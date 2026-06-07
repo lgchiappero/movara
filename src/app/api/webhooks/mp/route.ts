@@ -2,13 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import crypto from 'crypto'
 
-function verifyWebhook(body: string, signature: string): boolean {
-  const secret = process.env.MP_WEBHOOK_SECRET!
-  const hash = crypto
-    .createHmac('sha256', secret)
-    .update(body)
-    .digest('hex')
-  return hash === signature
+export function verifyWebhook(body: string, signature: string): boolean {
+  const secret = process.env.MP_WEBHOOK_SECRET
+  if (!secret) return false
+
+  const expected = crypto.createHmac('sha256', secret).update(body).digest('hex')
+
+  // MP sends "ts=<timestamp>,v1=<hex>" — extract the hash portion
+  const hex = signature.includes(',v1=') ? signature.split(',v1=').pop()! : signature
+
+  try {
+    const expectedBuf = Buffer.from(expected, 'hex')
+    const sigBuf = Buffer.from(hex, 'hex')
+    if (sigBuf.length !== expectedBuf.length) return false
+    return crypto.timingSafeEqual(sigBuf, expectedBuf)
+  } catch {
+    return false
+  }
 }
 
 export async function POST(req: NextRequest) {
