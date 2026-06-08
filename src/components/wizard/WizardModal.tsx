@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWizardStore, buildWhatsAppMessage, type WizardModel, type WizardStore } from "@/store/wizard";
-import { CATEGORY_LABELS } from "@/data/models";
 
 const TOTAL_STEPS = 6;
 
@@ -48,7 +47,7 @@ export default function WizardModal({ waNumber }: { waNumber?: string | null }) 
   const canProceed = useCallback((): boolean => {
     switch (w.step) {
       case 1: return true;
-      case 2: return w.habitaciones !== null && w.cocina !== null && w.banio !== null && (w.banio === false || w.banioAdicional !== null);
+      case 2: return w.habitaciones !== null && w.cocina !== null && w.banio !== null;
       case 3: return w.ciudad.trim().length > 0 && w.provincia.length > 0;
       case 4: return w.uso !== null;
       case 5: return true;
@@ -203,10 +202,7 @@ function Step1({ model }: { model: WizardModel | null }) {
       <p className="text-xs font-semibold uppercase tracking-widest text-sage-600 mb-2">
         Modelo seleccionado
       </p>
-      <h2 className="text-2xl font-bold text-stone-900 mb-1">{model?.name}</h2>
-      <p className="text-sm text-stone-500 mb-6">
-        {CATEGORY_LABELS[model?.category as keyof typeof CATEGORY_LABELS] ?? model?.category}
-      </p>
+      <h2 className="text-2xl font-bold text-stone-900 mb-6">{model?.name}</h2>
 
       <div className="bg-sage-50 border border-sage-100 rounded-xl p-5 flex items-start gap-4">
         <span className="text-3xl">🏠</span>
@@ -223,6 +219,34 @@ function Step1({ model }: { model: WizardModel | null }) {
 }
 
 function Step2({ w }: { w: WizardStore }) {
+  const effectiveMax = w.model?.maxHabitaciones ?? 4;
+  const cocinaConflict =
+    (w.habitaciones ?? 0) >= 3 &&
+    w.model?.permiteCocinaSiMax3Hab === false;
+
+  // Flag para mostrar el aviso de ajuste automático
+  const autoResetRef = useRef(false);
+  const [showAutoReset, setShowAutoReset] = useState(false);
+
+  // Cuando aparece el conflicto y cocina era "Sí", resetear y avisar
+  useEffect(() => {
+    if (cocinaConflict && w.cocina === true) {
+      autoResetRef.current = true;
+      w.setCocina(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cocinaConflict]);
+
+  useEffect(() => {
+    if (autoResetRef.current) {
+      autoResetRef.current = false;
+      setShowAutoReset(true);
+      const t = setTimeout(() => setShowAutoReset(false), 5000);
+      return () => clearTimeout(t);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [w.cocina]);
+
   const toggle = (val: boolean, current: boolean | null, setter: (v: boolean) => void) =>
     setter(current === val ? (null as unknown as boolean) : val);
 
@@ -232,23 +256,44 @@ function Step2({ w }: { w: WizardStore }) {
 
       {/* Habitaciones */}
       <div>
-        <label className="text-sm font-semibold text-stone-700 block mb-3">
+        <label className="text-sm font-semibold text-stone-700 block mb-1">
           ¿Cuántas habitaciones necesitás?
         </label>
+        {effectiveMax < 4 && (
+          <p className="text-xs text-stone-400 mb-3">
+            Este modelo admite hasta{" "}
+            <span className="font-semibold text-stone-600">
+              {effectiveMax === 1 ? "1 habitación" : `${effectiveMax} habitaciones`}
+            </span>
+          </p>
+        )}
+        {effectiveMax === 4 && <div className="mb-3" />}
         <div className="grid grid-cols-4 gap-2">
-          {[1, 2, 3, 4].map((n) => (
-            <button
-              key={n}
-              onClick={() => w.setHabitaciones(n)}
-              className={`py-3 rounded-xl text-lg font-bold border-2 transition-all duration-200 ${
-                w.habitaciones === n
-                  ? "border-sage-500 bg-sage-50 text-sage-700"
-                  : "border-stone-200 text-stone-600 hover:border-stone-300"
-              }`}
-            >
-              {n === 4 ? "4+" : n}
-            </button>
-          ))}
+          {[1, 2, 3, 4].map((n) => {
+            const overLimit = n > effectiveMax;
+            const isSelected = w.habitaciones === n;
+            return (
+              <button
+                key={n}
+                onClick={() => !overLimit && w.setHabitaciones(n)}
+                disabled={overLimit}
+                title={
+                  overLimit
+                    ? `Este modelo admite hasta ${effectiveMax === 1 ? "1 habitación" : `${effectiveMax} habitaciones`}`
+                    : undefined
+                }
+                className={`py-3 rounded-xl text-lg font-bold border-2 transition-all duration-200 ${
+                  overLimit
+                    ? "border-stone-100 text-stone-300 bg-stone-50 cursor-not-allowed line-through decoration-stone-300"
+                    : isSelected
+                    ? "border-sage-500 bg-sage-50 text-sage-700"
+                    : "border-stone-200 text-stone-600 hover:border-stone-300"
+                }`}
+              >
+                {n === 4 ? "4+" : n}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -257,7 +302,62 @@ function Step2({ w }: { w: WizardStore }) {
         <label className="text-sm font-semibold text-stone-700 block mb-3">
           ¿Incluye cocina?
         </label>
-        <BooleanToggle value={w.cocina} onChange={(v) => toggle(v, w.cocina, w.setCocina)} />
+
+        {/* Aviso: ajuste automático reciente */}
+        {showAutoReset && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-3 flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5"
+          >
+            <span className="shrink-0 mt-0.5">⚠️</span>
+            <span>
+              Con {w.habitaciones} habitaciones en el{" "}
+              <strong>{w.model?.name}</strong> no entra cocina.
+              Tu selección fue ajustada automáticamente.
+            </span>
+          </motion.div>
+        )}
+
+        {/* Aviso informativo (sin ajuste previo) */}
+        {cocinaConflict && !showAutoReset && (
+          <div className="mb-3 flex items-start gap-2 text-xs text-stone-500 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5">
+            <span className="shrink-0 mt-0.5">ℹ️</span>
+            <span>
+              Con {w.habitaciones} habitaciones en este modelo no es posible incluir cocina.
+            </span>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          {([true, false] as const).map((opt) => {
+            const isDisabled = opt === true && cocinaConflict;
+            const isSelected = w.cocina === opt;
+            return (
+              <button
+                key={String(opt)}
+                onClick={() => !isDisabled && toggle(opt, w.cocina, w.setCocina)}
+                disabled={isDisabled}
+                title={
+                  isDisabled
+                    ? "No disponible con 3 o más habitaciones en este modelo"
+                    : undefined
+                }
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all duration-200 ${
+                  isDisabled
+                    ? "border-stone-100 text-stone-300 bg-stone-50 cursor-not-allowed"
+                    : isSelected
+                    ? opt
+                      ? "border-sage-500 bg-sage-50 text-sage-700"
+                      : "border-stone-400 bg-stone-100 text-stone-700"
+                    : "border-stone-200 text-stone-500 hover:border-stone-300"
+                }`}
+              >
+                {opt ? "Sí" : "No"}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Baño */}
@@ -267,23 +367,6 @@ function Step2({ w }: { w: WizardStore }) {
         </label>
         <BooleanToggle value={w.banio} onChange={(v) => toggle(v, w.banio, w.setBanio)} />
       </div>
-
-      {/* Baño adicional (condicional) */}
-      {w.banio === true && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <label className="text-sm font-semibold text-stone-700 block mb-3">
-            ¿Necesitás un baño adicional?
-          </label>
-          <BooleanToggle
-            value={w.banioAdicional}
-            onChange={(v) => toggle(v, w.banioAdicional, w.setBanioAdicional)}
-          />
-        </motion.div>
-      )}
     </div>
   );
 }

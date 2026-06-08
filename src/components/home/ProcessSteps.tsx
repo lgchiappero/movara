@@ -1,4 +1,4 @@
-const STEPS = [
+const FALLBACK_STEPS = [
   {
     number: "01",
     icon: <HouseIcon />,
@@ -29,7 +29,31 @@ const STEPS = [
   },
 ];
 
-export default function ProcessSteps() {
+const STEP_ICONS = [<HouseIcon key="0" />, <SlidersIcon key="1" />, <TruckIcon key="2" />, <KeyIcon key="3" />];
+
+type StepData = { _key?: string; title: string; description: string };
+type ProcessData = {
+  title?: string | null;
+  subtitle?: string | null;
+  steps?: StepData[] | null;
+};
+
+export default function ProcessSteps({ data }: { data?: ProcessData | null }) {
+  const title = data?.title ?? "Simple. Transparente. Sin sorpresas.";
+  const subtitle =
+    data?.subtitle ??
+    "Cuatro pasos desde que elegís hasta que recibís las llaves. En promedio, 60 a 90 días corridos.";
+
+  const steps =
+    data?.steps?.length
+      ? data.steps.map((s, i) => ({
+          number: String(i + 1).padStart(2, "0"),
+          icon: STEP_ICONS[i] ?? STEP_ICONS[0],
+          title: s.title,
+          description: s.description,
+        }))
+      : FALLBACK_STEPS;
+
   return (
     <section id="proceso" className="bg-white py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -38,11 +62,10 @@ export default function ProcessSteps() {
             El proceso
           </span>
           <h2 className="mt-3 text-4xl font-bold text-stone-900 tracking-tight">
-            Simple. Transparente. Sin sorpresas.
+            {title}
           </h2>
           <p className="mt-4 text-stone-500 max-w-lg mx-auto">
-            Cuatro pasos desde que elegís hasta que recibís las llaves. En promedio,
-            60 a 90 días corridos.
+            {subtitle}
           </p>
         </div>
 
@@ -52,7 +75,7 @@ export default function ProcessSteps() {
           <div className="hidden lg:block absolute top-7 left-[calc(12.5%+2rem)] right-[calc(12.5%+2rem)] h-px bg-gradient-to-r from-sage-200 via-sage-300 to-sage-200" />
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-6">
-            {STEPS.map(({ number, icon, title, description }) => (
+            {steps.map(({ number, icon, title: stepTitle, description }) => (
               <div key={number} className="flex flex-col items-center text-center">
                 {/* Step circle */}
                 <div className="relative z-10 w-14 h-14 rounded-full bg-sage-600 flex items-center justify-center text-white mb-6 shrink-0 shadow-lg shadow-sage-600/20">
@@ -62,7 +85,7 @@ export default function ProcessSteps() {
                 <span className="text-sage-400 text-xs font-bold tracking-widest uppercase mb-2">
                   Paso {number}
                 </span>
-                <h3 className="text-lg font-bold text-stone-900 mb-3">{title}</h3>
+                <h3 className="text-lg font-bold text-stone-900 mb-3">{stepTitle}</h3>
                 <p className="text-sm text-stone-500 leading-relaxed max-w-xs">
                   {description}
                 </p>

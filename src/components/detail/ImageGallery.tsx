@@ -4,22 +4,22 @@ import { useState } from "react";
 import Image from "next/image";
 import { urlFor } from "@/sanity/lib/image";
 
-// Handles both static gradient images and Sanity-uploaded images
 type SanityAsset = { _ref: string; _type: string };
 
 export type GalleryImage = {
-  // Static gradient image fields
   gradient?: string;
   accent?: string;
-  // Sanity image fields
   asset?: SanityAsset;
   hotspot?: unknown;
   crop?: unknown;
-  // Shared
   label?: string;
 };
 
-const FALLBACK: GalleryImage = {
+type GalleryItem =
+  | { kind: "image"; img: GalleryImage }
+  | { kind: "video"; url: string; embedUrl: string; label: string };
+
+const FALLBACK_IMG: GalleryImage = {
   gradient: "from-sage-900 via-sage-800 to-sage-950",
   accent: "#819874",
   label: "Vista exterior",
@@ -29,55 +29,102 @@ function isSanityImage(img: GalleryImage): img is GalleryImage & { asset: Sanity
   return !!img.asset?._ref;
 }
 
-type Props = { images?: GalleryImage[] | null; modelName: string };
+function getEmbedUrl(url: string): string {
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?/]+)/);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}?autoplay=1&rel=0`;
+  const vimeo = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}?autoplay=1`;
+  return url;
+}
 
-export default function ImageGallery({ images, modelName }: Props) {
-  const gallery = images && images.length > 0 ? images : [FALLBACK];
+function isDirectVideo(url: string): boolean {
+  return /\.(mp4|webm|ogg)(\?|$)/i.test(url);
+}
+
+type Props = {
+  images?: GalleryImage[] | null;
+  modelName: string;
+  video?: { url: string; label?: string } | null;
+};
+
+export default function ImageGallery({ images, modelName, video }: Props) {
+  const items: GalleryItem[] = [
+    ...(video?.url
+      ? [
+          {
+            kind: "video" as const,
+            url: video.url,
+            embedUrl: getEmbedUrl(video.url),
+            label: video.label ?? "Video del modelo",
+          },
+        ]
+      : []),
+    ...(images && images.length > 0
+      ? images.map((img) => ({ kind: "image" as const, img }))
+      : [{ kind: "image" as const, img: FALLBACK_IMG }]),
+  ];
+
   const [selected, setSelected] = useState(0);
-  const active = gallery[selected] ?? FALLBACK;
+  const active = items[selected];
 
   return (
     <div className="space-y-3">
-      {/* Main image */}
+      {/* Main display */}
       <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-sage-900">
-        {isSanityImage(active) ? (
+        {active.kind === "video" ? (
+          isDirectVideo(active.url) ? (
+            <video
+              src={active.url}
+              controls
+              autoPlay
+              className="absolute inset-0 w-full h-full object-cover"
+              aria-label={active.label}
+            />
+          ) : (
+            <iframe
+              src={active.embedUrl}
+              title={active.label}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full border-0"
+            />
+          )
+        ) : isSanityImage(active.img) ? (
           <Image
-            src={urlFor(active).width(900).height(675).fit("crop").auto("format").url()}
-            alt={active.label ?? modelName}
+            src={urlFor(active.img).width(900).height(675).fit("crop").auto("format").url()}
+            alt={active.img.label ?? modelName}
             fill
             className="object-cover transition-opacity duration-500"
             sizes="(max-width: 768px) 100vw, 60vw"
             priority={selected === 0}
           />
         ) : (
-          <div
-            className={`absolute inset-0 bg-gradient-to-br ${active.gradient ?? FALLBACK.gradient}`}
-          >
-            <HouseScene accent={active.accent ?? FALLBACK.accent!} />
+          <div className={`absolute inset-0 bg-gradient-to-br ${active.img.gradient ?? FALLBACK_IMG.gradient}`}>
+            <HouseScene accent={active.img.accent ?? FALLBACK_IMG.accent!} />
           </div>
         )}
 
-        {/* Label */}
-        {active.label && (
+        {/* Label — not shown for iframes (has title) */}
+        {(active.kind === "image" || isDirectVideo(active.url)) && active.kind !== "video" && active.img.label && (
           <div className="absolute bottom-4 left-4 z-10">
             <span className="text-xs font-semibold text-white/80 bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
-              {active.label}
+              {active.img.label}
             </span>
           </div>
         )}
 
-        {/* Nav arrows — only show if more than 1 image */}
-        {gallery.length > 1 && (
+        {/* Nav arrows */}
+        {items.length > 1 && (
           <>
             <button
-              onClick={() => setSelected((s) => (s - 1 + gallery.length) % gallery.length)}
+              onClick={() => setSelected((s) => (s - 1 + items.length) % items.length)}
               className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/50 transition-colors"
               aria-label="Imagen anterior"
             >
               <ChevronLeftIcon />
             </button>
             <button
-              onClick={() => setSelected((s) => (s + 1) % gallery.length)}
+              onClick={() => setSelected((s) => (s + 1) % items.length)}
               className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/50 transition-colors"
               aria-label="Imagen siguiente"
             >
@@ -87,58 +134,73 @@ export default function ImageGallery({ images, modelName }: Props) {
         )}
 
         {/* Dot indicators */}
-        {gallery.length > 1 && (
+        {items.length > 1 && (
           <div className="absolute bottom-4 right-4 z-10 flex gap-1.5">
-            {gallery.map((_, i) => (
+            {items.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setSelected(i)}
                 className={`h-1.5 rounded-full transition-all ${
                   i === selected ? "bg-white w-4" : "bg-white/40 w-1.5"
                 }`}
-                aria-label={`Ver imagen ${i + 1}`}
+                aria-label={`Item ${i + 1}`}
               />
             ))}
           </div>
         )}
       </div>
 
-      {/* Thumbnails — only show if more than 1 */}
-      {gallery.length > 1 && (
+      {/* Thumbnails */}
+      {items.length > 1 && (
         <div className="grid grid-cols-4 gap-2">
-          {gallery.map((img, i) => (
+          {items.map((item, i) => (
             <button
               key={i}
               onClick={() => setSelected(i)}
               className={`relative aspect-[4/3] rounded-xl overflow-hidden bg-sage-900 transition-all duration-200 ${
-                i === selected
-                  ? "ring-2 ring-sage-500 ring-offset-2"
-                  : "opacity-60 hover:opacity-80"
+                i === selected ? "ring-2 ring-sage-500 ring-offset-2" : "opacity-60 hover:opacity-80"
               }`}
-              aria-label={img.label ?? `Imagen ${i + 1}`}
+              aria-label={item.kind === "video" ? item.label : (item.img.label ?? `Imagen ${i + 1}`)}
             >
-              {isSanityImage(img) ? (
+              {item.kind === "video" ? (
+                <VideoThumbnail label={item.label} />
+              ) : isSanityImage(item.img) ? (
                 <Image
-                  src={urlFor(img).width(200).height(150).fit("crop").auto("format").url()}
-                  alt={img.label ?? `Imagen ${i + 1}`}
+                  src={urlFor(item.img).width(200).height(150).fit("crop").auto("format").url()}
+                  alt={item.img.label ?? `Imagen ${i + 1}`}
                   fill
                   className="object-cover"
                   sizes="25vw"
                 />
               ) : (
-                <div className={`absolute inset-0 bg-gradient-to-br ${img.gradient ?? FALLBACK.gradient}`}>
-                  <MiniHouse accent={img.accent ?? FALLBACK.accent!} />
+                <div className={`absolute inset-0 bg-gradient-to-br ${item.img.gradient ?? FALLBACK_IMG.gradient}`}>
+                  <MiniHouse accent={item.img.accent ?? FALLBACK_IMG.accent!} />
                 </div>
               )}
-              <div className="absolute inset-0 flex items-end p-1.5">
-                <span className="text-[9px] text-white/60 leading-tight truncate">
-                  {img.label}
-                </span>
-              </div>
+              {item.kind === "image" && (
+                <div className="absolute inset-0 flex items-end p-1.5">
+                  <span className="text-[9px] text-white/60 leading-tight truncate">
+                    {item.img.label}
+                  </span>
+                </div>
+              )}
             </button>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function VideoThumbnail({ label }: { label: string }) {
+  return (
+    <div className="absolute inset-0 bg-gradient-to-br from-stone-900 to-stone-800 flex flex-col items-center justify-center gap-1">
+      <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+        <svg className="w-4 h-4 text-white ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </div>
+      <span className="text-[8px] text-white/60 font-medium truncate px-1 max-w-full">{label}</span>
     </div>
   );
 }

@@ -9,32 +9,35 @@ import Testimonials from "@/components/home/Testimonials";
 import CTAFinal from "@/components/home/CTAFinal";
 import Footer from "@/components/home/Footer";
 import { client } from "@/sanity/lib/client";
-import { SITE_CONFIG_QUERY } from "@/sanity/lib/queries";
+import { SITE_CONFIG_QUERY, HOME_PAGE_QUERY } from "@/sanity/lib/queries";
 
-async function getWaNumber(): Promise<string | null> {
+async function getPageData() {
   try {
-    const data = await client.fetch<{ whatsappNumber?: string | null }>(SITE_CONFIG_QUERY);
-    return data?.whatsappNumber ?? null;
+    const [config, homePage] = await Promise.all([
+      client.fetch<{ whatsappNumber?: string | null }>(SITE_CONFIG_QUERY),
+      client.fetch(HOME_PAGE_QUERY),
+    ]);
+    return { waNumber: config?.whatsappNumber ?? null, homePage };
   } catch {
-    return null;
+    return { waNumber: null, homePage: null };
   }
 }
 
 export default async function HomePage() {
-  const waNumber = await getWaNumber();
+  const { waNumber, homePage } = await getPageData();
 
   return (
     <>
       <Navbar />
       <main>
-        <Hero waNumber={waNumber} />
+        <Hero waNumber={waNumber} data={homePage?.hero} />
         <SocialProof />
-        <WhyHabitatt />
+        <WhyHabitatt data={homePage?.whyHabitatt} />
         <FeaturedModels />
-        <UsosPerfiles />
-        <ProcessSteps />
+        <UsosPerfiles data={homePage?.usos} />
+        <ProcessSteps data={homePage?.process} />
         <Testimonials />
-        <CTAFinal waNumber={waNumber} />
+        <CTAFinal waNumber={waNumber} data={homePage?.cta} />
       </main>
       <Footer />
     </>

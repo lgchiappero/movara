@@ -1,9 +1,13 @@
-export type ModelCategory = "familiar" | "turistico" | "oficina";
-
 export type ModelImage = {
-  gradient: string;
-  label: string;
-  accent: string;
+  // Sanity image fields
+  asset?: { _ref: string; _type: string };
+  hotspot?: unknown;
+  crop?: unknown;
+  // Static gradient fallback
+  gradient?: string;
+  accent?: string;
+  // Shared
+  label?: string;
 };
 
 export type ModelSpecs = {
@@ -20,7 +24,6 @@ export type ModelSpecs = {
 export type ProductModel = {
   slug: string;
   name: string;
-  category: ModelCategory;
   tagline: string;
   description: string;
   size: number;
@@ -32,12 +35,12 @@ export type ProductModel = {
   specs: ModelSpecs;
   images: ModelImage[];
   floorPlanSize: "small" | "medium" | "large" | "xl";
-};
-
-export const CATEGORY_LABELS: Record<ModelCategory, string> = {
-  familiar: "Vivienda familiar",
-  turistico: "Alquiler turístico",
-  oficina: "Oficina en casa",
+  video?: { url: string; label?: string } | null;
+  virtualTour?: string | null;
+  /** Límite físico real del módulo (1–4). El wizard no ofrece más opciones. */
+  maxHabitaciones?: number | null;
+  /** Si es false, con 3+ habitaciones no entra cocina en este modelo. */
+  permiteCocinaSiMax3Hab?: boolean | null;
 };
 
 const IMGS = {
@@ -95,11 +98,9 @@ const SPECS_OFICINA: ModelSpecs = {
 };
 
 export const MODELS: ProductModel[] = [
-  // ── FAMILIAR ──────────────────────────────────────────────
   {
     slug: "familiar-65",
     name: "Familiar 65",
-    category: "familiar",
     tag: "Más elegido",
     tagline: "El punto de partida ideal para tu familia",
     description:
@@ -119,11 +120,12 @@ export const MODELS: ProductModel[] = [
     specs: SPECS_FAMILIAR,
     images: IMGS.warm("Dormitorio principal"),
     floorPlanSize: "medium",
+    maxHabitaciones: 3,
+    permiteCocinaSiMax3Hab: false,
   },
   {
     slug: "familiar-90",
     name: "Familiar 90",
-    category: "familiar",
     tagline: "Espacio y comodidad para toda la familia",
     description:
       "El Familiar 90 suma un cuarto ambiente y más espacio en living-comedor. Ideal para familias con hijos o quienes trabajan desde casa y necesitan un ambiente extra. Dos baños completos y una galería amplia.",
@@ -142,11 +144,12 @@ export const MODELS: ProductModel[] = [
     specs: SPECS_FAMILIAR,
     images: IMGS.warm("Galería exterior"),
     floorPlanSize: "large",
+    maxHabitaciones: 4,
+    permiteCocinaSiMax3Hab: true,
   },
   {
     slug: "premium-95",
     name: "Premium 95",
-    category: "familiar",
     tag: "Premium",
     tagline: "Diseño premium y máximo confort",
     description:
@@ -166,11 +169,12 @@ export const MODELS: ProductModel[] = [
     specs: { ...SPECS_FAMILIAR, terminaciones: "Porcelanato 60×60, mesada de granito, aluminio premium" },
     images: IMGS.warm("Deck exterior"),
     floorPlanSize: "large",
+    maxHabitaciones: 4,
+    permiteCocinaSiMax3Hab: true,
   },
   {
     slug: "familiar-120",
     name: "Familiar 120",
-    category: "familiar",
     tag: "Gran familia",
     tagline: "La casa grande que siempre soñaste",
     description:
@@ -190,13 +194,12 @@ export const MODELS: ProductModel[] = [
     specs: { ...SPECS_FAMILIAR, estructura: "Steel frame galvanizado 120 mm" },
     images: IMGS.warm("Quincho exterior"),
     floorPlanSize: "xl",
+    maxHabitaciones: 4,
+    permiteCocinaSiMax3Hab: true,
   },
-
-  // ── TURÍSTICO ─────────────────────────────────────────────
   {
     slug: "studio-35",
     name: "Studio 35",
-    category: "turistico",
     tag: "Ideal inversión",
     tagline: "Máxima rentabilidad en mínimo espacio",
     description:
@@ -216,11 +219,12 @@ export const MODELS: ProductModel[] = [
     specs: SPECS_TURISTICO,
     images: IMGS.cool("Vista del deck"),
     floorPlanSize: "small",
+    maxHabitaciones: 1,
+    permiteCocinaSiMax3Hab: false,
   },
   {
     slug: "cabana-55",
     name: "Cabaña 55",
-    category: "turistico",
     tagline: "Escapada perfecta para dos o cuatro personas",
     description:
       "La Cabaña 55 ofrece un dormitorio separado con cama matrimonial, zona de estar con sofá-cama y baño completo. Ideal para parejas o grupos pequeños. El revestimiento de madera y el deck con vista la convierten en la opción más buscada en zonas de montaña.",
@@ -239,11 +243,12 @@ export const MODELS: ProductModel[] = [
     specs: { ...SPECS_TURISTICO, terminaciones: "Madera de pino tratado, deck de quebracho" },
     images: IMGS.cool("Deck panorámico"),
     floorPlanSize: "medium",
+    maxHabitaciones: 2,
+    permiteCocinaSiMax3Hab: false,
   },
   {
     slug: "duplex-75",
     name: "Dúplex 75",
-    category: "turistico",
     tag: "Mayor rentabilidad",
     tagline: "Dos unidades independientes para duplicar ingresos",
     description:
@@ -263,13 +268,12 @@ export const MODELS: ProductModel[] = [
     specs: SPECS_TURISTICO,
     images: IMGS.cool("Vista desde la calle"),
     floorPlanSize: "large",
+    maxHabitaciones: 2,
+    permiteCocinaSiMax3Hab: false,
   },
-
-  // ── OFICINA ───────────────────────────────────────────────
   {
     slug: "oficina-20",
     name: "Oficina 20",
-    category: "oficina",
     tagline: "Tu espacio de trabajo en 30 días",
     description:
       "Un espacio de trabajo compacto y funcional para instalar en el jardín. Open space con escritorio integrado, iluminación cenital y baño de cortesía. La solución más rápida para separar el trabajo del hogar.",
@@ -288,11 +292,12 @@ export const MODELS: ProductModel[] = [
     specs: SPECS_OFICINA,
     images: IMGS.neutral("Escritorio principal"),
     floorPlanSize: "small",
+    maxHabitaciones: 1,
+    permiteCocinaSiMax3Hab: false,
   },
   {
     slug: "oficina-35",
     name: "Oficina 35",
-    category: "oficina",
     tagline: "Trabajo individual y reuniones, sin salir de casa",
     description:
       "La Oficina 35 incorpora una zona de trabajo privada y una sala de reuniones para 4 personas. Conexión de datos CAT6, sistema de videoconferencia y baño completo. Ideal para profesionales que reciben clientes.",
@@ -311,11 +316,12 @@ export const MODELS: ProductModel[] = [
     specs: SPECS_OFICINA,
     images: IMGS.neutral("Sala de reuniones"),
     floorPlanSize: "medium",
+    maxHabitaciones: 2,
+    permiteCocinaSiMax3Hab: false,
   },
   {
     slug: "home-studio-45",
     name: "Home Studio 45",
-    category: "oficina",
     tag: "Más completo",
     tagline: "Estudio profesional en tu propiedad",
     description:
@@ -335,14 +341,11 @@ export const MODELS: ProductModel[] = [
     specs: { ...SPECS_OFICINA, aislacion: "Lana de roca 80 mm + aislación acústica certificada" },
     images: IMGS.neutral("Estudio principal"),
     floorPlanSize: "medium",
+    maxHabitaciones: 2,
+    permiteCocinaSiMax3Hab: false,
   },
 ];
 
 export function getModel(slug: string): ProductModel | undefined {
   return MODELS.find((m) => m.slug === slug);
-}
-
-export function getModelsByCategory(category: ModelCategory | "all"): ProductModel[] {
-  if (category === "all") return MODELS;
-  return MODELS.filter((m) => m.category === category);
 }

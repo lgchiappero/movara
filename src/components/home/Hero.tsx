@@ -11,9 +11,42 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.7, delay, ease: "easeOut" as const },
 });
 
-export default function Hero({ waNumber }: { waNumber?: string | null }) {
+type Stat = { value: string; label: string };
+
+type HeroData = {
+  badgeText?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  ctaPrimaryText?: string | null;
+  ctaSecondaryText?: string | null;
+  stats?: Stat[] | null;
+};
+
+const FALLBACK_STATS: Stat[] = [
+  { value: "+50", label: "casas entregadas" },
+  { value: "60 días", label: "entrega promedio" },
+  { value: "5 años", label: "garantía" },
+];
+
+export default function Hero({
+  waNumber,
+  data,
+}: {
+  waNumber?: string | null;
+  data?: HeroData | null;
+}) {
   const number = waNumber || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "5491100000000";
   const WA_HREF = `https://wa.me/${number}?text=${WA_TEXT}`;
+
+  const badgeText = data?.badgeText ?? "Fabricación 100% argentina";
+  const title = data?.title ?? "Tu casa, en 60 días. Sin obra.";
+  const subtitle =
+    data?.subtitle ??
+    "Casas modulares llave en mano. Diseñadas y fabricadas en planta, instaladas en tu terreno. Calidad superior, precio justo, entrega garantizada por contrato.";
+  const ctaPrimaryText = data?.ctaPrimaryText ?? "Ver modelos";
+  const ctaSecondaryText = data?.ctaSecondaryText ?? "Consultar por WhatsApp";
+  const stats = data?.stats?.length ? data.stats : FALLBACK_STATS;
+
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden bg-sage-950">
       {/* Subtle dot grid */}
@@ -35,7 +68,7 @@ export default function Hero({ waNumber }: { waNumber?: string | null }) {
           <motion.div {...fadeUp(0.05)}>
             <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sage-800/60 border border-sage-700/50 text-sage-400 text-sm font-medium mb-7">
               <span className="w-1.5 h-1.5 rounded-full bg-sage-500 animate-pulse" />
-              Fabricación 100% argentina
+              {badgeText}
             </span>
           </motion.div>
 
@@ -43,18 +76,14 @@ export default function Hero({ waNumber }: { waNumber?: string | null }) {
             {...fadeUp(0.12)}
             className="text-[2.75rem] sm:text-6xl lg:text-[4.5rem] font-bold text-white leading-[1.07] tracking-tight"
           >
-            Tu casa,{" "}
-            <span className="text-sage-400">en 60 días.</span>{" "}
-            Sin obra.
+            {title}
           </motion.h1>
 
           <motion.p
             {...fadeUp(0.2)}
             className="mt-6 text-lg text-stone-400 leading-relaxed max-w-lg"
           >
-            Casas modulares llave en mano. Diseñadas y fabricadas en planta,
-            instaladas en tu terreno. Calidad superior, precio justo, entrega
-            garantizada por contrato.
+            {subtitle}
           </motion.p>
 
           <motion.div {...fadeUp(0.28)} className="mt-10 flex flex-wrap gap-4">
@@ -62,7 +91,7 @@ export default function Hero({ waNumber }: { waNumber?: string | null }) {
               href="/modelos"
               className="inline-flex items-center gap-2 px-7 py-3.5 bg-sage-600 hover:bg-sage-500 text-white font-semibold rounded-xl transition-all duration-200 hover:shadow-xl hover:shadow-sage-600/25 hover:-translate-y-0.5 text-sm"
             >
-              Ver modelos
+              {ctaPrimaryText}
               <ArrowRightIcon />
             </Link>
             <a
@@ -72,16 +101,12 @@ export default function Hero({ waNumber }: { waNumber?: string | null }) {
               className="inline-flex items-center gap-2 px-7 py-3.5 border border-white/15 hover:border-white/30 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-all duration-200 text-sm"
             >
               <WhatsAppIcon />
-              Consultar por WhatsApp
+              {ctaSecondaryText}
             </a>
           </motion.div>
 
           <motion.div {...fadeUp(0.38)} className="mt-12 flex flex-wrap gap-8">
-            {[
-              { value: "+50", label: "casas entregadas" },
-              { value: "60 días", label: "entrega promedio" },
-              { value: "5 años", label: "garantía" },
-            ].map(({ value, label }) => (
+            {stats.map(({ value, label }) => (
               <div key={label}>
                 <p className="text-2xl font-bold text-sage-400">{value}</p>
                 <p className="text-stone-500 text-xs mt-0.5">{label}</p>

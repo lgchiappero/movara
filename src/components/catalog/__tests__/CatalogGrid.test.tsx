@@ -10,6 +10,19 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("next/image", () => ({
+  default: ({ src, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { src: string }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} {...props} />
+  ),
+}));
+
+vi.mock("@/sanity/lib/image", () => ({
+  urlFor: () => ({
+    width: () => ({ height: () => ({ fit: () => ({ auto: () => ({ url: () => "https://cdn.sanity.io/test.jpg" }) }) }) }),
+  }),
+}));
+
 const mockOpenWizard = vi.fn();
 vi.mock("@/store/wizard", () => ({
   useWizardStore: (selector: (s: { openWizard: typeof mockOpenWizard }) => unknown) =>
@@ -18,13 +31,12 @@ vi.mock("@/store/wizard", () => ({
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
-const makeModel = (slug: string, category: ProductModel["category"]): ProductModel => ({
+const makeModel = (slug: string, size: number): ProductModel => ({
   slug,
   name: slug,
-  category,
   tagline: "",
   description: "",
-  size: 50,
+  size,
   rooms: 2,
   baths: 1,
   priceUSD: 30000,
@@ -35,10 +47,10 @@ const makeModel = (slug: string, category: ProductModel["category"]): ProductMod
 });
 
 const MODELS: ProductModel[] = [
-  makeModel("familiar-1", "familiar"),
-  makeModel("familiar-2", "familiar"),
-  makeModel("turistico-1", "turistico"),
-  makeModel("oficina-1", "oficina"),
+  makeModel("compacto-1", 35),
+  makeModel("compacto-2", 45),
+  makeModel("mediano-1",  65),
+  makeModel("grande-1",   95),
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -51,36 +63,36 @@ describe("CatalogGrid", () => {
     }
   });
 
-  it("filtra por categoría 'familiar' al hacer click", async () => {
+  it("filtra por superficie 'Hasta 45 m²' al hacer click", async () => {
     const user = userEvent.setup();
     render(<CatalogGrid models={MODELS} />);
-    await user.click(screen.getByRole("button", { name: /vivienda familiar/i }));
+    await user.click(screen.getByRole("button", { name: /hasta 45/i }));
 
-    expect(screen.getAllByText("familiar-1").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("familiar-2").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("compacto-1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("compacto-2").length).toBeGreaterThan(0);
+    expect(screen.queryByText("mediano-1")).toBeNull();
+    expect(screen.queryByText("grande-1")).toBeNull();
   });
 
-  it("muestra el conteo correcto por categoría", () => {
+  it("muestra el conteo correcto en el botón 'Todos'", () => {
     render(<CatalogGrid models={MODELS} />);
-    // El botón "Todos" muestra el total
     const todosBtn = screen.getByRole("button", { name: /^todos/i });
     expect(todosBtn).toHaveTextContent("4");
   });
 
-  it("muestra estado vacío cuando no hay modelos en la categoría", async () => {
+  it("muestra estado vacío cuando no hay modelos en el rango de superficie", async () => {
     const user = userEvent.setup();
-    const models = [makeModel("oficina-1", "oficina")];
+    const models = [makeModel("grande-solo", 100)];
     render(<CatalogGrid models={models} />);
-    await user.click(screen.getByRole("button", { name: /vivienda familiar/i }));
-    expect(screen.getByText(/no hay modelos en esta categoría/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /hasta 45/i }));
+    expect(screen.getByText(/no hay modelos en ese rango/i)).toBeInTheDocument();
   });
 
   it("muestra 'modelo' en singular cuando solo hay 1 resultado", async () => {
     const user = userEvent.setup();
-    const models = [makeModel("turistico-solo", "turistico")];
+    const models = [makeModel("grande-solo", 100)];
     render(<CatalogGrid models={models} />);
-    await user.click(screen.getByRole("button", { name: /alquiler turístico/i }));
-    // "1 modelo" singular — solo visible en sm+, pero el texto existe
+    await user.click(screen.getByRole("button", { name: /90 m² o más/i }));
     expect(screen.getByText(/1 modelo$/)).toBeInTheDocument();
   });
 

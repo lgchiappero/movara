@@ -12,6 +12,19 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("next/image", () => ({
+  default: ({ src, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { src: string }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} {...props} />
+  ),
+}));
+
+vi.mock("@/sanity/lib/image", () => ({
+  urlFor: () => ({
+    width: () => ({ height: () => ({ fit: () => ({ auto: () => ({ url: () => "https://cdn.sanity.io/test.jpg" }) }) }) }),
+  }),
+}));
+
 const mockOpenWizard = vi.fn();
 vi.mock("@/store/wizard", () => ({
   useWizardStore: (selector: (s: { openWizard: typeof mockOpenWizard }) => unknown) =>
@@ -23,7 +36,6 @@ vi.mock("@/store/wizard", () => ({
 const FULL_MODEL: ProductModel = {
   slug: "familiar-65",
   name: "Familiar 65",
-  category: "familiar",
   tagline: "El punto de partida ideal para tu familia",
   description: "Descripción de prueba",
   size: 65,
@@ -52,7 +64,6 @@ const FULL_MODEL: ProductModel = {
 const PARTIAL_MODEL = {
   slug: "familiar-65",
   name: "Familiar 65",
-  category: "familiar",
 } as unknown as ProductModel;
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -110,7 +121,6 @@ describe("ModelCard", () => {
     expect(mockOpenWizard).toHaveBeenCalledWith({
       slug: "familiar-65",
       name: "Familiar 65",
-      category: "familiar",
     });
   });
 

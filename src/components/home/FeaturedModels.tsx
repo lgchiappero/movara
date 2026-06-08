@@ -7,7 +7,6 @@ const MODELS = [
   {
     slug: "familiar-65",
     name: "Familiar 65",
-    category: "familiar" as const,
     tag: "Más elegido",
     tagColor: "bg-sage-100 text-sage-700",
     size: 65,
@@ -18,11 +17,12 @@ const MODELS = [
       "La opción más popular para familias. Tres ambientes funcionales, cocina integrada y dos baños completos.",
     gradient: "from-sage-900/80 via-sage-800/60 to-sage-700/40",
     accent: "#647c57",
+    maxHabitaciones: 3,
+    permiteCocinaSiMax3Hab: false,
   },
   {
     slug: "studio-35",
     name: "Studio 35",
-    category: "turistico" as const,
     tag: "Ideal inversión",
     tagColor: "bg-stone-900 text-sage-400",
     size: 35,
@@ -33,11 +33,12 @@ const MODELS = [
       "Ideal para inversión turística o como espacio independiente. Diseño inteligente que maximiza cada metro cuadrado.",
     gradient: "from-sage-950/90 via-sage-900/70 to-sage-800/50",
     accent: "#819874",
+    maxHabitaciones: 1,
+    permiteCocinaSiMax3Hab: false,
   },
   {
     slug: "premium-95",
     name: "Premium 95",
-    category: "familiar" as const,
     tag: "Premium",
     tagColor: "bg-stone-800 text-stone-200",
     size: 95,
@@ -48,6 +49,8 @@ const MODELS = [
       "El máximo en confort y diseño. Cuatro ambientes, terminaciones de primera y posibilidad de ampliación.",
     gradient: "from-stone-800/90 via-stone-700/70 to-stone-600/50",
     accent: "#a5b899",
+    maxHabitaciones: 4,
+    permiteCocinaSiMax3Hab: true,
   },
 ];
 
@@ -119,7 +122,7 @@ export default function FeaturedModels() {
 
                 <div className="mt-6 grid grid-cols-2 gap-3">
                   <button
-                    onClick={() => openWizard({ slug: model.slug, name: model.name, category: model.category })}
+                    onClick={() => openWizard({ slug: model.slug, name: model.name, maxHabitaciones: model.maxHabitaciones, permiteCocinaSiMax3Hab: model.permiteCocinaSiMax3Hab })}
                     className="px-4 py-2.5 bg-sage-600 hover:bg-sage-500 text-white text-sm font-semibold rounded-xl transition-colors text-center"
                   >
                     Me interesa

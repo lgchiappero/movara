@@ -11,19 +11,28 @@ const geist = Geist({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Habitatt — Casas Modulares de Calidad",
-  description:
-    "Diseñamos, fabricamos y entregamos casas modulares sustentables en toda la Argentina. Llave en mano.",
+type SiteConfig = {
+  whatsappNumber?: string | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
 };
 
-async function getWaNumber(): Promise<string | null> {
+async function getSiteConfig(): Promise<SiteConfig | null> {
   try {
-    const data = await client.fetch<{ whatsappNumber?: string | null }>(SITE_CONFIG_QUERY);
-    return data?.whatsappNumber ?? null;
+    return await client.fetch<SiteConfig>(SITE_CONFIG_QUERY);
   } catch {
     return null;
   }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await getSiteConfig();
+  return {
+    title: config?.metaTitle ?? "Habitatt — Casas Modulares de Calidad",
+    description:
+      config?.metaDescription ??
+      "Diseñamos, fabricamos y entregamos casas modulares sustentables en toda la Argentina. Llave en mano.",
+  };
 }
 
 export default async function RootLayout({
@@ -31,7 +40,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const waNumber = await getWaNumber();
+  const config = await getSiteConfig();
+  const waNumber = config?.whatsappNumber ?? null;
 
   return (
     <html lang="es" className={`${geist.variable} h-full antialiased`}>

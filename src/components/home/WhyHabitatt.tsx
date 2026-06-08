@@ -1,4 +1,4 @@
-const PILLARS = [
+const FALLBACK_PILLARS = [
   {
     icon: <StructureIcon />,
     title: "Calidad constructiva",
@@ -25,7 +25,30 @@ const PILLARS = [
   },
 ];
 
-export default function WhyHabitatt() {
+const ICONS = [<StructureIcon key="0" />, <ClockIcon key="1" />, <CreditIcon key="2" />, <ShieldIcon key="3" />];
+
+type PillarData = { _key?: string; title: string; description: string };
+type WhyHabitattData = {
+  title?: string | null;
+  subtitle?: string | null;
+  pillars?: PillarData[] | null;
+};
+
+export default function WhyHabitatt({ data }: { data?: WhyHabitattData | null }) {
+  const title = data?.title ?? "4 pilares que nos diferencian";
+  const subtitle =
+    data?.subtitle ??
+    "Más de 8 años construyendo casas modulares nos enseñaron que la confianza se gana con hechos, no con promesas.";
+
+  const pillars =
+    data?.pillars?.length
+      ? data.pillars.map((p, i) => ({
+          icon: ICONS[i] ?? ICONS[0],
+          title: p.title,
+          description: p.description,
+        }))
+      : FALLBACK_PILLARS;
+
   return (
     <section className="bg-sage-50 py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -34,24 +57,23 @@ export default function WhyHabitatt() {
             Por qué elegirnos
           </span>
           <h2 className="mt-3 text-4xl font-bold text-stone-900 tracking-tight">
-            4 pilares que nos diferencian
+            {title}
           </h2>
           <p className="mt-4 text-stone-500 max-w-xl mx-auto">
-            Más de 8 años construyendo casas modulares nos enseñaron que la confianza
-            se gana con hechos, no con promesas.
+            {subtitle}
           </p>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {PILLARS.map(({ icon, title, description }) => (
+          {pillars.map(({ icon, title: pillarTitle, description }) => (
             <div
-              key={title}
+              key={pillarTitle}
               className="bg-white rounded-2xl p-7 border border-sage-100 hover:border-sage-200 hover:shadow-xl hover:shadow-sage-900/5 transition-all duration-300 group"
             >
               <div className="w-12 h-12 rounded-xl bg-sage-100 flex items-center justify-center text-sage-600 mb-5 group-hover:bg-sage-600 group-hover:text-white transition-colors duration-300">
                 {icon}
               </div>
-              <h3 className="font-bold text-stone-900 mb-2">{title}</h3>
+              <h3 className="font-bold text-stone-900 mb-2">{pillarTitle}</h3>
               <p className="text-sm text-stone-500 leading-relaxed">{description}</p>
             </div>
           ))}

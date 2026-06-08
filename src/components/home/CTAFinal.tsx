@@ -2,8 +2,25 @@
 
 import { useState } from "react";
 
-export default function CTAFinal({ waNumber }: { waNumber?: string | null }) {
+type CtaData = {
+  title?: string | null;
+  subtitle?: string | null;
+  ctaText?: string | null;
+};
+
+export default function CTAFinal({
+  waNumber,
+  data,
+}: {
+  waNumber?: string | null;
+  data?: CtaData | null;
+}) {
   const number = waNumber || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "5491100000000";
+  const ctaTitle = data?.title ?? "¿Listo para dar el primer paso?";
+  const ctaSubtitle =
+    data?.subtitle ??
+    "Sin compromisos. En una primera charla entendemos tu proyecto, te orientamos en modelos y te damos una idea de costos sin vueltas.";
+  const ctaButtonText = data?.ctaText ?? "Consultar por WhatsApp";
   const [form, setForm] = useState({ nombre: "", telefono: "", mensaje: "" });
   const [sent, setSent] = useState(false);
 
@@ -35,11 +52,10 @@ export default function CTAFinal({ waNumber }: { waNumber?: string | null }) {
               Empezá hoy
             </span>
             <h2 className="mt-3 text-4xl lg:text-5xl font-bold text-stone-900 tracking-tight leading-[1.1]">
-              ¿Listo para dar<br />el primer paso?
+              {ctaTitle}
             </h2>
             <p className="mt-5 text-lg text-stone-500 leading-relaxed max-w-md">
-              Sin compromisos. En una primera charla entendemos tu proyecto, te
-              orientamos en modelos y te damos una idea de costos sin vueltas.
+              {ctaSubtitle}
             </p>
 
             <a
@@ -49,7 +65,7 @@ export default function CTAFinal({ waNumber }: { waNumber?: string | null }) {
               className="mt-8 inline-flex items-center gap-3 bg-[#25D366] hover:bg-[#1fba58] text-white font-bold px-8 py-4 rounded-xl transition-all duration-200 hover:shadow-xl hover:shadow-green-500/25 hover:-translate-y-0.5 text-base"
             >
               <WhatsAppIcon />
-              Consultar por WhatsApp
+              {ctaButtonText}
             </a>
 
             <div className="mt-6 flex items-center gap-2 text-stone-400 text-sm">

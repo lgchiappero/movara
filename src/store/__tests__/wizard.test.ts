@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useWizardStore, buildWhatsAppMessage, type WizardStore } from "@/store/wizard";
 
-// Reset Zustand store between tests
 function resetStore() {
   useWizardStore.setState({
     open: false,
@@ -10,7 +9,6 @@ function resetStore() {
     habitaciones: null,
     cocina: null,
     banio: null,
-    banioAdicional: null,
     ciudad: "",
     provincia: "",
     uso: null,
@@ -18,7 +16,7 @@ function resetStore() {
   });
 }
 
-const MODEL = { slug: "familiar-65", name: "Familiar 65", category: "familiar" };
+const MODEL = { slug: "familiar-65", name: "Familiar 65" };
 
 describe("buildWhatsAppMessage", () => {
   it("retorna string vacío cuando model es null", () => {
@@ -32,7 +30,6 @@ describe("buildWhatsAppMessage", () => {
       habitaciones: 3,
       cocina: true,
       banio: true,
-      banioAdicional: false,
       ciudad: "Mar del Plata",
       provincia: "Buenos Aires",
       uso: "familiar",
@@ -56,7 +53,6 @@ describe("buildWhatsAppMessage", () => {
       habitaciones: 1,
       cocina: true,
       banio: false,
-      banioAdicional: null,
       ciudad: "Rosario",
       provincia: "Santa Fe",
       uso: "oficina",
@@ -73,7 +69,6 @@ describe("buildWhatsAppMessage", () => {
       habitaciones: 4,
       cocina: true,
       banio: false,
-      banioAdicional: null,
       ciudad: "Córdoba",
       provincia: "Córdoba",
       uso: "familiar",
@@ -83,29 +78,12 @@ describe("buildWhatsAppMessage", () => {
     expect(buildWhatsAppMessage(state)).toContain("4 o más habitaciones");
   });
 
-  it("muestra 'con 2 baños' cuando banioAdicional es true", () => {
-    const state = {
-      model: MODEL,
-      habitaciones: 2,
-      cocina: true,
-      banio: true,
-      banioAdicional: true,
-      ciudad: "Mendoza",
-      provincia: "Mendoza",
-      uso: "turistico",
-      consulta: "",
-    } as unknown as WizardStore;
-
-    expect(buildWhatsAppMessage(state)).toContain("con 2 baños");
-  });
-
   it("muestra 'sin cocina' y 'sin baño' cuando ambos son false", () => {
     const state = {
       model: MODEL,
       habitaciones: 1,
       cocina: false,
       banio: false,
-      banioAdicional: null,
       ciudad: "Neuquén",
       provincia: "Neuquén",
       uso: "oficina",
@@ -123,7 +101,6 @@ describe("buildWhatsAppMessage", () => {
       habitaciones: 2,
       cocina: true,
       banio: true,
-      banioAdicional: false,
       ciudad: "Salta",
       provincia: "Salta",
       uso: "familiar",
@@ -139,7 +116,6 @@ describe("buildWhatsAppMessage", () => {
       habitaciones: 2,
       cocina: true,
       banio: false,
-      banioAdicional: null,
       ciudad: "Tucumán",
       provincia: "Tucumán",
       uso: "turistico",
@@ -157,7 +133,6 @@ describe("buildWhatsAppMessage", () => {
       habitaciones: 1,
       cocina: false,
       banio: false,
-      banioAdicional: null,
       ciudad: "La Plata",
       provincia: "Buenos Aires",
       uso: "otro",
@@ -173,7 +148,6 @@ describe("buildWhatsAppMessage", () => {
       habitaciones: 1,
       cocina: false,
       banio: false,
-      banioAdicional: null,
       ciudad: "La Plata",
       provincia: "Buenos Aires",
       uso: "desconocido",
@@ -199,7 +173,6 @@ describe("useWizardStore — acciones", () => {
     expect(s.habitaciones).toBeNull();
     expect(s.cocina).toBeNull();
     expect(s.banio).toBeNull();
-    expect(s.banioAdicional).toBeNull();
     expect(s.ciudad).toBe("");
     expect(s.provincia).toBe("");
     expect(s.uso).toBeNull();
@@ -225,21 +198,11 @@ describe("useWizardStore — acciones", () => {
     expect(useWizardStore.getState().step).toBe(1);
   });
 
-  it("setBanio(false) también pone banioAdicional en false", () => {
-    useWizardStore.getState().openWizard(MODEL);
-    useWizardStore.getState().setBanio(true);
-    useWizardStore.getState().setBanioAdicional(true);
-    useWizardStore.getState().setBanio(false);
-
-    const s = useWizardStore.getState();
-    expect(s.banio).toBe(false);
-    expect(s.banioAdicional).toBe(false);
-  });
-
   it("setters individuales actualizan solo su campo", () => {
     useWizardStore.getState().openWizard(MODEL);
     useWizardStore.getState().setHabitaciones(3);
     useWizardStore.getState().setCocina(true);
+    useWizardStore.getState().setBanio(true);
     useWizardStore.getState().setCiudad("Rosario");
     useWizardStore.getState().setProvincia("Santa Fe");
     useWizardStore.getState().setUso("turistico");
@@ -248,6 +211,7 @@ describe("useWizardStore — acciones", () => {
     const s = useWizardStore.getState();
     expect(s.habitaciones).toBe(3);
     expect(s.cocina).toBe(true);
+    expect(s.banio).toBe(true);
     expect(s.ciudad).toBe("Rosario");
     expect(s.provincia).toBe("Santa Fe");
     expect(s.uso).toBe("turistico");

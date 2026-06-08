@@ -1,32 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { CATEGORY_LABELS, type ModelCategory, type ProductModel } from "@/data/models";
+import { type ProductModel } from "@/data/models";
 import ModelCard from "./ModelCard";
 
-type Filter = ModelCategory | "all";
+type SizeFilter = "all" | "compact" | "medium" | "large";
 
-const FILTERS: { value: Filter; label: string }[] = [
-  { value: "all", label: "Todos" },
-  { value: "familiar", label: CATEGORY_LABELS.familiar },
-  { value: "turistico", label: CATEGORY_LABELS.turistico },
-  { value: "oficina", label: CATEGORY_LABELS.oficina },
+const SIZE_FILTERS: { value: SizeFilter; label: string; desc: string }[] = [
+  { value: "all",     label: "Todos",          desc: "" },
+  { value: "compact", label: "Hasta 45 m²",    desc: "" },
+  { value: "medium",  label: "50 – 80 m²",     desc: "" },
+  { value: "large",   label: "90 m² o más",    desc: "" },
 ];
 
+function matchesSize(model: ProductModel, filter: SizeFilter): boolean {
+  if (filter === "all")     return true;
+  if (filter === "compact") return model.size <= 45;
+  if (filter === "medium")  return model.size >= 50 && model.size <= 80;
+  if (filter === "large")   return model.size >= 90;
+  return true;
+}
+
 export default function CatalogGrid({ models }: { models: ProductModel[] }) {
-  const [active, setActive] = useState<Filter>("all");
+  const [active, setActive] = useState<SizeFilter>("all");
 
-  const filtered =
-    active === "all" ? models : models.filter((m) => m.category === active);
+  const filtered = models.filter((m) => matchesSize(m, active));
 
-  const count = (f: Filter) =>
-    f === "all" ? models.length : models.filter((m) => m.category === f).length;
+  const count = (f: SizeFilter) => models.filter((m) => matchesSize(m, f)).length;
 
   return (
     <div>
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 mb-10">
-        {FILTERS.map(({ value, label }) => {
+        {SIZE_FILTERS.map(({ value, label }) => {
           const isActive = active === value;
           return (
             <button
@@ -66,7 +72,7 @@ export default function CatalogGrid({ models }: { models: ProductModel[] }) {
 
       {filtered.length === 0 && (
         <div className="col-span-3 py-24 text-center text-stone-400">
-          No hay modelos en esta categoría todavía.
+          No hay modelos en ese rango de superficie.
         </div>
       )}
     </div>

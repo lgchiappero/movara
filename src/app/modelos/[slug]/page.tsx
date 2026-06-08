@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { MODELS, CATEGORY_LABELS, getModel, type ProductModel } from "@/data/models";
+import { MODELS, getModel, type ProductModel } from "@/data/models";
 import { client } from "@/sanity/lib/client";
 import { MODELO_BY_SLUG_QUERY, MODELO_SLUGS_QUERY } from "@/sanity/lib/queries";
 import ImageGallery from "@/components/detail/ImageGallery";
 import FloorPlan from "@/components/detail/FloorPlan";
 import ConsultarButton from "@/components/detail/ConsultarButton";
+import VirtualTour from "@/components/detail/VirtualTour";
 
 export const revalidate = 3600;
 
@@ -85,19 +86,14 @@ export default async function ModelDetailPage({ params }: Props) {
 
           {/* Gallery */}
           <div className="lg:col-span-3">
-            <ImageGallery images={model.images} modelName={model.name} />
+            <ImageGallery images={model.images} modelName={model.name} video={model.video} />
           </div>
 
           {/* Info sidebar */}
           <div className="lg:col-span-2 flex flex-col gap-6">
             <div>
-              {model.category && (
-                <span className="inline-block text-xs font-semibold uppercase tracking-widest text-sage-600 bg-sage-50 border border-sage-100 px-3 py-1 rounded-full mb-3">
-                  {CATEGORY_LABELS[model.category] ?? model.category}
-                </span>
-              )}
               {model.tag && (
-                <span className="inline-block ml-2 text-xs font-bold uppercase tracking-widest text-white bg-sage-600 px-3 py-1 rounded-full mb-3">
+                <span className="inline-block text-xs font-bold uppercase tracking-widest text-white bg-sage-600 px-3 py-1 rounded-full mb-3">
                   {model.tag}
                 </span>
               )}
@@ -162,7 +158,7 @@ export default async function ModelDetailPage({ params }: Props) {
 
             {/* CTA buttons */}
             <div className="flex flex-col gap-3">
-              <ConsultarButton model={{ slug: model.slug, name: model.name, category: model.category }} />
+              <ConsultarButton model={{ slug: model.slug, name: model.name, maxHabitaciones: model.maxHabitaciones, permiteCocinaSiMax3Hab: model.permiteCocinaSiMax3Hab }} />
               <a
                 href={waHref}
                 target="_blank"
@@ -229,6 +225,11 @@ export default async function ModelDetailPage({ params }: Props) {
               </p>
               <FloorPlan size={model.floorPlanSize ?? "medium"} />
             </section>
+
+            {/* Virtual tour — only when URL is set */}
+            {model.virtualTour && (
+              <VirtualTour url={model.virtualTour} modelName={model.name} />
+            )}
           </div>
 
           {/* Sidebar */}
@@ -274,7 +275,7 @@ export default async function ModelDetailPage({ params }: Props) {
               Completá 6 preguntas rápidas y te enviamos un presupuesto personalizado por WhatsApp.
             </p>
           </div>
-          <ConsultarButton model={{ slug: model.slug, name: model.name, category: model.category }} />
+          <ConsultarButton model={{ slug: model.slug, name: model.name, maxHabitaciones: model.maxHabitaciones, permiteCocinaSiMax3Hab: model.permiteCocinaSiMax3Hab }} />
         </div>
       </main>
     </>

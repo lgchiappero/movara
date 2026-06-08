@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getModel, getModelsByCategory, MODELS } from "@/data/models";
-
-/**
- * Tests de seguridad para datos opcionales — cubre el escenario donde
- * Sanity devuelve campos null/undefined (modelo creado pero sin completar).
- */
+import { getModel, MODELS } from "@/data/models";
 
 describe("getModel — fallback estático", () => {
   it("devuelve el modelo cuando el slug existe", () => {
@@ -19,11 +14,10 @@ describe("getModel — fallback estático", () => {
 });
 
 describe("MODELS — integridad de datos estáticos", () => {
-  it("todos los modelos tienen slug, name y category", () => {
+  it("todos los modelos tienen slug y name", () => {
     for (const m of MODELS) {
       expect(m.slug, `${m.slug} sin slug`).toBeTruthy();
       expect(m.name, `${m.slug} sin name`).toBeTruthy();
-      expect(m.category, `${m.slug} sin category`).toBeTruthy();
     }
   });
 
@@ -49,13 +43,6 @@ describe("MODELS — integridad de datos estáticos", () => {
     }
   });
 
-  it("categories son solo los valores permitidos", () => {
-    const VALID = ["familiar", "turistico", "oficina"];
-    for (const m of MODELS) {
-      expect(VALID).toContain(m.category);
-    }
-  });
-
   it("slugs son únicos", () => {
     const slugs = MODELS.map((m) => m.slug);
     const unique = new Set(slugs);
@@ -63,27 +50,8 @@ describe("MODELS — integridad de datos estáticos", () => {
   });
 });
 
-describe("getModelsByCategory", () => {
-  it("devuelve todos los modelos cuando category es 'all'", () => {
-    expect(getModelsByCategory("all")).toHaveLength(MODELS.length);
-  });
-
-  it("filtra correctamente por categoría 'familiar'", () => {
-    const result = getModelsByCategory("familiar");
-    expect(result.length).toBeGreaterThan(0);
-    for (const m of result) expect(m.category).toBe("familiar");
-  });
-
-  it("filtra correctamente por categoría 'turistico'", () => {
-    const result = getModelsByCategory("turistico");
-    expect(result.length).toBeGreaterThan(0);
-    for (const m of result) expect(m.category).toBe("turistico");
-  });
-});
-
 describe("Seguridad de campos opcionales — modelos parciales de Sanity", () => {
   it("optional chaining en specs no lanza cuando specs es null", () => {
-    // Simula un modelo de Sanity sin specs
     const partial = { specs: null } as unknown as { specs: { tiempo?: string } | null };
     expect(() => partial.specs?.tiempo).not.toThrow();
     expect(partial.specs?.tiempo).toBeUndefined();

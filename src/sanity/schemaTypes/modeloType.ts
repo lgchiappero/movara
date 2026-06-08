@@ -19,19 +19,6 @@ export const modeloType = defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
-      name: 'category',
-      title: 'Categoría',
-      type: 'string',
-      options: {
-        list: [
-          { title: 'Vivienda familiar', value: 'familiar' },
-          { title: 'Alquiler turístico', value: 'turistico' },
-          { title: 'Oficina en casa', value: 'oficina' },
-        ],
-      },
-      validation: (Rule) => Rule.required(),
-    }),
-    defineField({
       name: 'tagline',
       title: 'Tagline',
       type: 'string',
@@ -77,6 +64,70 @@ export const modeloType = defineType({
           ],
         },
       ],
+    }),
+    defineField({
+      name: 'maxHabitaciones',
+      title: 'Máximo de habitaciones posibles',
+      type: 'number',
+      description: 'Límite físico del modelo. El wizard no ofrecerá más opciones que este número.',
+      initialValue: 4,
+      validation: (Rule) => Rule.min(1).max(4).integer(),
+    }),
+    defineField({
+      name: 'permiteCocinaSiMax3Hab',
+      title: '¿Permite cocina con 3 o más habitaciones?',
+      type: 'boolean',
+      description: 'Si está desactivado, el wizard avisará que la cocina no entra cuando el cliente elige 3+ habitaciones.',
+      initialValue: true,
+    }),
+    defineField({
+      name: 'configuracionesValidas',
+      title: 'Configuraciones válidas (avanzado, opcional)',
+      type: 'array',
+      description: 'Lista explícita de combinaciones posibles. Si se completa, tiene prioridad sobre los campos anteriores.',
+      of: [
+        {
+          type: 'object',
+          fields: [
+            defineField({ name: 'habitaciones', title: 'Habitaciones', type: 'number' }),
+            defineField({ name: 'cocina', title: 'Incluye cocina', type: 'boolean' }),
+            defineField({ name: 'banio', title: 'Incluye baño', type: 'boolean' }),
+          ],
+          preview: {
+            select: { habitaciones: 'habitaciones', cocina: 'cocina', banio: 'banio' },
+            prepare({ habitaciones, cocina, banio }: { habitaciones?: number; cocina?: boolean; banio?: boolean }) {
+              const parts = [`${habitaciones ?? '?'} hab.`, cocina ? 'con cocina' : 'sin cocina', banio ? 'con baño' : 'sin baño'];
+              return { title: parts.join(', ') };
+            },
+          },
+        },
+      ],
+    }),
+    defineField({
+      name: 'video',
+      title: 'Video del modelo',
+      type: 'object',
+      description: 'URL de YouTube, Vimeo o video directo (.mp4). Se muestra antes que las fotos.',
+      fields: [
+        defineField({
+          name: 'url',
+          title: 'URL del video',
+          type: 'url',
+          validation: (Rule) => Rule.required(),
+        }),
+        defineField({
+          name: 'label',
+          title: 'Etiqueta',
+          type: 'string',
+          initialValue: 'Video del modelo',
+        }),
+      ],
+    }),
+    defineField({
+      name: 'virtualTour',
+      title: 'Tour virtual 360° (URL)',
+      type: 'url',
+      description: 'URL de Matterport, Google Street View u otro recorrido virtual embebible.',
     }),
     defineField({
       name: 'specs',
