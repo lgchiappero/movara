@@ -1,10 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { REGIONAL_MODELS, PROVINCIA_A_MODELO, PROVINCIAS_AR, getModeloKey } from "@/data/regional-models";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
+import {
+  validateField,
+  particularSchema,
+  empresaSchema,
+  nombreSchema,
+  razonSocialSchema,
+  telefonoSchema,
+  emailSchema,
+  localidadSchema,
+  sanitizarLinea,
+  normalizarTelefono,
+  sanitizarMensaje,
+} from "@/lib/validators/configurador";
 
 // ─────────────────────────────────────────────────────────
 // Constants
@@ -157,10 +170,6 @@ const LABELS_LAVA: Record<TipoLavarropas, string> = {
   externo: "espacio externo con desagüe",
 };
 
-function isValidEmail(e: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
-}
-
 function buildWAMessage(params: {
   modelo: ModeloKey;
   finalidad: FinalidadKey;
@@ -183,7 +192,13 @@ function buildWAMessage(params: {
 }): string {
   const m = MOVARA_MODELS.find((x) => x.key === params.modelo)!;
   const f = FINALIDADES.find((x) => x.key === params.finalidad)!;
-  const loc = [params.localidad.trim(), params.provincia].filter(Boolean).join(", ");
+
+  // Sanitize all user-provided fields before composing the message
+  const clienteNombre = sanitizarLinea(params.tipoCliente === "particular" ? params.nombre : params.razonSocial);
+  const contacto = sanitizarLinea(params.nombreContacto);
+  const tel = normalizarTelefono(params.telefono);
+  const mail = sanitizarLinea(params.email).toLowerCase();
+  const loc = [sanitizarLinea(params.localidad), params.provincia].filter(Boolean).join(", ");
 
   const cocinaTxt = params.incluyeCocina
     ? `cocina con ${params.tipoCocina === "electrico" ? "anafe eléctrico" : "preparación gas"}`
@@ -197,14 +212,12 @@ function buildWAMessage(params: {
     .map((k) => allUpgrades.find((u) => u.key === k)?.nombre)
     .filter(Boolean);
 
-  const clienteNombre = params.tipoCliente === "particular" ? params.nombre : params.razonSocial;
-
-  return (
+  const msg =
     `Hola MOVARA! 👋\n\n` +
     `👤 Cliente: ${clienteNombre}\n` +
-    (params.tipoCliente === "empresa" ? `🏢 Contacto: ${params.nombreContacto}\n` : "") +
-    `📞 Teléfono: ${params.telefono}\n` +
-    `📧 Email: ${params.email}\n\n` +
+    (params.tipoCliente === "empresa" ? `🏢 Contacto: ${contacto}\n` : "") +
+    `📞 Teléfono: ${tel}\n` +
+    `📧 Email: ${mail}\n\n` +
     `📦 Modelo: ${m.nombre} — ${m.superficie}m²\n` +
     `🎯 Uso: ${f.label}\n` +
     `📍 Ubicación: ${loc || "(no especificada)"}\n` +
@@ -213,8 +226,9 @@ function buildWAMessage(params: {
       ? `⚙️ Mejoras a cotizar: ${selectedUpgradeNames.join(", ")}\n`
       : `⚙️ Zona climática: ${regional?.region ?? params.regionalKey}\n`) +
     `💰 Precio base estimado: USD ${m.precio.min.toLocaleString("es-AR")} – ${m.precio.max.toLocaleString("es-AR")}\n\n` +
-    `Quedo a la espera de su presupuesto. Gracias!`
-  );
+    `Quedo a la espera de su presupuesto. Gracias!`;
+
+  return sanitizarMensaje(msg, 1500);
 }
 
 // ─────────────────────────────────────────────────────────
@@ -298,8 +312,8 @@ export default function ConfiguradorMovara({
 
   const step6Valid =
     tipoCliente === "particular"
-      ? nombre.trim() !== "" && telefono.trim() !== "" && isValidEmail(email)
-      : razonSocial.trim() !== "" && nombreContacto.trim() !== "" && telefono.trim() !== "" && isValidEmail(email);
+      ? particularSchema.safeParse({ nombre: nombre.trim(), telefono, email: email.trim() }).success
+      : empresaSchema.safeParse({ razonSocial: razonSocial.trim(), nombreContacto: nombreContacto.trim(), telefono, email: email.trim() }).success;
 
   const canNext =
     (step === 1 && modelo !== null) ||
@@ -606,6 +620,19 @@ function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, regio
   localidadLabel: string;
   provinciaLabel: string;
 }) {
+  const [locTouched, setLocTouched] = useState(false);
+  const locError = locTouched && localidad.trim() !== ""
+    ? validateField(localidadSchema, localidad.trim())
+    : null;
+  const locIsValid = localidad.trim() !== "" && !validateField(localidadSchema, localidad.trim());
+
+  function locCls() {
+    const base = "w-full px-4 py-3 rounded-xl border-2 outline-none text-stone-900 text-sm placeholder:text-stone-400 transition-all bg-white";
+    if (!locTouched || localidad.trim() === "") return `${base} border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20`;
+    if (locError) return `${base} border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-400/20`;
+    return `${base} border-green-400 focus:border-green-500 focus:ring-2 focus:ring-green-400/20`;
+  }
+
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 3 de 7</p>
@@ -613,8 +640,26 @@ function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, regio
       <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
       <div className="space-y-5">
         <div>
-          <label htmlFor="cfg-localidad" className="block text-sm font-semibold text-stone-700 mb-1.5">{localidadLabel}</label>
-          <input id="cfg-localidad" type="text" value={localidad} onChange={(e) => setLocalidad(e.target.value)} placeholder="Ej: Rosario, Mendoza, Bariloche…" maxLength={100} className="w-full px-4 py-3 rounded-xl border border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20 outline-none text-stone-900 text-sm placeholder:text-stone-400 transition-colors bg-white" />
+          <label htmlFor="cfg-localidad" className="block text-sm font-semibold text-stone-700 mb-1.5">
+            {localidadLabel}
+            {locIsValid && <span className="ml-1.5 text-green-500 text-xs">✓</span>}
+          </label>
+          <input
+            id="cfg-localidad"
+            type="text"
+            value={localidad}
+            onChange={(e) => setLocalidad(e.target.value)}
+            onBlur={() => { setLocTouched(true); setLocalidad(localidad.trim()); }}
+            placeholder="Ej: Rosario, Mendoza, Bariloche…"
+            maxLength={100}
+            autoComplete="address-level2"
+            className={locCls()}
+          />
+          {locError && (
+            <p className="text-xs text-red-500 mt-1.5 flex items-start gap-1">
+              <span className="shrink-0 mt-px">⚠</span>{locError}
+            </p>
+          )}
         </div>
         <div>
           <label htmlFor="cfg-provincia" className="block text-sm font-semibold text-stone-700 mb-1.5">{provinciaLabel} <span className="text-sage-500">*</span></label>
@@ -861,7 +906,26 @@ function StepMejoras({ regionalKey, regional, modelo, upgradesSeleccionados, onT
 // Step 6 — Tus datos
 // ─────────────────────────────────────────────────────────
 
-const INPUT_CLS = "w-full px-4 py-3 rounded-xl border border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20 outline-none text-stone-900 text-sm placeholder:text-stone-400 transition-colors bg-white";
+const INPUT_BASE =
+  "w-full px-4 py-3 rounded-xl border-2 outline-none text-stone-900 text-sm placeholder:text-stone-400 transition-all bg-white";
+
+function inputCls(error: string | null, isDirty: boolean): string {
+  if (!isDirty)
+    return `${INPUT_BASE} border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20`;
+  if (error)
+    return `${INPUT_BASE} border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-400/20`;
+  return `${INPUT_BASE} border-green-400 focus:border-green-500 focus:ring-2 focus:ring-green-400/20`;
+}
+
+function FieldError({ msg }: { msg: string | null }) {
+  if (!msg) return null;
+  return (
+    <p className="text-xs text-red-500 mt-1.5 flex items-start gap-1">
+      <span className="shrink-0 mt-px">⚠</span>
+      {msg}
+    </p>
+  );
+}
 
 function StepDatos({
   tipoCliente, setTipoCliente,
@@ -879,8 +943,26 @@ function StepDatos({
   telefono: string; setTelefono: (v: string) => void;
   email: string; setEmail: (v: string) => void;
 }) {
-  const emailTouched = email.length > 0;
-  const emailValid = isValidEmail(email);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Reset touched state when switching client type
+  useEffect(() => {
+    setTouched({});
+  }, [tipoCliente]);
+
+  function touch(field: string) {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  }
+
+  const errors = {
+    nombre: validateField(nombreSchema, nombre.trim()),
+    razonSocial: validateField(razonSocialSchema, razonSocial.trim()),
+    nombreContacto: validateField(nombreSchema, nombreContacto.trim()),
+    telefono: validateField(telefonoSchema, telefono),
+    email: validateField(emailSchema, email.trim()),
+  };
+
+  const req = <span className="text-sage-500">*</span>;
 
   return (
     <div>
@@ -889,7 +971,6 @@ function StepDatos({
       <p className="text-stone-500 text-sm mb-6">Completá tus datos para que podamos preparar tu presupuesto personalizado.</p>
 
       <div className="space-y-4">
-        {/* Tipo de cliente */}
         <Section title="Tipo de cliente">
           <Field label="¿Cómo consultás?">
             <ToggleGroup<TipoCliente>
@@ -903,87 +984,101 @@ function StepDatos({
           </Field>
         </Section>
 
-        {/* Campos según tipo */}
         {tipoCliente === "particular" ? (
           <Section title="Datos personales">
-            <Field label={<>Nombre y apellido <span className="text-sage-500">*</span></>}>
+            <Field label={<>Nombre y apellido {req}</>}>
               <input
                 type="text"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
+                onBlur={() => { touch("nombre"); setNombre(nombre.trim()); }}
                 placeholder="Ej: Juan García"
                 maxLength={100}
-                className={INPUT_CLS}
+                autoComplete="name"
+                className={inputCls(errors.nombre, !!touched.nombre)}
               />
+              <FieldError msg={touched.nombre ? errors.nombre : null} />
             </Field>
-            <Field label={<>Teléfono de contacto <span className="text-sage-500">*</span></>}>
+            <Field label={<>Teléfono de contacto {req}</>}>
               <input
                 type="tel"
                 value={telefono}
                 onChange={(e) => setTelefono(e.target.value)}
+                onBlur={() => touch("telefono")}
                 placeholder="Ej: +54 9 11 1234-5678"
-                maxLength={30}
-                className={INPUT_CLS}
+                maxLength={20}
+                autoComplete="tel"
+                className={inputCls(errors.telefono, !!touched.telefono)}
               />
+              <FieldError msg={touched.telefono ? errors.telefono : null} />
             </Field>
-            <Field label={<>Email <span className="text-sage-500">*</span></>}>
+            <Field label={<>Email {req}</>}>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => { touch("email"); setEmail(email.trim().toLowerCase()); }}
                 placeholder="tu@email.com"
-                maxLength={150}
-                className={`${INPUT_CLS} ${emailTouched && !emailValid ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""}`}
+                maxLength={254}
+                autoComplete="email"
+                className={inputCls(errors.email, !!touched.email)}
               />
-              {emailTouched && !emailValid && (
-                <p className="text-xs text-red-500 mt-1">Ingresá un email válido</p>
-              )}
+              <FieldError msg={touched.email ? errors.email : null} />
             </Field>
           </Section>
         ) : (
           <Section title="Datos de la empresa">
-            <Field label={<>Razón social <span className="text-sage-500">*</span></>}>
+            <Field label={<>Razón social {req}</>}>
               <input
                 type="text"
                 value={razonSocial}
                 onChange={(e) => setRazonSocial(e.target.value)}
+                onBlur={() => { touch("razonSocial"); setRazonSocial(razonSocial.trim()); }}
                 placeholder="Ej: Constructora Ejemplo S.A."
                 maxLength={150}
-                className={INPUT_CLS}
+                autoComplete="organization"
+                className={inputCls(errors.razonSocial, !!touched.razonSocial)}
               />
+              <FieldError msg={touched.razonSocial ? errors.razonSocial : null} />
             </Field>
-            <Field label={<>Nombre de contacto <span className="text-sage-500">*</span></>}>
+            <Field label={<>Nombre de contacto {req}</>}>
               <input
                 type="text"
                 value={nombreContacto}
                 onChange={(e) => setNombreContacto(e.target.value)}
+                onBlur={() => { touch("nombreContacto"); setNombreContacto(nombreContacto.trim()); }}
                 placeholder="Ej: María López"
                 maxLength={100}
-                className={INPUT_CLS}
+                autoComplete="name"
+                className={inputCls(errors.nombreContacto, !!touched.nombreContacto)}
               />
+              <FieldError msg={touched.nombreContacto ? errors.nombreContacto : null} />
             </Field>
-            <Field label={<>Teléfono de contacto <span className="text-sage-500">*</span></>}>
+            <Field label={<>Teléfono de contacto {req}</>}>
               <input
                 type="tel"
                 value={telefono}
                 onChange={(e) => setTelefono(e.target.value)}
+                onBlur={() => touch("telefono")}
                 placeholder="Ej: +54 9 11 1234-5678"
-                maxLength={30}
-                className={INPUT_CLS}
+                maxLength={20}
+                autoComplete="tel"
+                className={inputCls(errors.telefono, !!touched.telefono)}
               />
+              <FieldError msg={touched.telefono ? errors.telefono : null} />
             </Field>
-            <Field label={<>Email <span className="text-sage-500">*</span></>}>
+            <Field label={<>Email {req}</>}>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => { touch("email"); setEmail(email.trim().toLowerCase()); }}
                 placeholder="contacto@empresa.com"
-                maxLength={150}
-                className={`${INPUT_CLS} ${emailTouched && !emailValid ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""}`}
+                maxLength={254}
+                autoComplete="email"
+                className={inputCls(errors.email, !!touched.email)}
               />
-              {emailTouched && !emailValid && (
-                <p className="text-xs text-red-500 mt-1">Ingresá un email válido</p>
-              )}
+              <FieldError msg={touched.email ? errors.email : null} />
             </Field>
           </Section>
         )}
