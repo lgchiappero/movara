@@ -95,13 +95,13 @@ export default async function Footer() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link href="/" className="inline-flex items-center gap-3 mb-5">
+            <Link href="/" className="inline-flex items-center gap-2.5 mb-5">
               <Image src="/Icono.jpeg" alt="" height={48} width={48} className="h-12 w-auto object-contain" />
-              <div className="flex flex-col leading-none gap-1">
-                <span className="text-2xl font-bold tracking-tight" style={{ color: "#D4B06A", fontFamily: "var(--font-montserrat)" }}>
+              <div className="flex flex-col leading-none gap-[3px]">
+                <span style={{ fontFamily: "var(--font-montserrat)", fontWeight: 700, fontSize: "2.25rem", color: "#D4B06A", lineHeight: 1, letterSpacing: "-0.01em" }}>
                   MOVARA
                 </span>
-                <span className="text-xs tracking-widest uppercase" style={{ color: "#D4B06A", fontFamily: "var(--font-montserrat)", fontWeight: 400 }}>
+                <span style={{ fontFamily: "var(--font-montserrat)", fontWeight: 400, fontSize: "0.6rem", color: "#D4B06A", letterSpacing: "0.3em", textTransform: "uppercase", lineHeight: 1 }}>
                   Espacios Modulares
                 </span>
               </div>
