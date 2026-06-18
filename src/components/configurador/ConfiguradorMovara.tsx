@@ -4,8 +4,6 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { REGIONAL_MODELS, PROVINCIA_A_MODELO, PROVINCIAS_AR } from "@/data/regional-models";
-import Navbar from "@/components/home/Navbar";
-import Footer from "@/components/home/Footer";
 
 // ─────────────────────────────────────────────────────────
 // Data
@@ -41,43 +39,43 @@ const FINALIDADES = [
     key: "inversor",
     emoji: "💰",
     label: "Inversor",
-    subdesc: "Airbnb, renta, glamping",
     desc: "Transformá capital en renta en semanas",
+    subdesc: "Airbnb, renta, glamping",
   },
   {
     key: "agro",
     emoji: "🌾",
     label: "Agro / Campo",
-    subdesc: "Vivienda o infraestructura rural",
     desc: "Infraestructura lista para tu campo, sin meses de obra",
+    subdesc: "Vivienda o infraestructura rural",
   },
   {
     key: "vivienda",
     emoji: "🏠",
     label: "Primera vivienda",
-    subdesc: "Tu hogar propio",
     desc: "Una nueva forma de habitar",
+    subdesc: "Tu hogar propio",
   },
   {
     key: "turismo",
     emoji: "🏕️",
     label: "Turismo y hospitalidad",
-    subdesc: "Eco resort, glamping",
     desc: "Eco resort, glamping o expansión rápida",
+    subdesc: "Eco resort, glamping",
   },
   {
     key: "empresa",
     emoji: "💼",
     label: "Empresa / B2B",
-    subdesc: "Corporativo o industrial",
     desc: "Oficinas, campamentos o infraestructura corporativa",
+    subdesc: "Corporativo o industrial",
   },
   {
     key: "sector-publico",
     emoji: "🏛️",
     label: "Sector público",
-    subdesc: "Municipal o social",
     desc: "Vivienda social o infraestructura municipal",
+    subdesc: "Municipal o social",
   },
 ] as const;
 
@@ -113,21 +111,14 @@ function buildWAMessage(
 }
 
 // ─────────────────────────────────────────────────────────
-// Main
+// Main component
 // ─────────────────────────────────────────────────────────
 
 const STEP_LABELS = ["Modelo", "Finalidad", "Ubicación"] as const;
 
-const fadeSlide = (dir: 1 | -1) => ({
-  initial: { opacity: 0, x: dir * 24 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: dir * -24 },
-  transition: { duration: 0.22, ease: "easeOut" as const },
-});
-
 export default function ConfiguradorMovara() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [dir, setDir] = useState<1 | -1>(1);
+  const [slideDir, setSlideDir] = useState<1 | -1>(1);
   const [modelo, setModelo] = useState<ModeloKey | null>(null);
   const [finalidad, setFinalidad] = useState<FinalidadKey | null>(null);
   const [localidad, setLocalidad] = useState("");
@@ -136,14 +127,14 @@ export default function ConfiguradorMovara() {
   const [waMessage, setWaMessage] = useState("");
 
   const canNext =
-    (step === 1 && !!modelo) ||
-    (step === 2 && !!finalidad) ||
-    (step === 3 && !!provincia);
+    (step === 1 && modelo !== null) ||
+    (step === 2 && finalidad !== null) ||
+    (step === 3 && provincia !== "");
 
   function goNext() {
     if (step < 3) {
-      setDir(1);
-      setStep((s) => (s + 1) as 1 | 2 | 3);
+      setSlideDir(1);
+      setStep((s) => (s + 1) as 2 | 3);
     } else {
       const msg = buildWAMessage(modelo!, finalidad!, localidad, provincia);
       setWaMessage(msg);
@@ -155,8 +146,8 @@ export default function ConfiguradorMovara() {
     if (showResult) {
       setShowResult(false);
     } else {
-      setDir(-1);
-      setStep((s) => Math.max(1, s - 1) as 1 | 2 | 3);
+      setSlideDir(-1);
+      setStep((s) => Math.max(1, s - 1) as 1 | 2);
     }
   }
 
@@ -172,132 +163,143 @@ export default function ConfiguradorMovara() {
   const regionalKey = provincia ? (PROVINCIA_A_MODELO[provincia] ?? "pampa") : null;
   const regional = regionalKey ? REGIONAL_MODELS[regionalKey] : null;
 
-  return (
-    <>
-      <Navbar />
+  if (showResult) {
+    return (
       <main className="min-h-screen bg-stone-50 pt-16">
-        {/* Page header */}
-        <div className="bg-sage-950 px-6 pt-14 pb-10">
-          <div className="max-w-2xl mx-auto text-center">
-            <span className="inline-block text-sage-400 text-xs font-semibold uppercase tracking-[0.2em] mb-3">
-              Configurador
-            </span>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
-              Diseñá tu MOVARA
-            </h1>
-            <p className="text-stone-400 mt-3 text-sm leading-relaxed max-w-sm mx-auto">
-              Tres pasos para encontrar el módulo ideal y recibir un presupuesto personalizado.
-            </p>
+        <div className="bg-sage-950 px-6 pt-14 pb-10 text-center">
+          <span className="text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">
+            Tu configuración
+          </span>
+          <h1 className="text-3xl font-bold text-white mt-2">Listo. Así queda tu MOVARA.</h1>
+          <p className="text-stone-400 mt-2 text-sm">
+            Revisá el mensaje y enviánoslo por WhatsApp para arrancar.
+          </p>
+        </div>
+        <div className="max-w-2xl mx-auto px-6 py-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ResultScreen
+              modelo={modelo!}
+              finalidad={finalidad!}
+              localidad={localidad}
+              provincia={provincia}
+              regional={regional}
+              waMessage={waMessage}
+              setWaMessage={setWaMessage}
+              onBack={goBack}
+              onSend={handleSendWA}
+            />
+          </motion.div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-stone-50 pt-16">
+      {/* Page header */}
+      <div className="bg-sage-950 px-6 pt-14 pb-10 text-center">
+        <span className="text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">
+          Configurador
+        </span>
+        <h1 className="text-3xl sm:text-4xl font-bold text-white mt-2 tracking-tight">
+          Diseñá tu MOVARA
+        </h1>
+        <p className="text-stone-400 mt-2 text-sm">
+          Tres pasos para encontrar el módulo ideal y recibir un presupuesto por WhatsApp.
+        </p>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-6 py-10">
+        {/* Progress bar */}
+        <div className="mb-10">
+          <div className="flex gap-1.5 mb-3">
+            {([1, 2, 3] as const).map((n) => (
+              <div key={n} className="flex-1 h-1.5 rounded-full bg-stone-200 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-sage-500 transition-all duration-500"
+                  style={{ width: n <= step ? "100%" : "0%" }}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between">
+            {STEP_LABELS.map((label, i) => (
+              <span
+                key={label}
+                className={`text-xs font-semibold transition-colors ${
+                  i + 1 <= step ? "text-sage-600" : "text-stone-400"
+                }`}
+              >
+                {label}
+              </span>
+            ))}
           </div>
         </div>
 
-        <div className="max-w-2xl mx-auto px-6 py-10">
-          <AnimatePresence mode="wait">
-            {!showResult ? (
-              <motion.div key="steps" initial={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                {/* Progress */}
-                <div className="mb-10">
-                  <div className="flex gap-1.5 mb-3">
-                    {([1, 2, 3] as const).map((n) => (
-                      <div key={n} className="flex-1 h-1.5 rounded-full overflow-hidden bg-stone-200">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            n <= step ? "bg-sage-500 w-full" : "w-0"
-                          }`}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex justify-between">
-                    {STEP_LABELS.map((label, i) => (
-                      <span
-                        key={label}
-                        className={`text-xs font-semibold transition-colors ${
-                          i + 1 <= step ? "text-sage-600" : "text-stone-400"
-                        }`}
-                      >
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Step content */}
-                <AnimatePresence mode="wait">
-                  <motion.div key={step} {...fadeSlide(dir)}>
-                    {step === 1 && (
-                      <StepModelo modelo={modelo} onSelect={setModelo} onNext={goNext} />
-                    )}
-                    {step === 2 && (
-                      <StepFinalidad finalidad={finalidad} onSelect={setFinalidad} onNext={goNext} />
-                    )}
-                    {step === 3 && (
-                      <StepUbicacion
-                        localidad={localidad}
-                        setLocalidad={setLocalidad}
-                        provincia={provincia}
-                        setProvincia={setProvincia}
-                        regional={regional}
-                      />
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-
-                {/* Navigation */}
-                <div className="flex items-center justify-between mt-10 pt-6 border-t border-stone-200">
-                  {step > 1 ? (
-                    <button
-                      onClick={goBack}
-                      className="flex items-center gap-1.5 px-4 py-2.5 text-stone-500 hover:text-stone-800 text-sm font-semibold transition-colors"
-                    >
-                      <ChevronLeftIcon />
-                      Atrás
-                    </button>
-                  ) : (
-                    <Link
-                      href="/"
-                      className="flex items-center gap-1.5 px-4 py-2.5 text-stone-400 hover:text-stone-600 text-sm font-semibold transition-colors"
-                    >
-                      <ChevronLeftIcon />
-                      Inicio
-                    </Link>
-                  )}
-
-                  <button
-                    onClick={goNext}
-                    disabled={!canNext}
-                    className="flex items-center gap-2 px-8 py-3 bg-sage-600 hover:bg-sage-700 disabled:opacity-35 disabled:cursor-not-allowed text-white text-sm font-bold rounded-full transition-all duration-200 hover:shadow-lg hover:shadow-sage-600/25 hover:-translate-y-px"
-                  >
-                    {step === 3 ? "Ver mi configuración" : "Siguiente"}
-                    <ChevronRightIcon />
-                  </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="result"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <ResultScreen
-                  modelo={modelo!}
-                  finalidad={finalidad!}
-                  localidad={localidad}
-                  provincia={provincia}
-                  regional={regional}
-                  waMessage={waMessage}
-                  setWaMessage={setWaMessage}
-                  onBack={goBack}
-                  onSend={handleSendWA}
-                />
-              </motion.div>
+        {/* Step content — keyed for enter/exit animation */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: slideDir * 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: slideDir * -30 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            {step === 1 && (
+              <StepModelo modelo={modelo} onSelect={setModelo} />
             )}
-          </AnimatePresence>
+            {step === 2 && (
+              <StepFinalidad finalidad={finalidad} onSelect={setFinalidad} />
+            )}
+            {step === 3 && (
+              <StepUbicacion
+                localidad={localidad}
+                setLocalidad={setLocalidad}
+                provincia={provincia}
+                setProvincia={setProvincia}
+                regional={regional}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between mt-10 pt-6 border-t border-stone-200">
+          {step > 1 ? (
+            <button
+              type="button"
+              onClick={goBack}
+              className="flex items-center gap-1.5 px-4 py-2.5 text-stone-500 hover:text-stone-800 text-sm font-semibold transition-colors"
+            >
+              <ChevronLeftIcon />
+              Atrás
+            </button>
+          ) : (
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 px-4 py-2.5 text-stone-400 hover:text-stone-600 text-sm font-semibold transition-colors"
+            >
+              <ChevronLeftIcon />
+              Inicio
+            </Link>
+          )}
+
+          <button
+            type="button"
+            onClick={goNext}
+            disabled={!canNext}
+            className="flex items-center gap-2 px-8 py-3 bg-sage-600 hover:bg-sage-700 disabled:opacity-35 disabled:cursor-not-allowed text-white text-sm font-bold rounded-full transition-all duration-200 hover:shadow-lg hover:shadow-sage-600/25 hover:-translate-y-px"
+          >
+            {step === 3 ? "Ver mi configuración" : "Siguiente"}
+            <ChevronRightIcon />
+          </button>
         </div>
-      </main>
-      <Footer />
-    </>
+      </div>
+    </main>
   );
 }
 
@@ -308,11 +310,9 @@ export default function ConfiguradorMovara() {
 function StepModelo({
   modelo,
   onSelect,
-  onNext,
 }: {
   modelo: ModeloKey | null;
   onSelect: (k: ModeloKey) => void;
-  onNext: () => void;
 }) {
   return (
     <div>
@@ -330,11 +330,9 @@ function StepModelo({
           return (
             <button
               key={m.key}
-              onClick={() => {
-                onSelect(m.key);
-              }}
-              onDoubleClick={onNext}
-              className={`w-full text-left rounded-2xl border-2 p-5 transition-all duration-200 group ${
+              type="button"
+              onClick={() => onSelect(m.key)}
+              className={`w-full text-left rounded-2xl border-2 p-5 transition-all duration-200 group cursor-pointer ${
                 selected
                   ? "border-sage-500 bg-sage-50 shadow-md shadow-sage-500/10"
                   : "border-stone-200 bg-white hover:border-sage-300 hover:shadow-sm"
@@ -350,7 +348,7 @@ function StepModelo({
                     >
                       {m.nombre}
                     </span>
-                    {"badge" in m && m.badge && (
+                    {"badge" in m && (
                       <span className="px-2 py-0.5 bg-sage-600 text-white text-[10px] font-bold uppercase tracking-wide rounded-full">
                         {m.badge}
                       </span>
@@ -361,7 +359,6 @@ function StepModelo({
                   </p>
                 </div>
 
-                {/* Visual */}
                 <div
                   className={`shrink-0 flex flex-col items-center justify-center rounded-xl w-20 py-3 transition-colors ${
                     selected ? "bg-sage-100" : "bg-stone-100 group-hover:bg-sage-50"
@@ -369,7 +366,9 @@ function StepModelo({
                 >
                   <ModuleIcon size={m.key} selected={selected} />
                   <span
-                    className={`text-lg font-bold mt-1 ${selected ? "text-sage-700" : "text-stone-700"}`}
+                    className={`text-lg font-bold mt-1 ${
+                      selected ? "text-sage-700" : "text-stone-700"
+                    }`}
                   >
                     {m.superficie}m²
                   </span>
@@ -378,7 +377,9 @@ function StepModelo({
 
               <div className="mt-4 flex items-center justify-between">
                 <span
-                  className={`text-xs font-semibold ${selected ? "text-sage-600" : "text-stone-400"}`}
+                  className={`text-xs font-semibold ${
+                    selected ? "text-sage-600" : "text-stone-400"
+                  }`}
                 >
                   USD {m.precio.min.toLocaleString("es-AR")} –{" "}
                   {m.precio.max.toLocaleString("es-AR")}
@@ -404,11 +405,9 @@ function StepModelo({
 function StepFinalidad({
   finalidad,
   onSelect,
-  onNext,
 }: {
   finalidad: FinalidadKey | null;
   onSelect: (k: FinalidadKey) => void;
-  onNext: () => void;
 }) {
   return (
     <div>
@@ -426,11 +425,9 @@ function StepFinalidad({
           return (
             <button
               key={f.key}
-              onClick={() => {
-                onSelect(f.key);
-              }}
-              onDoubleClick={onNext}
-              className={`text-left rounded-xl border-2 p-4 transition-all duration-200 ${
+              type="button"
+              onClick={() => onSelect(f.key)}
+              className={`text-left rounded-xl border-2 p-4 transition-all duration-200 cursor-pointer ${
                 selected
                   ? "border-sage-500 bg-sage-50 shadow-md shadow-sage-500/10"
                   : "border-stone-200 bg-white hover:border-sage-300 hover:shadow-sm"
@@ -444,7 +441,11 @@ function StepFinalidad({
               >
                 {f.label}
               </p>
-              <p className={`text-xs mt-1 leading-snug ${selected ? "text-stone-600" : "text-stone-400"}`}>
+              <p
+                className={`text-xs mt-1 leading-snug ${
+                  selected ? "text-stone-600" : "text-stone-400"
+                }`}
+              >
                 {f.desc}
               </p>
               {selected && (
@@ -484,16 +485,19 @@ function StepUbicacion({
       </p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">¿Dónde lo instalás?</h2>
       <p className="text-stone-500 text-sm mb-8">
-        Cada zona del país tiene requerimientos técnicos distintos. Lo calculamos automáticamente.
+        Cada zona del país tiene requerimientos técnicos distintos. Los calculamos automáticamente.
       </p>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div>
-          <label htmlFor="localidad" className="block text-sm font-semibold text-stone-700 mb-1.5">
+          <label
+            htmlFor="cfg-localidad"
+            className="block text-sm font-semibold text-stone-700 mb-1.5"
+          >
             Localidad
           </label>
           <input
-            id="localidad"
+            id="cfg-localidad"
             type="text"
             value={localidad}
             onChange={(e) => setLocalidad(e.target.value)}
@@ -504,11 +508,14 @@ function StepUbicacion({
         </div>
 
         <div>
-          <label htmlFor="provincia" className="block text-sm font-semibold text-stone-700 mb-1.5">
+          <label
+            htmlFor="cfg-provincia"
+            className="block text-sm font-semibold text-stone-700 mb-1.5"
+          >
             Provincia <span className="text-sage-600">*</span>
           </label>
           <select
-            id="provincia"
+            id="cfg-provincia"
             value={provincia}
             onChange={(e) => setProvincia(e.target.value)}
             className="w-full px-4 py-3 rounded-xl border border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20 outline-none text-stone-900 text-sm transition-colors bg-white"
@@ -523,13 +530,15 @@ function StepUbicacion({
         </div>
 
         {/* Climate preview */}
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
           {regional && (
             <motion.div
+              key={regional.key}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="mt-2 rounded-xl border border-sage-200 bg-sage-50 p-4"
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2 }}
+              className="rounded-xl border border-sage-200 bg-sage-50 p-4"
             >
               <div className="flex items-start gap-3">
                 <span className="text-2xl shrink-0">{regional.icon}</span>
@@ -591,19 +600,6 @@ function ResultScreen({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-sage-600 mb-2">
-          Tu configuración
-        </p>
-        <h2 className="text-2xl font-bold text-stone-900">
-          Listo. Así queda tu MOVARA.
-        </h2>
-        <p className="text-stone-500 text-sm mt-1">
-          Revisá el mensaje y enviánoslo por WhatsApp para arrancar.
-        </p>
-      </div>
-
       {/* Summary chips */}
       <div className="flex flex-wrap gap-2">
         <Chip icon="📦" text={`${m.nombre} — ${m.superficie}m²`} />
@@ -629,9 +625,9 @@ function ResultScreen({
       {regional && (
         <div className="rounded-xl border border-stone-200 bg-white p-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-3">
-            Upgrades climáticos incluidos — {regional.region}
+            Upgrades climáticos — {regional.region}
           </p>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {[
               { label: "Panel", value: regional.panel },
               { label: "Ventanas", value: regional.ventanas },
@@ -658,7 +654,7 @@ function ResultScreen({
 
       {/* Editable WA message */}
       <div>
-        <label className="block text-sm font-semibold text-stone-700 mb-2">
+        <label className="block text-sm font-semibold text-stone-700 mb-1.5">
           Vista previa del mensaje de WhatsApp
         </label>
         <p className="text-xs text-stone-400 mb-2">Podés editarlo antes de enviar.</p>
@@ -671,8 +667,9 @@ function ResultScreen({
       </div>
 
       {/* CTAs */}
-      <div className="space-y-3">
+      <div className="space-y-3 pb-4">
         <button
+          type="button"
           onClick={onSend}
           className="w-full flex items-center justify-center gap-2.5 py-4 bg-[#25D366] hover:bg-[#1fba58] text-white font-bold text-sm rounded-xl transition-all duration-200 hover:shadow-xl hover:shadow-green-500/25 hover:-translate-y-0.5"
         >
@@ -680,6 +677,7 @@ function ResultScreen({
           Enviar por WhatsApp
         </button>
         <button
+          type="button"
           onClick={onBack}
           className="w-full py-3 border border-stone-200 hover:border-stone-300 text-stone-500 hover:text-stone-700 text-sm font-semibold rounded-xl transition-colors"
         >
@@ -691,7 +689,7 @@ function ResultScreen({
 }
 
 // ─────────────────────────────────────────────────────────
-// Small components
+// Micro components
 // ─────────────────────────────────────────────────────────
 
 function Chip({ icon, text }: { icon: string; text: string }) {
@@ -705,12 +703,17 @@ function Chip({ icon, text }: { icon: string; text: string }) {
 
 function ModuleIcon({ size, selected }: { size: ModeloKey; selected: boolean }) {
   const color = selected ? "#BF9A52" : "#a8a29e";
-  const widths = { "10ft": 28, "20ft": 44, "40ft": 60 };
+  const widths: Record<ModeloKey, number> = { "10ft": 28, "20ft": 44, "40ft": 60 };
   const w = widths[size];
   return (
     <svg width={w} height={28} viewBox={`0 0 ${w} 28`} fill="none">
       <rect x="1" y="6" width={w - 2} height="21" rx="2" stroke={color} strokeWidth="1.5" />
-      <polyline points={`1,6 ${w / 2},1 ${w - 1},6`} stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+      <polyline
+        points={`1,6 ${w / 2},1 ${w - 1},6`}
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
       {size !== "10ft" && (
         <line x1={w / 2} y1="6" x2={w / 2} y2="27" stroke={color} strokeWidth="1" />
       )}
@@ -728,7 +731,13 @@ function CheckIcon({ className }: { className?: string }) {
 
 function ChevronLeftIcon() {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+    <svg
+      className="w-4 h-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2.5}
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
     </svg>
   );
@@ -736,7 +745,13 @@ function ChevronLeftIcon() {
 
 function ChevronRightIcon() {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+    <svg
+      className="w-4 h-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2.5}
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
     </svg>
   );
