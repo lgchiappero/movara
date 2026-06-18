@@ -50,10 +50,10 @@ export default function WhyMovara({ data }: { data?: WhyMovaraData | null }) {
       : FALLBACK_PILLARS;
 
   return (
-    <section className="bg-sage-50 py-24">
+    <section className="bg-white py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="text-center mb-14">
-          <span className="text-sage-600 text-sm font-semibold uppercase tracking-widest">
+          <span className="text-sage-500 text-sm font-semibold uppercase tracking-widest">
             Por qué elegirnos
           </span>
           <h2 className="mt-3 text-4xl font-bold text-stone-900 tracking-tight">
@@ -70,7 +70,7 @@ export default function WhyMovara({ data }: { data?: WhyMovaraData | null }) {
               key={pillarTitle}
               className="bg-white rounded-2xl p-7 border border-sage-100 hover:border-sage-200 hover:shadow-xl hover:shadow-sage-900/5 transition-all duration-300 group"
             >
-              <div className="w-12 h-12 rounded-xl bg-sage-100 flex items-center justify-center text-sage-600 mb-5 group-hover:bg-sage-600 group-hover:text-white transition-colors duration-300">
+              <div className="w-12 h-12 rounded-xl bg-sage-100 flex items-center justify-center text-sage-500 mb-5 group-hover:bg-sage-500 group-hover:text-white transition-colors duration-300">
                 {icon}
               </div>
               <h3 className="font-bold text-stone-900 mb-2">{pillarTitle}</h3>

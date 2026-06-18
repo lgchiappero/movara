@@ -12,7 +12,7 @@ export default function SocialProof() {
         <dl className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-0 lg:divide-x lg:divide-stone-100">
           {STATS.map(({ value, label }) => (
             <div key={label} className="text-center lg:px-8">
-              <dt className="text-3xl font-bold text-sage-600 tracking-tight">{value}</dt>
+              <dt className="text-3xl font-bold text-sage-500 tracking-tight">{value}</dt>
               <dd className="mt-1 text-sm text-stone-500 font-medium">{label}</dd>
             </div>
           ))}

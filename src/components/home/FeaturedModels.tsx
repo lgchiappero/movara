@@ -69,7 +69,7 @@ export default function FeaturedModels({ data }: { data?: FeaturedModelsData | n
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-14">
           <div>
-            <span className="text-sage-600 text-sm font-semibold uppercase tracking-widest">
+            <span className="text-sage-500 text-sm font-semibold uppercase tracking-widest">
               Catálogo
             </span>
             <h2 className="mt-3 text-4xl font-bold text-stone-900 tracking-tight">
@@ -81,7 +81,7 @@ export default function FeaturedModels({ data }: { data?: FeaturedModelsData | n
           </div>
           <Link
             href="/modelos"
-            className="shrink-0 text-sm font-semibold text-stone-500 hover:text-sage-600 transition-colors"
+            className="shrink-0 text-sm font-semibold text-stone-500 hover:text-sage-500 transition-colors"
           >
             Ver catálogo completo →
           </Link>
@@ -91,7 +91,7 @@ export default function FeaturedModels({ data }: { data?: FeaturedModelsData | n
           {MODELS.map((model) => (
             <article
               key={model.slug}
-              className="group bg-white border border-stone-100 rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-stone-900/10 transition-all duration-300 hover:-translate-y-1"
+              className="group bg-white border border-[#E5E5E5] rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-sage-900/8 transition-all duration-300 hover:-translate-y-1"
             >
               {/* Image placeholder with gradient + SVG */}
               <div className={`relative h-52 bg-gradient-to-br ${model.gradient} flex items-end p-5`}>
@@ -133,7 +133,7 @@ export default function FeaturedModels({ data }: { data?: FeaturedModelsData | n
                 <div className="mt-6 grid grid-cols-2 gap-3">
                   <button
                     onClick={() => openWizard({ slug: model.slug, name: model.name, maxHabitaciones: model.maxHabitaciones, permiteCocinaSiMax3Hab: model.permiteCocinaSiMax3Hab })}
-                    className="px-4 py-2.5 bg-sage-600 hover:bg-sage-500 text-white text-sm font-semibold rounded-xl transition-colors text-center"
+                    className="px-4 py-2.5 bg-sage-500 hover:bg-sage-600 text-white text-sm font-semibold rounded-xl transition-colors text-center"
                   >
                     Me interesa
                   </button>

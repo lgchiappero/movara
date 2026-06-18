@@ -95,7 +95,7 @@ export default async function Footer() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-center gap-2.5 mb-5">
-              <div className="w-8 h-8 bg-sage-600 rounded-md flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 bg-sage-500 rounded-md flex items-center justify-center shrink-0">
                 <HouseIcon className="w-4 h-4 text-white" />
               </div>
               <span className="font-bold text-xl text-white tracking-tight">MOVARA</span>

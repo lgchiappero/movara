@@ -48,7 +48,7 @@ export default function CTAFinal({
         <div className="grid lg:grid-cols-2 gap-14 items-center">
           {/* Left — CTA copy */}
           <div>
-            <span className="text-sage-600 text-sm font-semibold uppercase tracking-widest">
+            <span className="text-sage-500 text-sm font-semibold uppercase tracking-widest">
               Empezá hoy
             </span>
             <h2 className="mt-3 text-4xl lg:text-5xl font-bold text-stone-900 tracking-tight leading-[1.1]">
@@ -92,7 +92,7 @@ export default function CTAFinal({
             {sent ? (
               <div className="flex flex-col items-center text-center py-8">
                 <div className="w-16 h-16 bg-sage-100 rounded-full flex items-center justify-center mb-5">
-                  <CheckIcon className="w-8 h-8 text-sage-600" />
+                  <CheckIcon className="w-8 h-8 text-sage-500" />
                 </div>
                 <h3 className="text-xl font-bold text-stone-900 mb-2">¡Mensaje enviado!</h3>
                 <p className="text-stone-500 text-sm">
@@ -100,7 +100,7 @@ export default function CTAFinal({
                 </p>
                 <button
                   onClick={() => setSent(false)}
-                  className="mt-6 text-sage-600 text-sm font-semibold hover:underline"
+                  className="mt-6 text-sage-500 text-sm font-semibold hover:underline"
                 >
                   Enviar otra consulta
                 </button>
@@ -166,7 +166,7 @@ export default function CTAFinal({
 
                   <button
                     type="submit"
-                    className="w-full flex items-center justify-center gap-2 bg-sage-600 hover:bg-sage-500 text-white font-semibold py-3.5 rounded-xl transition-colors duration-200 text-sm"
+                    className="w-full flex items-center justify-center gap-2 bg-sage-500 hover:bg-sage-600 text-white font-semibold py-3.5 rounded-xl transition-colors duration-200 text-sm"
                   >
                     <WhatsAppIcon />
                     Enviar por WhatsApp

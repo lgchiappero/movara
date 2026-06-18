@@ -15,33 +15,24 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const textClass = scrolled || menuOpen ? "text-stone-700" : "text-white/80";
-  const hoverClass = "hover:text-sage-600";
-
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled || menuOpen
-          ? "bg-white/96 backdrop-blur-md shadow-sm border-b border-stone-100"
-          : "bg-transparent"
+      className={`fixed top-0 left-0 right-0 z-50 bg-white transition-shadow duration-300 ${
+        scrolled ? "shadow-sm border-b border-stone-100" : "border-b border-stone-100"
       }`}
     >
       <nav className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-sage-600 rounded-md flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 bg-sage-500 rounded-md flex items-center justify-center shrink-0">
             <HouseIcon className="w-4 h-4 text-white" />
           </div>
-          <span
-            className={`font-bold text-xl tracking-tight transition-colors ${
-              scrolled || menuOpen ? "text-stone-900" : "text-white"
-            }`}
-          >
+          <span className="font-bold text-xl tracking-tight text-sage-500">
             MOVARA
           </span>
         </Link>
@@ -52,7 +43,7 @@ export default function Navbar() {
             <li key={label}>
               <Link
                 href={href}
-                className={`text-sm font-medium transition-colors ${textClass} ${hoverClass}`}
+                className="text-sm font-medium text-[#2F2F2F] hover:text-sage-500 transition-colors"
               >
                 {label}
               </Link>
@@ -64,7 +55,7 @@ export default function Navbar() {
         <div className="hidden md:block">
           <Link
             href="/modelos"
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-sage-600 hover:bg-sage-500 text-white text-sm font-semibold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-sage-600/20 hover:-translate-y-px"
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-sage-500 hover:bg-sage-600 text-white text-sm font-semibold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-sage-500/25 hover:-translate-y-px"
           >
             Ver modelos
           </Link>
@@ -74,11 +65,7 @@ export default function Navbar() {
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Menú"
-          className={`md:hidden p-2 rounded-md transition-colors ${
-            scrolled || menuOpen
-              ? "text-stone-700 hover:bg-stone-100"
-              : "text-white hover:bg-white/10"
-          }`}
+          className="md:hidden p-2 rounded-md text-stone-700 hover:bg-stone-100 transition-colors"
         >
           {menuOpen ? <XIcon /> : <MenuIcon />}
         </button>
@@ -92,7 +79,7 @@ export default function Navbar() {
               key={label}
               href={href}
               onClick={() => setMenuOpen(false)}
-              className="block py-2.5 text-stone-700 font-medium hover:text-sage-600 transition-colors"
+              className="block py-2.5 text-[#2F2F2F] font-medium hover:text-sage-500 transition-colors"
             >
               {label}
             </Link>
@@ -101,7 +88,7 @@ export default function Navbar() {
             <Link
               href="/modelos"
               onClick={() => setMenuOpen(false)}
-              className="block text-center px-5 py-3 bg-sage-600 text-white font-semibold rounded-xl"
+              className="block text-center px-5 py-3 bg-sage-500 hover:bg-sage-600 text-white font-semibold rounded-xl transition-colors"
             >
               Ver modelos
             </Link>

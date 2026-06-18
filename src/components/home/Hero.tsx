@@ -37,25 +37,26 @@ export default function Hero({ data }: { data?: HeroData | null }) {
   const stats = data?.stats?.length ? data.stats : FALLBACK_STATS;
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-sage-950">
+    <section className="relative min-h-screen flex items-center overflow-hidden bg-white">
       {/* Subtle dot grid */}
       <div
-        className="absolute inset-0 opacity-[0.06]"
+        className="absolute inset-0 opacity-[0.035]"
         style={{
-          backgroundImage: "radial-gradient(circle, #D4B06A 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(circle, #2F2F2F 1px, transparent 1px)",
           backgroundSize: "44px 44px",
         }}
       />
 
-      {/* Glow orbs */}
-      <div className="absolute top-0 right-0 w-2/3 h-2/3 bg-gradient-to-bl from-sage-700/20 via-transparent to-transparent pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[480px] h-[480px] bg-sage-800/20 rounded-full blur-3xl pointer-events-none" />
+      {/* Soft gold glow — top right */}
+      <div className="absolute top-0 right-0 w-[560px] h-[560px] bg-sage-100 rounded-full blur-[120px] opacity-60 pointer-events-none" />
+      {/* Soft gold glow — bottom left */}
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-sage-50 rounded-full blur-[100px] opacity-80 pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8 pt-28 pb-20 lg:py-0 grid lg:grid-cols-2 gap-12 lg:gap-20 items-center min-h-screen">
         {/* Copy */}
         <div>
           <motion.div {...fadeUp(0.05)}>
-            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sage-800/60 border border-sage-700/50 text-sage-400 text-sm font-medium mb-7">
+            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sage-100 border border-sage-200 text-sage-700 text-sm font-medium mb-7">
               <span className="w-1.5 h-1.5 rounded-full bg-sage-500 animate-pulse" />
               {badgeText}
             </span>
@@ -63,14 +64,14 @@ export default function Hero({ data }: { data?: HeroData | null }) {
 
           <motion.h1
             {...fadeUp(0.12)}
-            className="text-[2.75rem] sm:text-6xl lg:text-[4.5rem] font-bold text-white leading-[1.07] tracking-tight"
+            className="text-[2.75rem] sm:text-6xl lg:text-[4.5rem] font-bold text-[#2F2F2F] leading-[1.07] tracking-tight"
           >
             {title}
           </motion.h1>
 
           <motion.p
             {...fadeUp(0.2)}
-            className="mt-6 text-lg text-stone-400 leading-relaxed max-w-lg"
+            className="mt-6 text-lg text-stone-500 leading-relaxed max-w-lg"
           >
             {subtitle}
           </motion.p>
@@ -78,14 +79,14 @@ export default function Hero({ data }: { data?: HeroData | null }) {
           <motion.div {...fadeUp(0.28)} className="mt-10 flex flex-wrap gap-4">
             <Link
               href="/configurador"
-              className="inline-flex items-center gap-2 px-7 py-3.5 bg-sage-600 hover:bg-sage-500 text-white font-semibold rounded-xl transition-all duration-200 hover:shadow-xl hover:shadow-sage-600/25 hover:-translate-y-0.5 text-sm"
+              className="inline-flex items-center gap-2 px-7 py-3.5 bg-sage-500 hover:bg-sage-600 text-white font-semibold rounded-xl transition-all duration-200 hover:shadow-xl hover:shadow-sage-500/25 hover:-translate-y-0.5 text-sm"
             >
               {ctaPrimaryText}
               <ArrowRightIcon />
             </Link>
             <Link
               href="/modelos"
-              className="inline-flex items-center gap-2 px-7 py-3.5 border border-white/15 hover:border-white/30 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-all duration-200 text-sm"
+              className="inline-flex items-center gap-2 px-7 py-3.5 border-2 border-sage-300 hover:border-sage-500 text-sage-600 hover:text-sage-700 font-semibold rounded-xl transition-all duration-200 text-sm bg-white hover:bg-sage-50"
             >
               {ctaSecondaryText}
             </Link>
@@ -94,8 +95,8 @@ export default function Hero({ data }: { data?: HeroData | null }) {
           <motion.div {...fadeUp(0.38)} className="mt-12 flex flex-wrap gap-8">
             {stats.map(({ value, label }) => (
               <div key={label}>
-                <p className="text-2xl font-bold text-sage-400">{value}</p>
-                <p className="text-stone-500 text-xs mt-0.5">{label}</p>
+                <p className="text-2xl font-bold text-sage-500">{value}</p>
+                <p className="text-stone-400 text-xs mt-0.5">{label}</p>
               </div>
             ))}
           </motion.div>
@@ -119,11 +120,11 @@ export default function Hero({ data }: { data?: HeroData | null }) {
         transition={{ delay: 1.2 }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1"
       >
-        <span className="text-stone-600 text-xs tracking-widest uppercase">Scroll</span>
+        <span className="text-stone-400 text-xs tracking-widest uppercase">Scroll</span>
         <motion.div
           animate={{ y: [0, 6, 0] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" as const }}
-          className="w-px h-10 bg-gradient-to-b from-stone-600 to-transparent"
+          className="w-px h-10 bg-gradient-to-b from-stone-300 to-transparent"
         />
       </motion.div>
     </section>
@@ -133,10 +134,10 @@ export default function Hero({ data }: { data?: HeroData | null }) {
 function HouseCard() {
   return (
     <div className="relative w-full max-w-md">
-      <div className="relative bg-sage-900/60 border border-sage-700/40 rounded-2xl p-7 backdrop-blur-sm">
+      <div className="relative bg-white border border-sage-200 rounded-2xl p-7 shadow-2xl shadow-sage-900/8">
         <svg viewBox="0 0 360 280" className="w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="30" y1="260" x2="330" y2="260" stroke="#715A2D" strokeWidth="1.5" strokeDasharray="4 6" />
-          <rect x="55" y="145" width="250" height="115" rx="3" stroke="#9A7A3C" strokeWidth="1.5" />
+          <line x1="30" y1="260" x2="330" y2="260" stroke="#E0CC9E" strokeWidth="1.5" strokeDasharray="4 6" />
+          <rect x="55" y="145" width="250" height="115" rx="3" stroke="#CEBA82" strokeWidth="1.5" />
           <polyline points="35,145 180,55 325,145" stroke="#D4B06A" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
           <rect x="258" y="72" width="22" height="44" rx="2" stroke="#BF9A52" strokeWidth="1.5" />
           <rect x="255" y="69" width="28" height="6" rx="1" stroke="#BF9A52" strokeWidth="1.5" />
@@ -144,18 +145,18 @@ function HouseCard() {
           <line x1="162" y1="88" x2="162" y2="104" stroke="#D4B06A" strokeWidth="1" opacity="0.7" />
           <rect x="183" y="83" width="28" height="16" rx="1" stroke="#D4B06A" strokeWidth="1.5" opacity="0.9" />
           <line x1="197" y1="83" x2="197" y2="99" stroke="#D4B06A" strokeWidth="1" opacity="0.7" />
-          <rect x="150" y="190" width="60" height="70" rx="4" stroke="#9A7A3C" strokeWidth="1.5" />
-          <line x1="180" y1="190" x2="180" y2="260" stroke="#9A7A3C" strokeWidth="1" />
+          <rect x="150" y="190" width="60" height="70" rx="4" stroke="#CEBA82" strokeWidth="1.5" />
+          <line x1="180" y1="190" x2="180" y2="260" stroke="#CEBA82" strokeWidth="1" />
           <circle cx="202" cy="228" r="3.5" fill="#D4B06A" />
-          <rect x="80" y="175" width="48" height="38" rx="3" stroke="#9A7A3C" strokeWidth="1.5" />
-          <line x1="104" y1="175" x2="104" y2="213" stroke="#9A7A3C" strokeWidth="1" />
-          <line x1="80" y1="194" x2="128" y2="194" stroke="#9A7A3C" strokeWidth="1" />
-          <rect x="232" y="175" width="48" height="38" rx="3" stroke="#9A7A3C" strokeWidth="1.5" />
-          <line x1="256" y1="175" x2="256" y2="213" stroke="#9A7A3C" strokeWidth="1" />
-          <line x1="232" y1="194" x2="280" y2="194" stroke="#9A7A3C" strokeWidth="1" />
-          <line x1="55" y1="272" x2="305" y2="272" stroke="#715A2D" strokeWidth="1" />
-          <line x1="55" y1="268" x2="55" y2="276" stroke="#715A2D" strokeWidth="1" />
-          <line x1="305" y1="268" x2="305" y2="276" stroke="#715A2D" strokeWidth="1" />
+          <rect x="80" y="175" width="48" height="38" rx="3" stroke="#CEBA82" strokeWidth="1.5" />
+          <line x1="104" y1="175" x2="104" y2="213" stroke="#CEBA82" strokeWidth="1" />
+          <line x1="80" y1="194" x2="128" y2="194" stroke="#CEBA82" strokeWidth="1" />
+          <rect x="232" y="175" width="48" height="38" rx="3" stroke="#CEBA82" strokeWidth="1.5" />
+          <line x1="256" y1="175" x2="256" y2="213" stroke="#CEBA82" strokeWidth="1" />
+          <line x1="232" y1="194" x2="280" y2="194" stroke="#CEBA82" strokeWidth="1" />
+          <line x1="55" y1="272" x2="305" y2="272" stroke="#E0CC9E" strokeWidth="1" />
+          <line x1="55" y1="268" x2="55" y2="276" stroke="#E0CC9E" strokeWidth="1" />
+          <line x1="305" y1="268" x2="305" y2="276" stroke="#E0CC9E" strokeWidth="1" />
           <text x="180" y="278" textAnchor="middle" fill="#BF9A52" fontSize="9" fontFamily="monospace">35 — 120 m²</text>
         </svg>
 
@@ -165,22 +166,22 @@ function HouseCard() {
             { value: "5", unit: "años", label: "Garantía" },
             { value: "100%", unit: "", label: "Nacional" },
           ].map(({ value, unit, label }) => (
-            <div key={label} className="text-center bg-sage-950/60 rounded-lg py-2.5">
-              <div className="text-white font-bold text-sm">
+            <div key={label} className="text-center bg-sage-50 border border-sage-100 rounded-lg py-2.5">
+              <div className="text-[#2F2F2F] font-bold text-sm">
                 {value}
-                <span className="text-sage-400 text-xs ml-0.5">{unit}</span>
+                <span className="text-sage-500 text-xs ml-0.5">{unit}</span>
               </div>
-              <div className="text-stone-500 text-[10px] mt-0.5">{label}</div>
+              <div className="text-stone-400 text-[10px] mt-0.5">{label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="absolute -top-4 -right-4 bg-sage-600 text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-lg shadow-sage-600/30">
+      <div className="absolute -top-4 -right-4 bg-sage-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-lg shadow-sage-500/30">
         Desde USD 17.000
       </div>
 
-      <div className="absolute -z-10 inset-0 bg-sage-800/20 rounded-2xl border border-sage-700/20 translate-x-3 translate-y-3" />
+      <div className="absolute -z-10 inset-0 bg-sage-100 rounded-2xl border border-sage-200 translate-x-3 translate-y-3" />
     </div>
   );
 }

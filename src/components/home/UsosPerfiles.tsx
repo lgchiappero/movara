@@ -78,16 +78,16 @@ export default function UsosPerfiles({ data }: { data?: UsosData | null }) {
     : FALLBACK_USOS;
 
   return (
-    <section className="bg-sage-950 py-24">
+    <section className="bg-[#F2F2F2] py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="text-center mb-14">
-          <span className="text-sage-400 text-sm font-semibold uppercase tracking-widest">
+          <span className="text-sage-500 text-sm font-semibold uppercase tracking-widest">
             Para quién
           </span>
-          <h2 className="mt-3 text-4xl font-bold text-white tracking-tight">
+          <h2 className="mt-3 text-4xl font-bold text-[#2F2F2F] tracking-tight">
             {title}
           </h2>
-          <p className="mt-4 text-stone-400 max-w-xl mx-auto">
+          <p className="mt-4 text-stone-500 max-w-xl mx-auto">
             {subtitle}
           </p>
         </div>
@@ -97,28 +97,28 @@ export default function UsosPerfiles({ data }: { data?: UsosData | null }) {
             <Link
               key={category}
               href={href}
-              className="group flex flex-col bg-sage-900/40 hover:bg-sage-800/40 border border-sage-800/60 hover:border-sage-700/60 rounded-2xl p-7 transition-all duration-300"
+              className="group flex flex-col bg-white hover:bg-sage-50 border border-[#E5E5E5] hover:border-sage-300 rounded-2xl p-7 transition-all duration-300 hover:shadow-lg hover:shadow-sage-900/5"
             >
               <span className="text-3xl mb-4">{emoji}</span>
 
-              <span className="text-sage-400 text-xs font-semibold uppercase tracking-widest mb-2">
+              <span className="text-sage-500 text-xs font-semibold uppercase tracking-widest mb-2">
                 {category}
               </span>
 
-              <h3 className="text-white font-bold text-lg leading-snug mb-3">
+              <h3 className="text-[#2F2F2F] font-bold text-lg leading-snug mb-3">
                 {usoTitle}
               </h3>
 
-              <p className="text-stone-400 text-sm leading-relaxed flex-1">
+              <p className="text-stone-500 text-sm leading-relaxed flex-1">
                 {description}
               </p>
 
-              <div className="mt-6 pt-5 border-t border-sage-800/60 flex items-end justify-between">
+              <div className="mt-6 pt-5 border-t border-[#E5E5E5] flex items-end justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-sage-400">{statValue}</p>
-                  <p className="text-stone-500 text-xs mt-0.5">{statLabel}</p>
+                  <p className="text-2xl font-bold text-sage-500">{statValue}</p>
+                  <p className="text-stone-400 text-xs mt-0.5">{statLabel}</p>
                 </div>
-                <span className="text-sage-500 group-hover:text-sage-300 transition-colors text-sm font-semibold">
+                <span className="text-sage-400 group-hover:text-sage-600 transition-colors text-sm font-semibold">
                   Ver modelos →
                 </span>
               </div>

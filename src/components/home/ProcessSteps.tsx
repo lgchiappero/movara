@@ -58,7 +58,7 @@ export default function ProcessSteps({ data }: { data?: ProcessData | null }) {
     <section id="proceso" className="bg-white py-24">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="text-center mb-16">
-          <span className="text-sage-600 text-sm font-semibold uppercase tracking-widest">
+          <span className="text-sage-500 text-sm font-semibold uppercase tracking-widest">
             El proceso
           </span>
           <h2 className="mt-3 text-4xl font-bold text-stone-900 tracking-tight">
@@ -78,7 +78,7 @@ export default function ProcessSteps({ data }: { data?: ProcessData | null }) {
             {steps.map(({ number, icon, title: stepTitle, description }) => (
               <div key={number} className="flex flex-col items-center text-center">
                 {/* Step circle */}
-                <div className="relative z-10 w-14 h-14 rounded-full bg-sage-600 flex items-center justify-center text-white mb-6 shrink-0 shadow-lg shadow-sage-600/20">
+                <div className="relative z-10 w-14 h-14 rounded-full bg-sage-500 flex items-center justify-center text-white mb-6 shrink-0 shadow-lg shadow-sage-500/20">
                   {icon}
                 </div>
 
@@ -96,7 +96,7 @@ export default function ProcessSteps({ data }: { data?: ProcessData | null }) {
 
         {/* Timeline badge */}
         <div className="mt-14 flex justify-center">
-          <div className="inline-flex items-center gap-3 bg-sage-50 border border-sage-200 rounded-full px-6 py-3 text-sm text-stone-600">
+          <div className="inline-flex items-center gap-3 bg-sage-100 border border-sage-200 rounded-full px-6 py-3 text-sm text-stone-600">
             <span className="w-2 h-2 rounded-full bg-sage-500 shrink-0" />
             Tiempo total estimado:
             <strong className="text-stone-900">60 a 90 días corridos</strong>

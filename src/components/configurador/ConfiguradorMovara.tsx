@@ -312,7 +312,7 @@ export default function ConfiguradorMovara({
               <span
                 key={label}
                 className={`text-xs font-semibold transition-colors ${
-                  i + 1 <= step ? "text-sage-600" : "text-stone-400"
+                  i + 1 <= step ? "text-sage-500" : "text-stone-400"
                 }`}
               >
                 {label}
@@ -389,7 +389,7 @@ export default function ConfiguradorMovara({
             type="button"
             onClick={goNext}
             disabled={!canNext}
-            className="flex items-center gap-2 px-8 py-3 bg-sage-600 hover:bg-sage-700 disabled:opacity-35 disabled:cursor-not-allowed text-white text-sm font-bold rounded-full transition-all duration-200 hover:shadow-lg hover:shadow-sage-600/25 hover:-translate-y-px"
+            className="flex items-center gap-2 px-8 py-3 bg-sage-500 hover:bg-sage-600 disabled:opacity-35 disabled:cursor-not-allowed text-white text-sm font-bold rounded-full transition-all duration-200 hover:shadow-lg hover:shadow-sage-500/25 hover:-translate-y-px"
           >
             {step === 3 ? "Ver mi configuración" : "Siguiente"}
             <ChevronRightIcon />
@@ -419,7 +419,7 @@ function StepModelo({
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-600 mb-2">
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">
         Paso 1 de 3
       </p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
@@ -450,7 +450,7 @@ function StepModelo({
                       {m.nombre}
                     </span>
                     {"badge" in m && (
-                      <span className="px-2 py-0.5 bg-sage-600 text-white text-[10px] font-bold uppercase tracking-wide rounded-full">
+                      <span className="px-2 py-0.5 bg-sage-500 text-white text-[10px] font-bold uppercase tracking-wide rounded-full">
                         {m.badge}
                       </span>
                     )}
@@ -479,7 +479,7 @@ function StepModelo({
               <div className="mt-4 flex items-center justify-between">
                 <span
                   className={`text-xs font-semibold ${
-                    selected ? "text-sage-600" : "text-stone-400"
+                    selected ? "text-sage-500" : "text-stone-400"
                   }`}
                 >
                   USD {m.precio.min.toLocaleString("es-AR")} –{" "}
@@ -518,7 +518,7 @@ function StepFinalidad({
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-600 mb-2">
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">
         Paso 2 de 3
       </p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
@@ -593,7 +593,7 @@ function StepUbicacion({
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-600 mb-2">
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">
         Paso 3 de 3
       </p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
@@ -623,7 +623,7 @@ function StepUbicacion({
             htmlFor="cfg-provincia"
             className="block text-sm font-semibold text-stone-700 mb-1.5"
           >
-            {provinciaLabel} <span className="text-sage-600">*</span>
+            {provinciaLabel} <span className="text-sage-500">*</span>
           </label>
           <select
             id="cfg-provincia"
@@ -757,7 +757,7 @@ function ResultScreen({
           <div className="mt-3 pt-3 border-t border-stone-100 space-y-1.5">
             {regional.extras.slice(0, 3).map((extra) => (
               <div key={extra} className="flex items-center gap-2 text-xs text-stone-600">
-                <span className="w-4 h-4 rounded-full bg-sage-100 text-sage-600 flex items-center justify-center text-[10px] font-bold shrink-0">
+                <span className="w-4 h-4 rounded-full bg-sage-100 text-sage-500 flex items-center justify-center text-[10px] font-bold shrink-0">
                   ✓
                 </span>
                 {extra}
