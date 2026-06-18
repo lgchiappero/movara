@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 const NAV_LINKS = [
   { label: "Modelos", href: "/modelos" },
@@ -28,13 +29,8 @@ export default function Navbar() {
     >
       <nav className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-sage-500 rounded-md flex items-center justify-center shrink-0">
-            <HouseIcon className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-bold text-xl tracking-tight text-sage-500">
-            MOVARA
-          </span>
+        <Link href="/" className="flex items-center">
+          <Image src="/logo.jpeg" alt="MOVARA" height={40} width={120} className="h-10 w-auto object-contain" />
         </Link>
 
         {/* Desktop nav */}

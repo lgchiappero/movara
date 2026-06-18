@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { client } from "@/sanity/lib/client";
 import { SITE_CONFIG_QUERY } from "@/sanity/lib/queries";
 
@@ -94,11 +95,8 @@ export default async function Footer() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2.5 mb-5">
-              <div className="w-8 h-8 bg-sage-500 rounded-md flex items-center justify-center shrink-0">
-                <HouseIcon className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold text-xl text-white tracking-tight">MOVARA</span>
+            <Link href="/" className="inline-flex mb-5">
+              <Image src="/logo.jpeg" alt="MOVARA" height={48} width={144} className="h-12 w-auto object-contain" />
             </Link>
             <p className="text-sm leading-relaxed text-stone-500 max-w-xs">
               {config.footerDescription}
