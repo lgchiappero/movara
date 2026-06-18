@@ -91,7 +91,7 @@ export function buildWhatsAppMessage(s: WizardStore): string {
     otro: "Otro",
   };
 
-  let msg = `Hola Habitatt! 👋 Me interesa el modelo ${s.model.name}.\n`;
+  let msg = `Hola MOVARA! 👋 Me interesa el modelo ${s.model.name}.\n`;
   msg += `🏠 Configuración: ${hab}, ${cocinaTxt}, ${banioTxt}.\n`;
   msg += `📍 Ubicación: ${s.ciudad}, ${s.provincia}.\n`;
   msg += `🎯 Uso: ${usoLabels[s.uso ?? ""] ?? s.uso}.\n`;

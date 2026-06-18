@@ -31,7 +31,7 @@ export default function CTAFinal({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const text = encodeURIComponent(
-      `Hola, me contacto desde la web de Habitatt.\n\n` +
+      `Hola, me contacto desde la web de MOVARA.\n\n` +
         `*Nombre:* ${form.nombre}\n` +
         `*Teléfono:* ${form.telefono}\n` +
         `*Consulta:* ${form.mensaje}`
@@ -40,7 +40,7 @@ export default function CTAFinal({
     setSent(true);
   }
 
-  const waHref = `https://wa.me/${number}?text=${encodeURIComponent("Hola, quiero conocer más sobre las casas modulares de Habitatt.")}`;
+  const waHref = `https://wa.me/${number}?text=${encodeURIComponent("Hola, quiero conocer más sobre las casas modulares de MOVARA.")}`;
 
   return (
     <section id="contacto" className="bg-white py-24">

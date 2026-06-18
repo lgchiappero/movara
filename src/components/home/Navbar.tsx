@@ -42,7 +42,7 @@ export default function Navbar() {
               scrolled || menuOpen ? "text-stone-900" : "text-white"
             }`}
           >
-            Habitatt
+            MOVARA
           </span>
         </Link>
 

@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const model = await getModeloBySlug(slug);
   if (!model) return {};
   return {
-    title: `${model.name} — Habitatt`,
+    title: `${model.name} — MOVARA`,
     description: model.tagline ?? undefined,
   };
 }

@@ -1,7 +1,9 @@
 import Navbar from "@/components/home/Navbar";
 import Hero from "@/components/home/Hero";
+import RegionalBanner from "@/components/home/RegionalBanner";
+import ConfiguradorRegional from "@/components/configurador/ConfiguradorRegional";
 import SocialProof from "@/components/home/SocialProof";
-import WhyHabitatt from "@/components/home/WhyHabitatt";
+import WhyMovara from "@/components/home/WhyMovara";
 import FeaturedModels from "@/components/home/FeaturedModels";
 import UsosPerfiles from "@/components/home/UsosPerfiles";
 import ProcessSteps from "@/components/home/ProcessSteps";
@@ -29,10 +31,12 @@ export default async function HomePage() {
   return (
     <>
       <Navbar />
+      <ConfiguradorRegional waNumber={waNumber} />
       <main>
-        <Hero waNumber={waNumber} data={homePage?.hero} />
+        <Hero data={homePage?.hero} />
+        <RegionalBanner />
         <SocialProof />
-        <WhyHabitatt data={homePage?.whyHabitatt} />
+        <WhyMovara data={homePage?.whyMovara} />
         <FeaturedModels />
         <UsosPerfiles data={homePage?.usos} />
         <ProcessSteps data={homePage?.process} />

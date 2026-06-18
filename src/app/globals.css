@@ -2,21 +2,30 @@
 
 @theme inline {
   --color-background: #ffffff;
-  --color-foreground: #1c1917;
-  --font-sans: var(--font-geist-sans);
+  --color-foreground: #2F2F2F;
+  --font-sans: var(--font-poppins);
 
-  /* Verde salvia — acento principal */
-  --color-sage-50:  #f2f5ef;
-  --color-sage-100: #e4eadf;
-  --color-sage-200: #c8d4be;
-  --color-sage-300: #a5b899;
-  --color-sage-400: #819874;
-  --color-sage-500: #647c57;
-  --color-sage-600: #506447;
-  --color-sage-700: #41513a;
-  --color-sage-800: #344130;
-  --color-sage-900: #2b3527;
-  --color-sage-950: #141c11;
+  /* Dorado premium — paleta MOVARA */
+  --color-sage-50:  #FAFAF7;
+  --color-sage-100: #F2F2F2;
+  --color-sage-200: #EDE0CA;
+  --color-sage-300: #E0CC9E;
+  --color-sage-400: #CEBA82;
+  --color-sage-500: #D4B06A;
+  --color-sage-600: #BF9A52;
+  --color-sage-700: #9A7A3C;
+  --color-sage-800: #715A2D;
+  --color-sage-900: #483A1D;
+  --color-sage-950: #2F2F2F;
+
+  /* Named brand tokens */
+  --color-brand-primary: #D4B06A;
+  --color-brand-dark:    #2F2F2F;
+  --color-brand-light:   #F2F2F2;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-montserrat);
 }
 
 @keyframes float {
@@ -33,3 +42,16 @@
 .animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
 
 html { scroll-behavior: smooth; }
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 38s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}

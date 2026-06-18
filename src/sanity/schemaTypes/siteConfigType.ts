@@ -60,7 +60,7 @@ export const siteConfigType = defineType({
       title: 'Meta título (SEO)',
       type: 'string',
       description: 'Título que aparece en Google y en la pestaña del navegador.',
-      initialValue: 'Habitatt — Casas Modulares de Calidad',
+      initialValue: 'MOVARA — Casas Modulares de Calidad',
       group: 'seo',
     }),
     defineField({

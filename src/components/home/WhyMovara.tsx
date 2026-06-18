@@ -28,13 +28,13 @@ const FALLBACK_PILLARS = [
 const ICONS = [<StructureIcon key="0" />, <ClockIcon key="1" />, <CreditIcon key="2" />, <ShieldIcon key="3" />];
 
 type PillarData = { _key?: string; title: string; description: string };
-type WhyHabitattData = {
+type WhyMovaraData = {
   title?: string | null;
   subtitle?: string | null;
   pillars?: PillarData[] | null;
 };
 
-export default function WhyHabitatt({ data }: { data?: WhyHabitattData | null }) {
+export default function WhyMovara({ data }: { data?: WhyMovaraData | null }) {
   const title = data?.title ?? "4 pilares que nos diferencian";
   const subtitle =
     data?.subtitle ??

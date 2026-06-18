@@ -92,7 +92,7 @@ export const HOME_PAGE_QUERY = groq`
       ctaSecondaryText,
       stats[] { value, label },
     },
-    whyHabitatt {
+    whyMovara {
       title,
       subtitle,
       pillars[] { _key, title, description },

@@ -62,8 +62,8 @@ export const homePageType = defineType({
       ],
     }),
     defineField({
-      name: 'whyHabitatt',
-      title: 'Sección "Por qué Habitatt"',
+      name: 'whyMovara',
+      title: 'Sección "Por qué MOVARA"',
       type: 'object',
       fields: [
         defineField({

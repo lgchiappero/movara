@@ -10,9 +10,9 @@ import Footer from "@/components/home/Footer";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Quiénes somos — Habitatt",
+  title: "Quiénes somos — MOVARA",
   description:
-    "Conocé el equipo y la historia detrás de Habitatt, empresa argentina de casas modulares.",
+    "Conocé el equipo y la historia detrás de MOVARA, empresa argentina de casas modulares.",
 };
 
 type TeamMember = {

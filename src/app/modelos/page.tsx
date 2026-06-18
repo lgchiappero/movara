@@ -5,7 +5,7 @@ import { MODELS, type ProductModel } from "@/data/models";
 import CatalogGrid from "@/components/catalog/CatalogGrid";
 
 export const metadata: Metadata = {
-  title: "Catálogo de Modelos — Habitatt",
+  title: "Catálogo de Modelos — MOVARA",
   description:
     "Explorá nuestros modelos de casas modulares: vivienda familiar, alquiler turístico y oficinas. Precios, planos y especificaciones.",
 };

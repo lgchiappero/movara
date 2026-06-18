@@ -19,11 +19,11 @@ type ResolvedConfig = {
 };
 
 const FALLBACK: ResolvedConfig = {
-  email: "info@habitatt.com.ar",
+  email: "info@movara.com.ar",
   phone: "+54 9 11 0000-0000",
   address: "Buenos Aires, Argentina",
-  instagram: "https://instagram.com/habitatt",
-  linkedin: "https://linkedin.com/company/habitatt",
+  instagram: "https://instagram.com/movara",
+  linkedin: "https://linkedin.com/company/movara",
 };
 
 async function getSiteConfig(): Promise<ResolvedConfig> {
@@ -88,11 +88,11 @@ export default async function Footer() {
               <div className="w-8 h-8 bg-sage-600 rounded-md flex items-center justify-center shrink-0">
                 <HouseIcon className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-xl text-white tracking-tight">Habitatt</span>
+              <span className="font-bold text-xl text-white tracking-tight">MOVARA</span>
             </Link>
             <p className="text-sm leading-relaxed text-stone-500 max-w-xs">
-              Casas modulares de calidad superior. Fabricación argentina, entrega en toda
-              la Argentina.
+              Estamos repensando la forma de habitar. Casas modulares de calidad superior,
+              fabricación argentina.
             </p>
             <div className="flex items-center gap-3 mt-6">
               {social.map(({ label, href, icon }) => (
@@ -149,7 +149,7 @@ export default async function Footer() {
 
         <div className="mt-14 pt-8 border-t border-sage-900 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-stone-600 text-sm">
-            © {new Date().getFullYear()} Habitatt. Todos los derechos reservados.
+            © {new Date().getFullYear()} MOVARA. Todos los derechos reservados.
           </p>
           <div className="flex items-center gap-6 text-sm">
             <Link href="/privacidad" className="text-stone-600 hover:text-stone-400 transition-colors">

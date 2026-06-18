@@ -12,7 +12,7 @@ import { authorType } from './authorType'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
-    // Habitatt core
+    // MOVARA core
     modeloType,
     testimonioType,
     siteConfigType,
