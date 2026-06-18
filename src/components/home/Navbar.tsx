@@ -29,13 +29,13 @@ export default function Navbar() {
     >
       <nav className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/icono.png" alt="" height={38} width={38} className="h-[38px] w-auto object-contain" />
-          <div className="flex flex-col leading-none">
-            <span className="font-bold text-xl tracking-tight" style={{ color: "#D4B06A", fontFamily: "var(--font-montserrat)" }}>
+        <Link href="/" className="flex items-center gap-3">
+          <Image src="/Icono.jpeg" alt="" height={48} width={48} className="h-12 w-auto object-contain" />
+          <div className="flex flex-col leading-none gap-1">
+            <span className="text-2xl font-bold tracking-tight" style={{ color: "#D4B06A", fontFamily: "var(--font-montserrat)" }}>
               MOVARA
             </span>
-            <span className="text-xs tracking-[0.18em] mt-0.5" style={{ color: "#2F2F2F", fontFamily: "var(--font-poppins)", fontWeight: 400 }}>
+            <span className="text-xs tracking-widest uppercase" style={{ color: "#D4B06A", fontFamily: "var(--font-montserrat)", fontWeight: 400 }}>
               Espacios Modulares
             </span>
           </div>
