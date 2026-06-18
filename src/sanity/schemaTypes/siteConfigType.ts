@@ -1,4 +1,4 @@
-import { defineField, defineType } from 'sanity'
+import { defineField, defineType, defineArrayMember } from 'sanity'
 
 export const siteConfigType = defineType({
   name: 'siteConfig',
@@ -6,6 +6,7 @@ export const siteConfigType = defineType({
   type: 'document',
   groups: [
     { name: 'contacto', title: 'Contacto' },
+    { name: 'footer', title: 'Footer' },
     { name: 'seo', title: 'SEO y marca' },
   ],
   fields: [
@@ -14,6 +15,22 @@ export const siteConfigType = defineType({
       title: 'Número de WhatsApp',
       type: 'string',
       description: 'Sin espacios ni símbolos. Ej: 5491100000000',
+      group: 'contacto',
+    }),
+    defineField({
+      name: 'whatsappHorario',
+      title: 'Horario WhatsApp',
+      type: 'string',
+      description: 'Ej: Lun a Vie 9 a 18hs',
+      initialValue: 'Lun a Vie 9 a 18hs',
+      group: 'contacto',
+    }),
+    defineField({
+      name: 'whatsappRespuesta',
+      title: 'Tiempo de respuesta WhatsApp',
+      type: 'string',
+      description: 'Ej: Respondemos en menos de 2 horas',
+      initialValue: 'Respondemos en menos de 2 horas',
       group: 'contacto',
     }),
     defineField({
@@ -54,6 +71,53 @@ export const siteConfigType = defineType({
       description: 'Ej: Lunes a viernes de 9 a 18 hs',
       initialValue: 'Lunes a viernes de 9 a 18 hs',
       group: 'contacto',
+    }),
+    // ── Footer ──────────────────────────────────────────────
+    defineField({
+      name: 'footerDescription',
+      title: 'Descripción de la marca (footer)',
+      type: 'text',
+      rows: 3,
+      description: 'Párrafo corto que aparece debajo del logo en el footer.',
+      initialValue:
+        'Estamos repensando la forma de habitar. Casas modulares de calidad superior, fabricación argentina.',
+      group: 'footer',
+    }),
+    defineField({
+      name: 'footerNavLinks',
+      title: 'Links de navegación',
+      type: 'array',
+      description: 'Links que aparecen en la columna de navegación del footer.',
+      group: 'footer',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          fields: [
+            defineField({
+              name: 'label',
+              title: 'Texto del link',
+              type: 'string',
+            }),
+            defineField({
+              name: 'url',
+              title: 'URL',
+              type: 'string',
+              description: 'Ruta interna (ej: /modelos) o URL completa.',
+            }),
+          ],
+          preview: {
+            select: { title: 'label', subtitle: 'url' },
+          },
+        }),
+      ],
+    }),
+    defineField({
+      name: 'copyrightText',
+      title: 'Texto de copyright',
+      type: 'string',
+      description: 'Aparece en la barra inferior del footer.',
+      initialValue: 'MOVARA. Todos los derechos reservados.',
+      group: 'footer',
     }),
     defineField({
       name: 'metaTitle',

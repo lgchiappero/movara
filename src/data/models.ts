@@ -37,10 +37,17 @@ export type ProductModel = {
   floorPlanSize: "small" | "medium" | "large" | "xl";
   video?: { url: string; label?: string } | null;
   virtualTour?: string | null;
-  /** Límite físico real del módulo (1–4). El wizard no ofrece más opciones. */
   maxHabitaciones?: number | null;
-  /** Si es false, con 3+ habitaciones no entra cocina en este modelo. */
   permiteCocinaSiMax3Hab?: boolean | null;
+  // Campos MOVARA nuevos
+  tamano?: "10ft" | "20ft" | "40ft" | null;
+  precioHasta?: number | null;
+  incluyeCocina?: boolean | null;
+  incluyeBano?: boolean | null;
+  especificaciones?: { clave: string; valor: string }[] | null;
+  finalidades?: string[] | null;
+  destacado?: boolean | null;
+  activo?: boolean | null;
 };
 
 const IMGS = {

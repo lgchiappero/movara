@@ -1,5 +1,10 @@
 import { REGIONAL_MODELS } from "@/data/regional-models";
 
+type RegionalBannerData = {
+  title?: string | null;
+  subtitle?: string | null;
+};
+
 const MODELS = Object.values(REGIONAL_MODELS);
 
 // Full class strings required — Tailwind JIT can't resolve dynamic values
@@ -14,7 +19,10 @@ const STYLES: Record<string, { bg: string; border: string; accent: string }> = {
   yagan:        { bg: "from-indigo-900 via-stone-900 to-stone-950",  border: "border-indigo-800/30",  accent: "text-indigo-400" },
 };
 
-export default function RegionalBanner() {
+export default function RegionalBanner({ data }: { data?: RegionalBannerData | null }) {
+  const title = data?.title ?? 'Una solución para cada zona del país';
+  const subtitle = data?.subtitle ?? 'Cada región tiene su propio clima. Cada modelo, sus especificaciones únicas.';
+
   return (
     <section className="py-20 bg-stone-950 overflow-hidden">
       {/* Header */}
@@ -23,10 +31,10 @@ export default function RegionalBanner() {
           8 modelos regionales
         </p>
         <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight">
-          Una solución para<br className="hidden sm:block" /> cada zona del país
+          {title}
         </h2>
         <p className="mt-4 text-stone-400 text-base max-w-md leading-relaxed">
-          Cada región tiene su propio clima. Cada modelo, sus especificaciones únicas.
+          {subtitle}
         </p>
       </div>
 

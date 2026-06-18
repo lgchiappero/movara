@@ -62,6 +62,26 @@ export const homePageType = defineType({
       ],
     }),
     defineField({
+      name: 'regionalBanner',
+      title: 'Banner modelos regionales',
+      type: 'object',
+      fields: [
+        defineField({
+          name: 'title',
+          title: 'Título',
+          type: 'string',
+          initialValue: 'Una solución para cada zona del país',
+        }),
+        defineField({
+          name: 'subtitle',
+          title: 'Subtítulo',
+          type: 'text',
+          rows: 2,
+          initialValue: 'Cada región tiene su propio clima. Cada modelo, sus especificaciones únicas.',
+        }),
+      ],
+    }),
+    defineField({
       name: 'whyMovara',
       title: 'Sección "Por qué MOVARA"',
       type: 'object',
@@ -89,11 +109,17 @@ export const homePageType = defineType({
             defineArrayMember({
               type: 'object',
               fields: [
+                defineField({
+                  name: 'icon',
+                  title: 'Ícono (emoji)',
+                  type: 'string',
+                  description: 'Emoji que representa el pilar. Ej: 🏗️ ⏱️ 💳 🛡️',
+                }),
                 defineField({ name: 'title', title: 'Título', type: 'string' }),
                 defineField({ name: 'description', title: 'Descripción', type: 'text', rows: 3 }),
               ],
               preview: {
-                select: { title: 'title' },
+                select: { title: 'icon', subtitle: 'title' },
               },
             }),
           ],
@@ -183,6 +209,46 @@ export const homePageType = defineType({
               },
             }),
           ],
+        }),
+      ],
+    }),
+    defineField({
+      name: 'featuredModels',
+      title: 'Sección Modelos destacados',
+      type: 'object',
+      fields: [
+        defineField({
+          name: 'title',
+          title: 'Título',
+          type: 'string',
+          initialValue: 'Modelos más elegidos',
+        }),
+        defineField({
+          name: 'subtitle',
+          title: 'Subtítulo',
+          type: 'text',
+          rows: 2,
+          initialValue: 'Cada modelo es personalizable en distribución, terminaciones y colores.',
+        }),
+      ],
+    }),
+    defineField({
+      name: 'testimonials',
+      title: 'Sección Testimonios',
+      type: 'object',
+      fields: [
+        defineField({
+          name: 'title',
+          title: 'Título',
+          type: 'string',
+          initialValue: 'Lo que dicen nuestros clientes',
+        }),
+        defineField({
+          name: 'subtitle',
+          title: 'Subtítulo',
+          type: 'text',
+          rows: 2,
+          initialValue: 'Historias reales de personas que eligieron MOVARA.',
         }),
       ],
     }),

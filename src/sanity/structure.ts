@@ -21,6 +21,33 @@ export const structure: StructureResolver = (S) =>
             .title('Configuración del sitio'),
         ),
 
+      S.listItem()
+        .title('Configurador')
+        .child(
+          S.document()
+            .schemaType('configuradorPage')
+            .documentId('configuradorPage')
+            .title('Configurador'),
+        ),
+
+      S.listItem()
+        .title('Quiénes somos')
+        .child(
+          S.document()
+            .schemaType('quienesSomos')
+            .documentId('quienesSomos')
+            .title('Quiénes somos'),
+        ),
+
+      S.listItem()
+        .title('Página de Modelos')
+        .child(
+          S.document()
+            .schemaType('modelosPage')
+            .documentId('modelosPage')
+            .title('Página de Modelos'),
+        ),
+
       S.divider(),
 
       S.listItem()

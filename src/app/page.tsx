@@ -34,13 +34,13 @@ export default async function HomePage() {
       <ConfiguradorRegional waNumber={waNumber} />
       <main>
         <Hero data={homePage?.hero} />
-        <RegionalBanner />
+        <RegionalBanner data={homePage?.regionalBanner} />
         <SocialProof />
         <WhyMovara data={homePage?.whyMovara} />
-        <FeaturedModels />
+        <FeaturedModels data={homePage?.featuredModels} />
         <UsosPerfiles data={homePage?.usos} />
         <ProcessSteps data={homePage?.process} />
-        <Testimonials />
+        <Testimonials data={homePage?.testimonials} />
         <CTAFinal waNumber={waNumber} data={homePage?.cta} />
       </main>
       <Footer />

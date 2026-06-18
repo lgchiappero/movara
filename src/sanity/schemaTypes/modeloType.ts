@@ -1,20 +1,40 @@
-import { defineField, defineType } from 'sanity'
+import { defineField, defineType, defineArrayMember } from 'sanity'
+
+const FINALIDADES_LIST = [
+  { title: 'Inversor / Renta', value: 'inversor' },
+  { title: 'Agro / Campo', value: 'agro' },
+  { title: 'Primera vivienda', value: 'vivienda' },
+  { title: 'Turismo y hospitalidad', value: 'turismo' },
+  { title: 'Empresa / B2B', value: 'empresa' },
+  { title: 'Sector público', value: 'sector-publico' },
+]
 
 export const modeloType = defineType({
   name: 'modelo',
   title: 'Modelo',
   type: 'document',
+  groups: [
+    { name: 'identificacion', title: 'Identificación' },
+    { name: 'precios', title: 'Precios' },
+    { name: 'dimensiones', title: 'Dimensiones e incluidos' },
+    { name: 'media', title: 'Fotos y multimedia' },
+    { name: 'especificaciones', title: 'Especificaciones' },
+    { name: 'marketing', title: 'Marketing y visibilidad' },
+  ],
   fields: [
+    // ── Identificación ──────────────────────────────────────
     defineField({
       name: 'name',
       title: 'Nombre',
       type: 'string',
+      group: 'identificacion',
       validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: 'slug',
       title: 'Slug',
       type: 'slug',
+      group: 'identificacion',
       options: { source: 'name', maxLength: 96 },
       validation: (Rule) => Rule.required(),
     }),
@@ -23,35 +43,100 @@ export const modeloType = defineType({
       title: 'Tagline',
       type: 'string',
       description: 'Una línea corta que resume el modelo',
+      group: 'identificacion',
     }),
     defineField({
-      name: 'description',
-      title: 'Descripción',
-      type: 'text',
-      rows: 4,
-    }),
-    defineField({ name: 'size', title: 'Superficie (m²)', type: 'number' }),
-    defineField({ name: 'rooms', title: 'Habitaciones / Ambientes', type: 'number' }),
-    defineField({ name: 'baths', title: 'Baños', type: 'number' }),
-    defineField({ name: 'priceUSD', title: 'Precio desde (USD)', type: 'number' }),
-    defineField({
-      name: 'tag',
-      title: 'Etiqueta destacada',
+      name: 'tamano',
+      title: 'Tamaño',
       type: 'string',
-      description: 'Ej: Más elegido, Premium, Ideal inversión',
+      group: 'identificacion',
+      description: 'Tamaño del contenedor base. Conecta con el Configurador.',
+      options: {
+        list: [
+          { title: '10ft — 18 m²', value: '10ft' },
+          { title: '20ft — 37 m²', value: '20ft' },
+          { title: '40ft — 74 m²', value: '40ft' },
+        ],
+        layout: 'radio',
+      },
+    }),
+
+    // ── Precios ─────────────────────────────────────────────
+    defineField({
+      name: 'priceUSD',
+      title: 'Precio desde (USD)',
+      type: 'number',
+      group: 'precios',
     }),
     defineField({
-      name: 'features',
-      title: 'Características incluidas',
-      type: 'array',
-      of: [{ type: 'string' }],
+      name: 'precioHasta',
+      title: 'Precio hasta (USD)',
+      type: 'number',
+      description: 'Si se completa, se muestra un rango: "Desde USD X – USD Y"',
+      group: 'precios',
     }),
+
+    // ── Dimensiones e incluidos ─────────────────────────────
+    defineField({
+      name: 'size',
+      title: 'Superficie total (m²)',
+      type: 'number',
+      group: 'dimensiones',
+    }),
+    defineField({
+      name: 'rooms',
+      title: 'Ambientes / Habitaciones',
+      type: 'number',
+      group: 'dimensiones',
+    }),
+    defineField({
+      name: 'baths',
+      title: 'Baños',
+      type: 'number',
+      group: 'dimensiones',
+    }),
+    defineField({
+      name: 'maxHabitaciones',
+      title: 'Máximo de habitaciones posibles',
+      type: 'number',
+      description: 'Límite físico del modelo. El configurador no ofrecerá más opciones.',
+      initialValue: 4,
+      validation: (Rule) => Rule.min(1).max(6).integer(),
+      group: 'dimensiones',
+    }),
+    defineField({
+      name: 'incluyeCocina',
+      title: '¿Incluye cocina de serie?',
+      type: 'boolean',
+      description: 'Si está activado, el módulo estándar incluye cocina.',
+      initialValue: true,
+      group: 'dimensiones',
+    }),
+    defineField({
+      name: 'incluyeBano',
+      title: '¿Incluye baño de serie?',
+      type: 'boolean',
+      description: 'Si está activado, el módulo estándar incluye baño.',
+      initialValue: true,
+      group: 'dimensiones',
+    }),
+    defineField({
+      name: 'permiteCocinaSiMax3Hab',
+      title: '¿Permite cocina con 3 o más habitaciones?',
+      type: 'boolean',
+      description: 'Si está desactivado, el configurador avisará que la cocina no entra con 3+ habitaciones.',
+      initialValue: true,
+      group: 'dimensiones',
+    }),
+
+    // ── Media ────────────────────────────────────────────────
     defineField({
       name: 'images',
-      title: 'Fotos del modelo',
+      title: 'Galería de fotos',
       type: 'array',
+      group: 'media',
       of: [
-        {
+        defineArrayMember({
           type: 'image',
           options: { hotspot: true },
           fields: [
@@ -62,52 +147,15 @@ export const modeloType = defineType({
               description: 'Ej: Vista exterior, Sala de estar',
             }),
           ],
-        },
-      ],
-    }),
-    defineField({
-      name: 'maxHabitaciones',
-      title: 'Máximo de habitaciones posibles',
-      type: 'number',
-      description: 'Límite físico del modelo. El wizard no ofrecerá más opciones que este número.',
-      initialValue: 4,
-      validation: (Rule) => Rule.min(1).max(4).integer(),
-    }),
-    defineField({
-      name: 'permiteCocinaSiMax3Hab',
-      title: '¿Permite cocina con 3 o más habitaciones?',
-      type: 'boolean',
-      description: 'Si está desactivado, el wizard avisará que la cocina no entra cuando el cliente elige 3+ habitaciones.',
-      initialValue: true,
-    }),
-    defineField({
-      name: 'configuracionesValidas',
-      title: 'Configuraciones válidas (avanzado, opcional)',
-      type: 'array',
-      description: 'Lista explícita de combinaciones posibles. Si se completa, tiene prioridad sobre los campos anteriores.',
-      of: [
-        {
-          type: 'object',
-          fields: [
-            defineField({ name: 'habitaciones', title: 'Habitaciones', type: 'number' }),
-            defineField({ name: 'cocina', title: 'Incluye cocina', type: 'boolean' }),
-            defineField({ name: 'banio', title: 'Incluye baño', type: 'boolean' }),
-          ],
-          preview: {
-            select: { habitaciones: 'habitaciones', cocina: 'cocina', banio: 'banio' },
-            prepare({ habitaciones, cocina, banio }: { habitaciones?: number; cocina?: boolean; banio?: boolean }) {
-              const parts = [`${habitaciones ?? '?'} hab.`, cocina ? 'con cocina' : 'sin cocina', banio ? 'con baño' : 'sin baño'];
-              return { title: parts.join(', ') };
-            },
-          },
-        },
+        }),
       ],
     }),
     defineField({
       name: 'video',
       title: 'Video del modelo',
       type: 'object',
-      description: 'URL de YouTube, Vimeo o video directo (.mp4). Se muestra antes que las fotos.',
+      group: 'media',
+      description: 'URL de YouTube, Vimeo o video directo (.mp4).',
       fields: [
         defineField({
           name: 'url',
@@ -127,12 +175,67 @@ export const modeloType = defineType({
       name: 'virtualTour',
       title: 'Tour virtual 360° (URL)',
       type: 'url',
+      group: 'media',
       description: 'URL de Matterport, Google Street View u otro recorrido virtual embebible.',
+    }),
+
+    // ── Especificaciones ─────────────────────────────────────
+    defineField({
+      name: 'descripcion',
+      title: 'Descripción',
+      type: 'text',
+      rows: 5,
+      group: 'especificaciones',
+    }),
+    defineField({
+      name: 'description',
+      title: 'Descripción (legado)',
+      type: 'text',
+      rows: 5,
+      description: 'Campo heredado. Usar "Descripción" para modelos nuevos.',
+      hidden: true,
+    }),
+    defineField({
+      name: 'upgrades',
+      title: 'Upgrades incluidos',
+      type: 'array',
+      group: 'especificaciones',
+      description: 'Lista de características o upgrades incluidos en el precio base.',
+      of: [defineArrayMember({ type: 'string' })],
+    }),
+    defineField({
+      name: 'features',
+      title: 'Características (legado)',
+      type: 'array',
+      description: 'Campo heredado. Usar "Upgrades incluidos" para modelos nuevos.',
+      hidden: true,
+      of: [defineArrayMember({ type: 'string' })],
+    }),
+    defineField({
+      name: 'especificaciones',
+      title: 'Especificaciones técnicas',
+      type: 'array',
+      group: 'especificaciones',
+      description: 'Tabla libre de especificaciones técnicas (clave → valor).',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          fields: [
+            defineField({ name: 'clave', title: 'Especificación', type: 'string' }),
+            defineField({ name: 'valor', title: 'Valor', type: 'string' }),
+          ],
+          preview: {
+            select: { title: 'clave', subtitle: 'valor' },
+          },
+        }),
+      ],
     }),
     defineField({
       name: 'specs',
-      title: 'Especificaciones técnicas',
+      title: 'Especificaciones fijas (legado)',
       type: 'object',
+      description: 'Campo heredado. Usar "Especificaciones técnicas" para modelos nuevos.',
+      hidden: true,
       fields: [
         defineField({ name: 'estructura', title: 'Estructura', type: 'string' }),
         defineField({ name: 'cubierta', title: 'Cubierta', type: 'string' }),
@@ -144,12 +247,67 @@ export const modeloType = defineType({
         defineField({ name: 'garantia', title: 'Garantía', type: 'string' }),
       ],
     }),
+
+    // ── Marketing y visibilidad ──────────────────────────────
+    defineField({
+      name: 'tag',
+      title: 'Etiqueta destacada',
+      type: 'string',
+      description: 'Ej: Más elegido, Premium, Ideal inversión',
+      group: 'marketing',
+    }),
+    defineField({
+      name: 'finalidades',
+      title: 'Usos recomendados',
+      type: 'array',
+      group: 'marketing',
+      description: 'Seleccioná los usos para los que este modelo es ideal.',
+      of: [defineArrayMember({ type: 'string' })],
+      options: {
+        list: FINALIDADES_LIST,
+      },
+    }),
+    defineField({
+      name: 'destacado',
+      title: '¿Modelo destacado?',
+      type: 'boolean',
+      description: 'Los modelos destacados aparecen primero en el catálogo.',
+      initialValue: false,
+      group: 'marketing',
+    }),
+    defineField({
+      name: 'activo',
+      title: '¿Modelo activo?',
+      type: 'boolean',
+      description: 'Los modelos inactivos no se muestran en el sitio.',
+      initialValue: true,
+      group: 'marketing',
+    }),
     defineField({
       name: 'order',
       title: 'Orden en el catálogo',
       type: 'number',
       description: 'Menor número = aparece primero',
       initialValue: 99,
+      group: 'marketing',
+    }),
+
+    // Campos legado ocultos
+    defineField({
+      name: 'configuracionesValidas',
+      title: 'Configuraciones válidas (legado)',
+      type: 'array',
+      hidden: true,
+      of: [
+        defineArrayMember({
+          type: 'object',
+          fields: [
+            defineField({ name: 'habitaciones', title: 'Habitaciones', type: 'number' }),
+            defineField({ name: 'cocina', title: 'Incluye cocina', type: 'boolean' }),
+            defineField({ name: 'banio', title: 'Incluye baño', type: 'boolean' }),
+          ],
+        }),
+      ],
     }),
   ],
   preview: {

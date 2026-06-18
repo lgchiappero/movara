@@ -51,8 +51,15 @@ async function getTestimonios(): Promise<Testimonio[]> {
   return STATIC_TESTIMONIOS;
 }
 
-export default async function Testimonials() {
+type TestimonialsData = {
+  title?: string | null;
+  subtitle?: string | null;
+};
+
+export default async function Testimonials({ data }: { data?: TestimonialsData | null }) {
   const testimonios = await getTestimonios();
+  const title = data?.title ?? 'Lo que dicen nuestros clientes';
+  const subtitle = data?.subtitle;
 
   const featured = testimonios.find((t) => t.isFeatured) ?? testimonios[0];
   const rest = testimonios.filter((t) => t._id !== featured._id).slice(0, 2);
@@ -65,8 +72,13 @@ export default async function Testimonials() {
             Testimonios
           </span>
           <h2 className="mt-3 text-4xl font-bold text-stone-900 tracking-tight">
-            Lo que dicen nuestros clientes
+            {title}
           </h2>
+          {subtitle && (
+            <p className="mt-4 text-stone-500 text-base max-w-2xl mx-auto leading-relaxed">
+              {subtitle}
+            </p>
+          )}
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">

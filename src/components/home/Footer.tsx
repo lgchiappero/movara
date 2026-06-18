@@ -2,12 +2,17 @@ import Link from "next/link";
 import { client } from "@/sanity/lib/client";
 import { SITE_CONFIG_QUERY } from "@/sanity/lib/queries";
 
+type FooterNavLink = { label?: string | null; url?: string | null };
+
 type SiteConfigRaw = {
   email?: string | null;
   phone?: string | null;
   address?: string | null;
   instagram?: string | null;
   linkedin?: string | null;
+  footerDescription?: string | null;
+  footerNavLinks?: FooterNavLink[] | null;
+  copyrightText?: string | null;
 };
 
 type ResolvedConfig = {
@@ -16,7 +21,18 @@ type ResolvedConfig = {
   address: string;
   instagram: string;
   linkedin: string;
+  footerDescription: string;
+  footerNavLinks: { label: string; url: string }[];
+  copyrightText: string;
 };
+
+const FALLBACK_NAV_LINKS = [
+  { label: "Modelos", url: "/modelos" },
+  { label: "Configurador", url: "/configurador" },
+  { label: "Quiénes somos", url: "/quienes-somos" },
+  { label: "Cómo funciona", url: "/#proceso" },
+  { label: "Testimonios", url: "/#testimonios" },
+];
 
 const FALLBACK: ResolvedConfig = {
   email: "info@movara.com.ar",
@@ -24,48 +40,42 @@ const FALLBACK: ResolvedConfig = {
   address: "Buenos Aires, Argentina",
   instagram: "https://instagram.com/movara",
   linkedin: "https://linkedin.com/company/movara",
+  footerDescription:
+    "Estamos repensando la forma de habitar. Casas modulares de calidad superior, fabricación argentina.",
+  footerNavLinks: FALLBACK_NAV_LINKS,
+  copyrightText: "MOVARA. Todos los derechos reservados.",
 };
 
 async function getSiteConfig(): Promise<ResolvedConfig> {
   try {
     const data = await client.fetch<SiteConfigRaw | null>(SITE_CONFIG_QUERY);
     if (data) {
+      const navLinks =
+        data.footerNavLinks && data.footerNavLinks.length > 0
+          ? data.footerNavLinks
+              .filter((l): l is { label: string; url: string } => !!l.label && !!l.url)
+          : FALLBACK_NAV_LINKS;
+
       return {
         email: data.email ?? FALLBACK.email,
         phone: data.phone ?? FALLBACK.phone,
         address: data.address ?? FALLBACK.address,
         instagram: data.instagram ?? FALLBACK.instagram,
         linkedin: data.linkedin ?? FALLBACK.linkedin,
+        footerDescription: data.footerDescription ?? FALLBACK.footerDescription,
+        footerNavLinks: navLinks,
+        copyrightText: data.copyrightText ?? FALLBACK.copyrightText,
       };
     }
   } catch {}
   return FALLBACK;
 }
 
-const NAV_STATIC = [
-  {
-    title: "Modelos",
-    links: [
-      { label: "Studio 35", href: "/modelos/studio-35" },
-      { label: "Familiar 65", href: "/modelos/familiar-65" },
-      { label: "Premium 95", href: "/modelos/premium-95" },
-      { label: "Ver catálogo completo", href: "/modelos" },
-    ],
-  },
-  {
-    title: "Empresa",
-    links: [
-      { label: "Quiénes somos", href: "/#nosotros" },
-      { label: "Cómo funciona", href: "/#proceso" },
-      { label: "Testimonios", href: "/#testimonios" },
-    ],
-  },
-];
-
 export default async function Footer() {
   const config = await getSiteConfig();
 
   const phoneHref = `tel:${config.phone.replace(/[\s\-()]/g, "")}`;
+  const year = new Date().getFullYear();
 
   const contactLinks = [
     { label: config.email, href: `mailto:${config.email}` },
@@ -91,8 +101,7 @@ export default async function Footer() {
               <span className="font-bold text-xl text-white tracking-tight">MOVARA</span>
             </Link>
             <p className="text-sm leading-relaxed text-stone-500 max-w-xs">
-              Estamos repensando la forma de habitar. Casas modulares de calidad superior,
-              fabricación argentina.
+              {config.footerDescription}
             </p>
             <div className="flex items-center gap-3 mt-6">
               {social.map(({ label, href, icon }) => (
@@ -110,24 +119,22 @@ export default async function Footer() {
             </div>
           </div>
 
-          {/* Nav columns */}
-          {NAV_STATIC.map(({ title, links }) => (
-            <div key={title}>
-              <h3 className="text-white font-semibold text-sm mb-4">{title}</h3>
-              <ul className="space-y-3">
-                {links.map(({ label, href }) => (
-                  <li key={label}>
-                    <Link
-                      href={href}
-                      className="text-sm text-stone-500 hover:text-stone-300 transition-colors"
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {/* Nav links (dinámico desde Sanity) */}
+          <div>
+            <h3 className="text-white font-semibold text-sm mb-4">Navegación</h3>
+            <ul className="space-y-3">
+              {config.footerNavLinks.map(({ label, url }) => (
+                <li key={url}>
+                  <Link
+                    href={url}
+                    className="text-sm text-stone-500 hover:text-stone-300 transition-colors"
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
 
           {/* Contacto dinámico */}
           <div>
@@ -149,7 +156,7 @@ export default async function Footer() {
 
         <div className="mt-14 pt-8 border-t border-sage-900 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-stone-600 text-sm">
-            © {new Date().getFullYear()} MOVARA. Todos los derechos reservados.
+            © {year} {config.copyrightText}
           </p>
           <div className="flex items-center gap-6 text-sm">
             <Link href="/privacidad" className="text-stone-600 hover:text-stone-400 transition-colors">

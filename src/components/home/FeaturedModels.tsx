@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useWizardStore } from "@/store/wizard";
 
+type FeaturedModelsData = {
+  title?: string | null;
+  subtitle?: string | null;
+};
+
 const MODELS = [
   {
     slug: "familiar-65",
@@ -54,8 +59,10 @@ const MODELS = [
   },
 ];
 
-export default function FeaturedModels() {
+export default function FeaturedModels({ data }: { data?: FeaturedModelsData | null }) {
   const openWizard = useWizardStore((s) => s.openWizard);
+  const title = data?.title ?? 'Modelos más elegidos';
+  const subtitle = data?.subtitle;
 
   return (
     <section id="modelos" className="bg-white py-24">
@@ -66,8 +73,11 @@ export default function FeaturedModels() {
               Catálogo
             </span>
             <h2 className="mt-3 text-4xl font-bold text-stone-900 tracking-tight">
-              Modelos más elegidos
+              {title}
             </h2>
+            {subtitle && (
+              <p className="mt-2 text-stone-500 text-base max-w-xl leading-relaxed">{subtitle}</p>
+            )}
           </div>
           <Link
             href="/modelos"

@@ -10,6 +10,15 @@ import FloorPlan from "@/components/detail/FloorPlan";
 import ConsultarButton from "@/components/detail/ConsultarButton";
 import VirtualTour from "@/components/detail/VirtualTour";
 
+const FINALIDAD_LABELS: Record<string, string> = {
+  inversor: "💰 Inversión / Renta",
+  agro: "🌾 Agro / Campo",
+  vivienda: "🏠 Primera vivienda",
+  turismo: "🏕️ Turismo",
+  empresa: "💼 Empresa / B2B",
+  "sector-publico": "🏛️ Sector público",
+};
+
 export const revalidate = 3600;
 
 type Props = { params: Promise<{ slug: string }> };
@@ -54,18 +63,26 @@ export default async function ModelDetailPage({ params }: Props) {
     `Hola, me interesa el modelo ${model.name}. ¿Podrían enviarme más información?`
   )}`;
 
-  const specRows = model.specs
-    ? [
-        { key: "Estructura", val: model.specs.estructura },
-        { key: "Cubierta", val: model.specs.cubierta },
-        { key: "Cerramiento", val: model.specs.cerramiento },
-        { key: "Aislación", val: model.specs.aislacion },
-        { key: "Instalaciones", val: model.specs.instalaciones },
-        { key: "Terminaciones", val: model.specs.terminaciones },
-        { key: "Tiempo de obra", val: model.specs.tiempo },
-        { key: "Garantía", val: model.specs.garantia },
-      ].filter((r) => r.val)
-    : [];
+  // Prefer flexible especificaciones array; fall back to legacy specs object
+  const specRows: { key: string; val: string }[] =
+    model.especificaciones && model.especificaciones.length > 0
+      ? model.especificaciones.map((e) => ({ key: e.clave, val: e.valor }))
+      : model.specs
+        ? [
+            { key: "Estructura", val: model.specs.estructura },
+            { key: "Cubierta", val: model.specs.cubierta },
+            { key: "Cerramiento", val: model.specs.cerramiento },
+            { key: "Aislación", val: model.specs.aislacion },
+            { key: "Instalaciones", val: model.specs.instalaciones },
+            { key: "Terminaciones", val: model.specs.terminaciones },
+            { key: "Tiempo de obra", val: model.specs.tiempo },
+            { key: "Garantía", val: model.specs.garantia },
+          ].filter((r) => r.val)
+        : [];
+
+  const configuradorHref = model.tamano
+    ? `/configurador?modelo=${model.tamano}`
+    : "/configurador";
 
   return (
     <>
@@ -135,13 +152,18 @@ export default async function ModelDetailPage({ params }: Props) {
             {model.priceUSD != null && (
               <div className="bg-sage-50 border border-sage-100 rounded-2xl p-5">
                 <p className="text-xs font-semibold uppercase tracking-widest text-sage-700">
-                  Precio desde
+                  {model.precioHasta ? "Precio estimado" : "Precio desde"}
                 </p>
                 <p className="text-4xl font-bold text-stone-900 mt-1">
                   USD {model.priceUSD.toLocaleString("es-AR")}
+                  {model.precioHasta && (
+                    <span className="text-stone-400 text-2xl font-normal">
+                      {" – "}{model.precioHasta.toLocaleString("es-AR")}
+                    </span>
+                  )}
                 </p>
                 <p className="text-xs text-stone-500 mt-1">
-                  Financiación disponible en pesos y dólares
+                  Incluye fabricación, transporte e instalación
                 </p>
               </div>
             )}
@@ -156,9 +178,28 @@ export default async function ModelDetailPage({ params }: Props) {
               </div>
             )}
 
+            {/* Finalidades */}
+            {model.finalidades && model.finalidades.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {model.finalidades.map((f) => (
+                  <span
+                    key={f}
+                    className="px-2.5 py-1 bg-sage-50 border border-sage-100 text-sage-700 text-xs font-medium rounded-full"
+                  >
+                    {FINALIDAD_LABELS[f] ?? f}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* CTA buttons */}
             <div className="flex flex-col gap-3">
-              <ConsultarButton model={{ slug: model.slug, name: model.name, maxHabitaciones: model.maxHabitaciones, permiteCocinaSiMax3Hab: model.permiteCocinaSiMax3Hab }} />
+              <Link
+                href={configuradorHref}
+                className="block w-full text-center py-3.5 bg-sage-600 hover:bg-sage-700 text-white font-bold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-sage-600/25 hover:-translate-y-0.5"
+              >
+                Diseñar mi MOVARA
+              </Link>
               <a
                 href={waHref}
                 target="_blank"
@@ -267,15 +308,20 @@ export default async function ModelDetailPage({ params }: Props) {
           </aside>
         </div>
 
-        {/* Wizard CTA banner */}
-        <div className="mt-12 bg-sage-50 border border-sage-100 rounded-2xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+        {/* Configurador CTA banner */}
+        <div className="mt-12 bg-sage-950 rounded-2xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div>
-            <h2 className="text-xl font-bold text-stone-900">¿Listo para consultar?</h2>
-            <p className="text-stone-500 text-sm mt-1">
-              Completá 6 preguntas rápidas y te enviamos un presupuesto personalizado por WhatsApp.
+            <h2 className="text-xl font-bold text-white">¿Listo para personalizarlo?</h2>
+            <p className="text-stone-400 text-sm mt-1">
+              3 preguntas, 2 minutos. Recibís el presupuesto exacto por WhatsApp al instante.
             </p>
           </div>
-          <ConsultarButton model={{ slug: model.slug, name: model.name, maxHabitaciones: model.maxHabitaciones, permiteCocinaSiMax3Hab: model.permiteCocinaSiMax3Hab }} />
+          <Link
+            href={configuradorHref}
+            className="shrink-0 px-8 py-3.5 bg-sage-500 hover:bg-sage-400 text-white font-bold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-sage-500/30 hover:-translate-y-0.5 text-sm"
+          >
+            Abrir configurador →
+          </Link>
         </div>
       </main>
     </>

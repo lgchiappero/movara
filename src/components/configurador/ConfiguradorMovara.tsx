@@ -82,6 +82,37 @@ const FINALIDADES = [
 type ModeloKey = (typeof MOVARA_MODELS)[number]["key"];
 type FinalidadKey = (typeof FINALIDADES)[number]["key"];
 
+type ConfiguradorPageData = {
+  paso1?: {
+    title?: string | null;
+    subtitle?: string | null;
+    modelo10ft?: string | null;
+    modelo20ft?: string | null;
+    modelo40ft?: string | null;
+  } | null;
+  paso2?: {
+    title?: string | null;
+    subtitle?: string | null;
+    descInversor?: string | null;
+    descAgro?: string | null;
+    descVivienda?: string | null;
+    descTurismo?: string | null;
+    descEmpresa?: string | null;
+    descSectorPublico?: string | null;
+  } | null;
+  paso3?: {
+    title?: string | null;
+    subtitle?: string | null;
+    localidadLabel?: string | null;
+    provinciaLabel?: string | null;
+  } | null;
+  resultado?: {
+    title?: string | null;
+    waButtonText?: string | null;
+    trustText?: string | null;
+  } | null;
+};
+
 // ─────────────────────────────────────────────────────────
 // WA message builder
 // ─────────────────────────────────────────────────────────
@@ -116,10 +147,58 @@ function buildWAMessage(
 
 const STEP_LABELS = ["Modelo", "Finalidad", "Ubicación"] as const;
 
-export default function ConfiguradorMovara() {
+const VALID_MODELO_KEYS = new Set(MOVARA_MODELS.map((m) => m.key));
+
+export default function ConfiguradorMovara({
+  data,
+  preselectedModelo,
+}: {
+  data?: ConfiguradorPageData | null;
+  preselectedModelo?: string;
+}) {
+  const validPreselected =
+    preselectedModelo && VALID_MODELO_KEYS.has(preselectedModelo as ModeloKey)
+      ? (preselectedModelo as ModeloKey)
+      : null;
+
+  const cms = {
+    paso1: {
+      title: data?.paso1?.title ?? '¿Qué tamaño necesitás?',
+      subtitle: data?.paso1?.subtitle ?? 'Cada módulo es un contenedor de alta prestación. Elegí según tu proyecto.',
+      taglines: {
+        '10ft': data?.paso1?.modelo10ft ?? null,
+        '20ft': data?.paso1?.modelo20ft ?? null,
+        '40ft': data?.paso1?.modelo40ft ?? null,
+      } as Record<string, string | null>,
+    },
+    paso2: {
+      title: data?.paso2?.title ?? '¿Para qué lo vas a usar?',
+      subtitle: data?.paso2?.subtitle ?? 'El uso define la configuración interior y el tipo de asesoramiento que te damos.',
+      descs: {
+        'inversor': data?.paso2?.descInversor ?? null,
+        'agro': data?.paso2?.descAgro ?? null,
+        'vivienda': data?.paso2?.descVivienda ?? null,
+        'turismo': data?.paso2?.descTurismo ?? null,
+        'empresa': data?.paso2?.descEmpresa ?? null,
+        'sector-publico': data?.paso2?.descSectorPublico ?? null,
+      } as Record<string, string | null>,
+    },
+    paso3: {
+      title: data?.paso3?.title ?? '¿Dónde lo instalás?',
+      subtitle: data?.paso3?.subtitle ?? 'Cada zona del país tiene requerimientos técnicos distintos. Los calculamos automáticamente.',
+      localidadLabel: data?.paso3?.localidadLabel ?? 'Localidad',
+      provinciaLabel: data?.paso3?.provinciaLabel ?? 'Provincia',
+    },
+    resultado: {
+      title: data?.resultado?.title ?? 'Listo. Así queda tu MOVARA.',
+      waButtonText: data?.resultado?.waButtonText ?? 'Enviar por WhatsApp',
+      trustText: data?.resultado?.trustText ?? 'Sin cargo. Respondemos en menos de 2 horas.',
+    },
+  };
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [slideDir, setSlideDir] = useState<1 | -1>(1);
-  const [modelo, setModelo] = useState<ModeloKey | null>(null);
+  const [modelo, setModelo] = useState<ModeloKey | null>(validPreselected);
   const [finalidad, setFinalidad] = useState<FinalidadKey | null>(null);
   const [localidad, setLocalidad] = useState("");
   const [provincia, setProvincia] = useState("");
@@ -170,7 +249,7 @@ export default function ConfiguradorMovara() {
           <span className="text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">
             Tu configuración
           </span>
-          <h1 className="text-3xl font-bold text-white mt-2">Listo. Así queda tu MOVARA.</h1>
+          <h1 className="text-3xl font-bold text-white mt-2">{cms.resultado.title}</h1>
           <p className="text-stone-400 mt-2 text-sm">
             Revisá el mensaje y enviánoslo por WhatsApp para arrancar.
           </p>
@@ -191,6 +270,8 @@ export default function ConfiguradorMovara() {
               setWaMessage={setWaMessage}
               onBack={goBack}
               onSend={handleSendWA}
+              waButtonText={cms.resultado.waButtonText}
+              trustText={cms.resultado.trustText}
             />
           </motion.div>
         </div>
@@ -250,10 +331,22 @@ export default function ConfiguradorMovara() {
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
             {step === 1 && (
-              <StepModelo modelo={modelo} onSelect={setModelo} />
+              <StepModelo
+                modelo={modelo}
+                onSelect={setModelo}
+                title={cms.paso1.title}
+                subtitle={cms.paso1.subtitle}
+                taglines={cms.paso1.taglines}
+              />
             )}
             {step === 2 && (
-              <StepFinalidad finalidad={finalidad} onSelect={setFinalidad} />
+              <StepFinalidad
+                finalidad={finalidad}
+                onSelect={setFinalidad}
+                title={cms.paso2.title}
+                subtitle={cms.paso2.subtitle}
+                descs={cms.paso2.descs}
+              />
             )}
             {step === 3 && (
               <StepUbicacion
@@ -262,6 +355,10 @@ export default function ConfiguradorMovara() {
                 provincia={provincia}
                 setProvincia={setProvincia}
                 regional={regional}
+                title={cms.paso3.title}
+                subtitle={cms.paso3.subtitle}
+                localidadLabel={cms.paso3.localidadLabel}
+                provinciaLabel={cms.paso3.provinciaLabel}
               />
             )}
           </motion.div>
@@ -310,19 +407,23 @@ export default function ConfiguradorMovara() {
 function StepModelo({
   modelo,
   onSelect,
+  title,
+  subtitle,
+  taglines,
 }: {
   modelo: ModeloKey | null;
   onSelect: (k: ModeloKey) => void;
+  title: string;
+  subtitle: string;
+  taglines: Record<string, string | null>;
 }) {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-sage-600 mb-2">
         Paso 1 de 3
       </p>
-      <h2 className="text-2xl font-bold text-stone-900 mb-1">¿Qué tamaño necesitás?</h2>
-      <p className="text-stone-500 text-sm mb-8">
-        Cada módulo es un contenedor de alta prestación. Elegí según tu proyecto.
-      </p>
+      <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
+      <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
 
       <div className="space-y-4">
         {MOVARA_MODELS.map((m) => {
@@ -355,7 +456,7 @@ function StepModelo({
                     )}
                   </div>
                   <p className={`text-sm ${selected ? "text-stone-600" : "text-stone-500"}`}>
-                    {m.tagline}
+                    {taglines[m.key] ?? m.tagline}
                   </p>
                 </div>
 
@@ -405,19 +506,23 @@ function StepModelo({
 function StepFinalidad({
   finalidad,
   onSelect,
+  title,
+  subtitle,
+  descs,
 }: {
   finalidad: FinalidadKey | null;
   onSelect: (k: FinalidadKey) => void;
+  title: string;
+  subtitle: string;
+  descs: Record<string, string | null>;
 }) {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-sage-600 mb-2">
         Paso 2 de 3
       </p>
-      <h2 className="text-2xl font-bold text-stone-900 mb-1">¿Para qué lo vas a usar?</h2>
-      <p className="text-stone-500 text-sm mb-8">
-        El uso define la configuración interior y el tipo de asesoramiento que te damos.
-      </p>
+      <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
+      <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {FINALIDADES.map((f) => {
@@ -446,7 +551,7 @@ function StepFinalidad({
                   selected ? "text-stone-600" : "text-stone-400"
                 }`}
               >
-                {f.desc}
+                {descs[f.key] ?? f.desc}
               </p>
               {selected && (
                 <span className="mt-2 inline-flex w-4 h-4 rounded-full bg-sage-500 items-center justify-center">
@@ -471,22 +576,28 @@ function StepUbicacion({
   provincia,
   setProvincia,
   regional,
+  title,
+  subtitle,
+  localidadLabel,
+  provinciaLabel,
 }: {
   localidad: string;
   setLocalidad: (v: string) => void;
   provincia: string;
   setProvincia: (v: string) => void;
   regional: (typeof REGIONAL_MODELS)[string] | null;
+  title: string;
+  subtitle: string;
+  localidadLabel: string;
+  provinciaLabel: string;
 }) {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-sage-600 mb-2">
         Paso 3 de 3
       </p>
-      <h2 className="text-2xl font-bold text-stone-900 mb-1">¿Dónde lo instalás?</h2>
-      <p className="text-stone-500 text-sm mb-8">
-        Cada zona del país tiene requerimientos técnicos distintos. Los calculamos automáticamente.
-      </p>
+      <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
+      <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
 
       <div className="space-y-5">
         <div>
@@ -494,7 +605,7 @@ function StepUbicacion({
             htmlFor="cfg-localidad"
             className="block text-sm font-semibold text-stone-700 mb-1.5"
           >
-            Localidad
+            {localidadLabel}
           </label>
           <input
             id="cfg-localidad"
@@ -512,7 +623,7 @@ function StepUbicacion({
             htmlFor="cfg-provincia"
             className="block text-sm font-semibold text-stone-700 mb-1.5"
           >
-            Provincia <span className="text-sage-600">*</span>
+            {provinciaLabel} <span className="text-sage-600">*</span>
           </label>
           <select
             id="cfg-provincia"
@@ -583,6 +694,8 @@ function ResultScreen({
   setWaMessage,
   onBack,
   onSend,
+  waButtonText,
+  trustText,
 }: {
   modelo: ModeloKey;
   finalidad: FinalidadKey;
@@ -593,6 +706,8 @@ function ResultScreen({
   setWaMessage: (v: string) => void;
   onBack: () => void;
   onSend: () => void;
+  waButtonText: string;
+  trustText: string;
 }) {
   const m = MOVARA_MODELS.find((x) => x.key === modelo)!;
   const f = FINALIDADES.find((x) => x.key === finalidad)!;
@@ -674,8 +789,9 @@ function ResultScreen({
           className="w-full flex items-center justify-center gap-2.5 py-4 bg-[#25D366] hover:bg-[#1fba58] text-white font-bold text-sm rounded-xl transition-all duration-200 hover:shadow-xl hover:shadow-green-500/25 hover:-translate-y-0.5"
         >
           <WhatsAppIcon className="w-5 h-5" />
-          Enviar por WhatsApp
+          {waButtonText}
         </button>
+        <p className="text-center text-xs text-stone-400">{trustText}</p>
         <button
           type="button"
           onClick={onBack}
