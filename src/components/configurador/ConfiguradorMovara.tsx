@@ -46,7 +46,41 @@ const FINALIDADES = [
   { key: "sector-publico", emoji: "🏛️", label: "Sector público", desc: "Vivienda social o infraestructura municipal", subdesc: "Municipal o social" },
 ] as const;
 
-type Upgrade = { key: string; icon: string; nombre: string; descripcion: string; recomendado?: boolean };
+type Upgrade = { key: string; icon: string; nombre: string; descripcion: string; recomendado?: boolean; soloModelos?: string[] };
+
+const UNIVERSAL_UPGRADES: Upgrade[] = [
+  {
+    key: "panel-100",
+    icon: "🧱",
+    nombre: "Panel lana de roca 100mm",
+    descripcion: "Valor R: 2.8 m²K/W — 33% más que el estándar 75mm. Mantiene temperatura interior estable hasta −15°C exterior. Recomendado para Patagonia, Cordillera, NOA y TDF.",
+  },
+  {
+    key: "triple-vidrio",
+    icon: "🪟",
+    nombre: "Triple vidrio (TDH)",
+    descripcion: "Transmitancia: 0.5–0.7 W/m²K vs DVH estándar 1.0–1.2 W/m²K — 50% más eficiente. Elimina condensación incluso en invierno extremo.",
+  },
+  {
+    key: "balcon-delantero",
+    icon: "🏗️",
+    nombre: "Balcón delantero",
+    descripcion: "Amplía el espacio exterior habitable. Disponible para todos los modelos. Ideal para uso turístico y vivienda.",
+  },
+  {
+    key: "balcon-lateral",
+    icon: "🏗️",
+    nombre: "Balcón lateral",
+    descripcion: "Espacio exterior de acceso lateral. Solo disponible para modelos 20ft y 40ft (superficie mayor a 18m²).",
+    soloModelos: ["20ft", "40ft"],
+  },
+  {
+    key: "kit-solar",
+    icon: "⚡",
+    nombre: "Kit solar básico",
+    descripcion: "2 paneles 400W + inversor. Reducción estimada de factura eléctrica: 40–60%. Disponible para todos los modelos.",
+  },
+];
 
 const UPGRADES_BY_REGION: Record<string, Upgrade[]> = {
   pampa: [
@@ -146,7 +180,7 @@ function buildWAMessage(params: {
   const lavaTxt = LABELS_LAVA[params.lavarropas];
 
   const regional = REGIONAL_MODELS[params.regionalKey];
-  const allUpgrades = UPGRADES_BY_REGION[params.regionalKey] ?? [];
+  const allUpgrades = [...UNIVERSAL_UPGRADES, ...(UPGRADES_BY_REGION[params.regionalKey] ?? [])];
   const selectedUpgradeNames = params.upgradesSeleccionados
     .map((k) => allUpgrades.find((u) => u.key === k)?.nombre)
     .filter(Boolean);
@@ -365,7 +399,7 @@ export default function ConfiguradorMovara({
             {step === 2 && <StepFinalidad finalidad={finalidad} onSelect={setFinalidad} title={cms.paso2.title} subtitle={cms.paso2.subtitle} descs={cms.paso2.descs} />}
             {step === 3 && <StepUbicacion localidad={localidad} setLocalidad={setLocalidad} provincia={provincia} setProvincia={setProvincia} regional={regional} title={cms.paso3.title} subtitle={cms.paso3.subtitle} localidadLabel={cms.paso3.localidadLabel} provinciaLabel={cms.paso3.provinciaLabel} />}
             {step === 4 && <StepConfiguracion modelo={modelo} habitaciones={habitaciones} setHabitaciones={setHabitaciones} maxHab={maxHab} incluyeCocina={incluyeCocina} setIncluyeCocina={setIncluyeCocina} tipoCocina={tipoCocina} setTipoCocina={setTipoCocina} incluyeBano={incluyeBano} setIncluyeBano={setIncluyeBano} tipoAgua={tipoAgua} setTipoAgua={setTipoAgua} lavarropas={lavarropas} setLavarropas={setLavarropas} />}
-            {step === 5 && <StepMejoras regionalKey={regionalKey} regional={regional} upgradesSeleccionados={upgradesSeleccionados} onToggle={toggleUpgrade} />}
+            {step === 5 && <StepMejoras regionalKey={regionalKey} regional={regional} modelo={modelo} upgradesSeleccionados={upgradesSeleccionados} onToggle={toggleUpgrade} />}
           </motion.div>
         </AnimatePresence>
 
@@ -703,67 +737,84 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
 // Step 5 — Mejoras por región
 // ─────────────────────────────────────────────────────────
 
-function StepMejoras({ regionalKey, regional, upgradesSeleccionados, onToggle }: {
+function UpgradeCard({ upgrade, selected, onToggle }: { upgrade: Upgrade; selected: boolean; onToggle: () => void }) {
+  return (
+    <div className={`rounded-2xl border-2 transition-all duration-200 overflow-hidden ${selected ? "border-sage-500 shadow-sm shadow-sage-500/10" : "border-[#E5E5E5] bg-white hover:border-sage-300"}`}>
+      <button type="button" onClick={onToggle} className="w-full text-left p-5 cursor-pointer">
+        <div className="flex items-start gap-4">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl transition-colors ${selected ? "bg-sage-100" : "bg-stone-100"}`}>
+            {upgrade.icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-sm font-bold ${selected ? "text-sage-800" : "text-stone-800"}`}>{upgrade.nombre}</span>
+              {upgrade.recomendado && <span className="px-2 py-0.5 bg-sage-500 text-white text-[10px] font-bold uppercase tracking-wide rounded-full">Recomendado</span>}
+            </div>
+            <p className="text-xs text-stone-500 mt-0.5 leading-relaxed">{upgrade.descripcion}</p>
+          </div>
+          <div className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-all mt-0.5 ${selected ? "bg-sage-500 border-sage-500" : "border-stone-300 bg-white"}`}>
+            {selected && <CheckIcon className="w-3 h-3 text-white" />}
+          </div>
+        </div>
+      </button>
+      <div className="px-5 pb-5">
+        <PhotoCarousel slides={2} />
+      </div>
+    </div>
+  );
+}
+
+function StepMejoras({ regionalKey, regional, modelo, upgradesSeleccionados, onToggle }: {
   regionalKey: string;
   regional: (typeof REGIONAL_MODELS)[string] | null;
+  modelo: ModeloKey | null;
   upgradesSeleccionados: Set<string>;
   onToggle: (key: string) => void;
 }) {
-  const upgrades = UPGRADES_BY_REGION[regionalKey] ?? [];
-
-  if (!regional || upgrades.length === 0) {
-    return (
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 5 de 5</p>
-        <h2 className="text-2xl font-bold text-stone-900 mb-1">Mejoras recomendadas para tu zona</h2>
-        <div className="mt-8 bg-stone-100 rounded-2xl p-8 text-center">
-          <p className="text-stone-400 text-sm">Completá tu provincia en el paso anterior para ver las mejoras recomendadas para tu zona climática.</p>
-        </div>
-      </div>
-    );
-  }
+  const regionalUpgrades = UPGRADES_BY_REGION[regionalKey] ?? [];
+  const universalFiltered = UNIVERSAL_UPGRADES.filter(
+    (u) => !u.soloModelos || (modelo && u.soloModelos.includes(modelo))
+  );
 
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 5 de 5</p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">Mejoras recomendadas para tu zona</h2>
-      <p className="text-stone-500 text-sm mb-1">Seleccioná las que querés cotizar — no son obligatorias.</p>
-      {regional && (
-        <div className="inline-flex items-center gap-1.5 mt-1 mb-6 px-3 py-1.5 bg-sage-50 border border-sage-200 rounded-full">
-          <span>{regional.icon}</span>
-          <span className="text-xs font-semibold text-sage-700">{regional.region}</span>
+      <p className="text-stone-500 text-sm mb-6">Seleccioná las que querés cotizar — no son obligatorias.</p>
+
+      {/* Universal upgrades */}
+      <div className="mb-2">
+        <p className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-3">Disponibles para todos los modelos</p>
+        <div className="space-y-3">
+          {universalFiltered.map((upgrade) => (
+            <UpgradeCard key={upgrade.key} upgrade={upgrade} selected={upgradesSeleccionados.has(upgrade.key)} onToggle={() => onToggle(upgrade.key)} />
+          ))}
+        </div>
+      </div>
+
+      {/* Regional upgrades */}
+      {regional && regionalUpgrades.length > 0 && (
+        <div className="mt-6">
+          <div className="flex items-center gap-2 mb-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Específicas para tu zona</p>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-sage-50 border border-sage-200 rounded-full">
+              <span className="text-sm">{regional.icon}</span>
+              <span className="text-xs font-semibold text-sage-700">{regional.region}</span>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {regionalUpgrades.map((upgrade) => (
+              <UpgradeCard key={upgrade.key} upgrade={upgrade} selected={upgradesSeleccionados.has(upgrade.key)} onToggle={() => onToggle(upgrade.key)} />
+            ))}
+          </div>
         </div>
       )}
 
-      <div className="space-y-3">
-        {upgrades.map((upgrade) => {
-          const selected = upgradesSeleccionados.has(upgrade.key);
-          return (
-            <div key={upgrade.key} className={`rounded-2xl border-2 transition-all duration-200 overflow-hidden ${selected ? "border-sage-500 shadow-sm shadow-sage-500/10" : "border-[#E5E5E5] bg-white hover:border-sage-300"}`}>
-              <button type="button" onClick={() => onToggle(upgrade.key)} className="w-full text-left p-5 cursor-pointer">
-                <div className="flex items-start gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl transition-colors ${selected ? "bg-sage-100" : "bg-stone-100"}`}>
-                    {upgrade.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-sm font-bold ${selected ? "text-sage-800" : "text-stone-800"}`}>{upgrade.nombre}</span>
-                      {upgrade.recomendado && <span className="px-2 py-0.5 bg-sage-500 text-white text-[10px] font-bold uppercase tracking-wide rounded-full">Recomendado</span>}
-                    </div>
-                    <p className="text-xs text-stone-500 mt-0.5 leading-relaxed">{upgrade.descripcion}</p>
-                  </div>
-                  <div className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-all ${selected ? "bg-sage-500 border-sage-500" : "border-stone-300 bg-white"}`}>
-                    {selected && <CheckIcon className="w-3 h-3 text-white" />}
-                  </div>
-                </div>
-              </button>
-              <div className="px-5 pb-5">
-                <PhotoCarousel slides={2} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {!regional && (
+        <div className="mt-4 bg-stone-50 border border-stone-200 rounded-xl p-4 text-center">
+          <p className="text-stone-400 text-sm">Completá tu provincia en el paso anterior para ver también las mejoras específicas de tu zona climática.</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -796,7 +847,7 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habit
   const m = MOVARA_MODELS.find((x) => x.key === modelo)!;
   const f = FINALIDADES.find((x) => x.key === finalidad)!;
   const loc = [localidad.trim(), provincia].filter(Boolean).join(", ");
-  const allUpgrades = UPGRADES_BY_REGION[regionalKey] ?? [];
+  const allUpgrades = [...UNIVERSAL_UPGRADES, ...(UPGRADES_BY_REGION[regionalKey] ?? [])];
   const selectedUpgrades = upgradesSeleccionados.map((k) => allUpgrades.find((u) => u.key === k)).filter(Boolean) as Upgrade[];
 
   return (
