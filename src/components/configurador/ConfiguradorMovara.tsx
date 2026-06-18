@@ -131,6 +131,7 @@ type FinalidadKey = (typeof FINALIDADES)[number]["key"];
 type TipoCocina = "electrico" | "gas";
 type TipoAgua = "calefon-electrico" | "termotanque-gas";
 type TipoLavarropas = "sin" | "bano" | "cocina" | "externo";
+type TipoCliente = "particular" | "empresa";
 
 type ConfiguradorPageData = {
   paso1?: { title?: string | null; subtitle?: string | null; modelo10ft?: string | null; modelo20ft?: string | null; modelo40ft?: string | null } | null;
@@ -155,6 +156,10 @@ const LABELS_LAVA: Record<TipoLavarropas, string> = {
   externo: "espacio externo con desagüe",
 };
 
+function isValidEmail(e: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+}
+
 function buildWAMessage(params: {
   modelo: ModeloKey;
   finalidad: FinalidadKey;
@@ -168,6 +173,12 @@ function buildWAMessage(params: {
   lavarropas: TipoLavarropas;
   upgradesSeleccionados: string[];
   regionalKey: string;
+  tipoCliente: TipoCliente;
+  nombre: string;
+  razonSocial: string;
+  nombreContacto: string;
+  telefono: string;
+  email: string;
 }): string {
   const m = MOVARA_MODELS.find((x) => x.key === params.modelo)!;
   const f = FINALIDADES.find((x) => x.key === params.finalidad)!;
@@ -185,8 +196,14 @@ function buildWAMessage(params: {
     .map((k) => allUpgrades.find((u) => u.key === k)?.nombre)
     .filter(Boolean);
 
+  const clienteNombre = params.tipoCliente === "particular" ? params.nombre : params.razonSocial;
+
   return (
-    `Hola MOVARA! 👋\n` +
+    `Hola MOVARA! 👋\n\n` +
+    `👤 Cliente: ${clienteNombre}\n` +
+    (params.tipoCliente === "empresa" ? `🏢 Contacto: ${params.nombreContacto}\n` : "") +
+    `📞 Teléfono: ${params.telefono}\n` +
+    `📧 Email: ${params.email}\n\n` +
     `📦 Modelo: ${m.nombre} — ${m.superficie}m²\n` +
     `🎯 Uso: ${f.label}\n` +
     `📍 Ubicación: ${loc || "(no especificada)"}\n` +
@@ -194,8 +211,8 @@ function buildWAMessage(params: {
     (selectedUpgradeNames.length
       ? `⚙️ Mejoras a cotizar: ${selectedUpgradeNames.join(", ")}\n`
       : `⚙️ Zona climática: ${regional?.region ?? params.regionalKey}\n`) +
-    `💰 Precio base estimado: USD ${m.precio.min.toLocaleString("es-AR")} – ${m.precio.max.toLocaleString("es-AR")}\n` +
-    `¿Me pueden asesorar?`
+    `💰 Precio base estimado: USD ${m.precio.min.toLocaleString("es-AR")} – ${m.precio.max.toLocaleString("es-AR")}\n\n` +
+    `Quedo a la espera de su presupuesto. Gracias!`
   );
 }
 
@@ -203,7 +220,7 @@ function buildWAMessage(params: {
 // Main component
 // ─────────────────────────────────────────────────────────
 
-const STEP_LABELS = ["Modelo", "Finalidad", "Ubicación", "Configuración", "Mejoras"] as const;
+const STEP_LABELS = ["Modelo", "Finalidad", "Ubicación", "Configuración", "Mejoras", "Datos", "Resultado"] as const;
 const VALID_MODELO_KEYS = new Set(MOVARA_MODELS.map((m) => m.key));
 
 export default function ConfiguradorMovara({
@@ -242,8 +259,8 @@ export default function ConfiguradorMovara({
     },
   };
 
-  // Paso 1–3
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  // Paso 1–6
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
   const [slideDir, setSlideDir] = useState<1 | -1>(1);
   const [modelo, setModelo] = useState<ModeloKey | null>(validPreselected);
   const [finalidad, setFinalidad] = useState<FinalidadKey | null>(null);
@@ -261,6 +278,14 @@ export default function ConfiguradorMovara({
   // Paso 5
   const [upgradesSeleccionados, setUpgradesSeleccionados] = useState<Set<string>>(new Set());
 
+  // Paso 6
+  const [tipoCliente, setTipoCliente] = useState<TipoCliente>("particular");
+  const [nombre, setNombre] = useState("");
+  const [razonSocial, setRazonSocial] = useState("");
+  const [nombreContacto, setNombreContacto] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [email, setEmail] = useState("");
+
   // Result
   const [showResult, setShowResult] = useState(false);
   const [waMessage, setWaMessage] = useState("");
@@ -270,17 +295,23 @@ export default function ConfiguradorMovara({
   const regionalKey = getModeloKey(provincia, localidad);
   const regional = REGIONAL_MODELS[regionalKey] ?? null;
 
+  const step6Valid =
+    tipoCliente === "particular"
+      ? nombre.trim() !== "" && telefono.trim() !== "" && isValidEmail(email)
+      : razonSocial.trim() !== "" && nombreContacto.trim() !== "" && telefono.trim() !== "" && isValidEmail(email);
+
   const canNext =
     (step === 1 && modelo !== null) ||
     (step === 2 && finalidad !== null) ||
     (step === 3 && provincia !== "") ||
     step === 4 ||
-    step === 5;
+    step === 5 ||
+    (step === 6 && step6Valid);
 
   function goNext() {
-    if (step < 5) {
+    if (step < 6) {
       setSlideDir(1);
-      setStep((s) => (s + 1) as 2 | 3 | 4 | 5);
+      setStep((s) => (s + 1) as 2 | 3 | 4 | 5 | 6);
     } else {
       const msg = buildWAMessage({
         modelo: modelo!,
@@ -295,6 +326,12 @@ export default function ConfiguradorMovara({
         lavarropas,
         upgradesSeleccionados: Array.from(upgradesSeleccionados),
         regionalKey,
+        tipoCliente,
+        nombre,
+        razonSocial,
+        nombreContacto,
+        telefono,
+        email,
       });
       setWaMessage(msg);
       setShowResult(true);
@@ -306,7 +343,7 @@ export default function ConfiguradorMovara({
       setShowResult(false);
     } else if (step > 1) {
       setSlideDir(-1);
-      setStep((s) => (s - 1) as 1 | 2 | 3 | 4);
+      setStep((s) => (s - 1) as 1 | 2 | 3 | 4 | 5 | 6);
     }
   }
 
@@ -327,7 +364,7 @@ export default function ConfiguradorMovara({
     return (
       <main className="min-h-screen bg-stone-50 pt-16">
         <div className="bg-[#2F2F2F] px-6 pt-14 pb-10 text-center">
-          <span className="text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Paso 6 de 6 — Tu configuración</span>
+          <span className="text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Paso 7 de 7 — Tu configuración</span>
           <h1 className="text-3xl font-bold text-white mt-2">{cms.resultado.title}</h1>
           <p className="text-stone-400 mt-2 text-sm">Revisá el mensaje y enviánoslo por WhatsApp para arrancar.</p>
         </div>
@@ -365,14 +402,14 @@ export default function ConfiguradorMovara({
       <div className="bg-[#2F2F2F] px-6 pt-14 pb-10 text-center">
         <span className="text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Configurador</span>
         <h1 className="text-3xl sm:text-4xl font-bold text-white mt-2 tracking-tight">Diseñá tu MOVARA</h1>
-        <p className="text-stone-400 mt-2 text-sm">5 pasos para encontrar el módulo ideal y recibir un presupuesto por WhatsApp.</p>
+        <p className="text-stone-400 mt-2 text-sm">7 pasos para encontrar el módulo ideal y recibir un presupuesto por WhatsApp.</p>
       </div>
 
       <div className="max-w-2xl mx-auto px-6 py-10">
         {/* Progress */}
         <div className="mb-10">
           <div className="flex gap-1.5 mb-3">
-            {([1, 2, 3, 4, 5] as const).map((n) => (
+            {([1, 2, 3, 4, 5, 6, 7] as const).map((n) => (
               <div key={n} className="flex-1 h-1.5 rounded-full bg-stone-200 overflow-hidden">
                 <div className="h-full rounded-full bg-sage-500 transition-all duration-500" style={{ width: n <= step ? "100%" : "0%" }} />
               </div>
@@ -400,6 +437,7 @@ export default function ConfiguradorMovara({
             {step === 3 && <StepUbicacion localidad={localidad} setLocalidad={setLocalidad} provincia={provincia} setProvincia={setProvincia} regional={regional} title={cms.paso3.title} subtitle={cms.paso3.subtitle} localidadLabel={cms.paso3.localidadLabel} provinciaLabel={cms.paso3.provinciaLabel} />}
             {step === 4 && <StepConfiguracion modelo={modelo} habitaciones={habitaciones} setHabitaciones={setHabitaciones} maxHab={maxHab} incluyeCocina={incluyeCocina} setIncluyeCocina={setIncluyeCocina} tipoCocina={tipoCocina} setTipoCocina={setTipoCocina} incluyeBano={incluyeBano} setIncluyeBano={setIncluyeBano} tipoAgua={tipoAgua} setTipoAgua={setTipoAgua} lavarropas={lavarropas} setLavarropas={setLavarropas} />}
             {step === 5 && <StepMejoras regionalKey={regionalKey} regional={regional} modelo={modelo} upgradesSeleccionados={upgradesSeleccionados} onToggle={toggleUpgrade} />}
+            {step === 6 && <StepDatos tipoCliente={tipoCliente} setTipoCliente={setTipoCliente} nombre={nombre} setNombre={setNombre} razonSocial={razonSocial} setRazonSocial={setRazonSocial} nombreContacto={nombreContacto} setNombreContacto={setNombreContacto} telefono={telefono} setTelefono={setTelefono} email={email} setEmail={setEmail} />}
           </motion.div>
         </AnimatePresence>
 
@@ -420,7 +458,7 @@ export default function ConfiguradorMovara({
             disabled={!canNext}
             className="flex items-center gap-2 px-8 py-3 bg-sage-500 hover:bg-sage-600 disabled:opacity-35 disabled:cursor-not-allowed text-white text-sm font-bold rounded-full transition-all duration-200 hover:shadow-lg hover:shadow-sage-500/25 hover:-translate-y-px"
           >
-            {step === 5 ? "Ver mi configuración" : "Siguiente"}
+            {step === 6 ? "Ver mi configuración" : "Siguiente"}
             <ChevronRightIcon />
           </button>
         </div>
@@ -480,7 +518,7 @@ function StepModelo({ modelo, onSelect, title, subtitle, taglines }: {
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 1 de 5</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 1 de 7</p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
       <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
       <div className="space-y-4">
@@ -533,7 +571,7 @@ function StepFinalidad({ finalidad, onSelect, title, subtitle, descs }: {
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 2 de 5</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 2 de 7</p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
       <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -570,7 +608,7 @@ function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, regio
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 3 de 5</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 3 de 7</p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
       <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
       <div className="space-y-5">
@@ -636,7 +674,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
       <p className="text-sm font-semibold text-stone-700 mb-2">{label}</p>
@@ -673,7 +711,7 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 4 de 5</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 4 de 7</p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">Configurá tu espacio</h2>
       <p className="text-stone-500 text-sm mb-6">Personalizá el interior de tu módulo según tus necesidades.</p>
 
@@ -778,7 +816,7 @@ function StepMejoras({ regionalKey, regional, modelo, upgradesSeleccionados, onT
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 5 de 5</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 5 de 7</p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">Mejoras recomendadas para tu zona</h2>
       <p className="text-stone-500 text-sm mb-6">Seleccioná las que querés cotizar — no son obligatorias.</p>
 
@@ -820,7 +858,146 @@ function StepMejoras({ regionalKey, regional, modelo, upgradesSeleccionados, onT
 }
 
 // ─────────────────────────────────────────────────────────
-// Result screen — Paso 6
+// Step 6 — Tus datos
+// ─────────────────────────────────────────────────────────
+
+const INPUT_CLS = "w-full px-4 py-3 rounded-xl border border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20 outline-none text-stone-900 text-sm placeholder:text-stone-400 transition-colors bg-white";
+
+function StepDatos({
+  tipoCliente, setTipoCliente,
+  nombre, setNombre,
+  razonSocial, setRazonSocial,
+  nombreContacto, setNombreContacto,
+  telefono, setTelefono,
+  email, setEmail,
+}: {
+  tipoCliente: TipoCliente;
+  setTipoCliente: (v: TipoCliente) => void;
+  nombre: string; setNombre: (v: string) => void;
+  razonSocial: string; setRazonSocial: (v: string) => void;
+  nombreContacto: string; setNombreContacto: (v: string) => void;
+  telefono: string; setTelefono: (v: string) => void;
+  email: string; setEmail: (v: string) => void;
+}) {
+  const emailTouched = email.length > 0;
+  const emailValid = isValidEmail(email);
+
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 6 de 7</p>
+      <h2 className="text-2xl font-bold text-stone-900 mb-1">Tus datos</h2>
+      <p className="text-stone-500 text-sm mb-6">Completá tus datos para que podamos preparar tu presupuesto personalizado.</p>
+
+      <div className="space-y-4">
+        {/* Tipo de cliente */}
+        <Section title="Tipo de cliente">
+          <Field label="¿Cómo consultás?">
+            <ToggleGroup<TipoCliente>
+              value={tipoCliente}
+              onChange={setTipoCliente}
+              options={[
+                { value: "particular", label: "Particular" },
+                { value: "empresa", label: "Empresa" },
+              ]}
+            />
+          </Field>
+        </Section>
+
+        {/* Campos según tipo */}
+        {tipoCliente === "particular" ? (
+          <Section title="Datos personales">
+            <Field label={<>Nombre y apellido <span className="text-sage-500">*</span></>}>
+              <input
+                type="text"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Ej: Juan García"
+                maxLength={100}
+                className={INPUT_CLS}
+              />
+            </Field>
+            <Field label={<>Teléfono de contacto <span className="text-sage-500">*</span></>}>
+              <input
+                type="tel"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                placeholder="Ej: +54 9 11 1234-5678"
+                maxLength={30}
+                className={INPUT_CLS}
+              />
+            </Field>
+            <Field label={<>Email <span className="text-sage-500">*</span></>}>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@email.com"
+                maxLength={150}
+                className={`${INPUT_CLS} ${emailTouched && !emailValid ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""}`}
+              />
+              {emailTouched && !emailValid && (
+                <p className="text-xs text-red-500 mt-1">Ingresá un email válido</p>
+              )}
+            </Field>
+          </Section>
+        ) : (
+          <Section title="Datos de la empresa">
+            <Field label={<>Razón social <span className="text-sage-500">*</span></>}>
+              <input
+                type="text"
+                value={razonSocial}
+                onChange={(e) => setRazonSocial(e.target.value)}
+                placeholder="Ej: Constructora Ejemplo S.A."
+                maxLength={150}
+                className={INPUT_CLS}
+              />
+            </Field>
+            <Field label={<>Nombre de contacto <span className="text-sage-500">*</span></>}>
+              <input
+                type="text"
+                value={nombreContacto}
+                onChange={(e) => setNombreContacto(e.target.value)}
+                placeholder="Ej: María López"
+                maxLength={100}
+                className={INPUT_CLS}
+              />
+            </Field>
+            <Field label={<>Teléfono de contacto <span className="text-sage-500">*</span></>}>
+              <input
+                type="tel"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                placeholder="Ej: +54 9 11 1234-5678"
+                maxLength={30}
+                className={INPUT_CLS}
+              />
+            </Field>
+            <Field label={<>Email <span className="text-sage-500">*</span></>}>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="contacto@empresa.com"
+                maxLength={150}
+                className={`${INPUT_CLS} ${emailTouched && !emailValid ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""}`}
+              />
+              {emailTouched && !emailValid && (
+                <p className="text-xs text-red-500 mt-1">Ingresá un email válido</p>
+              )}
+            </Field>
+          </Section>
+        )}
+
+        <p className="text-xs text-stone-400 text-center">
+          Campos con <span className="text-sage-500 font-semibold">*</span> son obligatorios. Tus datos solo se usan para preparar tu presupuesto.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// Result screen — Paso 7
 // ─────────────────────────────────────────────────────────
 
 function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habitaciones, incluyeCocina, tipoCocina, incluyeBano, tipoAgua, lavarropas, upgradesSeleccionados, regionalKey, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText }: {
