@@ -450,7 +450,21 @@ export default function ConfiguradorMovara({
             {step === 2 && <StepFinalidad finalidad={finalidad} onSelect={setFinalidad} title={cms.paso2.title} subtitle={cms.paso2.subtitle} descs={cms.paso2.descs} />}
             {step === 3 && <StepUbicacion localidad={localidad} setLocalidad={setLocalidad} provincia={provincia} setProvincia={setProvincia} regional={regional} title={cms.paso3.title} subtitle={cms.paso3.subtitle} localidadLabel={cms.paso3.localidadLabel} provinciaLabel={cms.paso3.provinciaLabel} />}
             {step === 4 && <StepConfiguracion modelo={modelo} habitaciones={habitaciones} setHabitaciones={setHabitaciones} maxHab={maxHab} incluyeCocina={incluyeCocina} setIncluyeCocina={setIncluyeCocina} tipoCocina={tipoCocina} setTipoCocina={setTipoCocina} incluyeBano={incluyeBano} setIncluyeBano={setIncluyeBano} tipoAgua={tipoAgua} setTipoAgua={setTipoAgua} lavarropas={lavarropas} setLavarropas={setLavarropas} />}
-            {step === 5 && <StepMejoras regionalKey={regionalKey} regional={regional} modelo={modelo} upgradesSeleccionados={upgradesSeleccionados} onToggle={toggleUpgrade} />}
+            {step === 5 && (
+              <StepMejoras
+                regionalKey={regionalKey}
+                regional={regional}
+                modelo={modelo}
+                upgradesSeleccionados={upgradesSeleccionados}
+                onToggle={toggleUpgrade}
+                habitaciones={habitaciones}
+                incluyeCocina={incluyeCocina}
+                tipoCocina={tipoCocina}
+                incluyeBano={incluyeBano}
+                tipoAgua={tipoAgua}
+                lavarropas={lavarropas}
+              />
+            )}
             {step === 6 && <StepDatos tipoCliente={tipoCliente} setTipoCliente={setTipoCliente} nombre={nombre} setNombre={setNombre} razonSocial={razonSocial} setRazonSocial={setRazonSocial} nombreContacto={nombreContacto} setNombreContacto={setNombreContacto} telefono={telefono} setTelefono={setTelefono} email={email} setEmail={setEmail} />}
           </motion.div>
         </AnimatePresence>
@@ -817,25 +831,68 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
 }
 
 // ─────────────────────────────────────────────────────────
-// Step 5 — Mejoras por región
+// Step 5 — Mejoras por región (rediseñado)
 // ─────────────────────────────────────────────────────────
 
-function UpgradeCard({ upgrade, selected, onToggle }: { upgrade: Upgrade; selected: boolean; onToggle: () => void }) {
+function IncludeItem({ label, description }: { label: string; description?: string }) {
   return (
-    <div className={`rounded-2xl border-2 transition-all duration-200 overflow-hidden ${selected ? "border-sage-500 shadow-sm shadow-sage-500/10" : "border-[#E5E5E5] bg-white hover:border-sage-300"}`}>
+    <div className="flex items-start gap-3">
+      <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+        <CheckIcon className="w-3 h-3 text-emerald-600" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-stone-800 leading-snug">{label}</p>
+        {description && (
+          <p className="text-xs text-stone-500 mt-0.5 leading-relaxed">{description}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function UpgradeCard({ upgrade, selected, onToggle }: {
+  upgrade: Upgrade;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div
+      className={`rounded-2xl border-2 transition-all duration-200 overflow-hidden ${
+        selected
+          ? "border-sage-500 shadow-sm shadow-sage-500/10 bg-sage-50/40"
+          : "border-[#E5E5E5] bg-white hover:border-sage-300"
+      }`}
+    >
       <button type="button" onClick={onToggle} className="w-full text-left p-5 cursor-pointer">
         <div className="flex items-start gap-4">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl transition-colors ${selected ? "bg-sage-100" : "bg-stone-100"}`}>
+          <div
+            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl transition-colors ${
+              selected ? "bg-sage-100" : "bg-stone-100"
+            }`}
+          >
             {upgrade.icon}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`text-sm font-bold ${selected ? "text-sage-800" : "text-stone-800"}`}>{upgrade.nombre}</span>
-              {upgrade.recomendado && <span className="px-2 py-0.5 bg-sage-500 text-white text-[10px] font-bold uppercase tracking-wide rounded-full">Recomendado</span>}
+            <p className={`text-sm font-bold mb-1.5 ${selected ? "text-sage-800" : "text-stone-800"}`}>
+              {upgrade.nombre}
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase tracking-wide rounded-full">
+                Costo adicional
+              </span>
+              {upgrade.recomendado && (
+                <span className="px-2 py-0.5 bg-sage-500 text-white text-[10px] font-bold uppercase tracking-wide rounded-full">
+                  Recomendado para tu zona
+                </span>
+              )}
             </div>
-            <p className="text-xs text-stone-500 mt-0.5 leading-relaxed">{upgrade.descripcion}</p>
+            <p className="text-xs text-stone-500 leading-relaxed">{upgrade.descripcion}</p>
           </div>
-          <div className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-all mt-0.5 ${selected ? "bg-sage-500 border-sage-500" : "border-stone-300 bg-white"}`}>
+          <div
+            className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-all mt-0.5 ${
+              selected ? "bg-sage-500 border-sage-500" : "border-stone-300 bg-white"
+            }`}
+          >
             {selected && <CheckIcon className="w-3 h-3 text-white" />}
           </div>
         </div>
@@ -847,57 +904,179 @@ function UpgradeCard({ upgrade, selected, onToggle }: { upgrade: Upgrade; select
   );
 }
 
-function StepMejoras({ regionalKey, regional, modelo, upgradesSeleccionados, onToggle }: {
+function StepMejoras({
+  regionalKey,
+  regional,
+  modelo,
+  upgradesSeleccionados,
+  onToggle,
+  habitaciones,
+  incluyeCocina,
+  tipoCocina,
+  incluyeBano,
+  tipoAgua,
+  lavarropas,
+}: {
   regionalKey: string;
   regional: (typeof REGIONAL_MODELS)[string] | null;
   modelo: ModeloKey | null;
   upgradesSeleccionados: Set<string>;
   onToggle: (key: string) => void;
+  habitaciones: number;
+  incluyeCocina: boolean;
+  tipoCocina: TipoCocina;
+  incluyeBano: boolean;
+  tipoAgua: TipoAgua;
+  lavarropas: TipoLavarropas;
 }) {
   const regionalUpgrades = UPGRADES_BY_REGION[regionalKey] ?? [];
   const universalFiltered = UNIVERSAL_UPGRADES.filter(
     (u) => !u.soloModelos || (modelo && u.soloModelos.includes(modelo))
   );
 
+  const balconDelantero = upgradesSeleccionados.has("balcon-delantero");
+  const balconLateral = upgradesSeleccionados.has("balcon-lateral");
+
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 5 de 7</p>
-      <h2 className="text-2xl font-bold text-stone-900 mb-1">Mejoras recomendadas para tu zona</h2>
-      <p className="text-stone-500 text-sm mb-6">Seleccioná las que querés cotizar — no son obligatorias.</p>
+      <h2 className="text-2xl font-bold text-stone-900 mb-1">Mejoras para tu MOVARA</h2>
+      <p className="text-stone-500 text-sm mb-6">
+        Revisá lo que ya incluye tu módulo y sumá las mejoras opcionales que necesites.
+      </p>
 
-      {/* Universal upgrades */}
-      <div className="mb-2">
-        <p className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-3">Disponibles para todos los modelos</p>
-        <div className="space-y-3">
-          {universalFiltered.map((upgrade) => (
-            <UpgradeCard key={upgrade.key} upgrade={upgrade} selected={upgradesSeleccionados.has(upgrade.key)} onToggle={() => onToggle(upgrade.key)} />
-          ))}
+      {/* ── Sección 1: Tu MOVARA incluye ─────────────────── */}
+      <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-5">
+        <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4">
+          Tu MOVARA incluye
+        </p>
+
+        {/* Estructura estándar */}
+        <div className="space-y-3.5">
+          <IncludeItem
+            label="Estructura steel Q235B"
+            description="Resistencia y durabilidad industrial"
+          />
+          <IncludeItem
+            label="Lana de roca 75mm"
+            description="Aislación térmica y acústica superior — R: 2.1 m²K/W, absorción acústica 0.70-0.75"
+          />
+          <IncludeItem
+            label="DVH con rotura de puente térmico"
+            description="52% menos pérdida de calor vs vidrio simple — reduce ruido 30-50 dB"
+          />
+          <IncludeItem label="Mosquiteros en todas las aberturas" />
+          <IncludeItem label="Sistema eléctrico certificado CE" />
+        </div>
+
+        {/* Divisor interno */}
+        <div className="my-4 border-t border-emerald-200" />
+        <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-3">
+          Según tu configuración
+        </p>
+
+        {/* Items de la configuración del cliente */}
+        <div className="space-y-3.5">
+          <IncludeItem
+            label={`${habitaciones} habitación${habitaciones > 1 ? "es" : ""}`}
+          />
+          {incluyeCocina && (
+            <IncludeItem
+              label={`Cocina con ${tipoCocina === "electrico" ? "anafe eléctrico" : "preparación para gas"}`}
+            />
+          )}
+          {incluyeBano && (
+            <IncludeItem
+              label={`Baño completo con ${LABELS_AGUA[tipoAgua]}`}
+            />
+          )}
+          {lavarropas !== "sin" && (
+            <IncludeItem
+              label={
+                lavarropas === "bano"
+                  ? "Espacio para lavarropas en baño"
+                  : lavarropas === "cocina"
+                  ? "Espacio para lavarropas en cocina"
+                  : "Espacio para lavarropas externo con desagüe"
+              }
+            />
+          )}
+          {balconDelantero && (
+            <IncludeItem
+              label="Balcón delantero"
+              description="Amplía el espacio exterior habitable"
+            />
+          )}
+          {balconLateral && (
+            <IncludeItem
+              label="Balcón lateral"
+              description="Espacio exterior de acceso lateral"
+            />
+          )}
         </div>
       </div>
 
-      {/* Regional upgrades */}
-      {regional && regionalUpgrades.length > 0 && (
-        <div className="mt-6">
-          <div className="flex items-center gap-2 mb-3">
-            <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Específicas para tu zona</p>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-sage-50 border border-sage-200 rounded-full">
-              <span className="text-sm">{regional.icon}</span>
-              <span className="text-xs font-semibold text-sage-700">{regional.region}</span>
+      {/* ── Separador visual ──────────────────────────────── */}
+      <div className="my-6 rounded-xl bg-amber-50 border border-amber-100 p-4 text-center">
+        <p className="text-sm font-semibold text-amber-900">
+          ¿Querés potenciar tu MOVARA?
+        </p>
+        <p className="text-xs text-amber-700 mt-1">
+          Las siguientes mejoras tienen un costo adicional al estándar.
+        </p>
+      </div>
+
+      {/* ── Sección 2: Mejoras opcionales ────────────────── */}
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-3">
+          Mejoras opcionales
+        </p>
+
+        {/* Universal upgrades */}
+        <div className="space-y-3">
+          {universalFiltered.map((upgrade) => (
+            <UpgradeCard
+              key={upgrade.key}
+              upgrade={upgrade}
+              selected={upgradesSeleccionados.has(upgrade.key)}
+              onToggle={() => onToggle(upgrade.key)}
+            />
+          ))}
+        </div>
+
+        {/* Regional upgrades */}
+        {regional && regionalUpgrades.length > 0 && (
+          <div className="mt-6">
+            <div className="flex items-center gap-2 mb-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+                Específicas para tu zona
+              </p>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-sage-50 border border-sage-200 rounded-full">
+                <span className="text-sm">{regional.icon}</span>
+                <span className="text-xs font-semibold text-sage-700">{regional.region}</span>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {regionalUpgrades.map((upgrade) => (
+                <UpgradeCard
+                  key={upgrade.key}
+                  upgrade={upgrade}
+                  selected={upgradesSeleccionados.has(upgrade.key)}
+                  onToggle={() => onToggle(upgrade.key)}
+                />
+              ))}
             </div>
           </div>
-          <div className="space-y-3">
-            {regionalUpgrades.map((upgrade) => (
-              <UpgradeCard key={upgrade.key} upgrade={upgrade} selected={upgradesSeleccionados.has(upgrade.key)} onToggle={() => onToggle(upgrade.key)} />
-            ))}
-          </div>
-        </div>
-      )}
+        )}
 
-      {!regional && (
-        <div className="mt-4 bg-stone-50 border border-stone-200 rounded-xl p-4 text-center">
-          <p className="text-stone-400 text-sm">Completá tu provincia en el paso anterior para ver también las mejoras específicas de tu zona climática.</p>
-        </div>
-      )}
+        {!regional && (
+          <div className="mt-4 bg-stone-50 border border-stone-200 rounded-xl p-4 text-center">
+            <p className="text-stone-400 text-sm">
+              Completá tu provincia en el paso anterior para ver también las mejoras específicas de tu zona climática.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
