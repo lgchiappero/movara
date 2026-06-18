@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWizardStore, buildWhatsAppMessage, type WizardModel, type WizardStore } from "@/store/wizard";
+import { getWhatsAppUrl } from "@/lib/whatsapp";
 
 const TOTAL_STEPS = 6;
 
@@ -57,9 +58,7 @@ export default function WizardModal({ waNumber }: { waNumber?: string | null }) 
   }, [w, editableMsg]);
 
   const handleSend = () => {
-    const number = waNumber || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "5491100000000";
-    const url = `https://wa.me/${number}?text=${encodeURIComponent(editableMsg)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+    window.open(getWhatsAppUrl(editableMsg, waNumber), "_blank", "noopener,noreferrer");
     setSent(true);
   };
 

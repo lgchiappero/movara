@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { REGIONAL_MODELS, PROVINCIA_A_MODELO, PROVINCIAS_AR, getModeloKey } from "@/data/regional-models";
+import { getWhatsAppUrl } from "@/lib/whatsapp";
 
 // ─────────────────────────────────────────────────────────
 // Constants
@@ -348,8 +349,7 @@ export default function ConfiguradorMovara({
   }
 
   function handleSendWA() {
-    const number = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "5491100000000";
-    window.open(`https://wa.me/${number}?text=${encodeURIComponent(waMessage)}`, "_blank", "noopener,noreferrer");
+    window.open(getWhatsAppUrl(waMessage), "_blank", "noopener,noreferrer");
   }
 
   function toggleUpgrade(key: string) {

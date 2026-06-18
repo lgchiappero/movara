@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getWhatsAppUrl } from "@/lib/whatsapp";
 
 type CtaData = {
   title?: string | null;
@@ -15,7 +16,6 @@ export default function CTAFinal({
   waNumber?: string | null;
   data?: CtaData | null;
 }) {
-  const number = waNumber || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "5491100000000";
   const ctaTitle = data?.title ?? "¿Listo para dar el primer paso?";
   const ctaSubtitle =
     data?.subtitle ??
@@ -30,17 +30,16 @@ export default function CTAFinal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const text = encodeURIComponent(
+    const mensaje =
       `Hola, me contacto desde la web de MOVARA.\n\n` +
-        `*Nombre:* ${form.nombre}\n` +
-        `*Teléfono:* ${form.telefono}\n` +
-        `*Consulta:* ${form.mensaje}`
-    );
-    window.open(`https://wa.me/${number}?text=${text}`, "_blank", "noopener,noreferrer");
+      `*Nombre:* ${form.nombre}\n` +
+      `*Teléfono:* ${form.telefono}\n` +
+      `*Consulta:* ${form.mensaje}`;
+    window.open(getWhatsAppUrl(mensaje, waNumber), "_blank", "noopener,noreferrer");
     setSent(true);
   }
 
-  const waHref = `https://wa.me/${number}?text=${encodeURIComponent("Hola, quiero conocer más sobre las casas modulares de MOVARA.")}`;
+  const waHref = getWhatsAppUrl("Hola, quiero conocer más sobre las casas modulares de MOVARA.", waNumber);
 
   return (
     <section id="contacto" className="bg-white py-24">

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { MODELS, getModel, type ProductModel } from "@/data/models";
 import { client } from "@/sanity/lib/client";
 import { MODELO_BY_SLUG_QUERY, MODELO_SLUGS_QUERY } from "@/sanity/lib/queries";
+import { getWhatsAppUrl } from "@/lib/whatsapp";
 import ImageGallery from "@/components/detail/ImageGallery";
 import FloorPlan from "@/components/detail/FloorPlan";
 import ConsultarButton from "@/components/detail/ConsultarButton";
@@ -59,10 +60,7 @@ export default async function ModelDetailPage({ params }: Props) {
   const model = await getModeloBySlug(slug);
   if (!model) notFound();
 
-  const waNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "5491100000000";
-  const waHref = `https://wa.me/${waNumber}?text=${encodeURIComponent(
-    `Hola, me interesa el modelo ${model.name}. ¿Podrían enviarme más información?`
-  )}`;
+  const waHref = getWhatsAppUrl(`Hola, me interesa el modelo ${model.name}. ¿Podrían enviarme más información?`);
 
   // Prefer flexible especificaciones array; fall back to legacy specs object
   const specRows: { key: string; val: string }[] =

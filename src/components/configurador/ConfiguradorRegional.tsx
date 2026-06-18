@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { getWhatsAppUrl } from "@/lib/whatsapp";
 import {
   REGIONAL_MODELS,
   PROVINCIA_A_MODELO,
@@ -79,13 +80,8 @@ export default function ConfiguradorRegional({ waNumber }: { waNumber?: string |
 
   const handleSend = () => {
     if (!c.provincia || !c.modeloKey || !c.uso) return;
-    const number = waNumber || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "5491100000000";
     const msg = buildWAMessage(c.provincia, c.modeloKey, c.uso);
-    window.open(
-      `https://wa.me/${number}?text=${encodeURIComponent(msg)}`,
-      "_blank",
-      "noopener,noreferrer"
-    );
+    window.open(getWhatsAppUrl(msg, waNumber), "_blank", "noopener,noreferrer");
   };
 
   return (
