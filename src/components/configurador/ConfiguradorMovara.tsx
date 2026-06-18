@@ -927,7 +927,7 @@ function FieldError({ msg }: { msg: string | null }) {
   );
 }
 
-function StepDatos({
+export function StepDatos({
   tipoCliente, setTipoCliente,
   nombre, setNombre,
   razonSocial, setRazonSocial,

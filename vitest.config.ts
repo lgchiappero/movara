@@ -21,6 +21,8 @@ export default defineConfig({
         "src/components/detail/**/*.tsx",
         "src/components/home/CTAFinal.tsx",
         "src/app/api/webhooks/**/*.ts",
+        "src/lib/whatsapp.ts",
+        "src/lib/validators/configurador.ts",
       ],
       exclude: [
         "src/**/*.test.{ts,tsx}",
@@ -28,7 +30,7 @@ export default defineConfig({
       ],
       thresholds: {
         statements: 80,
-        branches: 75,
+        branches: 80,
         functions: 80,
         lines: 80,
       },
