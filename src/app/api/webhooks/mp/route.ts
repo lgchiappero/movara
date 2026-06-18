@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import crypto from 'crypto'
+import { checkRateLimit, getClientIP } from '@/lib/rate-limit'
+import '@/lib/env' // validate env vars at startup
 
 export function verifyWebhook(body: string, signature: string): boolean {
   const secret = process.env.MP_WEBHOOK_SECRET
@@ -22,6 +24,12 @@ export function verifyWebhook(body: string, signature: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIP(req)
+  const { allowed } = checkRateLimit(ip)
+  if (!allowed) {
+    return NextResponse.json({ error: 'Too Many Requests' }, { status: 429 })
+  }
+
   try {
     const body = await req.text()
     const signature = req.headers.get('x-signature') ?? ''
