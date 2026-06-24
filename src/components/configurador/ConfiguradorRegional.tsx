@@ -15,6 +15,7 @@ import {
   type ConfiguradorState,
   type ConfiguradorStore,
 } from "@/store/configurador";
+import { trackViewContent } from "@/lib/meta-pixel";
 
 const TOTAL_STEPS = 3;
 
@@ -57,6 +58,10 @@ function buildWAMessage(
 export default function ConfiguradorRegional({ waNumber }: { waNumber?: string | null }) {
   const c = useConfiguradorStore();
   const isResult = c.step === 4;
+
+  useEffect(() => {
+    if (c.open) trackViewContent("configurador-regional");
+  }, [c.open]);
 
   useEffect(() => {
     if (!c.open) return;

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWizardStore, buildWhatsAppMessage, type WizardModel, type WizardStore } from "@/store/wizard";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
+import { trackInitiateCheckout, trackLead } from "@/lib/meta-pixel";
 
 const TOTAL_STEPS = 6;
 
@@ -57,7 +58,17 @@ export default function WizardModal({ waNumber }: { waNumber?: string | null }) 
     }
   }, [w, editableMsg]);
 
+  const handleNext = () => {
+    if (w.step === 3) trackInitiateCheckout();
+    w.goNext();
+  };
+
   const handleSend = () => {
+    trackLead({
+      modelo: w.model?.name ?? "",
+      finalidad: w.uso ?? "",
+      provincia: w.provincia,
+    });
     window.open(getWhatsAppUrl(editableMsg, waNumber), "_blank", "noopener,noreferrer");
     setSent(true);
   };
@@ -166,7 +177,7 @@ export default function WizardModal({ waNumber }: { waNumber?: string | null }) 
                 <div className="flex-1" />
                 {w.step < TOTAL_STEPS ? (
                   <button
-                    onClick={w.goNext}
+                    onClick={handleNext}
                     disabled={!canProceed()}
                     className="flex items-center gap-1.5 px-6 py-2.5 bg-sage-600 hover:bg-sage-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-full transition-all duration-200 hover:shadow-lg hover:shadow-sage-600/25"
                   >
