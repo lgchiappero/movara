@@ -26,7 +26,7 @@ export default function Hero({ waNumber }: { waNumber?: string | null }) {
       <div className="absolute top-0 right-0 w-[560px] h-[560px] bg-sage-100 rounded-full blur-[120px] opacity-60 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-sage-50 rounded-full blur-[100px] opacity-80 pointer-events-none" />
 
-      <div className="relative max-w-7xl mx-auto px-6 lg:px-8 pt-28 pb-20 lg:py-0 grid lg:grid-cols-2 gap-12 lg:gap-20 items-center min-h-screen">
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-28 lg:py-24 grid lg:grid-cols-2 gap-12 lg:gap-20 items-center w-full">
         {/* Copy */}
         <div>
           <motion.div {...fadeUp(0.05)}>
