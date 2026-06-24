@@ -3,6 +3,7 @@ import { Montserrat, Poppins } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import WizardModal from "@/components/wizard/WizardModal";
+import WhatsAppFAB from "@/components/WhatsAppFAB";
 import { MetaPixelPageView } from "@/components/MetaPixelPageView";
 import { SanityLive } from "@/sanity/lib/live";
 import { client } from "@/sanity/lib/client";
@@ -69,6 +70,7 @@ export default async function RootLayout({
         </noscript>
         {children}
         <WizardModal waNumber={waNumber} />
+        <WhatsAppFAB />
         <SanityLive />
         <MetaPixelPageView />
         <Script

@@ -83,3 +83,15 @@ enum OrderStatus {
   DELIVERED
   CANCELLED
 }
+
+model Lead {
+  id        String   @id @default(cuid())
+  nombre    String
+  telefono  String
+  email     String?
+  provincia String?
+  mensaje   String?
+  createdAt DateTime @default(now())
+
+  @@map("leads")
+}
