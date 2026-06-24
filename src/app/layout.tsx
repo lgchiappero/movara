@@ -71,7 +71,7 @@ export default async function RootLayout({
         {children}
         <WizardModal waNumber={waNumber} />
         <WhatsAppFAB />
-        <SanityLive />
+        {process.env.SANITY_API_TOKEN && <SanityLive />}
         <MetaPixelPageView />
         <Script
           id="meta-pixel"
