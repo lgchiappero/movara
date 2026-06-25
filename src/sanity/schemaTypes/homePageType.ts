@@ -60,7 +60,7 @@ export const homePageType = defineType({
             'Estructura certificada CE',
             'Lana de roca 75mm',
             'DVH con RPT',
-            'Producción nacional',
+            'Garantía escrita',
           ],
         }),
       ],

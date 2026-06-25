@@ -20,7 +20,7 @@ const DEFAULTS = {
     "Las primeras unidades MOVARA están disponibles con condiciones exclusivas de preventa. Estamos habilitando acceso prioritario a clientes seleccionados antes de la apertura oficial.",
   ctaPrimario: "Quiero acceso prioritario",
   ctaSecundario: "Reservar precio de lanzamiento",
-  trustStrip: ["Estructura certificada CE", "Lana de roca 75mm", "DVH con RPT", "Producción nacional"],
+  trustStrip: ["Estructura certificada CE", "Lana de roca 75mm", "DVH con RPT", "Garantía escrita"],
 };
 
 export default function Hero({
