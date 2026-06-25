@@ -403,35 +403,58 @@ export const homePageType = defineType({
     // ─── PRUEBA SOCIAL ────────────────────────────────────────────────────────
     defineField({
       name: 'pruebaSocial',
-      title: 'Prueba social / Estándar técnico',
+      title: 'Calidad / Estándares internacionales',
       type: 'object',
       fields: [
         defineField({
           name: 'badgeSeccion',
           title: 'Badge de sección (label dorado)',
           type: 'string',
-          initialValue: 'Estándar técnico',
+          initialValue: 'Estándares internacionales',
         }),
         defineField({
           name: 'titulo',
           title: 'Título',
           type: 'string',
-          initialValue: 'Calidad que podés verificar',
+          initialValue: 'Calidad que no se negocia',
+        }),
+        defineField({
+          name: 'subtitulo',
+          title: 'Subtítulo',
+          type: 'text',
+          rows: 3,
+          initialValue:
+            'Cada MOVARA sale de fábrica con certificaciones internacionales y procesos industrializados de precisión. No es una obra. Es manufactura controlada.',
         }),
         defineField({
           name: 'badges',
-          title: 'Badges de calidad',
+          title: 'Puntos de calidad',
           type: 'array',
           of: [
             defineArrayMember({
               type: 'object',
               fields: [
-                defineField({ name: 'icono', title: 'Ícono (emoji)', type: 'string' }),
-                defineField({ name: 'label', title: 'Etiqueta', type: 'string' }),
+                defineField({
+                  name: 'iconoLucide',
+                  title: 'Ícono Lucide',
+                  type: 'string',
+                  description: 'Nombre del ícono: Shield, Layers, Wind, Droplets, Thermometer, ClipboardCheck',
+                }),
+                defineField({ name: 'titulo', title: 'Título', type: 'string' }),
+                defineField({ name: 'descripcion', title: 'Descripción', type: 'text', rows: 2 }),
+                defineField({ name: 'badge', title: 'Badge/chip (texto corto)', type: 'string' }),
               ],
-              preview: { select: { title: 'label', subtitle: 'icono' } },
+              preview: { select: { title: 'titulo', subtitle: 'badge' } },
             }),
           ],
+        }),
+        defineField({
+          name: 'textoCierre',
+          title: 'Texto de cierre',
+          type: 'text',
+          rows: 2,
+          initialValue:
+            'No comprás una promesa. Comprás un producto que ya fue testeado, certificado y aprobado antes de llegar a tu terreno.',
         }),
         defineField({
           name: 'showroomTitulo',

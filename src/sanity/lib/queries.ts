@@ -203,7 +203,9 @@ export const HOME_PAGE_QUERY = groq`
     pruebaSocial {
       badgeSeccion,
       titulo,
-      badges[] { _key, icono, label },
+      subtitulo,
+      badges[] { _key, iconoLucide, titulo, descripcion, badge },
+      textoCierre,
       showroomTitulo,
       showroomDesc,
       showroomChip,
