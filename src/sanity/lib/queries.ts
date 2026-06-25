@@ -177,8 +177,8 @@ export const HOME_PAGE_QUERY = groq`
       titulo,
       subtitulo,
       stats[] { _key, stat, label, sub },
-      problemas,
-      beneficios,
+      problemas[] { _key, titulo, descripcion },
+      separador,
     },
     paraQuien {
       titulo,

@@ -2,49 +2,58 @@
 
 import { motion } from "framer-motion";
 
-type Stat = { stat: string; label: string; sub: string };
+type Stat = { _key?: string; stat: string; label: string; sub: string };
+type Problema = { _key?: string; titulo: string; descripcion: string };
 
 type DolorContent = {
   titulo?: string;
   subtitulo?: string;
   stats?: Stat[];
-  problemas?: string[];
-  beneficios?: string[];
+  problemas?: Problema[];
+  separador?: string;
 };
 
-const DEFAULT_STATS: Stat[] = [
-  { stat: "18 meses", label: "promedio de obra", sub: "mientras seguís pagando alquiler" },
-  { stat: "40%", label: "sobrecosto habitual", sub: "vs. el presupuesto que te dieron" },
-  { stat: "6+", label: "contratistas distintos", sub: "albañil, electricista, plomero, yesero…" },
-  { stat: "∞", label: "imprevistos", sub: "tiempo, clima, materiales, conflictos" },
-];
-
-const DEFAULT_PROBLEMAS = [
-  "Presupuestos que se duplican antes de la mitad de la obra",
-  "Obras que se detienen sin aviso durante semanas",
-  "Calidad que depende del humor del contratista del mes",
-  "Ningún responsable real cuando algo sale mal",
-  "Tu terreno convertido en escombros por meses",
-  "Estrés permanente. Cero certeza. Cero garantías.",
-];
-
-const DEFAULT_BENEFICIOS = [
-  "Precio fijo desde el día 1. Sin sorpresas.",
-  "Entrega garantizada en 4–8 semanas.",
-  "Un solo interlocutor, de inicio a fin.",
-  "Producción en planta controlada. Sin obra en tu terreno.",
-  "Garantía escrita. Sin letra chica.",
-  "Certeza total. Desde antes de firmar.",
+const DEFAULT_PROBLEMAS: Problema[] = [
+  {
+    titulo: "Renegar con albañiles",
+    descripcion:
+      "Llegaron tres días, después desaparecieron. Volvieron a cobrar, avanzaron poco. El ciclo de siempre.",
+  },
+  {
+    titulo: "Presupuestos que no cierran",
+    descripcion:
+      "Te dijeron $X. A mitad de obra ya iban $2X. Y todavía faltaba la mitad.",
+  },
+  {
+    titulo: "Meses que se vuelven años",
+    descripcion:
+      "Lo que iba a estar en 6 meses lleva 2 años y todavía no tiene techo definitivo.",
+  },
+  {
+    titulo: "Decisiones que te consumen",
+    descripcion:
+      "Cerámicos, ventanas, electricista, plomero, inspector. Coordinás vos. Todo. Todo el tiempo.",
+  },
+  {
+    titulo: "Incertidumbre total",
+    descripcion:
+      "Nunca sabés cuánto va a salir en total. Ni cuándo va a terminar. Ni si va a quedar bien.",
+  },
+  {
+    titulo: "El costo emocional",
+    descripcion:
+      "Años de ahorro en juego, decisiones todos los días, y una obra que te sigue en la cabeza 24/7.",
+  },
 ];
 
 export default function DolorConvencional({ content }: { content?: DolorContent | null }) {
-  const titulo = content?.titulo ?? "La construcción tradicional está rota.";
+  const titulo = content?.titulo ?? "¿Ya pasaste por esto?";
   const subtitulo =
     content?.subtitulo ??
-    "Cada obra en Argentina termina siendo un proyecto de gestión de crisis. No de construcción.";
-  const stats = content?.stats?.length ? content.stats : DEFAULT_STATS;
+    "La construcción tradicional en Argentina es un camino lleno de obstáculos que nadie te cuenta antes de empezar.";
   const problemas = content?.problemas?.length ? content.problemas : DEFAULT_PROBLEMAS;
-  const beneficios = content?.beneficios?.length ? content.beneficios : DEFAULT_BENEFICIOS;
+  const separador =
+    content?.separador ?? "MOVARA existe para que esto no te pase a vos.";
 
   return (
     <section className="py-32 bg-white">
@@ -55,88 +64,55 @@ export default function DolorConvencional({ content }: { content?: DolorContent 
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mb-20"
+          className="mb-16"
         >
           <span className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-5 block">
             El problema
           </span>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#2F2F2F] leading-[1.08] max-w-3xl">
-            {titulo.endsWith("rota.") ? (
-              <>
-                La construcción<br />
-                tradicional está{" "}
-                <span className="relative inline-block">
-                  rota.
-                  <span className="absolute inset-x-0 bottom-2 h-3 bg-red-100 -z-10 rounded" />
-                </span>
-              </>
-            ) : (
-              titulo
-            )}
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#2F2F2F] leading-[1.08] max-w-3xl mb-6">
+            {titulo}
           </h2>
+          <p className="text-lg text-stone-500 max-w-2xl leading-relaxed">
+            {subtitulo}
+          </p>
         </motion.div>
 
-        {/* Stats grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-stone-100 rounded-2xl overflow-hidden mb-20">
-          {stats.map((d, i) => (
+        {/* Problem cards grid */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
+          {problemas.map((p, i) => (
             <motion.div
-              key={d.label}
-              initial={{ opacity: 0, y: 16 }}
+              key={p._key ?? p.titulo}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="bg-white p-8 lg:p-10"
+              transition={{ duration: 0.45, delay: i * 0.07 }}
+              className="bg-stone-50 border border-stone-100 rounded-2xl p-6 hover:border-stone-200 transition-colors"
             >
-              <p className="text-4xl lg:text-5xl font-bold text-[#2F2F2F] mb-2 leading-none">{d.stat}</p>
-              <p className="text-sm font-semibold text-stone-700 mb-1">{d.label}</p>
-              <p className="text-xs text-stone-400 leading-relaxed">{d.sub}</p>
+              <div className="w-7 h-7 rounded-full bg-red-50 border border-red-100 flex items-center justify-center mb-4 shrink-0">
+                <span className="text-[11px] text-red-400 font-bold">✕</span>
+              </div>
+              <h3 className="font-bold text-[#2F2F2F] text-base mb-2 leading-snug">
+                {p.titulo}
+              </h3>
+              <p className="text-stone-500 text-sm leading-relaxed">{p.descripcion}</p>
             </motion.div>
           ))}
         </div>
 
-        {/* Two-col comparison */}
-        <div className="grid lg:grid-cols-2 gap-8 items-start">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <p className="text-xl text-stone-500 leading-relaxed mb-8">{subtitulo}</p>
-            <ul className="space-y-4">
-              {problemas.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-stone-500 text-sm">
-                  <span className="mt-1 w-4 h-4 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-[10px] text-red-400 shrink-0 font-bold">
-                    ✕
-                  </span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="bg-[#1A1A1A] rounded-2xl p-8 lg:p-10"
-          >
-            <p className="text-[#D4B06A] text-xs font-semibold uppercase tracking-widest mb-8">
-              Con MOVARA
-            </p>
-            <ul className="space-y-5">
-              {beneficios.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-stone-300 text-sm">
-                  <span className="mt-1 w-4 h-4 rounded-full bg-[#D4B06A]/20 flex items-center justify-center text-[10px] text-[#D4B06A] shrink-0 font-bold">
-                    ✓
-                  </span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        </div>
+        {/* Separator */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="flex items-center gap-6"
+        >
+          <div className="flex-1 h-px bg-stone-100" />
+          <p className="text-sm font-semibold text-[#2F2F2F] text-center shrink-0 px-2">
+            {separador}
+          </p>
+          <div className="flex-1 h-px bg-stone-100" />
+        </motion.div>
       </div>
     </section>
   );
