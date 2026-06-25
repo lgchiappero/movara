@@ -291,6 +291,22 @@ export const modeloType = defineType({
       initialValue: 99,
       group: 'marketing',
     }),
+    defineField({
+      name: 'tagsLanding',
+      title: 'Tags para landing premium',
+      type: 'array',
+      group: 'marketing',
+      description: 'Badges cortos visibles en la tarjeta de la landing (ej: Studio, Trabajo, Campo)',
+      of: [defineArrayMember({ type: 'string' })],
+    }),
+    defineField({
+      name: 'disponiblesPreventa',
+      title: 'Unidades disponibles en preventa',
+      type: 'number',
+      group: 'marketing',
+      description: 'Contador de escasez que aparece en la landing premium. 0 = no mostrar.',
+      initialValue: 0,
+    }),
 
     // Campos legado ocultos
     defineField({

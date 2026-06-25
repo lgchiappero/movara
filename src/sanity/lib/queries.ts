@@ -126,6 +126,21 @@ export const CONFIGURADOR_PAGE_QUERY = groq`
   }
 `
 
+export const HOME_MODELOS_QUERY = groq`
+  *[_type == "modelo" && activo != false] | order(order asc, _createdAt asc) [0...3] {
+    _id,
+    name,
+    "slug": slug.current,
+    "descripcion": coalesce(descripcion, description),
+    tamano,
+    size,
+    priceUSD,
+    tagsLanding,
+    disponiblesPreventa,
+    destacado,
+  }
+`
+
 export const HOME_PAGE_QUERY = groq`
   *[_type == "homePage"][0] {
     hero {
@@ -177,6 +192,21 @@ export const HOME_PAGE_QUERY = groq`
       titulo,
       subtitulo,
       textoCTA,
+    },
+    modelosHome {
+      badgeSeccion,
+      titulo,
+      badgePreventa,
+      ctaReservar,
+      ctaCatalogo,
+    },
+    pruebaSocial {
+      badgeSeccion,
+      titulo,
+      badges[] { _key, icono, label },
+      showroomTitulo,
+      showroomDesc,
+      showroomChip,
     },
   }
 `

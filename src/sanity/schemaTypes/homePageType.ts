@@ -365,6 +365,102 @@ export const homePageType = defineType({
       ],
     }),
 
+    // ─── MODELOS HOME (header + datos de preventa) ──────────────────────────
+    defineField({
+      name: 'modelosHome',
+      title: 'Sección modelos (landing)',
+      type: 'object',
+      description: 'Los datos de cada modelo vienen del documento "Modelo" en Sanity. Aquí se edita el encabezado de la sección.',
+      fields: [
+        defineField({
+          name: 'badgeSeccion',
+          title: 'Badge de sección',
+          type: 'string',
+          initialValue: 'Línea de productos — Edición Fundadores',
+        }),
+        defineField({
+          name: 'titulo',
+          title: 'Título',
+          type: 'string',
+          initialValue: 'Tres modelos. Un estándar.',
+        }),
+        defineField({
+          name: 'badgePreventa',
+          title: 'Badge de preventa (chip derecho)',
+          type: 'string',
+          initialValue: '⚡ Condiciones de preventa activas',
+        }),
+        defineField({
+          name: 'ctaReservar',
+          title: 'Texto botón "Reservar"',
+          type: 'string',
+          initialValue: 'Reservar precio',
+        }),
+        defineField({
+          name: 'ctaCatalogo',
+          title: 'Texto link catálogo completo',
+          type: 'string',
+          initialValue: 'Ver catálogo completo →',
+        }),
+      ],
+    }),
+
+    // ─── PRUEBA SOCIAL ────────────────────────────────────────────────────────
+    defineField({
+      name: 'pruebaSocial',
+      title: 'Prueba social / Estándar técnico',
+      type: 'object',
+      fields: [
+        defineField({
+          name: 'badgeSeccion',
+          title: 'Badge de sección (label dorado)',
+          type: 'string',
+          initialValue: 'Estándar técnico',
+        }),
+        defineField({
+          name: 'titulo',
+          title: 'Título',
+          type: 'string',
+          initialValue: 'Calidad que podés verificar',
+        }),
+        defineField({
+          name: 'badges',
+          title: 'Badges de calidad',
+          type: 'array',
+          of: [
+            defineArrayMember({
+              type: 'object',
+              fields: [
+                defineField({ name: 'icono', title: 'Ícono (emoji)', type: 'string' }),
+                defineField({ name: 'label', title: 'Etiqueta', type: 'string' }),
+              ],
+              preview: { select: { title: 'label', subtitle: 'icono' } },
+            }),
+          ],
+        }),
+        defineField({
+          name: 'showroomTitulo',
+          title: 'Título del banner showroom',
+          type: 'string',
+          initialValue: 'Showroom próximamente en Sunchales, Santa Fe',
+        }),
+        defineField({
+          name: 'showroomDesc',
+          title: 'Descripción del banner showroom',
+          type: 'text',
+          rows: 2,
+          initialValue:
+            'Vas a poder recorrer un modelo real, tocar los materiales y hablar con nuestro equipo.',
+        }),
+        defineField({
+          name: 'showroomChip',
+          title: 'Chip del showroom',
+          type: 'string',
+          initialValue: 'Próximamente',
+        }),
+      ],
+    }),
+
     // ─── 8. FORMULARIO DE CONTACTO ───────────────────────────────────────────
     defineField({
       name: 'formularioContacto',

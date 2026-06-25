@@ -2,16 +2,36 @@
 
 import { motion } from "framer-motion";
 
-const badges = [
-  { icon: "🏗️", label: "Estructura certificada CE" },
-  { icon: "🌡️", label: "Aislación lana de roca" },
-  { icon: "🪟", label: "DVH con RPT" },
-  { icon: "📜", label: "Garantía escrita" },
-  { icon: "🇦🇷", label: "Producción nacional" },
-  { icon: "🚚", label: "Envío a todo el país" },
+type Badge = { _key?: string; icono: string; label: string };
+
+type PruebaSocialContent = {
+  badgeSeccion?: string;
+  titulo?: string;
+  badges?: Badge[];
+  showroomTitulo?: string;
+  showroomDesc?: string;
+  showroomChip?: string;
+};
+
+const DEFAULT_BADGES: Badge[] = [
+  { icono: "🏗️", label: "Estructura certificada CE" },
+  { icono: "🌡️", label: "Aislación lana de roca" },
+  { icono: "🪟", label: "DVH con RPT" },
+  { icono: "📜", label: "Garantía escrita" },
+  { icono: "🇦🇷", label: "Producción nacional" },
+  { icono: "🚚", label: "Envío a todo el país" },
 ];
 
-export default function PruebaSocial() {
+export default function PruebaSocial({ content }: { content?: PruebaSocialContent | null }) {
+  const badgeSeccion = content?.badgeSeccion ?? "Estándar técnico";
+  const titulo = content?.titulo ?? "Calidad que podés verificar";
+  const badges = content?.badges?.length ? content.badges : DEFAULT_BADGES;
+  const showroomTitulo = content?.showroomTitulo ?? "Showroom próximamente en Sunchales, Santa Fe";
+  const showroomDesc =
+    content?.showroomDesc ??
+    "Vas a poder recorrer un modelo real, tocar los materiales y hablar con nuestro equipo.";
+  const showroomChip = content?.showroomChip ?? "Próximamente";
+
   return (
     <section className="py-20 bg-stone-50 border-y border-stone-100">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
@@ -23,24 +43,22 @@ export default function PruebaSocial() {
           className="text-center mb-10"
         >
           <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-3 block">
-            Estándar técnico
+            {badgeSeccion}
           </span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-[#2F2F2F]">
-            Calidad que podés verificar
-          </h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-[#2F2F2F]">{titulo}</h2>
         </motion.div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-12">
           {badges.map((b, i) => (
             <motion.div
-              key={b.label}
+              key={b._key ?? b.label}
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: i * 0.07 }}
               className="flex flex-col items-center gap-2 p-4 bg-white border border-stone-100 rounded-xl text-center hover:border-sage-200 transition-colors"
             >
-              <span className="text-2xl">{b.icon}</span>
+              <span className="text-2xl">{b.icono}</span>
               <span className="text-xs font-medium text-stone-600 leading-tight">{b.label}</span>
             </motion.div>
           ))}
@@ -57,13 +75,11 @@ export default function PruebaSocial() {
             📍
           </div>
           <div className="text-center sm:text-left">
-            <p className="font-semibold text-[#2F2F2F] text-sm">Showroom próximamente en Sunchales, Santa Fe</p>
-            <p className="text-stone-400 text-xs mt-0.5">
-              Vas a poder recorrer un modelo real, tocar los materiales y hablar con nuestro equipo.
-            </p>
+            <p className="font-semibold text-[#2F2F2F] text-sm">{showroomTitulo}</p>
+            <p className="text-stone-400 text-xs mt-0.5">{showroomDesc}</p>
           </div>
           <span className="sm:ml-auto px-3 py-1 bg-sage-100 text-sage-700 text-xs font-semibold rounded-full whitespace-nowrap">
-            Próximamente
+            {showroomChip}
           </span>
         </motion.div>
       </div>
