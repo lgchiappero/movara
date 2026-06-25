@@ -33,7 +33,29 @@ const selectCls =
 const inputCls =
   "w-full bg-white/5 border border-white/10 text-white placeholder-stone-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#D4B06A]/50 transition-colors";
 
-export default function DossierForm({ waNumber: _ }: { waNumber?: string | null }) {
+type DossierContent = {
+  titulo?: string;
+  subtitulo?: string;
+  items?: string[];
+  textoCTA?: string;
+};
+
+const DEFAULT_ITEMS = [
+  "Modelos completos con planos y especificaciones técnicas",
+  "Configuraciones premium y opciones de personalización",
+  "Comparativa técnica vs. construcción tradicional",
+  "Escenarios de inversión Airbnb con proyección de ROI",
+  "Condiciones exclusivas de preventa y lanzamiento",
+  "Acceso a asesoramiento privado con nuestro equipo",
+];
+
+export default function DossierForm({
+  waNumber: _,
+  content,
+}: {
+  waNumber?: string | null;
+  content?: DossierContent | null;
+}) {
   const [form, setForm] = useState<Form>(EMPTY);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
@@ -88,22 +110,15 @@ export default function DossierForm({ waNumber: _ }: { waNumber?: string | null 
               Dossier privado
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-6">
-              Accedé al dossier exclusivo MOVARA.
+              {content?.titulo ?? "Accedé al dossier exclusivo MOVARA."}
             </h2>
             <p className="text-stone-400 text-base leading-relaxed mb-10">
-              Solo para clientes seleccionados. Completá el formulario y un asesor MOVARA
-              se comunica con vos en menos de 2 horas hábiles.
+              {content?.subtitulo ??
+                "Solo para clientes seleccionados. Completá el formulario y un asesor MOVARA se comunica con vos en menos de 2 horas hábiles."}
             </p>
 
             <ul className="space-y-5 mb-12">
-              {[
-                "Modelos completos con planos y especificaciones técnicas",
-                "Configuraciones premium y opciones de personalización",
-                "Comparativa técnica vs. construcción tradicional",
-                "Escenarios de inversión Airbnb con proyección de ROI",
-                "Condiciones exclusivas de preventa y lanzamiento",
-                "Acceso a asesoramiento privado con nuestro equipo",
-              ].map((item) => (
+              {(content?.items?.length ? content.items : DEFAULT_ITEMS).map((item) => (
                 <li key={item} className="flex items-start gap-3 text-stone-300 text-sm">
                   <span className="mt-0.5 w-5 h-5 rounded-full bg-[#D4B06A]/20 flex items-center justify-center text-[#D4B06A] text-[10px] font-bold shrink-0">
                     ✓
@@ -273,7 +288,7 @@ export default function DossierForm({ waNumber: _ }: { waNumber?: string | null 
                   disabled={status === "sending"}
                   className="w-full py-4 bg-[#D4B06A] hover:bg-[#BF9A52] disabled:opacity-60 text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-xl hover:shadow-[#D4B06A]/20 hover:-translate-y-0.5 text-sm tracking-wide"
                 >
-                  {status === "sending" ? "Enviando…" : "Quiero el dossier privado"}
+                  {status === "sending" ? "Enviando…" : (content?.textoCTA ?? "Quiero el dossier privado")}
                 </button>
 
                 {status === "error" && (

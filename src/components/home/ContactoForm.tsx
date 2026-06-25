@@ -21,7 +21,19 @@ type FormState = {
 
 const EMPTY: FormState = { nombre: "", telefono: "", email: "", provincia: "", mensaje: "" };
 
-export default function ContactoForm({ waNumber }: { waNumber?: string | null }) {
+type ContactoContent = {
+  titulo?: string;
+  subtitulo?: string;
+  textoCTA?: string;
+};
+
+export default function ContactoForm({
+  waNumber,
+  content,
+}: {
+  waNumber?: string | null;
+  content?: ContactoContent | null;
+}) {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
@@ -60,12 +72,16 @@ export default function ContactoForm({ waNumber }: { waNumber?: string | null })
               Asesoramiento privado
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-4">
-              Hablá con un asesor MOVARA.
+              {content?.titulo ?? "Hablá con un asesor MOVARA."}
             </h2>
             <p className="text-stone-400 text-lg leading-relaxed mb-8">
-              Respuesta en{" "}
-              <span className="text-white font-semibold">menos de 2 horas</span>{" "}
-              en horario comercial. Sin presión, con toda la información.
+              {content?.subtitulo ?? (
+                <>
+                  Respuesta en{" "}
+                  <span className="text-white font-semibold">menos de 2 horas</span>{" "}
+                  en horario comercial. Sin presión, con toda la información.
+                </>
+              )}
             </p>
 
             <div className="space-y-4">
@@ -202,7 +218,7 @@ export default function ContactoForm({ waNumber }: { waNumber?: string | null })
                   disabled={status === "sending"}
                   className="w-full py-3.5 bg-[#D4B06A] hover:bg-[#BF9A52] disabled:opacity-50 disabled:cursor-not-allowed text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-[#D4B06A]/25 text-sm tracking-wide"
                 >
-                  {status === "sending" ? "Enviando…" : "Solicitar asesoramiento privado"}
+                  {status === "sending" ? "Enviando…" : (content?.textoCTA ?? "Solicitar asesoramiento privado")}
                 </button>
               </form>
             )}

@@ -2,14 +2,50 @@
 
 import { motion } from "framer-motion";
 
-const stats = [
+type Stat = { stat: string; label: string; sub: string };
+
+type DolorContent = {
+  titulo?: string;
+  subtitulo?: string;
+  stats?: Stat[];
+  problemas?: string[];
+  beneficios?: string[];
+};
+
+const DEFAULT_STATS: Stat[] = [
   { stat: "18 meses", label: "promedio de obra", sub: "mientras seguís pagando alquiler" },
   { stat: "40%", label: "sobrecosto habitual", sub: "vs. el presupuesto que te dieron" },
   { stat: "6+", label: "contratistas distintos", sub: "albañil, electricista, plomero, yesero…" },
   { stat: "∞", label: "imprevistos", sub: "tiempo, clima, materiales, conflictos" },
 ];
 
-export default function DolorConvencional() {
+const DEFAULT_PROBLEMAS = [
+  "Presupuestos que se duplican antes de la mitad de la obra",
+  "Obras que se detienen sin aviso durante semanas",
+  "Calidad que depende del humor del contratista del mes",
+  "Ningún responsable real cuando algo sale mal",
+  "Tu terreno convertido en escombros por meses",
+  "Estrés permanente. Cero certeza. Cero garantías.",
+];
+
+const DEFAULT_BENEFICIOS = [
+  "Precio fijo desde el día 1. Sin sorpresas.",
+  "Entrega garantizada en 4–8 semanas.",
+  "Un solo interlocutor, de inicio a fin.",
+  "Producción en planta controlada. Sin obra en tu terreno.",
+  "Garantía escrita. Sin letra chica.",
+  "Certeza total. Desde antes de firmar.",
+];
+
+export default function DolorConvencional({ content }: { content?: DolorContent | null }) {
+  const titulo = content?.titulo ?? "La construcción tradicional está rota.";
+  const subtitulo =
+    content?.subtitulo ??
+    "Cada obra en Argentina termina siendo un proyecto de gestión de crisis. No de construcción.";
+  const stats = content?.stats?.length ? content.stats : DEFAULT_STATS;
+  const problemas = content?.problemas?.length ? content.problemas : DEFAULT_PROBLEMAS;
+  const beneficios = content?.beneficios?.length ? content.beneficios : DEFAULT_BENEFICIOS;
+
   return (
     <section className="py-32 bg-white">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
@@ -25,12 +61,18 @@ export default function DolorConvencional() {
             El problema
           </span>
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#2F2F2F] leading-[1.08] max-w-3xl">
-            La construcción<br />
-            tradicional está{" "}
-            <span className="relative inline-block">
-              rota.
-              <span className="absolute inset-x-0 bottom-2 h-3 bg-red-100 -z-10 rounded" />
-            </span>
+            {titulo.endsWith("rota.") ? (
+              <>
+                La construcción<br />
+                tradicional está{" "}
+                <span className="relative inline-block">
+                  rota.
+                  <span className="absolute inset-x-0 bottom-2 h-3 bg-red-100 -z-10 rounded" />
+                </span>
+              </>
+            ) : (
+              titulo
+            )}
           </h2>
         </motion.div>
 
@@ -60,18 +102,9 @@ export default function DolorConvencional() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <p className="text-xl text-stone-500 leading-relaxed mb-8">
-              Cada obra en Argentina termina siendo un proyecto de gestión de crisis. No de construcción.
-            </p>
+            <p className="text-xl text-stone-500 leading-relaxed mb-8">{subtitulo}</p>
             <ul className="space-y-4">
-              {[
-                "Presupuestos que se duplican antes de la mitad de la obra",
-                "Obras que se detienen sin aviso durante semanas",
-                "Calidad que depende del humor del contratista del mes",
-                "Ningún responsable real cuando algo sale mal",
-                "Tu terreno convertido en escombros por meses",
-                "Estrés permanente. Cero certeza. Cero garantías.",
-              ].map((item) => (
+              {problemas.map((item) => (
                 <li key={item} className="flex items-start gap-3 text-stone-500 text-sm">
                   <span className="mt-1 w-4 h-4 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-[10px] text-red-400 shrink-0 font-bold">
                     ✕
@@ -93,14 +126,7 @@ export default function DolorConvencional() {
               Con MOVARA
             </p>
             <ul className="space-y-5">
-              {[
-                "Precio fijo desde el día 1. Sin sorpresas.",
-                "Entrega garantizada en 4–8 semanas.",
-                "Un solo interlocutor, de inicio a fin.",
-                "Producción en planta controlada. Sin obra en tu terreno.",
-                "Garantía escrita. Sin letra chica.",
-                "Certeza total. Desde antes de firmar.",
-              ].map((item) => (
+              {beneficios.map((item) => (
                 <li key={item} className="flex items-start gap-3 text-stone-300 text-sm">
                   <span className="mt-1 w-4 h-4 rounded-full bg-[#D4B06A]/20 flex items-center justify-center text-[10px] text-[#D4B06A] shrink-0 font-bold">
                     ✓

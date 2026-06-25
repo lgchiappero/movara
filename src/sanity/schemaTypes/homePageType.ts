@@ -2,287 +2,401 @@ import { defineField, defineType, defineArrayMember } from 'sanity'
 
 export const homePageType = defineType({
   name: 'homePage',
-  title: 'Página de inicio',
+  title: 'Landing Premium',
   type: 'document',
   fields: [
+    // ─── 1. HERO ────────────────────────────────────────────────────────────
     defineField({
       name: 'hero',
       title: 'Hero',
       type: 'object',
       fields: [
         defineField({
-          name: 'badgeText',
-          title: 'Texto del badge',
+          name: 'badgePreventa',
+          title: 'Badge superior (preventa)',
           type: 'string',
-          initialValue: 'Fabricación 100% argentina',
+          initialValue: 'Preventa activa — Acceso prioritario limitado',
         }),
         defineField({
-          name: 'title',
-          title: 'Título principal',
+          name: 'titulo',
+          title: 'Título (línea 1 y 2)',
           type: 'string',
-          initialValue: 'Tu casa, en 60 días. Sin obra.',
+          description: 'Ej: "Infraestructura habitacional premium."',
+          initialValue: 'Infraestructura habitacional premium.',
         }),
         defineField({
-          name: 'subtitle',
+          name: 'tituloDestacado',
+          title: 'Título destacado (línea dorada)',
+          type: 'string',
+          initialValue: 'Lista en semanas.',
+        }),
+        defineField({
+          name: 'subtitulo',
           title: 'Subtítulo',
           type: 'text',
           rows: 3,
           initialValue:
-            'Casas modulares llave en mano. Diseñadas y fabricadas en planta, instaladas en tu terreno. Calidad superior, precio justo, entrega garantizada por contrato.',
+            'Las primeras unidades MOVARA están disponibles con condiciones exclusivas de preventa. Estamos habilitando acceso prioritario a clientes seleccionados antes de la apertura oficial.',
         }),
         defineField({
-          name: 'ctaPrimaryText',
-          title: 'Botón principal',
+          name: 'ctaPrimario',
+          title: 'CTA primario (botón dorado)',
           type: 'string',
-          initialValue: 'Ver modelos',
+          initialValue: 'Quiero acceso prioritario',
         }),
         defineField({
-          name: 'ctaSecondaryText',
-          title: 'Botón secundario',
+          name: 'ctaSecundario',
+          title: 'CTA secundario (ghost)',
           type: 'string',
-          initialValue: 'Consultar por WhatsApp',
+          initialValue: 'Reservar precio de lanzamiento',
         }),
         defineField({
-          name: 'stats',
-          title: 'Estadísticas',
+          name: 'trustStrip',
+          title: 'Trust strip (specs técnicas)',
           type: 'array',
-          of: [
-            defineArrayMember({
-              type: 'object',
-              fields: [
-                defineField({ name: 'value', title: 'Valor', type: 'string' }),
-                defineField({ name: 'label', title: 'Etiqueta', type: 'string' }),
-              ],
-              preview: {
-                select: { title: 'value', subtitle: 'label' },
-              },
-            }),
+          description: 'Los 4 ítems técnicos del strip inferior del hero',
+          of: [defineArrayMember({ type: 'string' })],
+          initialValue: [
+            'Estructura certificada CE',
+            'Lana de roca 75mm',
+            'DVH con RPT',
+            'Producción nacional',
           ],
         }),
       ],
     }),
+
+    // ─── 2. PREVENTA ────────────────────────────────────────────────────────
     defineField({
-      name: 'regionalBanner',
-      title: 'Banner modelos regionales',
+      name: 'preventa',
+      title: 'Preventa / Acceso prioritario',
       type: 'object',
       fields: [
         defineField({
-          name: 'title',
+          name: 'badgeEscasez',
+          title: 'Badge escasez',
+          type: 'string',
+          initialValue: 'Preventa activa',
+        }),
+        defineField({
+          name: 'titulo',
           title: 'Título',
           type: 'string',
-          initialValue: 'Una solución para cada zona del país',
+          initialValue: 'Primeras 20 unidades\nen condiciones de lanzamiento.',
         }),
         defineField({
-          name: 'subtitle',
+          name: 'subtitulo',
           title: 'Subtítulo',
           type: 'text',
-          rows: 2,
-          initialValue: 'Cada región tiene su propio clima. Cada modelo, sus especificaciones únicas.',
-        }),
-      ],
-    }),
-    defineField({
-      name: 'whyMovara',
-      title: 'Sección "Por qué MOVARA"',
-      type: 'object',
-      fields: [
-        defineField({
-          name: 'title',
-          title: 'Título',
-          type: 'string',
-          initialValue: '4 pilares que nos diferencian',
-        }),
-        defineField({
-          name: 'subtitle',
-          title: 'Subtítulo',
-          type: 'text',
-          rows: 2,
+          rows: 3,
           initialValue:
-            'Más de 8 años construyendo casas modulares nos enseñaron que la confianza se gana con hechos, no con promesas.',
+            'Las condiciones de preventa no estarán disponibles para siempre. Una vez agotadas, el precio y los tiempos de entrega serán los del mercado abierto.',
         }),
         defineField({
-          name: 'pillars',
-          title: 'Pilares (máx. 4, el orden se respeta)',
+          name: 'totalUnidades',
+          title: 'Total de unidades en preventa',
+          type: 'number',
+          initialValue: 20,
+        }),
+        defineField({
+          name: 'unidadesReservadas',
+          title: 'Unidades ya reservadas',
+          type: 'number',
+          initialValue: 7,
+        }),
+        defineField({
+          name: 'textoCierre',
+          title: 'Texto CTA',
+          type: 'string',
+          initialValue: 'Quiero entrar en preventa',
+        }),
+        defineField({
+          name: 'beneficios',
+          title: 'Beneficios de la preventa (3 cards)',
           type: 'array',
-          validation: (Rule) => Rule.max(4),
           of: [
             defineArrayMember({
               type: 'object',
               fields: [
-                defineField({
-                  name: 'icon',
-                  title: 'Ícono (emoji)',
-                  type: 'string',
-                  description: 'Emoji que representa el pilar. Ej: 🏗️ ⏱️ 💳 🛡️',
-                }),
-                defineField({ name: 'title', title: 'Título', type: 'string' }),
-                defineField({ name: 'description', title: 'Descripción', type: 'text', rows: 3 }),
+                defineField({ name: 'titulo', title: 'Título', type: 'string' }),
+                defineField({ name: 'descripcion', title: 'Descripción', type: 'text', rows: 2 }),
               ],
-              preview: {
-                select: { title: 'icon', subtitle: 'title' },
-              },
+              preview: { select: { title: 'titulo' } },
             }),
           ],
         }),
       ],
     }),
+
+    // ─── 3. DOSSIER (lead magnet) ────────────────────────────────────────────
     defineField({
-      name: 'usos',
-      title: 'Sección Usos y Perfiles',
+      name: 'dossier',
+      title: 'Dossier privado (Lead magnet)',
       type: 'object',
       fields: [
         defineField({
-          name: 'title',
+          name: 'titulo',
           title: 'Título',
           type: 'string',
-          initialValue: 'Una solución para cada proyecto',
+          initialValue: 'Accedé al dossier exclusivo MOVARA.',
         }),
         defineField({
-          name: 'subtitle',
+          name: 'subtitulo',
           title: 'Subtítulo',
           type: 'text',
-          rows: 2,
-          initialValue: 'Nuestros modelos se adaptan a distintos objetivos. ¿En cuál te ves?',
+          rows: 3,
+          initialValue:
+            'Solo para clientes seleccionados. Completá el formulario y un asesor MOVARA se comunica con vos en menos de 2 horas hábiles.',
         }),
         defineField({
           name: 'items',
-          title: 'Usos',
+          title: 'Ítems incluidos en el dossier',
           type: 'array',
+          of: [defineArrayMember({ type: 'string' })],
+          initialValue: [
+            'Modelos completos con planos y especificaciones técnicas',
+            'Configuraciones premium y opciones de personalización',
+            'Comparativa técnica vs. construcción tradicional',
+            'Escenarios de inversión Airbnb con proyección de ROI',
+            'Condiciones exclusivas de preventa y lanzamiento',
+            'Acceso a asesoramiento privado con nuestro equipo',
+          ],
+        }),
+        defineField({
+          name: 'textoCTA',
+          title: 'Texto botón',
+          type: 'string',
+          initialValue: 'Quiero el dossier privado',
+        }),
+      ],
+    }),
+
+    // ─── 4. NUEVA CATEGORÍA (propuesta de valor comparativa) ────────────────
+    defineField({
+      name: 'nuevaCategoria',
+      title: 'Propuesta de valor — comparativa',
+      type: 'object',
+      fields: [
+        defineField({
+          name: 'titulo',
+          title: 'Título',
+          type: 'string',
+          initialValue: 'MOVARA no entra en ninguna categoría que ya conocés.',
+        }),
+        defineField({
+          name: 'subtitulo',
+          title: 'Subtítulo',
+          type: 'text',
+          rows: 2,
+          initialValue: 'Es una nueva forma de pensar la infraestructura habitacional en Argentina.',
+        }),
+        defineField({
+          name: 'cita',
+          title: 'Cita final',
+          type: 'string',
+          initialValue: '"No estamos compitiendo con la construcción tradicional. Estamos reemplazándola."',
+        }),
+        defineField({
+          name: 'columnas',
+          title: 'Columnas (máx. 3)',
+          type: 'array',
+          validation: (Rule) => Rule.max(3),
           of: [
             defineArrayMember({
               type: 'object',
               fields: [
-                defineField({ name: 'emoji', title: 'Emoji', type: 'string' }),
-                defineField({ name: 'category', title: 'Categoría (label pequeño)', type: 'string' }),
-                defineField({ name: 'title', title: 'Título', type: 'string' }),
-                defineField({ name: 'description', title: 'Descripción', type: 'text', rows: 3 }),
+                defineField({ name: 'titulo', title: 'Título de la columna', type: 'string' }),
+                defineField({ name: 'descripcion', title: 'Descripción', type: 'text', rows: 3 }),
                 defineField({
-                  name: 'href',
-                  title: 'Enlace',
-                  type: 'string',
-                  description: 'Ruta interna. Ej: /modelos',
+                  name: 'destacado',
+                  title: '¿Columna destacada? (fondo oscuro/dorado)',
+                  type: 'boolean',
+                  initialValue: false,
                 }),
-                defineField({ name: 'statValue', title: 'Valor estadística', type: 'string' }),
-                defineField({ name: 'statLabel', title: 'Etiqueta estadística', type: 'string' }),
+                defineField({
+                  name: 'tachado',
+                  title: '¿Título con tachado? (negaciones)',
+                  type: 'boolean',
+                  initialValue: false,
+                }),
               ],
               preview: {
-                select: { title: 'category', subtitle: 'title' },
+                select: { title: 'titulo', subtitle: 'destacado' },
+                prepare: ({ title, subtitle }) => ({
+                  title,
+                  subtitle: subtitle ? '★ Destacada' : '',
+                }),
               },
             }),
           ],
         }),
       ],
     }),
+
+    // ─── 5. DOLOR CONSTRUCCIÓN TRADICIONAL ──────────────────────────────────
     defineField({
-      name: 'process',
-      title: 'Sección Proceso',
+      name: 'dolorConvencional',
+      title: 'Dolor — construcción tradicional',
       type: 'object',
       fields: [
         defineField({
-          name: 'title',
+          name: 'titulo',
           title: 'Título',
           type: 'string',
-          initialValue: 'Simple. Transparente. Sin sorpresas.',
+          initialValue: 'La construcción tradicional está rota.',
         }),
         defineField({
-          name: 'subtitle',
-          title: 'Subtítulo',
+          name: 'subtitulo',
+          title: 'Subtítulo (frase introductoria)',
           type: 'text',
           rows: 2,
           initialValue:
-            'Cuatro pasos desde que elegís hasta que recibís las llaves. En promedio, 60 a 90 días corridos.',
+            'Cada obra en Argentina termina siendo un proyecto de gestión de crisis. No de construcción.',
         }),
         defineField({
-          name: 'steps',
-          title: 'Pasos (máx. 4, el ícono se asigna por posición)',
+          name: 'stats',
+          title: 'Estadísticas (grid 4)',
+          type: 'array',
+          of: [
+            defineArrayMember({
+              type: 'object',
+              fields: [
+                defineField({ name: 'stat', title: 'Valor / cifra', type: 'string' }),
+                defineField({ name: 'label', title: 'Etiqueta', type: 'string' }),
+                defineField({ name: 'sub', title: 'Descripción secundaria', type: 'string' }),
+              ],
+              preview: { select: { title: 'stat', subtitle: 'label' } },
+            }),
+          ],
+        }),
+        defineField({
+          name: 'problemas',
+          title: 'Problemas (bullets ✕ — izquierda)',
+          type: 'array',
+          of: [defineArrayMember({ type: 'string' })],
+          initialValue: [
+            'Presupuestos que se duplican antes de la mitad de la obra',
+            'Obras que se detienen sin aviso durante semanas',
+            'Calidad que depende del humor del contratista del mes',
+            'Ningún responsable real cuando algo sale mal',
+            'Tu terreno convertido en escombros por meses',
+            'Estrés permanente. Cero certeza. Cero garantías.',
+          ],
+        }),
+        defineField({
+          name: 'beneficios',
+          title: 'Beneficios MOVARA (bullets ✓ — derecha)',
+          type: 'array',
+          of: [defineArrayMember({ type: 'string' })],
+          initialValue: [
+            'Precio fijo desde el día 1. Sin sorpresas.',
+            'Entrega garantizada en 4–8 semanas.',
+            'Un solo interlocutor, de inicio a fin.',
+            'Producción en planta controlada. Sin obra en tu terreno.',
+            'Garantía escrita. Sin letra chica.',
+            'Certeza total. Desde antes de firmar.',
+          ],
+        }),
+      ],
+    }),
+
+    // ─── 6. PARA QUIÉN ES MOVARA ─────────────────────────────────────────────
+    defineField({
+      name: 'paraQuien',
+      title: 'Para quién es MOVARA',
+      type: 'object',
+      fields: [
+        defineField({
+          name: 'titulo',
+          title: 'Título de sección',
+          type: 'string',
+          initialValue: '¿Para quién es MOVARA?',
+        }),
+        defineField({
+          name: 'avatares',
+          title: 'Perfiles / Avatares',
+          type: 'array',
+          of: [
+            defineArrayMember({
+              type: 'object',
+              fields: [
+                defineField({ name: 'icono', title: 'Ícono (emoji)', type: 'string' }),
+                defineField({ name: 'titulo', title: 'Título', type: 'string' }),
+                defineField({ name: 'descripcion', title: 'Descripción', type: 'text', rows: 2 }),
+                defineField({ name: 'cta', title: 'Texto CTA (botón)', type: 'string' }),
+              ],
+              preview: {
+                select: { title: 'titulo', subtitle: 'icono' },
+              },
+            }),
+          ],
+        }),
+      ],
+    }),
+
+    // ─── 7. CÓMO FUNCIONA ────────────────────────────────────────────────────
+    defineField({
+      name: 'comoFunciona',
+      title: 'Cómo funciona',
+      type: 'object',
+      fields: [
+        defineField({
+          name: 'titulo',
+          title: 'Título',
+          type: 'string',
+          initialValue: 'De la idea al espacio en 4 pasos',
+        }),
+        defineField({
+          name: 'pasos',
+          title: 'Pasos (máx. 4)',
           type: 'array',
           validation: (Rule) => Rule.max(4),
           of: [
             defineArrayMember({
               type: 'object',
               fields: [
-                defineField({ name: 'title', title: 'Título del paso', type: 'string' }),
-                defineField({ name: 'description', title: 'Descripción', type: 'text', rows: 3 }),
+                defineField({ name: 'titulo', title: 'Título del paso', type: 'string' }),
+                defineField({ name: 'descripcion', title: 'Descripción', type: 'text', rows: 2 }),
               ],
-              preview: {
-                select: { title: 'title' },
-              },
+              preview: { select: { title: 'titulo' } },
             }),
           ],
         }),
       ],
     }),
+
+    // ─── 8. FORMULARIO DE CONTACTO ───────────────────────────────────────────
     defineField({
-      name: 'featuredModels',
-      title: 'Sección Modelos destacados',
+      name: 'formularioContacto',
+      title: 'Formulario de leads calificado',
       type: 'object',
       fields: [
         defineField({
-          name: 'title',
+          name: 'titulo',
           title: 'Título',
           type: 'string',
-          initialValue: 'Modelos más elegidos',
+          initialValue: 'Hablá con un asesor MOVARA.',
         }),
         defineField({
-          name: 'subtitle',
-          title: 'Subtítulo',
-          type: 'text',
-          rows: 2,
-          initialValue: 'Cada modelo es personalizable en distribución, terminaciones y colores.',
-        }),
-      ],
-    }),
-    defineField({
-      name: 'testimonials',
-      title: 'Sección Testimonios',
-      type: 'object',
-      fields: [
-        defineField({
-          name: 'title',
-          title: 'Título',
-          type: 'string',
-          initialValue: 'Lo que dicen nuestros clientes',
-        }),
-        defineField({
-          name: 'subtitle',
-          title: 'Subtítulo',
-          type: 'text',
-          rows: 2,
-          initialValue: 'Historias reales de personas que eligieron MOVARA.',
-        }),
-      ],
-    }),
-    defineField({
-      name: 'cta',
-      title: 'Sección CTA Final',
-      type: 'object',
-      fields: [
-        defineField({
-          name: 'title',
-          title: 'Título',
-          type: 'string',
-          initialValue: '¿Listo para dar el primer paso?',
-        }),
-        defineField({
-          name: 'subtitle',
+          name: 'subtitulo',
           title: 'Subtítulo',
           type: 'text',
           rows: 2,
           initialValue:
-            'Sin compromisos. En una primera charla entendemos tu proyecto, te orientamos en modelos y te damos una idea de costos sin vueltas.',
+            'Respuesta en menos de 2 horas en horario comercial. Sin presión, con toda la información.',
         }),
         defineField({
-          name: 'ctaText',
-          title: 'Texto del botón WhatsApp',
+          name: 'textoCTA',
+          title: 'Texto botón enviar',
           type: 'string',
-          initialValue: 'Consultar por WhatsApp',
+          initialValue: 'Solicitar asesoramiento privado',
         }),
       ],
     }),
   ],
   preview: {
     prepare() {
-      return { title: 'Página de inicio' }
+      return { title: 'Landing Premium MOVARA' }
     },
   },
 })

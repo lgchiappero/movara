@@ -3,30 +3,36 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 
-const pasos = [
+type Paso = { _key?: string; titulo: string; descripcion: string };
+
+type ComoFuncionaContent = {
+  titulo?: string;
+  pasos?: Paso[];
+};
+
+const DEFAULT_PASOS: Paso[] = [
   {
-    numero: "01",
     titulo: "Configurás tu espacio online",
     descripcion: "Elegís modelo, provincia y uso. El configurador recomienda el estándar térmico ideal para tu zona.",
   },
   {
-    numero: "02",
     titulo: "Recibís tu presupuesto en 2 horas",
     descripcion: "Precio fijo, sin letra chica. Sin sorpresas.",
   },
   {
-    numero: "03",
     titulo: "Fabricamos y coordinamos el envío",
     descripcion: "Producción en planta bajo controles de calidad. Logística hasta tu terreno incluida.",
   },
   {
-    numero: "04",
     titulo: "Tu MOVARA llega lista para instalarse",
     descripcion: "Sin obra, sin escombros. Garantía escrita incluida desde el primer día.",
   },
 ];
 
-export default function ComoFunciona() {
+export default function ComoFunciona({ content }: { content?: ComoFuncionaContent | null }) {
+  const titulo = content?.titulo ?? "De la idea al espacio en 4 pasos";
+  const pasos = content?.pasos?.length ? content.pasos : DEFAULT_PASOS;
+
   return (
     <section id="proceso" className="py-32 bg-white">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
@@ -41,14 +47,14 @@ export default function ComoFunciona() {
             Proceso
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-[#2F2F2F] leading-tight">
-            De la idea al espacio en 4 pasos
+            {titulo}
           </h2>
         </motion.div>
 
         <div className="grid sm:grid-cols-2 gap-x-12 gap-y-16">
           {pasos.map((paso, i) => (
             <motion.div
-              key={paso.numero}
+              key={paso._key ?? paso.titulo}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -56,7 +62,7 @@ export default function ComoFunciona() {
               className="flex flex-col"
             >
               <span className="text-7xl font-bold text-sage-500 leading-none mb-6 select-none">
-                {paso.numero}
+                {String(i + 1).padStart(2, "0")}
               </span>
               <h3 className="font-bold text-[#2F2F2F] text-xl mb-3 leading-snug">{paso.titulo}</h3>
               <p className="text-stone-500 text-base leading-relaxed">{paso.descripcion}</p>

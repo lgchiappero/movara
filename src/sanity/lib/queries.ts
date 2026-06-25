@@ -129,44 +129,54 @@ export const CONFIGURADOR_PAGE_QUERY = groq`
 export const HOME_PAGE_QUERY = groq`
   *[_type == "homePage"][0] {
     hero {
-      badgeText,
-      title,
-      subtitle,
-      ctaPrimaryText,
-      ctaSecondaryText,
-      stats[] { value, label },
+      badgePreventa,
+      titulo,
+      tituloDestacado,
+      subtitulo,
+      ctaPrimario,
+      ctaSecundario,
+      trustStrip,
     },
-    regionalBanner {
-      title,
-      subtitle,
+    preventa {
+      badgeEscasez,
+      titulo,
+      subtitulo,
+      totalUnidades,
+      unidadesReservadas,
+      textoCierre,
+      beneficios[] { _key, titulo, descripcion },
     },
-    whyMovara {
-      title,
-      subtitle,
-      pillars[] { _key, icon, title, description },
+    dossier {
+      titulo,
+      subtitulo,
+      items,
+      textoCTA,
     },
-    featuredModels {
-      title,
-      subtitle,
+    nuevaCategoria {
+      titulo,
+      subtitulo,
+      cita,
+      columnas[] { _key, titulo, descripcion, destacado, tachado },
     },
-    usos {
-      title,
-      subtitle,
-      items[] { _key, emoji, category, title, description, href, statValue, statLabel },
+    dolorConvencional {
+      titulo,
+      subtitulo,
+      stats[] { _key, stat, label, sub },
+      problemas,
+      beneficios,
     },
-    process {
-      title,
-      subtitle,
-      steps[] { _key, title, description },
+    paraQuien {
+      titulo,
+      avatares[] { _key, icono, titulo, descripcion, cta },
     },
-    testimonials {
-      title,
-      subtitle,
+    comoFunciona {
+      titulo,
+      pasos[] { _key, titulo, descripcion },
     },
-    cta {
-      title,
-      subtitle,
-      ctaText,
+    formularioContacto {
+      titulo,
+      subtitulo,
+      textoCTA,
     },
   }
 `

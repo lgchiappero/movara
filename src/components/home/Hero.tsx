@@ -2,7 +2,36 @@
 
 import { motion } from "framer-motion";
 
-export default function Hero({ waNumber: _ }: { waNumber?: string | null }) {
+type HeroContent = {
+  badgePreventa?: string;
+  titulo?: string;
+  tituloDestacado?: string;
+  subtitulo?: string;
+  ctaPrimario?: string;
+  ctaSecundario?: string;
+  trustStrip?: string[];
+};
+
+const DEFAULTS = {
+  badgePreventa: "Preventa activa — Acceso prioritario limitado",
+  titulo: "Infraestructura habitacional premium.",
+  tituloDestacado: "Lista en semanas.",
+  subtitulo:
+    "Las primeras unidades MOVARA están disponibles con condiciones exclusivas de preventa. Estamos habilitando acceso prioritario a clientes seleccionados antes de la apertura oficial.",
+  ctaPrimario: "Quiero acceso prioritario",
+  ctaSecundario: "Reservar precio de lanzamiento",
+  trustStrip: ["Estructura certificada CE", "Lana de roca 75mm", "DVH con RPT", "Producción nacional"],
+};
+
+export default function Hero({
+  waNumber: _,
+  content,
+}: {
+  waNumber?: string | null;
+  content?: HeroContent | null;
+}) {
+  const c = { ...DEFAULTS, ...content };
+
   return (
     <section className="relative min-h-screen flex items-center bg-[#1A1A1A] overflow-hidden">
       {/* Dot texture */}
@@ -25,7 +54,7 @@ export default function Hero({ waNumber: _ }: { waNumber?: string | null }) {
           className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-[#D4B06A]/40 bg-[#D4B06A]/8 text-[#D4B06A] text-xs font-semibold tracking-widest uppercase mb-12"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-[#D4B06A] animate-pulse" />
-          Preventa activa — Acceso prioritario limitado
+          {c.badgePreventa}
         </motion.div>
 
         {/* H1 */}
@@ -35,9 +64,9 @@ export default function Hero({ waNumber: _ }: { waNumber?: string | null }) {
           transition={{ duration: 0.9, delay: 0.08 }}
           className="text-5xl sm:text-6xl lg:text-[5rem] font-bold text-white leading-[1.04] tracking-tight mb-8"
         >
-          Infraestructura<br />
-          habitacional premium.<br />
-          <span className="text-[#D4B06A]">Lista en semanas.</span>
+          {c.titulo}
+          <br />
+          <span className="text-[#D4B06A]">{c.tituloDestacado}</span>
         </motion.h1>
 
         {/* Subtitle */}
@@ -47,8 +76,7 @@ export default function Hero({ waNumber: _ }: { waNumber?: string | null }) {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="text-lg sm:text-xl text-stone-400 max-w-2xl mx-auto leading-relaxed mb-14"
         >
-          Las primeras unidades MOVARA están disponibles con condiciones exclusivas de preventa.
-          Estamos habilitando acceso prioritario a clientes seleccionados antes de la apertura oficial.
+          {c.subtitulo}
         </motion.p>
 
         {/* CTAs */}
@@ -62,13 +90,13 @@ export default function Hero({ waNumber: _ }: { waNumber?: string | null }) {
             href="#dossier"
             className="px-9 py-4 bg-[#D4B06A] hover:bg-[#BF9A52] text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-2xl hover:shadow-[#D4B06A]/30 hover:-translate-y-0.5 text-sm tracking-wide"
           >
-            Quiero acceso prioritario
+            {c.ctaPrimario}
           </a>
           <a
             href="#preventa"
             className="px-9 py-4 border border-white/20 hover:border-[#D4B06A]/60 text-white font-semibold rounded-xl transition-all duration-200 text-sm hover:bg-white/5"
           >
-            Reservar precio de lanzamiento
+            {c.ctaSecundario}
           </a>
         </motion.div>
 
@@ -79,7 +107,7 @@ export default function Hero({ waNumber: _ }: { waNumber?: string | null }) {
           transition={{ duration: 1, delay: 0.55 }}
           className="flex flex-wrap justify-center gap-x-10 gap-y-3 text-stone-600 text-[11px] tracking-widest uppercase"
         >
-          {["Estructura certificada CE", "Lana de roca 75mm", "DVH con RPT", "Producción nacional"].map((item) => (
+          {(c.trustStrip ?? DEFAULTS.trustStrip).map((item) => (
             <span key={item} className="flex items-center gap-2">
               <span className="w-1 h-1 rounded-full bg-[#D4B06A]" />
               {item}

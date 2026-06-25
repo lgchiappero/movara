@@ -13,6 +13,15 @@ export const structure: StructureResolver = (S) =>
         .child(S.documentTypeList('testimonio').title('Testimonios')),
 
       S.listItem()
+        .title('Landing Premium')
+        .child(
+          S.document()
+            .schemaType('homePage')
+            .documentId('homePage')
+            .title('Landing Premium'),
+        ),
+
+      S.listItem()
         .title('Configuración del sitio')
         .child(
           S.document()

@@ -11,34 +11,40 @@ import ContactoForm from "@/components/home/ContactoForm";
 import ConfiguradorRegional from "@/components/configurador/ConfiguradorRegional";
 import Footer from "@/components/home/Footer";
 import { client } from "@/sanity/lib/client";
-import { SITE_CONFIG_QUERY } from "@/sanity/lib/queries";
+import { SITE_CONFIG_QUERY, HOME_PAGE_QUERY } from "@/sanity/lib/queries";
 
 async function getPageData() {
   try {
-    const config = await client.fetch<{ whatsappNumber?: string | null }>(SITE_CONFIG_QUERY);
-    return { waNumber: config?.whatsappNumber ?? null };
+    const [config, homePage] = await Promise.all([
+      client.fetch<{ whatsappNumber?: string | null }>(SITE_CONFIG_QUERY),
+      client.fetch(HOME_PAGE_QUERY),
+    ]);
+    return {
+      waNumber: config?.whatsappNumber ?? null,
+      homePage: homePage ?? null,
+    };
   } catch {
-    return { waNumber: null };
+    return { waNumber: null, homePage: null };
   }
 }
 
 export default async function HomePage() {
-  const { waNumber } = await getPageData();
+  const { waNumber, homePage } = await getPageData();
 
   return (
     <>
       <Navbar />
       <ConfiguradorRegional waNumber={waNumber} />
       <main>
-        <Hero waNumber={waNumber} />
-        <DolorConvencional />
-        <NuevaCategoria />
+        <Hero waNumber={waNumber} content={homePage?.hero} />
+        <DolorConvencional content={homePage?.dolorConvencional} />
+        <NuevaCategoria content={homePage?.nuevaCategoria} />
         <ModelosHome />
-        <Preventa />
-        <DossierForm waNumber={waNumber} />
-        <ComoFunciona />
+        <Preventa content={homePage?.preventa} />
+        <DossierForm waNumber={waNumber} content={homePage?.dossier} />
+        <ComoFunciona content={homePage?.comoFunciona} />
         <PruebaSocial />
-        <ContactoForm waNumber={waNumber} />
+        <ContactoForm waNumber={waNumber} content={homePage?.formularioContacto} />
       </main>
       <Footer />
     </>
