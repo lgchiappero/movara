@@ -22,8 +22,8 @@ export default function PruebaSocial() {
           transition={{ duration: 0.6 }}
           className="text-center mb-10"
         >
-          <span className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-3 block">
-            Estándares MOVARA
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-3 block">
+            Estándar técnico
           </span>
           <h2 className="text-2xl sm:text-3xl font-bold text-[#2F2F2F]">
             Calidad que podés verificar

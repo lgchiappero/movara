@@ -56,16 +56,16 @@ export default function ContactoForm({ waNumber }: { waNumber?: string | null })
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           {/* Copy */}
           <div>
-            <span className="text-xs font-semibold uppercase tracking-widest text-sage-400 mb-3 block">
-              Contacto
+            <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-3 block">
+              Asesoramiento privado
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-4">
-              ¿Querés saber más?
+              Hablá con un asesor MOVARA.
             </h2>
             <p className="text-stone-400 text-lg leading-relaxed mb-8">
-              Te contactamos en{" "}
+              Respuesta en{" "}
               <span className="text-white font-semibold">menos de 2 horas</span>{" "}
-              en horario comercial.
+              en horario comercial. Sin presión, con toda la información.
             </p>
 
             <div className="space-y-4">
@@ -200,9 +200,9 @@ export default function ContactoForm({ waNumber }: { waNumber?: string | null })
                 <button
                   type="submit"
                   disabled={status === "sending"}
-                  className="w-full py-3.5 bg-sage-500 hover:bg-sage-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-sage-500/25 text-sm"
+                  className="w-full py-3.5 bg-[#D4B06A] hover:bg-[#BF9A52] disabled:opacity-50 disabled:cursor-not-allowed text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-[#D4B06A]/25 text-sm tracking-wide"
                 >
-                  {status === "sending" ? "Enviando..." : "Quiero que me contacten"}
+                  {status === "sending" ? "Enviando…" : "Solicitar asesoramiento privado"}
                 </button>
               </form>
             )}

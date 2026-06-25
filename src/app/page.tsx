@@ -1,8 +1,10 @@
 import Navbar from "@/components/home/Navbar";
 import Hero from "@/components/home/Hero";
-import PropuestaDeValor from "@/components/home/PropuestaDeValor";
+import DolorConvencional from "@/components/home/DolorConvencional";
+import NuevaCategoria from "@/components/home/NuevaCategoria";
 import ModelosHome from "@/components/home/ModelosHome";
-import ParaQuien from "@/components/home/ParaQuien";
+import Preventa from "@/components/home/Preventa";
+import DossierForm from "@/components/home/DossierForm";
 import ComoFunciona from "@/components/home/ComoFunciona";
 import PruebaSocial from "@/components/home/PruebaSocial";
 import ContactoForm from "@/components/home/ContactoForm";
@@ -29,9 +31,11 @@ export default async function HomePage() {
       <ConfiguradorRegional waNumber={waNumber} />
       <main>
         <Hero waNumber={waNumber} />
-        <PropuestaDeValor />
+        <DolorConvencional />
+        <NuevaCategoria />
         <ModelosHome />
-        <ParaQuien />
+        <Preventa />
+        <DossierForm waNumber={waNumber} />
         <ComoFunciona />
         <PruebaSocial />
         <ContactoForm waNumber={waNumber} />

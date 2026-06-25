@@ -8,130 +8,142 @@ const modelos = [
     nombre: "MOVARA 10ft",
     superficie: "18 m²",
     precio: "USD 15.000",
-    slug: "movara-10ft",
-    descripcion: "Compacto y eficiente. Ideal para studios, espacios de trabajo u hospedaje rural.",
+    descripcion: "Studio de alta eficiencia. Ideal para hospedaje, trabajo remoto o inversión turística en campo.",
     tags: ["Studio", "Trabajo", "Campo"],
-    color: "from-sage-50 to-stone-50",
+    disponibles: 4,
   },
   {
     nombre: "MOVARA 20ft",
     superficie: "37 m²",
     precio: "USD 22.000",
-    slug: "movara-20ft",
-    descripcion: "El equilibrio perfecto entre confort y precio. Primera vivienda o inversión turística.",
+    descripcion: "El equilibrio perfecto entre confort y precio. Primera vivienda o inversión turística con alto ROI.",
     tags: ["Vivienda", "Turismo", "Inversión"],
-    color: "from-[#2F2F2F] to-stone-800",
-    dark: true,
+    disponibles: 8,
+    highlight: true,
   },
   {
     nombre: "MOVARA 40ft",
     superficie: "74 m²",
     precio: "USD 35.000",
-    slug: "movara-40ft",
     descripcion: "Máximo espacio y confort. Vivienda familiar, oficina corporativa o lodge premium.",
     tags: ["Familiar", "Corporativo", "Premium"],
-    color: "from-sage-50 to-stone-50",
+    disponibles: 3,
   },
 ];
 
 export default function ModelosHome() {
   return (
-    <section id="modelos" className="py-24 bg-white">
-      <div className="max-w-6xl mx-auto px-6 lg:px-8">
+    <section id="modelos" className="py-32 bg-white">
+      <div className="max-w-5xl mx-auto px-6 lg:px-8">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mb-12"
+          className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-14"
         >
-          <span className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-3 block">
-            Línea de productos
-          </span>
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-4 block">
+              Línea de productos — Edición Fundadores
+            </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-[#2F2F2F] leading-tight">
               Tres modelos. Un estándar.
             </h2>
-            <Link
-              href="/modelos"
-              className="text-sm font-semibold text-sage-600 hover:text-sage-700 underline underline-offset-4 shrink-0"
-            >
-              Ver catálogo completo →
-            </Link>
+          </div>
+          <div className="shrink-0 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+            <p className="text-xs font-semibold text-amber-700 whitespace-nowrap">
+              ⚡ Condiciones de preventa activas
+            </p>
           </div>
         </motion.div>
 
-        <div className="space-y-5">
+        {/* Cards */}
+        <div className="space-y-4">
           {modelos.map((m, i) => (
             <motion.div
               key={m.nombre}
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className={`rounded-2xl bg-gradient-to-r ${m.color} border ${
-                m.dark ? "border-stone-700" : "border-stone-100"
-              } overflow-hidden`}
+              className={`rounded-2xl border-2 p-7 lg:p-8 flex flex-col sm:flex-row sm:items-center gap-6 transition-all duration-200 ${
+                m.highlight
+                  ? "bg-[#2F2F2F] border-[#D4B06A]"
+                  : "bg-white border-stone-100 hover:border-stone-200"
+              }`}
             >
-              <div className="flex flex-col sm:flex-row sm:items-center gap-6 p-6 sm:p-8">
-                {/* Imagen placeholder */}
-                <div
-                  className={`shrink-0 w-full sm:w-40 h-32 sm:h-28 rounded-xl flex items-center justify-center text-4xl ${
-                    m.dark ? "bg-stone-700" : "bg-stone-100"
+              {/* Icon */}
+              <div
+                className={`shrink-0 w-14 h-14 rounded-xl flex items-center justify-center text-3xl ${
+                  m.highlight ? "bg-[#D4B06A]/10" : "bg-stone-50"
+                }`}
+              >
+                🏠
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2.5 mb-2 flex-wrap">
+                  <h3 className={`font-bold text-lg ${m.highlight ? "text-white" : "text-[#2F2F2F]"}`}>
+                    {m.nombre}
+                  </h3>
+                  {m.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                        m.highlight ? "bg-[#D4B06A]/20 text-[#D4B06A]" : "bg-stone-100 text-stone-500"
+                      }`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <p className={`text-sm leading-relaxed mb-2 ${m.highlight ? "text-stone-400" : "text-stone-500"}`}>
+                  {m.descripcion}
+                </p>
+                <p className={`text-xs font-medium ${m.highlight ? "text-[#D4B06A]/70" : "text-amber-600"}`}>
+                  Solo quedan <strong>{m.disponibles}</strong> unidades con precio de lanzamiento
+                </p>
+              </div>
+
+              {/* Price + CTA */}
+              <div className="shrink-0 text-right">
+                <p className={`text-xs mb-1 ${m.highlight ? "text-stone-500" : "text-stone-400"}`}>
+                  {m.superficie} · desde
+                </p>
+                <p className={`text-2xl font-bold mb-3 ${m.highlight ? "text-white" : "text-[#2F2F2F]"}`}>
+                  {m.precio}
+                </p>
+                <a
+                  href="#dossier"
+                  className={`inline-block px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+                    m.highlight
+                      ? "bg-[#D4B06A] hover:bg-[#BF9A52] text-[#1A1A1A]"
+                      : "bg-[#2F2F2F] hover:bg-stone-800 text-white"
                   }`}
                 >
-                  🏠
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <h3 className={`text-xl font-bold ${m.dark ? "text-white" : "text-[#2F2F2F]"}`}>
-                      {m.nombre}
-                    </h3>
-                    {m.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                          m.dark
-                            ? "bg-stone-700 text-stone-300"
-                            : "bg-stone-100 text-stone-500"
-                        }`}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <p className={`text-sm leading-relaxed ${m.dark ? "text-stone-400" : "text-stone-500"}`}>
-                    {m.descripcion}
-                  </p>
-                </div>
-
-                {/* Precio + CTA */}
-                <div className="shrink-0 flex flex-row sm:flex-col items-center sm:items-end gap-4 sm:gap-3">
-                  <div className="text-right">
-                    <p className={`text-xs ${m.dark ? "text-stone-500" : "text-stone-400"}`}>
-                      {m.superficie} · desde
-                    </p>
-                    <p className={`text-2xl font-bold ${m.dark ? "text-white" : "text-[#2F2F2F]"}`}>
-                      {m.precio}
-                    </p>
-                  </div>
-                  <Link
-                    href="/modelos"
-                    className={`whitespace-nowrap px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                      m.dark
-                        ? "bg-sage-500 hover:bg-sage-400 text-white"
-                        : "bg-[#2F2F2F] hover:bg-stone-700 text-white"
-                    }`}
-                  >
-                    Ver más
-                  </Link>
-                </div>
+                  Reservar precio
+                </a>
               </div>
             </motion.div>
           ))}
         </div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="text-center mt-10"
+        >
+          <Link
+            href="/modelos"
+            className="text-sm text-stone-400 hover:text-[#2F2F2F] transition-colors underline underline-offset-4"
+          >
+            Ver catálogo completo →
+          </Link>
+        </motion.div>
       </div>
     </section>
   );
