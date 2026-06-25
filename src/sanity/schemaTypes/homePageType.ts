@@ -277,10 +277,12 @@ export const homePageType = defineType({
             defineArrayMember({
               type: 'object',
               fields: [
+                defineField({ name: 'icono', title: 'Ícono (emoji)', type: 'string', description: 'Ej: 👷 💸 ⏳ 🧠 ❓ 😤' }),
                 defineField({ name: 'titulo', title: 'Título', type: 'string' }),
                 defineField({ name: 'descripcion', title: 'Descripción', type: 'text', rows: 2 }),
+                defineField({ name: 'lineaImpacto', title: 'Línea de impacto (costo real)', type: 'string' }),
               ],
-              preview: { select: { title: 'titulo' } },
+              preview: { select: { title: 'titulo', subtitle: 'icono' } },
             }),
           ],
         }),

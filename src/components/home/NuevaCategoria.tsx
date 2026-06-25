@@ -45,7 +45,7 @@ export default function NuevaCategoria({ content }: { content?: NuevaCategoriaCo
   const columnas = content?.columnas?.length ? content.columnas : DEFAULT_COLUMNAS;
 
   return (
-    <section className="py-32 bg-stone-50">
+    <section id="nueva-categoria" className="py-32 bg-stone-50">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
