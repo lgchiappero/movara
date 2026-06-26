@@ -96,9 +96,7 @@ export default async function Footer() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link href="/" className="inline-flex items-center gap-2.5 mb-5">
-              <span className="flex items-center justify-center rounded-xl bg-white p-1 shrink-0">
-                <Image src="/icono.jpeg" alt="" height={40} width={40} className="h-10 w-auto object-contain" />
-              </span>
+              <Image src="/icono.jpeg" alt="" height={48} width={48} className="h-12 w-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
               <div className="flex flex-col leading-none gap-[3px]">
                 <span style={{ fontFamily: "var(--font-montserrat)", fontWeight: 700, fontSize: "2.25rem", color: "#D4B06A", lineHeight: 1, letterSpacing: "-0.01em" }}>
                   MOVARA

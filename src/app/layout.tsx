@@ -45,6 +45,10 @@ export async function generateMetadata(): Promise<Metadata> {
     description:
       config?.metaDescription ??
       "Diseñamos, fabricamos y entregamos casas modulares sustentables en toda la Argentina. Llave en mano.",
+    icons: {
+      icon: "/icono.jpeg",
+      apple: "/icono.jpeg",
+    },
   };
 }
 
