@@ -84,7 +84,7 @@ const DEFAULT_PROBLEMAS: Problema[] = [
 ];
 
 export default function DolorConvencional({ content }: { content?: DolorContent | null }) {
-  const titulo = content?.titulo ?? "¿Ya pasaste por esto?";
+  const titulo = content?.titulo ?? "¿Ya pasaste por problemas como estos?";
   const subtitulo =
     content?.subtitulo ??
     "La construcción tradicional en Argentina es un camino lleno de obstáculos que nadie te cuenta antes de empezar.";
@@ -107,9 +107,6 @@ export default function DolorConvencional({ content }: { content?: DolorContent 
           transition={{ duration: 0.6 }}
           className="mb-16"
         >
-          <span className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-5 block">
-            El problema
-          </span>
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#2F2F2F] leading-[1.08] max-w-3xl mb-6">
             {titulo}
           </h2>
