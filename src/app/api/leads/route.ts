@@ -159,10 +159,13 @@ export async function POST(req: NextRequest) {
       mensaje: parsed.data.mensaje || null,
     };
 
+    console.log("[leads] Intentando guardar lead:", JSON.stringify(data));
+
     let dbSaved = false;
     try {
       await db.lead.create({ data });
       dbSaved = true;
+      console.log("[leads] Lead guardado en DB correctamente:", data.nombre, data.telefono);
     } catch (dbError) {
       console.error("[leads] DB unavailable — lead NOT saved:", dbError);
     }
