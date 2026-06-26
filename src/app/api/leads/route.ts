@@ -116,7 +116,7 @@ async function sendEmails(lead: LeadData): Promise<boolean> {
       await resend.emails.send({
         from: fromEmail,
         to: contactEmail,
-        subject: `🏠 Nuevo lead MOVARA — ${nombreCompleto} — ${lead.provincia ?? "Sin provincia"}`,
+        subject: `MOVARA | Consulta — ${nombreCompleto} | ${lead.telefono}`,
         html: buildAdminHtml(lead, now),
       });
       sent = true;
@@ -169,15 +169,11 @@ export async function POST(req: NextRequest) {
 
     const emailSent = await sendEmails(data);
 
-    if (dbSaved || emailSent) {
-      return NextResponse.json({ ok: true }, { status: 201 });
+    if (!dbSaved && !emailSent) {
+      console.error("[leads] Both DB and email failed for lead:", data.nombre, data.telefono);
     }
 
-    console.error("[leads] Both DB and email failed for lead:", data.nombre);
-    return NextResponse.json(
-      { error: "fatal", contactEmail: process.env.CONTACT_EMAIL ?? "" },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
     console.error("[leads]", error);
     return NextResponse.json({ error: "Error al procesar la solicitud" }, { status: 500 });

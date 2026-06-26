@@ -126,8 +126,7 @@ export default function DossierForm({
 }) {
   const [form, setForm] = useState<Form>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "fatal">("idle");
-  const [fatalEmail, setFatalEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
 
   // Generic field setter
   const set = (k: keyof Form) =>
@@ -171,7 +170,7 @@ export default function DossierForm({
     ].filter(Boolean);
 
     try {
-      const res = await fetch("/api/leads", {
+      await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -184,15 +183,6 @@ export default function DossierForm({
           mensaje: mensajeParts.join(" | "),
         }),
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        if (data?.error === "fatal") {
-          setFatalEmail(data.contactEmail ?? "");
-          setStatus("fatal");
-          return;
-        }
-      }
     } catch (err) {
       console.error("[DossierForm] submit error:", err);
     }
@@ -275,32 +265,6 @@ export default function DossierForm({
                     className="text-sm text-stone-500 hover:text-stone-300 underline underline-offset-2 transition-colors"
                   >
                     Hacer otra consulta
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ── FATAL ERROR ── */}
-            {status === "fatal" && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-10 text-center">
-                <div className="w-14 h-14 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
-                  <span className="text-red-400 text-2xl">!</span>
-                </div>
-                <h3 className="text-white font-bold text-xl mb-3">Hubo un problema técnico</h3>
-                <p className="text-stone-400 text-sm leading-relaxed mb-4">
-                  No pudimos procesar tu consulta. Por favor escribinos directamente a:
-                </p>
-                {fatalEmail && (
-                  <a href={`mailto:${fatalEmail}`} className="text-[#D4B06A] font-semibold text-sm hover:underline">
-                    {fatalEmail}
-                  </a>
-                )}
-                <div className="mt-8">
-                  <button
-                    onClick={() => { setStatus("idle"); }}
-                    className="text-sm text-stone-500 hover:text-stone-300 underline underline-offset-2 transition-colors"
-                  >
-                    Intentar de nuevo
                   </button>
                 </div>
               </div>

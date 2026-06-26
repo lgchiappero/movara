@@ -108,7 +108,7 @@ export const homePageType = defineType({
           name: 'textoCierre',
           title: 'Texto CTA',
           type: 'string',
-          initialValue: 'Quiero entrar en preventa',
+          initialValue: 'Quiero mi precio de lanzamiento',
         }),
         defineField({
           name: 'beneficios',

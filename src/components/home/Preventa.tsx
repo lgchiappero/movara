@@ -135,7 +135,7 @@ export default function Preventa({ content }: { content?: PreventaContent | null
             href="#dossier"
             className="inline-flex items-center gap-2 px-9 py-4 bg-[#D4B06A] hover:bg-[#BF9A52] text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-2xl hover:shadow-[#D4B06A]/20 hover:-translate-y-0.5 text-sm tracking-wide"
           >
-            {content?.textoCierre ?? "Quiero entrar en preventa"}
+            {content?.textoCierre ?? "Quiero mi precio de lanzamiento"}
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
