@@ -73,7 +73,7 @@ export default function DossierForm({
         form.uso && `Uso: ${form.uso}`,
         form.presupuesto && `Presupuesto: ${form.presupuesto}`,
         form.cuando && `Instalación: ${form.cuando}`,
-        "Origen: Dossier privado",
+        "Origen: Carpeta de proyecto",
       ]
         .filter(Boolean)
         .join(" | ");
@@ -107,10 +107,10 @@ export default function DossierForm({
             transition={{ duration: 0.7 }}
           >
             <span className="text-[#D4B06A] text-xs font-semibold uppercase tracking-widest mb-6 block">
-              Dossier privado
+              Carpeta de proyecto
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-6">
-              {content?.titulo ?? "Accedé al dossier exclusivo MOVARA."}
+              {content?.titulo ?? "Accedé a la información completa MOVARA."}
             </h2>
             <p className="text-stone-400 text-base leading-relaxed mb-10">
               {content?.subtitulo ??
@@ -288,7 +288,7 @@ export default function DossierForm({
                   disabled={status === "sending"}
                   className="w-full py-4 bg-[#D4B06A] hover:bg-[#BF9A52] disabled:opacity-60 text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-xl hover:shadow-[#D4B06A]/20 hover:-translate-y-0.5 text-sm tracking-wide"
                 >
-                  {status === "sending" ? "Enviando…" : (content?.textoCTA ?? "Quiero el dossier privado")}
+                  {status === "sending" ? "Enviando…" : (content?.textoCTA ?? "Quiero la información completa")}
                 </button>
 
                 {status === "error" && (

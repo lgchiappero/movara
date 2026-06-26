@@ -181,6 +181,20 @@ export default function DolorConvencional({ content }: { content?: DolorContent 
           <div className="flex-1 h-px bg-stone-100" />
         </motion.div>
 
+        {/* Quote */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.55 }}
+          className="border-l-4 border-[#D4B06A] pl-6 mb-10"
+        >
+          <p className="text-xl sm:text-2xl font-bold text-[#2F2F2F] leading-snug">
+            &ldquo;No estamos compitiendo con la construcción tradicional.{" "}
+            <span className="text-[#D4B06A]">Estamos reemplazándola.&rdquo;</span>
+          </p>
+        </motion.div>
+
         {/* Scroll CTA */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}

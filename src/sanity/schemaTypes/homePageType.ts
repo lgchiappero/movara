@@ -15,14 +15,14 @@ export const homePageType = defineType({
           name: 'badgePreventa',
           title: 'Badge superior (preventa)',
           type: 'string',
-          initialValue: 'Preventa activa — Acceso prioritario limitado',
+          initialValue: 'Precio Lanzamiento Exclusivo — Activo',
         }),
         defineField({
           name: 'titulo',
           title: 'Título (línea 1 y 2)',
           type: 'string',
           description: 'Ej: "Infraestructura habitacional premium."',
-          initialValue: 'Infraestructura habitacional premium.',
+          initialValue: 'Infraestructura habitacional sin obra.',
         }),
         defineField({
           name: 'tituloDestacado',
@@ -42,7 +42,7 @@ export const homePageType = defineType({
           name: 'ctaPrimario',
           title: 'CTA primario (botón dorado)',
           type: 'string',
-          initialValue: 'Quiero acceso prioritario',
+          initialValue: 'Reservar precio de lanzamiento',
         }),
         defineField({
           name: 'ctaSecundario',
@@ -76,7 +76,7 @@ export const homePageType = defineType({
           name: 'badgeEscasez',
           title: 'Badge escasez',
           type: 'string',
-          initialValue: 'Preventa activa',
+          initialValue: 'Precio Lanzamiento Exclusivo — Activo',
         }),
         defineField({
           name: 'titulo',
@@ -90,7 +90,7 @@ export const homePageType = defineType({
           type: 'text',
           rows: 3,
           initialValue:
-            'Las condiciones de preventa no estarán disponibles para siempre. Una vez agotadas, el precio y los tiempos de entrega serán los del mercado abierto.',
+            'Nuestro modelo siempre opera en preventa — hoy con precio especial de lanzamiento para los primeros clientes.',
         }),
         defineField({
           name: 'totalUnidades',
@@ -131,14 +131,14 @@ export const homePageType = defineType({
     // ─── 3. DOSSIER (lead magnet) ────────────────────────────────────────────
     defineField({
       name: 'dossier',
-      title: 'Dossier privado (Lead magnet)',
+      title: 'Carpeta de proyecto (Lead magnet)',
       type: 'object',
       fields: [
         defineField({
           name: 'titulo',
           title: 'Título',
           type: 'string',
-          initialValue: 'Accedé al dossier exclusivo MOVARA.',
+          initialValue: 'Accedé a la información completa MOVARA.',
         }),
         defineField({
           name: 'subtitulo',
@@ -166,7 +166,7 @@ export const homePageType = defineType({
           name: 'textoCTA',
           title: 'Texto botón',
           type: 'string',
-          initialValue: 'Quiero el dossier privado',
+          initialValue: 'Quiero la información completa',
         }),
       ],
     }),
@@ -371,7 +371,7 @@ export const homePageType = defineType({
           name: 'badgeSeccion',
           title: 'Badge de sección',
           type: 'string',
-          initialValue: 'Línea de productos — Edición Fundadores',
+          initialValue: 'Nuestros modelos',
         }),
         defineField({
           name: 'titulo',
@@ -383,7 +383,7 @@ export const homePageType = defineType({
           name: 'badgePreventa',
           title: 'Badge de preventa (chip derecho)',
           type: 'string',
-          initialValue: '⚡ Condiciones de preventa activas',
+          initialValue: '⚡ Condiciones de preventa de lanzamiento',
         }),
         defineField({
           name: 'ctaReservar',

@@ -74,9 +74,9 @@ export default function ModelosHome({
   content?: ModelosHomeContent | null;
   modelos?: SanityModelo[] | null;
 }) {
-  const badgeSeccion = content?.badgeSeccion ?? "Línea de productos — Edición Fundadores";
+  const badgeSeccion = content?.badgeSeccion ?? "Nuestros modelos";
   const titulo = content?.titulo ?? "Tres modelos. Un estándar.";
-  const badgePreventa = content?.badgePreventa ?? "⚡ Condiciones de preventa activas";
+  const badgePreventa = content?.badgePreventa ?? "⚡ Condiciones de preventa de lanzamiento";
   const ctaReservar = content?.ctaReservar ?? "Reservar precio";
   const ctaCatalogo = content?.ctaCatalogo ?? "Ver catálogo completo →";
 

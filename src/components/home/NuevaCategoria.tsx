@@ -39,9 +39,6 @@ export default function NuevaCategoria({ content }: { content?: NuevaCategoriaCo
   const titulo = content?.titulo ?? "MOVARA no entra en ninguna categoría que ya conocés.";
   const subtitulo =
     content?.subtitulo ?? "Es una nueva forma de pensar la infraestructura habitacional en Argentina.";
-  const cita =
-    content?.cita ??
-    '"No estamos compitiendo con la construcción tradicional. Estamos reemplazándola."';
   const columnas = content?.columnas?.length ? content.columnas : DEFAULT_COLUMNAS;
 
   return (
@@ -63,7 +60,7 @@ export default function NuevaCategoria({ content }: { content?: NuevaCategoriaCo
           <p className="mt-6 text-lg text-stone-500 max-w-xl mx-auto leading-relaxed">{subtitulo}</p>
         </motion.div>
 
-        <div className="grid lg:grid-cols-3 gap-6 mb-20">
+        <div className="grid lg:grid-cols-3 gap-6">
           {columnas.map((item, i) => (
             <motion.div
               key={item._key ?? item.titulo}
@@ -92,24 +89,6 @@ export default function NuevaCategoria({ content }: { content?: NuevaCategoriaCo
           ))}
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center"
-        >
-          <p className="text-2xl lg:text-3xl font-bold text-[#2F2F2F] max-w-2xl mx-auto leading-snug">
-            {cita.includes("reemplazándola") ? (
-              <>
-                &ldquo;No estamos compitiendo con la construcción tradicional.
-                <span className="text-[#D4B06A]"> Estamos reemplazándola.&rdquo;</span>
-              </>
-            ) : (
-              cita
-            )}
-          </p>
-        </motion.div>
       </div>
     </section>
   );

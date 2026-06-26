@@ -72,9 +72,12 @@ export default function Preventa({ content }: { content?: PreventaContent | null
             )}
           </h2>
 
-          <p className="text-stone-400 text-lg max-w-xl mx-auto mb-14 leading-relaxed">
+          <p className="text-stone-400 text-lg max-w-xl mx-auto mb-4 leading-relaxed">
             {content?.subtitulo ??
-              "Las condiciones de preventa no estarán disponibles para siempre. Una vez agotadas, el precio y los tiempos de entrega serán los del mercado abierto."}
+              "Nuestro modelo siempre opera en preventa — hoy con precio especial de lanzamiento para los primeros clientes."}
+          </p>
+          <p className="text-stone-600 text-sm max-w-sm mx-auto mb-10 leading-relaxed">
+            Una vez agotadas las condiciones de lanzamiento, el precio y los tiempos de entrega pasan al estándar de mercado abierto.
           </p>
 
           {/* Progress */}

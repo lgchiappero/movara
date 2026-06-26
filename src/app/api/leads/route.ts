@@ -58,15 +58,19 @@ export async function POST(req: NextRequest) {
       mensaje: parsed.data.mensaje || null,
     };
 
-    const lead = await db.lead.create({ data });
+    let savedId: string | undefined;
+    try {
+      const lead = await db.lead.create({ data });
+      savedId = lead.id;
+      await sendNotificationEmail(lead).catch(() => {});
+    } catch (dbError) {
+      console.error("[leads] DB unavailable — lead NOT saved:", dbError);
+      await sendNotificationEmail(data).catch(() => {});
+    }
 
-    await sendNotificationEmail(lead).catch(() => {
-      // email is optional — don't fail the request if SMTP is not configured
-    });
-
-    return NextResponse.json({ ok: true, id: lead.id }, { status: 201 });
+    return NextResponse.json({ ok: true, id: savedId }, { status: 201 });
   } catch (error) {
     console.error("[leads]", error);
-    return NextResponse.json({ error: "Error al guardar el lead" }, { status: 500 });
+    return NextResponse.json({ error: "Error al procesar la solicitud" }, { status: 500 });
   }
 }

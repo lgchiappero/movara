@@ -8,19 +8,15 @@ type HeroContent = {
   tituloDestacado?: string;
   subtitulo?: string;
   ctaPrimario?: string;
-  ctaSecundario?: string;
-  trustStrip?: string[];
 };
 
 const DEFAULTS = {
-  badgePreventa: "Preventa activa — Acceso prioritario limitado",
-  titulo: "Infraestructura habitacional premium.",
+  badgePreventa: "Precio Lanzamiento Exclusivo — Activo",
+  titulo: "Infraestructura habitacional sin obra.",
   tituloDestacado: "Lista en semanas.",
   subtitulo:
-    "Las primeras unidades MOVARA están disponibles con condiciones exclusivas de preventa. Estamos habilitando acceso prioritario a clientes seleccionados antes de la apertura oficial.",
-  ctaPrimario: "Quiero acceso prioritario",
-  ctaSecundario: "Reservar precio de lanzamiento",
-  trustStrip: ["Estructura certificada CE", "Lana de roca 75mm", "DVH con RPT", "Garantía escrita"],
+    "Las primeras unidades MOVARA están disponibles con condiciones exclusivas de lanzamiento. Estamos habilitando acceso prioritario a clientes seleccionados antes de la apertura oficial.",
+  ctaPrimario: "Reservar precio de lanzamiento",
 };
 
 export default function Hero({
@@ -51,10 +47,10 @@ export default function Hero({
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
-          className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-[#D4B06A]/40 bg-[#D4B06A]/8 text-[#D4B06A] text-xs font-semibold tracking-widest uppercase mb-12"
+          className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-red-500/40 bg-red-500/10 text-red-400 text-xs font-bold tracking-widest uppercase mb-12"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#D4B06A] animate-pulse" />
-          {c.badgePreventa}
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          🔥 {c.badgePreventa}
         </motion.div>
 
         {/* H1 */}
@@ -79,12 +75,12 @@ export default function Hero({
           {c.subtitulo}
         </motion.p>
 
-        {/* CTAs */}
+        {/* CTA */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.3 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center mb-20"
+          className="flex justify-center"
         >
           <a
             href="#dossier"
@@ -92,27 +88,6 @@ export default function Hero({
           >
             {c.ctaPrimario}
           </a>
-          <a
-            href="#preventa"
-            className="px-9 py-4 border border-white/20 hover:border-[#D4B06A]/60 text-white font-semibold rounded-xl transition-all duration-200 text-sm hover:bg-white/5"
-          >
-            {c.ctaSecundario}
-          </a>
-        </motion.div>
-
-        {/* Trust strip */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.55 }}
-          className="flex flex-wrap justify-center gap-x-10 gap-y-3 text-stone-600 text-[11px] tracking-widest uppercase"
-        >
-          {(c.trustStrip ?? DEFAULTS.trustStrip).map((item) => (
-            <span key={item} className="flex items-center gap-2">
-              <span className="w-1 h-1 rounded-full bg-[#D4B06A]" />
-              {item}
-            </span>
-          ))}
         </motion.div>
       </div>
 
