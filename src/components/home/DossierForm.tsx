@@ -174,6 +174,12 @@ export default function DossierForm({
                 <p className="text-stone-600 text-xs mt-4">
                   Se abrió WhatsApp con un mensaje pre-armado — podés enviarlo ahora.
                 </p>
+                <button
+                  onClick={() => { setForm(EMPTY); setStatus("idle"); }}
+                  className="mt-6 text-sm text-[#D4B06A] hover:text-[#BF9A52] underline underline-offset-2 transition-colors"
+                >
+                  Hacer otra consulta
+                </button>
               </div>
             ) : (
               <form

@@ -127,7 +127,7 @@ export const CONFIGURADOR_PAGE_QUERY = groq`
 `
 
 export const HOME_MODELOS_QUERY = groq`
-  *[_type == "modelo" && activo != false] | order(order asc, _createdAt asc) [0...3] {
+  *[_type == "modelo" && activo != false] | order(size asc, order asc) [0...3] {
     _id,
     name,
     "slug": slug.current,
