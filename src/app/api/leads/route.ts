@@ -5,19 +5,25 @@ import nodemailer from "nodemailer";
 
 const LeadSchema = z.object({
   nombre: z.string().min(2).max(100),
+  apellido: z.string().min(2).max(100).optional(),
+  dni: z.string().regex(/^\d{7,8}$/).optional().or(z.literal("")),
   telefono: z.string().min(6).max(30),
   email: z.string().email().optional().or(z.literal("")),
   provincia: z.string().max(60).optional(),
   mensaje: z.string().max(1000).optional(),
 });
 
-async function sendNotificationEmail(lead: {
+type LeadData = {
   nombre: string;
+  apellido?: string | null;
+  dni?: string | null;
   telefono: string;
   email?: string | null;
   provincia?: string | null;
   mensaje?: string | null;
-}) {
+};
+
+async function sendNotificationEmail(lead: LeadData) {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, CONTACT_EMAIL } = process.env;
   if (!SMTP_HOST || !CONTACT_EMAIL) return;
 
@@ -28,12 +34,15 @@ async function sendNotificationEmail(lead: {
     auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
 
+  const nombreCompleto = [lead.nombre, lead.apellido].filter(Boolean).join(" ");
+
   await transporter.sendMail({
     from: `"MOVARA Leads" <${SMTP_USER}>`,
     to: CONTACT_EMAIL,
-    subject: `Nuevo lead MOVARA — ${lead.nombre}`,
+    subject: `Nuevo lead MOVARA — ${nombreCompleto}`,
     text: [
-      `Nombre:    ${lead.nombre}`,
+      `Nombre:    ${nombreCompleto}`,
+      `DNI:       ${lead.dni || "—"}`,
       `Teléfono:  ${lead.telefono}`,
       `Email:     ${lead.email || "—"}`,
       `Provincia: ${lead.provincia || "—"}`,
@@ -50,8 +59,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
     }
 
-    const data = {
+    const data: LeadData = {
       nombre: parsed.data.nombre,
+      apellido: parsed.data.apellido || null,
+      dni: parsed.data.dni || null,
       telefono: parsed.data.telefono,
       email: parsed.data.email || null,
       provincia: parsed.data.provincia || null,

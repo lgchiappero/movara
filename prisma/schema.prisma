@@ -87,6 +87,8 @@ enum OrderStatus {
 model Lead {
   id        String   @id @default(cuid())
   nombre    String
+  apellido  String?
+  dni       String?
   telefono  String
   email     String?
   provincia String?

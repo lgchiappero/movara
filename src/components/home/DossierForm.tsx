@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { getWhatsAppUrl } from "@/lib/whatsapp";
 
 const PROVINCIAS = [
   "Buenos Aires", "Ciudad Autónoma de Buenos Aires", "Catamarca", "Chaco",
@@ -13,6 +14,8 @@ const PROVINCIAS = [
 
 type Form = {
   nombre: string;
+  apellido: string;
+  dni: string;
   telefono: string;
   email: string;
   provincia: string;
@@ -23,8 +26,8 @@ type Form = {
 };
 
 const EMPTY: Form = {
-  nombre: "", telefono: "", email: "", provincia: "",
-  terreno: "", uso: "", presupuesto: "", cuando: "",
+  nombre: "", apellido: "", dni: "", telefono: "", email: "",
+  provincia: "", terreno: "", uso: "", presupuesto: "", cuando: "",
 };
 
 const selectCls =
@@ -50,7 +53,7 @@ const DEFAULT_ITEMS = [
 ];
 
 export default function DossierForm({
-  waNumber: _,
+  waNumber,
   content,
 }: {
   waNumber?: string | null;
@@ -64,42 +67,58 @@ export default function DossierForm({
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  const openWhatsApp = (f: Form) => {
+    const nombre = [f.nombre, f.apellido].filter(Boolean).join(" ");
+    const msg =
+      `Hola MOVARA! 👋 Mi nombre es ${nombre}. Completé el formulario en el sitio y me interesa recibir información sobre precio de lanzamiento.` +
+      (f.email ? ` Mi email es ${f.email}` : "") +
+      (f.telefono ? ` y mi teléfono es ${f.telefono}` : "") +
+      ".";
+    window.open(getWhatsAppUrl(msg, waNumber), "_blank");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("sending");
-    try {
-      const mensaje = [
-        form.terreno && `Terreno: ${form.terreno}`,
-        form.uso && `Uso: ${form.uso}`,
-        form.presupuesto && `Presupuesto: ${form.presupuesto}`,
-        form.cuando && `Instalación: ${form.cuando}`,
-        "Origen: Carpeta de proyecto",
-      ]
-        .filter(Boolean)
-        .join(" | ");
 
-      const res = await fetch("/api/leads", {
+    const mensaje = [
+      form.terreno && `Terreno: ${form.terreno}`,
+      form.uso && `Uso: ${form.uso}`,
+      form.presupuesto && `Presupuesto: ${form.presupuesto}`,
+      form.cuando && `Instalación: ${form.cuando}`,
+      "Origen: Carpeta de proyecto",
+    ]
+      .filter(Boolean)
+      .join(" | ");
+
+    try {
+      await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre: form.nombre,
+          apellido: form.apellido || undefined,
+          dni: form.dni || undefined,
           telefono: form.telefono,
           email: form.email || undefined,
           provincia: form.provincia || undefined,
           mensaje,
         }),
       });
-      setStatus(res.ok ? "sent" : "error");
-    } catch {
-      setStatus("error");
+    } catch (err) {
+      console.error("[DossierForm] submit error:", err);
     }
+
+    // Always show success and open WhatsApp — never leave lead behind
+    setStatus("sent");
+    openWhatsApp(form);
   };
 
   return (
     <section id="dossier" className="py-32 bg-[#2F2F2F]">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-start">
-          {/* Left — dossier info */}
+          {/* Left — info */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -114,7 +133,7 @@ export default function DossierForm({
             </h2>
             <p className="text-stone-400 text-base leading-relaxed mb-10">
               {content?.subtitulo ??
-                "Solo para clientes seleccionados. Completá el formulario y un asesor MOVARA se comunica con vos en menos de 2 horas hábiles."}
+                "Completá el formulario y un asesor MOVARA te contacta a la brevedad."}
             </p>
 
             <ul className="space-y-5 mb-12">
@@ -150,8 +169,10 @@ export default function DossierForm({
                 </div>
                 <h3 className="text-white font-bold text-xl mb-3">¡Solicitud recibida!</h3>
                 <p className="text-stone-400 text-sm leading-relaxed max-w-xs mx-auto">
-                  Un asesor MOVARA se va a comunicar con vos en menos de 2 horas hábiles
-                  con el dossier completo y los detalles de preventa.
+                  Un asesor MOVARA te contacta a la brevedad.
+                </p>
+                <p className="text-stone-600 text-xs mt-4">
+                  Se abrió WhatsApp con un mensaje pre-armado — podés enviarlo ahora.
                 </p>
               </div>
             ) : (
@@ -159,7 +180,7 @@ export default function DossierForm({
                 onSubmit={handleSubmit}
                 className="bg-white/5 border border-white/10 rounded-2xl p-7 lg:p-8 space-y-4"
               >
-                {/* Nombre + Teléfono */}
+                {/* Nombre + Apellido */}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-stone-400 text-[10px] font-semibold uppercase tracking-widest mb-2">
@@ -173,6 +194,41 @@ export default function DossierForm({
                       maxLength={100}
                       placeholder="Tu nombre"
                       className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-stone-400 text-[10px] font-semibold uppercase tracking-widest mb-2">
+                      Apellido *
+                    </label>
+                    <input
+                      name="apellido"
+                      value={form.apellido}
+                      onChange={set("apellido")}
+                      required
+                      maxLength={100}
+                      placeholder="Tu apellido"
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+
+                {/* DNI + Teléfono */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-stone-400 text-[10px] font-semibold uppercase tracking-widest mb-2">
+                      DNI *
+                    </label>
+                    <input
+                      name="dni"
+                      value={form.dni}
+                      onChange={set("dni")}
+                      required
+                      inputMode="numeric"
+                      pattern="[0-9]{7,8}"
+                      maxLength={8}
+                      placeholder="12345678"
+                      className={inputCls}
+                      title="Ingresá tu DNI (7 u 8 dígitos, solo números)"
                     />
                   </div>
                   <div>
@@ -288,17 +344,11 @@ export default function DossierForm({
                   disabled={status === "sending"}
                   className="w-full py-4 bg-[#D4B06A] hover:bg-[#BF9A52] disabled:opacity-60 text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-xl hover:shadow-[#D4B06A]/20 hover:-translate-y-0.5 text-sm tracking-wide"
                 >
-                  {status === "sending" ? "Enviando…" : (content?.textoCTA ?? "Quiero la información completa")}
+                  {status === "sending" ? "Enviando…" : (content?.textoCTA ?? "Quiero mi precio de lanzamiento")}
                 </button>
 
-                {status === "error" && (
-                  <p className="text-red-400 text-xs text-center">
-                    Hubo un error. Por favor intentá de nuevo.
-                  </p>
-                )}
-
                 <p className="text-stone-600 text-xs text-center leading-relaxed">
-                  Respuesta en menos de 2 horas hábiles · Información 100% confidencial
+                  Respuesta a la brevedad · Información 100% confidencial
                 </p>
               </form>
             )}
