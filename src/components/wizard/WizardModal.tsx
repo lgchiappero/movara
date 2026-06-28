@@ -507,7 +507,7 @@ function Step6({
       <div className="mt-4 space-y-2">
         <div className="flex items-center gap-2 text-xs text-stone-500">
           <span>⏰</span>
-          <span>Respondemos en menos de 2 horas en horario comercial</span>
+          <span>Respondemos a la brevedad</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-stone-500">
           <span>🔒</span>
@@ -532,8 +532,7 @@ function SentScreen({ onClose }: { onClose: () => void }) {
       </div>
       <h3 className="text-xl font-bold text-stone-900">¡Listo! Se abrió WhatsApp</h3>
       <p className="mt-2 text-sm text-stone-500 max-w-xs">
-        Enviá el mensaje cuando quieras. Te respondemos en menos de 2 horas en
-        horario comercial.
+        Enviá el mensaje cuando quieras. Te respondemos a la brevedad.
       </p>
       <button
         onClick={onClose}

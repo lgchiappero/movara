@@ -8,6 +8,7 @@ const CSP = [
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://cdn.sanity.io",
   "connect-src 'self' https://*.sanity.io wss://*.sanity.io https://api.mercadopago.com",
+  "frame-src https://maps.google.com https://www.google.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

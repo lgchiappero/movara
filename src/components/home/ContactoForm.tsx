@@ -74,25 +74,19 @@ export default function ContactoForm({
             <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-4">
               {content?.titulo ?? "Hablá con un asesor MOVARA."}
             </h2>
-            <p className="text-stone-400 text-lg leading-relaxed mb-8">
-              {content?.subtitulo ?? (
-                <>
-                  Respuesta en{" "}
-                  <span className="text-white font-semibold">menos de 2 horas</span>{" "}
-                  en horario comercial. Sin presión, con toda la información.
-                </>
-              )}
+            <p className="text-stone-300 text-lg font-medium leading-relaxed mb-8">
+              {content?.subtitulo ?? "Respondemos a la brevedad. Sin presión, con toda la información."}
             </p>
 
             <div className="space-y-4">
               {[
-                { icon: "⏰", text: "Respuesta en menos de 2 horas hábiles" },
+                { icon: "⏰", text: "Respondemos a la brevedad" },
                 { icon: "💰", text: "Presupuesto sin compromiso, precio fijo" },
                 { icon: "🔒", text: "Tus datos son privados, no los compartimos" },
               ].map(({ icon, text }) => (
                 <div key={text} className="flex items-center gap-3">
                   <span className="text-xl">{icon}</span>
-                  <p className="text-stone-300 text-sm">{text}</p>
+                  <p className="text-stone-200 text-base font-medium">{text}</p>
                 </div>
               ))}
             </div>
@@ -120,8 +114,7 @@ export default function ContactoForm({
                 </div>
                 <h3 className="text-white font-bold text-xl mb-2">¡Mensaje recibido!</h3>
                 <p className="text-stone-400 text-sm max-w-xs">
-                  Te contactamos en menos de 2 horas en horario comercial. También podés
-                  escribirnos por WhatsApp.
+                  Te contactamos a la brevedad. También podés escribirnos por WhatsApp.
                 </p>
                 <button
                   onClick={() => { setForm(EMPTY); setStatus("idle"); }}

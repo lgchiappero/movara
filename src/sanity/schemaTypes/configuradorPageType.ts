@@ -29,7 +29,7 @@ export const configuradorPageType = defineType({
           title: 'Subtítulo',
           type: 'text',
           rows: 2,
-          initialValue: 'Cada módulo es un contenedor de alta prestación. Elegí según tu proyecto.',
+          initialValue: 'Cada unidad MOVARA es una estructura modular de alta prestación. Elegí según tu proyecto.',
         }),
         defineField({
           name: 'modelo10ft',

@@ -16,7 +16,7 @@ const DEFAULT_PASOS: Paso[] = [
     descripcion: "Elegís modelo, provincia y uso. El configurador recomienda el estándar térmico ideal para tu zona.",
   },
   {
-    titulo: "Recibís tu presupuesto en 2 horas",
+    titulo: "Recibís tu presupuesto acorde a tus necesidades",
     descripcion: "Precio fijo, sin letra chica. Sin sorpresas.",
   },
   {
@@ -44,7 +44,7 @@ export default function ComoFunciona({ content }: { content?: ComoFuncionaConten
           className="text-center mb-20"
         >
           <span className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-4 block">
-            Proceso
+            ¿Cómo tener tu MOVARA?
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-[#2F2F2F] leading-tight">
             {titulo}

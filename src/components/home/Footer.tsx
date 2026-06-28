@@ -10,7 +10,6 @@ type SiteConfigRaw = {
   phone?: string | null;
   address?: string | null;
   instagram?: string | null;
-  linkedin?: string | null;
   footerDescription?: string | null;
   footerNavLinks?: FooterNavLink[] | null;
   copyrightText?: string | null;
@@ -21,7 +20,6 @@ type ResolvedConfig = {
   phone: string;
   address: string;
   instagram: string;
-  linkedin: string;
   footerDescription: string;
   footerNavLinks: { label: string; url: string }[];
   copyrightText: string;
@@ -40,7 +38,6 @@ const FALLBACK: ResolvedConfig = {
   phone: "+54 9 11 0000-0000",
   address: "Buenos Aires, Argentina",
   instagram: "https://instagram.com/movara",
-  linkedin: "https://linkedin.com/company/movara",
   footerDescription:
     "Estamos repensando la forma de habitar. Casas modulares de calidad superior, fabricación argentina.",
   footerNavLinks: FALLBACK_NAV_LINKS,
@@ -62,7 +59,6 @@ async function getSiteConfig(): Promise<ResolvedConfig> {
         phone: data.phone ?? FALLBACK.phone,
         address: data.address ?? FALLBACK.address,
         instagram: data.instagram ?? FALLBACK.instagram,
-        linkedin: data.linkedin ?? FALLBACK.linkedin,
         footerDescription: data.footerDescription ?? FALLBACK.footerDescription,
         footerNavLinks: navLinks,
         copyrightText: data.copyrightText ?? FALLBACK.copyrightText,
@@ -86,7 +82,6 @@ export default async function Footer() {
 
   const social = [
     { label: "Instagram", href: config.instagram, icon: <InstagramIcon /> },
-    { label: "LinkedIn", href: config.linkedin, icon: <LinkedInIcon /> },
   ];
 
   return (
@@ -194,10 +189,3 @@ function InstagramIcon() {
   );
 }
 
-function LinkedInIcon() {
-  return (
-    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 23.2 24 22.222 24h.003z" />
-    </svg>
-  );
-}

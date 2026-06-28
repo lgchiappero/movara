@@ -69,7 +69,7 @@ export default function CTAFinal({
 
             <div className="mt-6 flex items-center gap-2 text-stone-400 text-sm">
               <ClockIcon />
-              Respondemos en menos de 2 horas en horario comercial
+              Respondemos a la brevedad
             </div>
 
             <div className="mt-10 pt-8 border-t border-stone-100 grid grid-cols-3 gap-6">

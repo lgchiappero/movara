@@ -115,7 +115,7 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
             {badgeSeccion}
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-5">{titulo}</h2>
-          <p className="text-stone-400 text-lg max-w-2xl mx-auto leading-relaxed">{subtitulo}</p>
+          <p className="text-stone-300 text-lg font-medium max-w-2xl mx-auto leading-relaxed">{subtitulo}</p>
         </motion.div>
 
         {/* Quality cards */}
@@ -144,7 +144,7 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
 
                 <h3 className="font-bold text-white text-sm mb-2 leading-snug">{b.titulo}</h3>
                 {b.descripcion && (
-                  <p className="text-stone-500 text-xs leading-relaxed">{b.descripcion}</p>
+                  <p className="text-stone-300 text-sm font-medium leading-relaxed">{b.descripcion}</p>
                 )}
               </motion.div>
             );
@@ -160,30 +160,69 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
           className="text-center mb-14"
         >
           <div className="inline-block border border-[#D4B06A]/20 rounded-2xl px-8 py-5 bg-[#D4B06A]/5">
-            <p className="text-stone-300 text-base leading-relaxed max-w-2xl">
+            <p className="text-stone-200 text-base font-medium leading-relaxed max-w-2xl">
               {textoCierre}
             </p>
           </div>
         </motion.div>
 
-        {/* Showroom banner */}
+        {/* Showroom section */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4 p-6 bg-white/5 border border-white/10 rounded-2xl"
+          className="bg-white/5 border border-[#D4B06A]/20 rounded-3xl overflow-hidden"
         >
-          <div className="w-10 h-10 rounded-xl bg-[#D4B06A]/10 flex items-center justify-center text-xl shrink-0">
-            📍
+          {/* Header */}
+          <div className="p-8 pb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#D4B06A]/10 border border-[#D4B06A]/30 text-[#D4B06A] text-xs font-bold uppercase tracking-widest animate-pulse">
+                🔨 En construcción — Próximamente
+              </span>
+            </div>
+            <h3 className="text-white text-2xl font-bold mb-2">{showroomTitulo}</h3>
+            <p className="text-stone-300 text-base font-medium leading-relaxed mb-1">
+              Nuestro primer showroom está en camino. Vas a poder ver, tocar y recorrer una unidad MOVARA real.
+            </p>
+            <div className="flex items-center gap-2 mt-3 text-stone-400 text-sm">
+              <span>📍</span>
+              <span>Sunchales, Santa Fe, Argentina</span>
+            </div>
           </div>
-          <div className="text-center sm:text-left">
-            <p className="font-semibold text-white text-sm">{showroomTitulo}</p>
-            <p className="text-stone-500 text-xs mt-0.5">{showroomDesc}</p>
+
+          {/* Map */}
+          <a
+            href="https://www.google.com/maps/search/Sunchales,+Santa+Fe,+Argentina"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block relative group"
+            aria-label="Ver Sunchales en Google Maps"
+          >
+            <iframe
+              src="https://maps.google.com/maps?q=-31.5333,-61.5667&z=13&output=embed"
+              width="100%"
+              height="260"
+              style={{ border: 0, display: "block" }}
+              loading="lazy"
+              allowFullScreen
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Showroom MOVARA — Sunchales, Santa Fe"
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center pointer-events-none">
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 text-white text-xs px-3 py-1.5 rounded-full">
+                Abrir en Google Maps
+              </span>
+            </div>
+          </a>
+
+          {/* Footer */}
+          <div className="p-6 pt-5 border-t border-white/10">
+            <p className="text-stone-400 text-sm leading-relaxed">
+              La dirección exacta se confirmará próximamente.{" "}
+              <span className="text-[#D4B06A] font-medium">Registrate para recibir la invitación al evento de apertura.</span>
+            </p>
           </div>
-          <span className="sm:ml-auto px-3 py-1 bg-[#D4B06A]/10 text-[#D4B06A] text-xs font-semibold rounded-full whitespace-nowrap border border-[#D4B06A]/20">
-            {showroomChip}
-          </span>
         </motion.div>
       </div>
     </section>

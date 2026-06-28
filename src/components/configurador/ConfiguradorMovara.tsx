@@ -253,7 +253,7 @@ export default function ConfiguradorMovara({
   const cms = {
     paso1: {
       title: data?.paso1?.title ?? "¿Qué tamaño necesitás?",
-      subtitle: data?.paso1?.subtitle ?? "Cada módulo es un contenedor de alta prestación. Elegí según tu proyecto.",
+      subtitle: data?.paso1?.subtitle ?? "Cada unidad MOVARA es una estructura modular de alta prestación. Elegí según tu proyecto.",
       taglines: { "10ft": data?.paso1?.modelo10ft ?? null, "20ft": data?.paso1?.modelo20ft ?? null, "40ft": data?.paso1?.modelo40ft ?? null } as Record<string, string | null>,
     },
     paso2: {
