@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Image from "next/image";
 import { urlFor } from "@/sanity/lib/image";
 
@@ -66,11 +66,31 @@ export default function ImageGallery({ images, modelName, video }: Props) {
 
   const [selected, setSelected] = useState(0);
   const active = items[selected];
+  const touchStartX = useRef<number | null>(null);
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null || items.length <= 1) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(delta) > 48) {
+      setSelected((s) =>
+        delta < 0 ? (s + 1) % items.length : (s - 1 + items.length) % items.length
+      );
+    }
+    touchStartX.current = null;
+  }
 
   return (
     <div className="space-y-3">
       {/* Main display */}
-      <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-sage-900">
+      <div
+        className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-sage-900"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {active.kind === "video" ? (
           isDirectVideo(active.url) ? (
             <video
@@ -133,19 +153,12 @@ export default function ImageGallery({ images, modelName, video }: Props) {
           </>
         )}
 
-        {/* Dot indicators */}
+        {/* Counter */}
         {items.length > 1 && (
-          <div className="absolute bottom-4 right-4 z-10 flex gap-1.5">
-            {items.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setSelected(i)}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === selected ? "bg-white w-4" : "bg-white/40 w-1.5"
-                }`}
-                aria-label={`Item ${i + 1}`}
-              />
-            ))}
+          <div className="absolute bottom-4 right-4 z-10">
+            <span className="text-xs font-semibold text-white/80 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full tabular-nums">
+              {selected + 1} / {items.length}
+            </span>
           </div>
         )}
       </div>
