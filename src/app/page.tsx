@@ -1,4 +1,5 @@
 import Navbar from "@/components/home/Navbar";
+import ExitIntentPopup from "@/components/home/ExitIntentPopup";
 import Hero from "@/components/home/Hero";
 import DolorConvencional from "@/components/home/DolorConvencional";
 import NuevaCategoria from "@/components/home/NuevaCategoria";
@@ -49,6 +50,7 @@ export default async function HomePage() {
         <ContactoForm waNumber={waNumber} content={homePage?.formularioContacto} />
       </main>
       <Footer />
+      <ExitIntentPopup />
     </>
   );
 }

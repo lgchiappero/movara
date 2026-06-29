@@ -29,3 +29,7 @@ export function trackLead(datos: { modelo: string; finalidad: string; provincia:
 export function trackInitiateCheckout() {
   fbq("track", "InitiateCheckout");
 }
+
+export function trackExitIntentLead() {
+  fbq("track", "Lead", { source: "exit_intent" });
+}

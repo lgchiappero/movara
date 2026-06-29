@@ -50,7 +50,13 @@ export default function ContactoForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      setStatus(res.ok ? "sent" : "error");
+      if (res.ok) {
+        localStorage.setItem("movara_exit_popup_submitted", "true");
+        window.dispatchEvent(new Event("movara:form:submitted"));
+        setStatus("sent");
+      } else {
+        setStatus("error");
+      }
     } catch {
       setStatus("error");
     }
