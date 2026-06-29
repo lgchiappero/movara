@@ -37,7 +37,7 @@ const FALLBACK: ResolvedConfig = {
   email: "info@movara.com.ar",
   phone: "+54 9 11 0000-0000",
   address: "Buenos Aires, Argentina",
-  instagram: "https://instagram.com/movara",
+  instagram: "https://www.instagram.com/movara.homes/",
   footerDescription:
     "Estamos repensando la forma de habitar. Casas modulares de calidad superior, fabricación argentina.",
   footerNavLinks: FALLBACK_NAV_LINKS,
