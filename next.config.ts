@@ -39,6 +39,17 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: SECURITY_HEADERS,
       },
+      {
+        // Página estática con ISR (revalidate: 3600) — permite que el CDN
+        // sirva la respuesta cacheada y la revalide en background.
+        source: "/configurador",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, s-maxage=3600, stale-while-revalidate=86400",
+          },
+        ],
+      },
     ];
   },
 };

@@ -147,7 +147,7 @@ type TipoAgua = "calefon-electrico" | "termotanque-gas";
 type TipoLavarropas = "sin" | "bano" | "cocina" | "externo";
 type TipoCliente = "particular" | "empresa";
 
-type ConfiguradorPageData = {
+export type ConfiguradorPageData = {
   paso1?: { title?: string | null; subtitle?: string | null; modelo10ft?: string | null; modelo20ft?: string | null; modelo40ft?: string | null } | null;
   paso2?: { title?: string | null; subtitle?: string | null; descInversor?: string | null; descAgro?: string | null; descVivienda?: string | null; descTurismo?: string | null; descEmpresa?: string | null; descSectorPublico?: string | null } | null;
   paso3?: { title?: string | null; subtitle?: string | null; localidadLabel?: string | null; provinciaLabel?: string | null } | null;
@@ -245,11 +245,6 @@ export default function ConfiguradorMovara({
   data?: ConfiguradorPageData | null;
   preselectedModelo?: string;
 }) {
-  const validPreselected =
-    preselectedModelo && VALID_MODELO_KEYS.has(preselectedModelo as ModeloKey)
-      ? (preselectedModelo as ModeloKey)
-      : null;
-
   const cms = {
     paso1: {
       title: data?.paso1?.title ?? "¿Qué tamaño necesitás?",
@@ -277,7 +272,17 @@ export default function ConfiguradorMovara({
   // Paso 1–6
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
   const [slideDir, setSlideDir] = useState<1 | -1>(1);
-  const [modelo, setModelo] = useState<ModeloKey | null>(validPreselected);
+  const [modelo, setModelo] = useState<ModeloKey | null>(null);
+
+  // Preselección vía `?modelo=` se aplica después del montaje, no en el
+  // estado inicial: así el primer render del cliente coincide con el HTML
+  // estático (sin esto, React tira un hydration mismatch).
+  useEffect(() => {
+    if (preselectedModelo && VALID_MODELO_KEYS.has(preselectedModelo as ModeloKey)) {
+      setModelo(preselectedModelo as ModeloKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [finalidad, setFinalidad] = useState<FinalidadKey | null>(null);
   const [localidad, setLocalidad] = useState("");
   const [provincia, setProvincia] = useState("");
