@@ -151,24 +151,44 @@ export const modeloType = defineType({
       ],
     }),
     defineField({
+      name: 'videos',
+      title: 'Videos del modelo',
+      type: 'array',
+      group: 'media',
+      description: 'Agregá uno o más videos de YouTube o Vimeo.',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          fields: [
+            defineField({
+              name: 'url',
+              title: 'URL del video',
+              type: 'url',
+              validation: (Rule) => Rule.required(),
+            }),
+            defineField({
+              name: 'titulo',
+              title: 'Título',
+              type: 'string',
+              initialValue: 'Video del modelo',
+            }),
+          ],
+          preview: {
+            select: { title: 'titulo', subtitle: 'url' },
+          },
+        }),
+      ],
+    }),
+    defineField({
       name: 'video',
-      title: 'Video del modelo',
+      title: 'Video (legado)',
       type: 'object',
       group: 'media',
-      description: 'URL de YouTube, Vimeo o video directo (.mp4).',
+      description: 'Campo heredado. Usar "Videos del modelo" para nuevos modelos.',
+      hidden: true,
       fields: [
-        defineField({
-          name: 'url',
-          title: 'URL del video',
-          type: 'url',
-          validation: (Rule) => Rule.required(),
-        }),
-        defineField({
-          name: 'label',
-          title: 'Etiqueta',
-          type: 'string',
-          initialValue: 'Video del modelo',
-        }),
+        defineField({ name: 'url', title: 'URL', type: 'url', validation: (Rule) => Rule.required() }),
+        defineField({ name: 'label', title: 'Etiqueta', type: 'string', initialValue: 'Video del modelo' }),
       ],
     }),
     defineField({

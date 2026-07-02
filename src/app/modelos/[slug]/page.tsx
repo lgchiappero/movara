@@ -102,7 +102,7 @@ export default async function ModelDetailPage({ params }: Props) {
 
           {/* Gallery */}
           <div className="lg:col-span-3">
-            <ImageGallery images={model.images} modelName={model.name} video={model.video} />
+            <ImageGallery images={model.images} modelName={model.name} video={model.video} videos={model.videos} />
           </div>
 
           {/* Info sidebar */}

@@ -57,6 +57,15 @@ export const structure: StructureResolver = (S) =>
             .title('Página de Modelos'),
         ),
 
+      S.listItem()
+        .title('Preguntas Frecuentes (FAQ)')
+        .child(
+          S.document()
+            .schemaType('faqPage')
+            .documentId('faqPage')
+            .title('Preguntas Frecuentes (FAQ)'),
+        ),
+
       S.divider(),
 
       S.listItem()

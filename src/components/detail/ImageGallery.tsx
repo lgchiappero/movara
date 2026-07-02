@@ -19,6 +19,8 @@ type GalleryItem =
   | { kind: "image"; img: GalleryImage }
   | { kind: "video"; url: string; embedUrl: string; label: string };
 
+type FilterTab = "todo" | "fotos" | "videos";
+
 const FALLBACK_IMG: GalleryImage = {
   gradient: "from-sage-900 via-sage-800 to-sage-950",
   accent: "#819874",
@@ -45,11 +47,20 @@ type Props = {
   images?: GalleryImage[] | null;
   modelName: string;
   video?: { url: string; label?: string } | null;
+  videos?: { url: string; titulo?: string }[] | null;
 };
 
-export default function ImageGallery({ images, modelName, video }: Props) {
-  const items: GalleryItem[] = [
-    ...(video?.url
+export default function ImageGallery({ images, modelName, video, videos }: Props) {
+  // Build video items — new array first, legacy fallback
+  const videoItems: GalleryItem[] =
+    videos && videos.length > 0
+      ? videos.map((v) => ({
+          kind: "video" as const,
+          url: v.url,
+          embedUrl: getEmbedUrl(v.url),
+          label: v.titulo ?? "Video del modelo",
+        }))
+      : video?.url
       ? [
           {
             kind: "video" as const,
@@ -58,15 +69,36 @@ export default function ImageGallery({ images, modelName, video }: Props) {
             label: video.label ?? "Video del modelo",
           },
         ]
-      : []),
-    ...(images && images.length > 0
-      ? images.map((img) => ({ kind: "image" as const, img }))
-      : [{ kind: "image" as const, img: FALLBACK_IMG }]),
-  ];
+      : [];
 
+  const hasSanityImages = !!(images && images.length > 0);
+  const imageItems: GalleryItem[] = hasSanityImages
+    ? images!.map((img) => ({ kind: "image" as const, img }))
+    : [{ kind: "image" as const, img: FALLBACK_IMG }];
+
+  const allItems: GalleryItem[] = [...videoItems, ...imageItems];
+
+  // Tabs only when both types exist with real content
+  const showTabs = videoItems.length > 0 && hasSanityImages;
+
+  const [filter, setFilter] = useState<FilterTab>("todo");
   const [selected, setSelected] = useState(0);
-  const active = items[selected];
   const touchStartX = useRef<number | null>(null);
+
+  function changeFilter(f: FilterTab) {
+    setFilter(f);
+    setSelected(0);
+  }
+
+  const items =
+    filter === "fotos"
+      ? allItems.filter((i) => i.kind === "image")
+      : filter === "videos"
+      ? allItems.filter((i) => i.kind === "video")
+      : allItems;
+
+  const activeIdx = Math.min(selected, items.length - 1);
+  const active = items[activeIdx];
 
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
@@ -83,8 +115,37 @@ export default function ImageGallery({ images, modelName, video }: Props) {
     touchStartX.current = null;
   }
 
+  const TAB_LABELS: Record<FilterTab, string> = { todo: "Todo", fotos: "Fotos", videos: "Videos" };
+  const TAB_COUNTS: Record<FilterTab, number> = {
+    todo: allItems.length,
+    fotos: imageItems.length,
+    videos: videoItems.length,
+  };
+
   return (
     <div className="space-y-3">
+      {/* Filter tabs */}
+      {showTabs && (
+        <div className="flex gap-1 p-1 bg-stone-100 rounded-xl w-fit">
+          {(["todo", "fotos", "videos"] as FilterTab[]).map((f) => (
+            <button
+              key={f}
+              onClick={() => changeFilter(f)}
+              className={`px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                filter === f
+                  ? "bg-white text-stone-900 shadow-sm"
+                  : "text-stone-500 hover:text-stone-700"
+              }`}
+            >
+              {TAB_LABELS[f]}
+              <span className="ml-1.5 text-xs tabular-nums text-stone-400">
+                {TAB_COUNTS[f]}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Main display */}
       <div
         className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-sage-900"
@@ -116,16 +177,20 @@ export default function ImageGallery({ images, modelName, video }: Props) {
             fill
             className="object-cover transition-opacity duration-500"
             sizes="(max-width: 768px) 100vw, 60vw"
-            priority={selected === 0}
+            priority={activeIdx === 0}
           />
         ) : (
-          <div className={`absolute inset-0 bg-gradient-to-br ${active.img.gradient ?? FALLBACK_IMG.gradient}`}>
+          <div
+            className={`absolute inset-0 bg-gradient-to-br ${
+              active.img.gradient ?? FALLBACK_IMG.gradient
+            }`}
+          >
             <HouseScene accent={active.img.accent ?? FALLBACK_IMG.accent!} />
           </div>
         )}
 
-        {/* Label — not shown for iframes (has title) */}
-        {(active.kind === "image" || isDirectVideo(active.url)) && active.kind !== "video" && active.img.label && (
+        {/* Label — images only */}
+        {active.kind === "image" && active.img.label && (
           <div className="absolute bottom-4 left-4 z-10">
             <span className="text-xs font-semibold text-white/80 bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
               {active.img.label}
@@ -157,7 +222,7 @@ export default function ImageGallery({ images, modelName, video }: Props) {
         {items.length > 1 && (
           <div className="absolute bottom-4 right-4 z-10">
             <span className="text-xs font-semibold text-white/80 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full tabular-nums">
-              {selected + 1} / {items.length}
+              {activeIdx + 1} / {items.length}
             </span>
           </div>
         )}
@@ -171,32 +236,54 @@ export default function ImageGallery({ images, modelName, video }: Props) {
               key={i}
               onClick={() => setSelected(i)}
               className={`relative aspect-[4/3] rounded-xl overflow-hidden bg-sage-900 transition-all duration-200 ${
-                i === selected ? "ring-2 ring-sage-500 ring-offset-2" : "opacity-60 hover:opacity-80"
+                i === activeIdx
+                  ? "ring-2 ring-sage-500 ring-offset-2"
+                  : "opacity-60 hover:opacity-80"
               }`}
-              aria-label={item.kind === "video" ? item.label : (item.img.label ?? `Imagen ${i + 1}`)}
+              aria-label={
+                item.kind === "video" ? item.label : item.img.label ?? `Imagen ${i + 1}`
+              }
             >
               {item.kind === "video" ? (
                 <VideoThumbnail label={item.label} />
               ) : isSanityImage(item.img) ? (
                 <Image
-                  src={urlFor(item.img).width(200).height(150).fit("crop").auto("format").url()}
+                  src={urlFor(item.img)
+                    .width(200)
+                    .height(150)
+                    .fit("crop")
+                    .auto("format")
+                    .url()}
                   alt={item.img.label ?? `Imagen ${i + 1}`}
                   fill
                   className="object-cover"
                   sizes="25vw"
                 />
               ) : (
-                <div className={`absolute inset-0 bg-gradient-to-br ${item.img.gradient ?? FALLBACK_IMG.gradient}`}>
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${
+                    item.img.gradient ?? FALLBACK_IMG.gradient
+                  }`}
+                >
                   <MiniHouse accent={item.img.accent ?? FALLBACK_IMG.accent!} />
                 </div>
               )}
-              {item.kind === "image" && (
-                <div className="absolute inset-0 flex items-end p-1.5">
-                  <span className="text-[9px] text-white/60 leading-tight truncate">
-                    {item.img.label}
-                  </span>
-                </div>
-              )}
+
+              {/* Type indicator */}
+              <div className="absolute top-1 left-1 z-10">
+                <span className="flex items-center justify-center w-4 h-4 rounded-full bg-black/50 backdrop-blur-sm">
+                  {item.kind === "video" ? (
+                    <svg className="w-2 h-2 text-white ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  )}
+                </span>
+              </div>
             </button>
           ))}
         </div>
@@ -213,7 +300,9 @@ function VideoThumbnail({ label }: { label: string }) {
           <path d="M8 5v14l11-7z" />
         </svg>
       </div>
-      <span className="text-[8px] text-white/60 font-medium truncate px-1 max-w-full">{label}</span>
+      <span className="text-[8px] text-white/60 font-medium truncate px-1 max-w-full">
+        {label}
+      </span>
     </div>
   );
 }

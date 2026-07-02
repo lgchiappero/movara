@@ -52,7 +52,7 @@ export default function ModelCard({ model }: Props) {
         </div>
 
         {/* Video badge */}
-        {model.video?.url && (
+        {(model.video?.url || (model.videos && model.videos.length > 0)) && (
           <div className="absolute bottom-3 left-3 z-10">
             <span className="flex items-center gap-1 text-[10px] font-semibold text-white/80 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full">
               <PlayIcon className="w-2.5 h-2.5" />

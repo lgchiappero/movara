@@ -6,7 +6,9 @@ import { trackExitIntentLead } from "@/lib/meta-pixel";
 
 const LS_SHOWN = "movara_exit_popup_shown";
 const LS_SUBMITTED = "movara_exit_popup_submitted";
-const MIN_TIME_MS = 15_000;
+const MIN_TIME_MS = 20_000;            // must spend 20s on page before eligible
+const INTERNAL_CLICK_GRACE_MS = 2_000; // don't fire within 2s of an internal click
+const HIDDEN_TRIGGER_MS = 3_000;       // mobile: page must be hidden for 3s
 
 function isValidEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
@@ -19,24 +21,24 @@ export default function ExitIntentPopup() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const readyRef = useRef(false);
   const shownRef = useRef(false);
+  const startTime = useRef(Date.now());
+  const lastInternalClickMs = useRef(0);
 
   function tryShow() {
     if (shownRef.current) return;
+    if (!readyRef.current) return;
     if (Date.now() - startTime.current < MIN_TIME_MS) return;
+    if (Date.now() - lastInternalClickMs.current < INTERNAL_CLICK_GRACE_MS) return;
+    if (window.location.pathname.startsWith("/configurador")) return;
     shownRef.current = true;
     localStorage.setItem(LS_SHOWN, "true");
     setOpen(true);
   }
 
-  const startTime = useRef(Date.now());
-
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    // Never show if already submitted
+    if (window.location.pathname.startsWith("/configurador")) return;
     if (localStorage.getItem(LS_SUBMITTED) === "true") return;
-
-    // If shown in previous visit: clear flag (so next visit shows) and skip this visit
     if (localStorage.getItem(LS_SHOWN) === "true") {
       localStorage.removeItem(LS_SHOWN);
       return;
@@ -45,36 +47,64 @@ export default function ExitIntentPopup() {
     readyRef.current = true;
     startTime.current = Date.now();
 
-    // Desktop: mouse leaving toward top of screen
-    const handleMouseLeave = (e: MouseEvent) => {
-      if (!readyRef.current) return;
-      if (e.clientY <= 5) tryShow();
-    };
+    const isMobile = "ontouchstart" in window || navigator.maxTouchPoints > 0;
 
-    // Mobile: intercept back button via history state
-    window.history.pushState({ exitIntent: true }, "");
-    const handlePopState = () => {
-      if (!readyRef.current) return;
-      tryShow();
-      // Re-push so the user can still navigate normally after dismissing
+    // Track internal link clicks — suppress trigger for 2s after any internal navigation
+    const handleInternalClick = (e: MouseEvent) => {
+      const anchor = (e.target as Element).closest("a[href]");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href") ?? "";
+      if (href.startsWith("/") || href.startsWith("#")) {
+        lastInternalClickMs.current = Date.now();
+      }
+    };
+    document.addEventListener("click", handleInternalClick, true);
+
+    const cleanups: (() => void)[] = [
+      () => document.removeEventListener("click", handleInternalClick, true),
+    ];
+
+    if (isMobile) {
+      // Mobile trigger 1: back button via history state
       window.history.pushState({ exitIntent: true }, "");
-    };
+      const handlePopState = () => {
+        tryShow();
+        window.history.pushState({ exitIntent: true }, "");
+      };
+      window.addEventListener("popstate", handlePopState);
+      cleanups.push(() => window.removeEventListener("popstate", handlePopState));
 
-    document.addEventListener("mouseleave", handleMouseLeave);
-    window.addEventListener("popstate", handlePopState);
+      // Mobile trigger 2: tab hidden for more than HIDDEN_TRIGGER_MS
+      let hiddenTimer: ReturnType<typeof setTimeout> | null = null;
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          hiddenTimer = setTimeout(tryShow, HIDDEN_TRIGGER_MS);
+        } else {
+          if (hiddenTimer) { clearTimeout(hiddenTimer); hiddenTimer = null; }
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      cleanups.push(() => {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        if (hiddenTimer) clearTimeout(hiddenTimer);
+      });
+    } else {
+      // Desktop: mouse leaving viewport through the top
+      const handleMouseLeave = (e: MouseEvent) => {
+        if (e.clientY <= 5) tryShow();
+      };
+      document.addEventListener("mouseleave", handleMouseLeave);
+      cleanups.push(() => document.removeEventListener("mouseleave", handleMouseLeave));
+    }
 
-    // Listen for main form submission success from other components
     const handleMainFormSubmit = () => {
       localStorage.setItem(LS_SUBMITTED, "true");
       readyRef.current = false;
     };
     window.addEventListener("movara:form:submitted", handleMainFormSubmit);
+    cleanups.push(() => window.removeEventListener("movara:form:submitted", handleMainFormSubmit));
 
-    return () => {
-      document.removeEventListener("mouseleave", handleMouseLeave);
-      window.removeEventListener("popstate", handlePopState);
-      window.removeEventListener("movara:form:submitted", handleMainFormSubmit);
-    };
+    return () => cleanups.forEach((fn) => fn());
   }, []);
 
   function close() {

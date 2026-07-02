@@ -29,10 +29,10 @@ export default function Navbar() {
     >
       <nav className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/icono.png" alt="" height={48} width={48} className="h-12 w-auto object-contain" />
+        <Link href="/" className="flex items-center gap-2">
+          <Image src="/icono.png" alt="" height={48} width={48} className="h-8 w-auto sm:h-12 object-contain" />
           <div className="flex flex-col leading-none gap-[3px]">
-            <span style={{ fontFamily: "var(--font-montserrat)", fontWeight: 700, fontSize: "2.25rem", color: "#D4B06A", lineHeight: 1, letterSpacing: "-0.01em" }}>
+            <span style={{ fontFamily: "var(--font-montserrat)", fontWeight: 700, color: "#D4B06A", lineHeight: 1, letterSpacing: "-0.01em" }} className="text-2xl sm:text-[2.25rem]">
               MOVARA
             </span>
             <span style={{ fontFamily: "var(--font-montserrat)", fontWeight: 400, fontSize: "0.6rem", color: "#D4B06A", letterSpacing: "0.3em", textTransform: "uppercase", lineHeight: 1 }}>

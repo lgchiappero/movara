@@ -20,6 +20,7 @@ export const MODELOS_QUERY = groq`
     especificaciones[] { clave, valor },
     specs,
     images[] { "asset": asset, hotspot, crop, label },
+    videos[] { url, titulo },
     video { url, label },
     virtualTour,
     maxHabitaciones,
@@ -51,6 +52,7 @@ export const MODELO_BY_SLUG_QUERY = groq`
     especificaciones[] { clave, valor },
     specs,
     images[] { "asset": asset, hotspot, crop, label },
+    videos[] { url, titulo },
     video { url, label },
     virtualTour,
     maxHabitaciones,
@@ -236,4 +238,15 @@ export const QUIENES_SOMOS_QUERY = groq`
 
 export const MODELO_SLUGS_QUERY = groq`
   *[_type == "modelo"] { "slug": slug.current }
+`
+
+export const FAQ_PAGE_QUERY = groq`
+  *[_type == "faqPage"][0] {
+    categorias[] {
+      _key,
+      titulo,
+      icono,
+      preguntas[] { _key, pregunta, respuesta },
+    },
+  }
 `
