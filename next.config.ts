@@ -3,11 +3,11 @@ import type { NextConfig } from "next";
 const CSP = [
   "default-src 'self'",
   // Next.js requires unsafe-inline/eval for client-side hydration
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https://cdn.sanity.io",
-  "connect-src 'self' https://*.sanity.io wss://*.sanity.io https://api.mercadopago.com",
+  "img-src 'self' data: blob: https://cdn.sanity.io https://www.facebook.com",
+  "connect-src 'self' https://*.sanity.io wss://*.sanity.io https://api.mercadopago.com https://www.facebook.com https://connect.facebook.net",
   "frame-src https://maps.google.com https://www.google.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
