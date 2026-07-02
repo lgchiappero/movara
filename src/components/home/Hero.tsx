@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 
 type HeroContent = {
@@ -30,6 +31,18 @@ export default function Hero({
 
   return (
     <section className="relative min-h-[100dvh] flex items-center bg-[#1A1A1A] overflow-hidden">
+      {/* Background banner */}
+      <Image
+        src="/banner-hero.webp"
+        alt=""
+        fill
+        priority
+        className="object-cover"
+        sizes="100vw"
+      />
+      {/* Dark overlay for text contrast */}
+      <div className="absolute inset-0 bg-[#1A1A1A]/80" />
+
       {/* Dot texture */}
       <div
         className="absolute inset-0 opacity-[0.04]"
