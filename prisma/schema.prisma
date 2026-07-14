@@ -95,5 +95,55 @@ model Lead {
   mensaje   String?
   createdAt DateTime @default(now())
 
+  pedidos ConfiguracionPedido[]
+
   @@map("leads")
+}
+
+model ConfiguracionPedido {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  leadId          String?
+  lead            Lead?   @relation(fields: [leadId], references: [id])
+  clienteNombre   String
+  clienteEmail    String?
+  clienteWhatsapp String
+
+  // Especificación del producto
+  modelo        String // "10ft" | "20ft" | "40ft"
+  zonaClimatica String // "templada" | "frio_intenso" | "calor_extremo" | "humedad_alta"
+
+  // Baño
+  banoInodoro String // "estandar" | "inteligente_bidet"
+  banoEspejo  String // "comun" | "inteligente_led"
+  banoDucha   String // "estandar_esquinero" | "premium"
+
+  // Cocina
+  cocinaTipo      String // "vitroceramica" | "espacio_gas"
+  cocinaExtractor Boolean @default(false)
+  cocinaAlacena   Boolean @default(false)
+  cocinaVentana   Boolean @default(false)
+
+  // Aberturas
+  aberturaRejas      Boolean @default(false)
+  aberturaMosquitero Boolean @default(false)
+  aberturaCortinas   Boolean @default(false)
+
+  // Lavarropas, energía, confort
+  lavarropas   String // "sin_preinstalacion" | "con_preinstalacion"
+  energiaSolar String // "sin" | "preinstalacion" | "kit_incluido"
+  calefon      String // "sin" | "electrico"
+
+  // Exterior
+  galeria String // "sin" | "balcon_techo" | "galeria_perimetral"
+
+  // Mejoras térmicas
+  mejoraParedes100    Boolean @default(false)
+  mejoraTripleVidrio  Boolean @default(false)
+  mejoraTechoSandwich Boolean @default(false)
+
+  estado String @default("enviado") // "enviado" | "revisado" | "confirmado"
+
+  @@map("configuraciones_pedido")
 }
