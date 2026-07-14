@@ -17,13 +17,28 @@ const valid = {
   aberturaRejas: false,
   aberturaMosquitero: true,
   aberturaCortinas: false,
-  lavarropas: "con_preinstalacion",
+  lavarropaIncluye: true,
+  lavarropaUbicacion: "bano",
   energiaSolar: "kit_incluido",
   calefon: "electrico",
   galeria: "balcon_techo",
   mejoraParedes100: true,
   mejoraTripleVidrio: false,
   mejoraTechoSandwich: false,
+  paredInteriorColor: "blanco",
+  paredInteriorRevestimiento: "pintura_lisa",
+  paredExteriorColor: "gris",
+  paredExteriorRevestimiento: "chapa_prepintada",
+  banoRevestimiento: "ceramico_blanco",
+  banoColorSanitarios: "blanco",
+  cocinaRevestimiento: "ceramico_blanco",
+  cocinaColorMuebles: "blanco",
+  puertaPrincipalTipo: "placa_simple",
+  puertaPrincipalMaterial: "acero_pintado",
+  puertaPrincipalColor: "blanco",
+  puertaInteriorTipo: "placa",
+  puertaInteriorColor: "blanco",
+  ventanaTipo: "tipo_a",
 };
 
 describe("pedidoSchema", () => {
@@ -82,5 +97,89 @@ describe("pedidoSchema", () => {
 
   it("rechaza leadId con formato inválido", () => {
     expect(pedidoSchema.safeParse({ ...valid, leadId: "not-a-cuid!" }).success).toBe(false);
+  });
+
+  // ─── Lavarropas ───────────────────────────────────────────
+
+  it("acepta lavarropaIncluye false sin ubicación", () => {
+    const { lavarropaUbicacion, ...rest } = valid;
+    const result = pedidoSchema.safeParse({ ...rest, lavarropaIncluye: false });
+    expect(result.success).toBe(true);
+  });
+
+  it("rechaza lavarropaIncluye true sin lavarropaUbicacion", () => {
+    const { lavarropaUbicacion, ...rest } = valid;
+    const result = pedidoSchema.safeParse({ ...rest, lavarropaIncluye: true });
+    expect(result.success).toBe(false);
+  });
+
+  it("rechaza lavarropaUbicacion fuera de las opciones válidas", () => {
+    expect(
+      pedidoSchema.safeParse({ ...valid, lavarropaUbicacion: "patio" }).success
+    ).toBe(false);
+  });
+
+  it("acepta las tres ubicaciones válidas de lavarropas", () => {
+    for (const ubicacion of ["bano", "cocina", "espacio_externo"]) {
+      expect(
+        pedidoSchema.safeParse({ ...valid, lavarropaUbicacion: ubicacion }).success
+      ).toBe(true);
+    }
+  });
+
+  // ─── Acabados y diseño ─────────────────────────────────────
+
+  it("rechaza paredInteriorColor fuera de las opciones válidas", () => {
+    expect(
+      pedidoSchema.safeParse({ ...valid, paredInteriorColor: "rosa" }).success
+    ).toBe(false);
+  });
+
+  it("rechaza paredExteriorRevestimiento fuera de las opciones válidas", () => {
+    expect(
+      pedidoSchema.safeParse({ ...valid, paredExteriorRevestimiento: "ladrillo" }).success
+    ).toBe(false);
+  });
+
+  it("rechaza banoColorSanitarios fuera de las opciones válidas", () => {
+    expect(
+      pedidoSchema.safeParse({ ...valid, banoColorSanitarios: "dorado" }).success
+    ).toBe(false);
+  });
+
+  it("rechaza cocinaColorMuebles fuera de las opciones válidas", () => {
+    expect(
+      pedidoSchema.safeParse({ ...valid, cocinaColorMuebles: "rojo" }).success
+    ).toBe(false);
+  });
+
+  // ─── Puertas y aberturas ────────────────────────────────────
+
+  it("rechaza puertaPrincipalTipo fuera de las opciones válidas", () => {
+    expect(
+      pedidoSchema.safeParse({ ...valid, puertaPrincipalTipo: "blindada" }).success
+    ).toBe(false);
+  });
+
+  it("rechaza puertaPrincipalMaterial fuera de las opciones válidas", () => {
+    expect(
+      pedidoSchema.safeParse({ ...valid, puertaPrincipalMaterial: "madera" }).success
+    ).toBe(false);
+  });
+
+  it("rechaza puertaInteriorTipo fuera de las opciones válidas", () => {
+    expect(
+      pedidoSchema.safeParse({ ...valid, puertaInteriorTipo: "vaiven" }).success
+    ).toBe(false);
+  });
+
+  it("rechaza ventanaTipo fuera de las opciones válidas", () => {
+    expect(pedidoSchema.safeParse({ ...valid, ventanaTipo: "tipo_d" }).success).toBe(false);
+  });
+
+  it("acepta los tres tipos de ventana válidos", () => {
+    for (const tipo of ["tipo_a", "tipo_b", "tipo_c"]) {
+      expect(pedidoSchema.safeParse({ ...valid, ventanaTipo: tipo }).success).toBe(true);
+    }
   });
 });

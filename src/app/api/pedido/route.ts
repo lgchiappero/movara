@@ -4,6 +4,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { db } from "@/lib/db";
 import { pedidoSchema } from "@/lib/validators/pedido";
 import { PedidoDocument } from "@/lib/pdf/PedidoDocument";
+import { PedidoDocumentEs } from "@/lib/pdf/PedidoDocumentEs";
 import { modeloLabels } from "@/lib/pdf/pedido-labels";
 import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
 
@@ -83,13 +84,28 @@ export async function POST(req: NextRequest) {
           aberturaRejas: data.aberturaRejas,
           aberturaMosquitero: data.aberturaMosquitero,
           aberturaCortinas: data.aberturaCortinas,
-          lavarropas: data.lavarropas,
+          lavarropaIncluye: data.lavarropaIncluye,
+          lavarropaUbicacion: data.lavarropaUbicacion || null,
           energiaSolar: data.energiaSolar,
           calefon: data.calefon,
           galeria: data.galeria,
           mejoraParedes100: data.mejoraParedes100,
           mejoraTripleVidrio: data.mejoraTripleVidrio,
           mejoraTechoSandwich: data.mejoraTechoSandwich,
+          paredInteriorColor: data.paredInteriorColor,
+          paredInteriorRevestimiento: data.paredInteriorRevestimiento,
+          paredExteriorColor: data.paredExteriorColor,
+          paredExteriorRevestimiento: data.paredExteriorRevestimiento,
+          banoRevestimiento: data.banoRevestimiento,
+          banoColorSanitarios: data.banoColorSanitarios,
+          cocinaRevestimiento: data.cocinaRevestimiento,
+          cocinaColorMuebles: data.cocinaColorMuebles,
+          puertaPrincipalTipo: data.puertaPrincipalTipo,
+          puertaPrincipalMaterial: data.puertaPrincipalMaterial,
+          puertaPrincipalColor: data.puertaPrincipalColor,
+          puertaInteriorTipo: data.puertaInteriorTipo,
+          puertaInteriorColor: data.puertaInteriorColor,
+          ventanaTipo: data.ventanaTipo,
         },
       });
     } catch (dbErr) {
@@ -97,19 +113,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Error al guardar el pedido" }, { status: 500 });
     }
 
-    const fecha = new Date().toLocaleDateString("en-US", {
+    const fechaEn = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const fechaEs = new Date().toLocaleDateString("es-AR", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
 
-    const pdfBuffer = await renderToBuffer(PedidoDocument({ data, fecha }));
+    // PDF en inglés: va por email al proveedor. PDF en español: lo ve/descarga el cliente.
+    const [pdfBufferEn, pdfBufferEs] = await Promise.all([
+      renderToBuffer(PedidoDocument({ data, fecha: fechaEn })),
+      renderToBuffer(PedidoDocumentEs({ data, fecha: fechaEs })),
+    ]);
 
-    await sendPedidoEmail(pdfBuffer, data.clienteNombre, modeloLabels[data.modelo]);
+    await sendPedidoEmail(pdfBufferEn, data.clienteNombre, modeloLabels[data.modelo]);
 
     return NextResponse.json({
       ok: true,
-      pdfBase64: pdfBuffer.toString("base64"),
+      pdfBase64: pdfBufferEs.toString("base64"),
     });
   } catch (err) {
     console.error("[pedido]", err);

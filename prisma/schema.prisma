@@ -131,9 +131,10 @@ model ConfiguracionPedido {
   aberturaCortinas   Boolean @default(false)
 
   // Lavarropas, energía, confort
-  lavarropas   String // "sin_preinstalacion" | "con_preinstalacion"
-  energiaSolar String // "sin" | "preinstalacion" | "kit_incluido"
-  calefon      String // "sin" | "electrico"
+  lavarropaIncluye   Boolean @default(false)
+  lavarropaUbicacion String? // "bano" | "cocina" | "espacio_externo"
+  energiaSolar       String // "sin" | "preinstalacion" | "kit_incluido"
+  calefon            String // "sin" | "electrico"
 
   // Exterior
   galeria String // "sin" | "balcon_techo" | "galeria_perimetral"
@@ -142,6 +143,34 @@ model ConfiguracionPedido {
   mejoraParedes100    Boolean @default(false)
   mejoraTripleVidrio  Boolean @default(false)
   mejoraTechoSandwich Boolean @default(false)
+
+  // Acabados y diseño — paredes interiores
+  paredInteriorColor          String // "blanco" | "gris_claro" | "beige" | "madera_clara" | "madera_oscura" | "personalizado"
+  paredInteriorRevestimiento  String // "pintura_lisa" | "panel_madera" | "panel_pvc" | "otro"
+
+  // Acabados y diseño — paredes exteriores
+  paredExteriorColor         String // "blanco" | "gris" | "beige" | "arena" | "negro_mate" | "personalizado"
+  paredExteriorRevestimiento String // "chapa_prepintada" | "madera_tratada" | "simil_madera" | "otro"
+
+  // Acabados y diseño — baño
+  banoRevestimiento    String // "ceramico_blanco" | "ceramico_gris" | "marmol_sintetico" | "madera_pvc" | "otro"
+  banoColorSanitarios  String // "blanco" | "negro" | "cromo"
+
+  // Acabados y diseño — cocina
+  cocinaRevestimiento  String // "ceramico_blanco" | "ceramico_gris" | "acero_inoxidable" | "otro"
+  cocinaColorMuebles   String // "blanco" | "gris" | "madera_clara" | "madera_oscura"
+
+  // Puertas y aberturas — puerta principal
+  puertaPrincipalTipo     String // "placa_simple" | "placa_vidrio_lateral" | "doble_hoja" | "corrediza"
+  puertaPrincipalMaterial String // "acero_pintado" | "aluminio" | "pvc"
+  puertaPrincipalColor    String // "blanco" | "negro" | "gris" | "igual_exterior"
+
+  // Puertas y aberturas — puerta interior
+  puertaInteriorTipo  String // "placa" | "corrediza" | "sin_puerta"
+  puertaInteriorColor String // "igual_paredes" | "blanco" | "natural_madera"
+
+  // Puertas y aberturas — ventanas (todas incluyen DVH y mosquitero)
+  ventanaTipo String // "tipo_a" | "tipo_b" | "tipo_c"
 
   estado String @default("enviado") // "enviado" | "revisado" | "confirmado"
 

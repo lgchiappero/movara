@@ -10,10 +10,24 @@ import {
   banoEspejoOptions,
   banoDuchaOptions,
   cocinaTipoOptions,
-  lavarropasOptions,
+  lavarropaUbicacionOptions,
   energiaSolarOptions,
   calefonOptions,
   galeriaOptions,
+  paredInteriorColorOptions,
+  paredInteriorRevestimientoOptions,
+  paredExteriorColorOptions,
+  paredExteriorRevestimientoOptions,
+  banoRevestimientoOptions,
+  banoColorSanitariosOptions,
+  cocinaRevestimientoOptions,
+  cocinaColorMueblesOptions,
+  puertaPrincipalTipoOptions,
+  puertaPrincipalMaterialOptions,
+  puertaPrincipalColorOptions,
+  puertaInteriorTipoOptions,
+  puertaInteriorColorOptions,
+  ventanaTipoOptions,
 } from "@/lib/validators/pedido";
 import {
   nombreSchema,
@@ -21,63 +35,32 @@ import {
   emailSchema,
   validateField,
 } from "@/lib/validators/configurador";
-
-// ─── Spanish labels for the form UI ───────────────────────
-
-const modeloLabelsEs: Record<PedidoInput["modelo"], string> = {
-  "10ft": "10ft (18m²)",
-  "20ft": "20ft (37m²)",
-  "40ft": "40ft (74m²)",
-};
-
-const zonaClimaticaLabelsEs: Record<PedidoInput["zonaClimatica"], string> = {
-  templada: "Templada",
-  frio_intenso: "Frío intenso",
-  calor_extremo: "Calor extremo",
-  humedad_alta: "Humedad alta",
-};
-
-const banoInodoroLabelsEs: Record<PedidoInput["banoInodoro"], string> = {
-  estandar: "Estándar",
-  inteligente_bidet: "Inteligente con bidet",
-};
-
-const banoEspejoLabelsEs: Record<PedidoInput["banoEspejo"], string> = {
-  comun: "Común",
-  inteligente_led: "Inteligente con LED",
-};
-
-const banoDuchaLabelsEs: Record<PedidoInput["banoDucha"], string> = {
-  estandar_esquinero: "Estándar esquinero",
-  premium: "Premium",
-};
-
-const cocinaTipoLabelsEs: Record<PedidoInput["cocinaTipo"], string> = {
-  vitroceramica: "Vitrocerámica",
-  espacio_gas: "Espacio para garrafa/gas",
-};
-
-const lavarropasLabelsEs: Record<PedidoInput["lavarropas"], string> = {
-  sin_preinstalacion: "Sin preinstalación",
-  con_preinstalacion: "Con preinstalación",
-};
-
-const energiaSolarLabelsEs: Record<PedidoInput["energiaSolar"], string> = {
-  sin: "Sin energía solar",
-  preinstalacion: "Solo preinstalación",
-  kit_incluido: "Kit incluido",
-};
-
-const calefonLabelsEs: Record<PedidoInput["calefon"], string> = {
-  sin: "Sin calefón",
-  electrico: "Calefón eléctrico",
-};
-
-const galeriaLabelsEs: Record<PedidoInput["galeria"], string> = {
-  sin: "Sin galería",
-  balcon_techo: "Balcón con techo",
-  galeria_perimetral: "Galería perimetral",
-};
+import {
+  modeloLabelsEs,
+  zonaClimaticaLabelsEs,
+  banoInodoroLabelsEs,
+  banoEspejoLabelsEs,
+  banoDuchaLabelsEs,
+  cocinaTipoLabelsEs,
+  lavarropaUbicacionLabelsEs,
+  energiaSolarLabelsEs,
+  calefonLabelsEs,
+  galeriaLabelsEs,
+  paredInteriorColorLabelsEs,
+  paredInteriorRevestimientoLabelsEs,
+  paredExteriorColorLabelsEs,
+  paredExteriorRevestimientoLabelsEs,
+  banoRevestimientoLabelsEs,
+  banoColorSanitariosLabelsEs,
+  cocinaRevestimientoLabelsEs,
+  cocinaColorMueblesLabelsEs,
+  puertaPrincipalTipoLabelsEs,
+  puertaPrincipalMaterialLabelsEs,
+  puertaPrincipalColorLabelsEs,
+  puertaInteriorTipoLabelsEs,
+  puertaInteriorColorLabelsEs,
+  ventanaTipoLabelsEs,
+} from "@/lib/pdf/pedido-labels-es";
 
 const DEFAULT_VALUES: PedidoInput = {
   clienteNombre: "",
@@ -95,13 +78,28 @@ const DEFAULT_VALUES: PedidoInput = {
   aberturaRejas: false,
   aberturaMosquitero: false,
   aberturaCortinas: false,
-  lavarropas: "sin_preinstalacion",
+  lavarropaIncluye: false,
+  lavarropaUbicacion: undefined,
   energiaSolar: "sin",
   calefon: "sin",
   galeria: "sin",
   mejoraParedes100: false,
   mejoraTripleVidrio: false,
   mejoraTechoSandwich: false,
+  paredInteriorColor: "blanco",
+  paredInteriorRevestimiento: "pintura_lisa",
+  paredExteriorColor: "blanco",
+  paredExteriorRevestimiento: "chapa_prepintada",
+  banoRevestimiento: "ceramico_blanco",
+  banoColorSanitarios: "blanco",
+  cocinaRevestimiento: "ceramico_blanco",
+  cocinaColorMuebles: "blanco",
+  puertaPrincipalTipo: "placa_simple",
+  puertaPrincipalMaterial: "acero_pintado",
+  puertaPrincipalColor: "blanco",
+  puertaInteriorTipo: "placa",
+  puertaInteriorColor: "blanco",
+  ventanaTipo: "tipo_a",
 };
 
 function base64ToBlob(base64: string, type: string): Blob {
@@ -412,19 +410,38 @@ export default function ConfiguradorPedidoForm() {
       </SectionCard>
 
       <SectionCard title="Lavarropas, energía y confort">
-        <Field label="Lavarropas">
-          <select
-            className={selectClass}
-            value={form.lavarropas}
-            onChange={(e) => update("lavarropas", e.target.value as PedidoInput["lavarropas"])}
-          >
-            {lavarropasOptions.map((v) => (
-              <option key={v} value={v}>
-                {lavarropasLabelsEs[v]}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <label className={checkboxRowClass}>
+          <input
+            type="checkbox"
+            checked={form.lavarropaIncluye}
+            onChange={(e) => {
+              const incluye = e.target.checked;
+              setForm((prev) => ({
+                ...prev,
+                lavarropaIncluye: incluye,
+                lavarropaUbicacion: incluye ? prev.lavarropaUbicacion ?? "bano" : undefined,
+              }));
+            }}
+          />
+          ¿Incluye espacio para lavarropas?
+        </label>
+        {form.lavarropaIncluye && (
+          <Field label="¿Dónde?">
+            <select
+              className={selectClass}
+              value={form.lavarropaUbicacion}
+              onChange={(e) =>
+                update("lavarropaUbicacion", e.target.value as PedidoInput["lavarropaUbicacion"])
+              }
+            >
+              {lavarropaUbicacionOptions.map((v) => (
+                <option key={v} value={v}>
+                  {lavarropaUbicacionLabelsEs[v]}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Field label="Energía solar">
           <select
             className={selectClass}
@@ -496,6 +513,263 @@ export default function ConfiguradorPedidoForm() {
           />
           Techo panel sándwich
         </label>
+      </SectionCard>
+
+      <SectionCard title="Acabados y diseño">
+        <p className="text-xs font-bold uppercase tracking-widest text-sage-500">
+          Paredes interiores
+        </p>
+        <Field label="Color de paredes interiores">
+          <select
+            className={selectClass}
+            value={form.paredInteriorColor}
+            onChange={(e) =>
+              update("paredInteriorColor", e.target.value as PedidoInput["paredInteriorColor"])
+            }
+          >
+            {paredInteriorColorOptions.map((v) => (
+              <option key={v} value={v}>
+                {paredInteriorColorLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Tipo de revestimiento interior">
+          <select
+            className={selectClass}
+            value={form.paredInteriorRevestimiento}
+            onChange={(e) =>
+              update(
+                "paredInteriorRevestimiento",
+                e.target.value as PedidoInput["paredInteriorRevestimiento"]
+              )
+            }
+          >
+            {paredInteriorRevestimientoOptions.map((v) => (
+              <option key={v} value={v}>
+                {paredInteriorRevestimientoLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <p className="text-xs font-bold uppercase tracking-widest text-sage-500 pt-2">
+          Paredes exteriores
+        </p>
+        <Field label="Color exterior">
+          <select
+            className={selectClass}
+            value={form.paredExteriorColor}
+            onChange={(e) =>
+              update("paredExteriorColor", e.target.value as PedidoInput["paredExteriorColor"])
+            }
+          >
+            {paredExteriorColorOptions.map((v) => (
+              <option key={v} value={v}>
+                {paredExteriorColorLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Tipo de revestimiento exterior">
+          <select
+            className={selectClass}
+            value={form.paredExteriorRevestimiento}
+            onChange={(e) =>
+              update(
+                "paredExteriorRevestimiento",
+                e.target.value as PedidoInput["paredExteriorRevestimiento"]
+              )
+            }
+          >
+            {paredExteriorRevestimientoOptions.map((v) => (
+              <option key={v} value={v}>
+                {paredExteriorRevestimientoLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <p className="text-xs font-bold uppercase tracking-widest text-sage-500 pt-2">Baño</p>
+        <Field label="Revestimiento de paredes baño">
+          <select
+            className={selectClass}
+            value={form.banoRevestimiento}
+            onChange={(e) =>
+              update("banoRevestimiento", e.target.value as PedidoInput["banoRevestimiento"])
+            }
+          >
+            {banoRevestimientoOptions.map((v) => (
+              <option key={v} value={v}>
+                {banoRevestimientoLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Color de sanitarios">
+          <select
+            className={selectClass}
+            value={form.banoColorSanitarios}
+            onChange={(e) =>
+              update(
+                "banoColorSanitarios",
+                e.target.value as PedidoInput["banoColorSanitarios"]
+              )
+            }
+          >
+            {banoColorSanitariosOptions.map((v) => (
+              <option key={v} value={v}>
+                {banoColorSanitariosLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <p className="text-xs font-bold uppercase tracking-widest text-sage-500 pt-2">Cocina</p>
+        <Field label="Revestimiento de paredes cocina">
+          <select
+            className={selectClass}
+            value={form.cocinaRevestimiento}
+            onChange={(e) =>
+              update(
+                "cocinaRevestimiento",
+                e.target.value as PedidoInput["cocinaRevestimiento"]
+              )
+            }
+          >
+            {cocinaRevestimientoOptions.map((v) => (
+              <option key={v} value={v}>
+                {cocinaRevestimientoLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Color de muebles de cocina">
+          <select
+            className={selectClass}
+            value={form.cocinaColorMuebles}
+            onChange={(e) =>
+              update("cocinaColorMuebles", e.target.value as PedidoInput["cocinaColorMuebles"])
+            }
+          >
+            {cocinaColorMueblesOptions.map((v) => (
+              <option key={v} value={v}>
+                {cocinaColorMueblesLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </SectionCard>
+
+      <SectionCard title="Puertas y aberturas">
+        <p className="text-xs font-bold uppercase tracking-widest text-sage-500">
+          Puerta de ingreso principal
+        </p>
+        <Field label="Tipo">
+          <select
+            className={selectClass}
+            value={form.puertaPrincipalTipo}
+            onChange={(e) =>
+              update("puertaPrincipalTipo", e.target.value as PedidoInput["puertaPrincipalTipo"])
+            }
+          >
+            {puertaPrincipalTipoOptions.map((v) => (
+              <option key={v} value={v}>
+                {puertaPrincipalTipoLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Material">
+          <select
+            className={selectClass}
+            value={form.puertaPrincipalMaterial}
+            onChange={(e) =>
+              update(
+                "puertaPrincipalMaterial",
+                e.target.value as PedidoInput["puertaPrincipalMaterial"]
+              )
+            }
+          >
+            {puertaPrincipalMaterialOptions.map((v) => (
+              <option key={v} value={v}>
+                {puertaPrincipalMaterialLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Color">
+          <select
+            className={selectClass}
+            value={form.puertaPrincipalColor}
+            onChange={(e) =>
+              update(
+                "puertaPrincipalColor",
+                e.target.value as PedidoInput["puertaPrincipalColor"]
+              )
+            }
+          >
+            {puertaPrincipalColorOptions.map((v) => (
+              <option key={v} value={v}>
+                {puertaPrincipalColorLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <p className="text-xs font-bold uppercase tracking-widest text-sage-500 pt-2">
+          Puerta interior (entre ambientes)
+        </p>
+        <Field label="Tipo">
+          <select
+            className={selectClass}
+            value={form.puertaInteriorTipo}
+            onChange={(e) =>
+              update("puertaInteriorTipo", e.target.value as PedidoInput["puertaInteriorTipo"])
+            }
+          >
+            {puertaInteriorTipoOptions.map((v) => (
+              <option key={v} value={v}>
+                {puertaInteriorTipoLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Color">
+          <select
+            className={selectClass}
+            value={form.puertaInteriorColor}
+            onChange={(e) =>
+              update("puertaInteriorColor", e.target.value as PedidoInput["puertaInteriorColor"])
+            }
+          >
+            {puertaInteriorColorOptions.map((v) => (
+              <option key={v} value={v}>
+                {puertaInteriorColorLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <p className="text-xs font-bold uppercase tracking-widest text-sage-500 pt-2">
+          Aberturas (ventanas)
+        </p>
+        <Field label="Tipo de abertura">
+          <select
+            className={selectClass}
+            value={form.ventanaTipo}
+            onChange={(e) => update("ventanaTipo", e.target.value as PedidoInput["ventanaTipo"])}
+          >
+            {ventanaTipoOptions.map((v) => (
+              <option key={v} value={v}>
+                {ventanaTipoLabelsEs[v]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <p className="text-xs text-[#888888] italic">
+          Las ventanas incluyen DVH (doble vidrio hermético) y mosquitero en todos los tipos.
+        </p>
       </SectionCard>
 
       {submitError && (

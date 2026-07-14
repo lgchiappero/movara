@@ -6,16 +6,31 @@ import {
   banoEspejoLabels,
   banoDuchaLabels,
   cocinaTipoLabels,
-  lavarropasLabels,
+  lavarropaUbicacionLabels,
   energiaSolarLabels,
   calefonLabels,
   galeriaLabels,
+  paredInteriorColorLabels,
+  paredInteriorRevestimientoLabels,
+  paredExteriorColorLabels,
+  paredExteriorRevestimientoLabels,
+  banoRevestimientoLabels,
+  banoColorSanitariosLabels,
+  cocinaRevestimientoLabels,
+  cocinaColorMueblesLabels,
+  puertaPrincipalTipoLabels,
+  puertaPrincipalMaterialLabels,
+  puertaPrincipalColorLabels,
+  puertaInteriorTipoLabels,
+  puertaInteriorColorLabels,
+  ventanaTipoLabels,
   yesNo,
 } from "@/lib/pdf/pedido-labels";
 
 export type PedidoSpecSection = {
   title: string;
   rows: { label: string; value: string }[];
+  note?: string;
 };
 
 export function buildPedidoSpecSections(data: PedidoInput): PedidoSpecSection[] {
@@ -56,7 +71,12 @@ export function buildPedidoSpecSections(data: PedidoInput): PedidoSpecSection[] 
     {
       title: "6. LAUNDRY / ENERGY / COMFORT",
       rows: [
-        { label: "Washing machine setup", value: lavarropasLabels[data.lavarropas] },
+        {
+          label: "Washing machine space",
+          value: data.lavarropaIncluye
+            ? `Yes — ${lavarropaUbicacionLabels[data.lavarropaUbicacion!]}`
+            : "No",
+        },
         { label: "Solar energy", value: energiaSolarLabels[data.energiaSolar] },
         { label: "Water heater", value: calefonLabels[data.calefon] },
       ],
@@ -73,6 +93,40 @@ export function buildPedidoSpecSections(data: PedidoInput): PedidoSpecSection[] 
         { label: "Sandwich panel roof", value: yesNo(data.mejoraTechoSandwich) },
       ],
     },
+    {
+      title: "9. FINISHES & DESIGN",
+      rows: [
+        { label: "Interior wall color", value: paredInteriorColorLabels[data.paredInteriorColor] },
+        {
+          label: "Interior wall cladding",
+          value: paredInteriorRevestimientoLabels[data.paredInteriorRevestimiento],
+        },
+        { label: "Exterior wall color", value: paredExteriorColorLabels[data.paredExteriorColor] },
+        {
+          label: "Exterior wall cladding",
+          value: paredExteriorRevestimientoLabels[data.paredExteriorRevestimiento],
+        },
+        { label: "Bathroom wall cladding", value: banoRevestimientoLabels[data.banoRevestimiento] },
+        { label: "Bathroom fixtures color", value: banoColorSanitariosLabels[data.banoColorSanitarios] },
+        { label: "Kitchen wall cladding", value: cocinaRevestimientoLabels[data.cocinaRevestimiento] },
+        { label: "Kitchen cabinets color", value: cocinaColorMueblesLabels[data.cocinaColorMuebles] },
+      ],
+    },
+    {
+      title: "10. DOORS & OPENINGS",
+      rows: [
+        { label: "Main door type", value: puertaPrincipalTipoLabels[data.puertaPrincipalTipo] },
+        {
+          label: "Main door material",
+          value: puertaPrincipalMaterialLabels[data.puertaPrincipalMaterial],
+        },
+        { label: "Main door color", value: puertaPrincipalColorLabels[data.puertaPrincipalColor] },
+        { label: "Interior door type", value: puertaInteriorTipoLabels[data.puertaInteriorTipo] },
+        { label: "Interior door color", value: puertaInteriorColorLabels[data.puertaInteriorColor] },
+        { label: "Window type", value: ventanaTipoLabels[data.ventanaTipo] },
+      ],
+      note: "All window types include double glazing (DVH) and mosquito net.",
+    },
   ];
 }
 
@@ -82,7 +136,11 @@ export function buildPedidoSpecText(
 ): string {
   const sections = buildPedidoSpecSections(data);
   const body = sections
-    .map((s) => `${s.title}\n${s.rows.map((r) => `   - ${r.label}: ${r.value}`).join("\n")}`)
+    .map((s) => {
+      const rows = s.rows.map((r) => `   - ${r.label}: ${r.value}`).join("\n");
+      const note = s.note ? `\n   Note: ${s.note}` : "";
+      return `${s.title}\n${rows}${note}`;
+    })
     .join("\n\n");
 
   return `MOVARA ESPACIOS MODULARES — PURCHASE ORDER SPEC

@@ -14,14 +14,84 @@ export const banoInodoroOptions = ["estandar", "inteligente_bidet"] as const;
 export const banoEspejoOptions = ["comun", "inteligente_led"] as const;
 export const banoDuchaOptions = ["estandar_esquinero", "premium"] as const;
 export const cocinaTipoOptions = ["vitroceramica", "espacio_gas"] as const;
-export const lavarropasOptions = ["sin_preinstalacion", "con_preinstalacion"] as const;
+export const lavarropaUbicacionOptions = ["bano", "cocina", "espacio_externo"] as const;
 export const energiaSolarOptions = ["sin", "preinstalacion", "kit_incluido"] as const;
 export const calefonOptions = ["sin", "electrico"] as const;
 export const galeriaOptions = ["sin", "balcon_techo", "galeria_perimetral"] as const;
 
+export const paredInteriorColorOptions = [
+  "blanco",
+  "gris_claro",
+  "beige",
+  "madera_clara",
+  "madera_oscura",
+  "personalizado",
+] as const;
+export const paredInteriorRevestimientoOptions = [
+  "pintura_lisa",
+  "panel_madera",
+  "panel_pvc",
+  "otro",
+] as const;
+export const paredExteriorColorOptions = [
+  "blanco",
+  "gris",
+  "beige",
+  "arena",
+  "negro_mate",
+  "personalizado",
+] as const;
+export const paredExteriorRevestimientoOptions = [
+  "chapa_prepintada",
+  "madera_tratada",
+  "simil_madera",
+  "otro",
+] as const;
+export const banoRevestimientoOptions = [
+  "ceramico_blanco",
+  "ceramico_gris",
+  "marmol_sintetico",
+  "madera_pvc",
+  "otro",
+] as const;
+export const banoColorSanitariosOptions = ["blanco", "negro", "cromo"] as const;
+export const cocinaRevestimientoOptions = [
+  "ceramico_blanco",
+  "ceramico_gris",
+  "acero_inoxidable",
+  "otro",
+] as const;
+export const cocinaColorMueblesOptions = [
+  "blanco",
+  "gris",
+  "madera_clara",
+  "madera_oscura",
+] as const;
+
+export const puertaPrincipalTipoOptions = [
+  "placa_simple",
+  "placa_vidrio_lateral",
+  "doble_hoja",
+  "corrediza",
+] as const;
+export const puertaPrincipalMaterialOptions = ["acero_pintado", "aluminio", "pvc"] as const;
+export const puertaPrincipalColorOptions = [
+  "blanco",
+  "negro",
+  "gris",
+  "igual_exterior",
+] as const;
+export const puertaInteriorTipoOptions = ["placa", "corrediza", "sin_puerta"] as const;
+export const puertaInteriorColorOptions = [
+  "igual_paredes",
+  "blanco",
+  "natural_madera",
+] as const;
+export const ventanaTipoOptions = ["tipo_a", "tipo_b", "tipo_c"] as const;
+
 // ─── Schema ────────────────────────────────────────────────
 
-export const pedidoSchema = z.object({
+const baseSchema = z.object({
   // Contacto
   leadId: z.string().cuid().optional(),
   clienteNombre: nombreSchema,
@@ -49,7 +119,8 @@ export const pedidoSchema = z.object({
   aberturaCortinas: z.boolean().default(false),
 
   // Lavarropas, energía, confort
-  lavarropas: z.enum(lavarropasOptions),
+  lavarropaIncluye: z.boolean().default(false),
+  lavarropaUbicacion: z.enum(lavarropaUbicacionOptions).optional(),
   energiaSolar: z.enum(energiaSolarOptions),
   calefon: z.enum(calefonOptions),
 
@@ -60,6 +131,42 @@ export const pedidoSchema = z.object({
   mejoraParedes100: z.boolean().default(false),
   mejoraTripleVidrio: z.boolean().default(false),
   mejoraTechoSandwich: z.boolean().default(false),
+
+  // Acabados y diseño — paredes interiores
+  paredInteriorColor: z.enum(paredInteriorColorOptions),
+  paredInteriorRevestimiento: z.enum(paredInteriorRevestimientoOptions),
+
+  // Acabados y diseño — paredes exteriores
+  paredExteriorColor: z.enum(paredExteriorColorOptions),
+  paredExteriorRevestimiento: z.enum(paredExteriorRevestimientoOptions),
+
+  // Acabados y diseño — baño
+  banoRevestimiento: z.enum(banoRevestimientoOptions),
+  banoColorSanitarios: z.enum(banoColorSanitariosOptions),
+
+  // Acabados y diseño — cocina
+  cocinaRevestimiento: z.enum(cocinaRevestimientoOptions),
+  cocinaColorMuebles: z.enum(cocinaColorMueblesOptions),
+
+  // Puertas y aberturas — puerta principal
+  puertaPrincipalTipo: z.enum(puertaPrincipalTipoOptions),
+  puertaPrincipalMaterial: z.enum(puertaPrincipalMaterialOptions),
+  puertaPrincipalColor: z.enum(puertaPrincipalColorOptions),
+
+  // Puertas y aberturas — puerta interior
+  puertaInteriorTipo: z.enum(puertaInteriorTipoOptions),
+  puertaInteriorColor: z.enum(puertaInteriorColorOptions),
+
+  // Puertas y aberturas — ventanas
+  ventanaTipo: z.enum(ventanaTipoOptions),
 });
 
-export type PedidoInput = z.infer<typeof pedidoSchema>;
+export const pedidoSchema = baseSchema.refine(
+  (data) => !data.lavarropaIncluye || Boolean(data.lavarropaUbicacion),
+  {
+    message: "Elegí dónde va el lavarropas",
+    path: ["lavarropaUbicacion"],
+  }
+);
+
+export type PedidoInput = z.infer<typeof baseSchema>;
