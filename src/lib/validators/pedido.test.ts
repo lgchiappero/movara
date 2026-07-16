@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { pedidoSchema } from "@/lib/validators/pedido";
 
 const valid = {
+  configId: "ckabc12300000abcdefghijk",
   clienteNombre: "Juan García",
   clienteWhatsapp: "+54 9 11 1234-5678",
   clienteEmail: "juan@example.com",
@@ -87,6 +88,11 @@ describe("pedidoSchema", () => {
 
   it("rechaza objeto vacío", () => {
     expect(pedidoSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("rechaza sin configId", () => {
+    const { configId, ...rest } = valid;
+    expect(pedidoSchema.safeParse(rest).success).toBe(false);
   });
 
   it("acepta leadId cuid opcional", () => {

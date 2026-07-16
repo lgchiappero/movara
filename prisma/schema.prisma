@@ -103,24 +103,26 @@ model Lead {
 model ConfiguracionPedido {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   leadId          String?
   lead            Lead?   @relation(fields: [leadId], references: [id])
   clienteNombre   String
   clienteEmail    String?
-  clienteWhatsapp String
+  clienteWhatsapp String?
 
-  // Especificación del producto
-  modelo        String // "10ft" | "20ft" | "40ft"
-  zonaClimatica String // "templada" | "frio_intenso" | "calor_extremo" | "humedad_alta"
+  // Especificación del producto — null mientras el registro está "pendiente"
+  // (creado desde /admin, todavía no completado por el cliente)
+  modelo        String? // "10ft" | "20ft" | "40ft"
+  zonaClimatica String? // "templada" | "frio_intenso" | "calor_extremo" | "humedad_alta"
 
   // Baño
-  banoInodoro String // "estandar" | "inteligente_bidet"
-  banoEspejo  String // "comun" | "inteligente_led"
-  banoDucha   String // "estandar_esquinero" | "premium"
+  banoInodoro String? // "estandar" | "inteligente_bidet"
+  banoEspejo  String? // "comun" | "inteligente_led"
+  banoDucha   String? // "estandar_esquinero" | "premium"
 
   // Cocina
-  cocinaTipo      String // "vitroceramica" | "espacio_gas"
+  cocinaTipo      String? // "vitroceramica" | "espacio_gas"
   cocinaExtractor Boolean @default(false)
   cocinaAlacena   Boolean @default(false)
   cocinaVentana   Boolean @default(false)
@@ -133,11 +135,11 @@ model ConfiguracionPedido {
   // Lavarropas, energía, confort
   lavarropaIncluye   Boolean @default(false)
   lavarropaUbicacion String? // "bano" | "cocina" | "espacio_externo"
-  energiaSolar       String // "sin" | "preinstalacion" | "kit_incluido"
-  calefon            String // "sin" | "electrico"
+  energiaSolar       String? // "sin" | "preinstalacion" | "kit_incluido"
+  calefon            String? // "sin" | "electrico"
 
   // Exterior
-  galeria String // "sin" | "balcon_techo" | "galeria_perimetral"
+  galeria String? // "sin" | "balcon_techo" | "galeria_perimetral"
 
   // Mejoras térmicas
   mejoraParedes100    Boolean @default(false)
@@ -145,34 +147,34 @@ model ConfiguracionPedido {
   mejoraTechoSandwich Boolean @default(false)
 
   // Acabados y diseño — paredes interiores
-  paredInteriorColor          String // "blanco" | "gris_claro" | "beige" | "madera_clara" | "madera_oscura" | "personalizado"
-  paredInteriorRevestimiento  String // "pintura_lisa" | "panel_madera" | "panel_pvc" | "otro"
+  paredInteriorColor         String? // "blanco" | "gris_claro" | "beige" | "madera_clara" | "madera_oscura" | "personalizado"
+  paredInteriorRevestimiento String? // "pintura_lisa" | "panel_madera" | "panel_pvc" | "otro"
 
   // Acabados y diseño — paredes exteriores
-  paredExteriorColor         String // "blanco" | "gris" | "beige" | "arena" | "negro_mate" | "personalizado"
-  paredExteriorRevestimiento String // "chapa_prepintada" | "madera_tratada" | "simil_madera" | "otro"
+  paredExteriorColor         String? // "blanco" | "gris" | "beige" | "arena" | "negro_mate" | "personalizado"
+  paredExteriorRevestimiento String? // "chapa_prepintada" | "madera_tratada" | "simil_madera" | "otro"
 
   // Acabados y diseño — baño
-  banoRevestimiento    String // "ceramico_blanco" | "ceramico_gris" | "marmol_sintetico" | "madera_pvc" | "otro"
-  banoColorSanitarios  String // "blanco" | "negro" | "cromo"
+  banoRevestimiento   String? // "ceramico_blanco" | "ceramico_gris" | "marmol_sintetico" | "madera_pvc" | "otro"
+  banoColorSanitarios String? // "blanco" | "negro" | "cromo"
 
   // Acabados y diseño — cocina
-  cocinaRevestimiento  String // "ceramico_blanco" | "ceramico_gris" | "acero_inoxidable" | "otro"
-  cocinaColorMuebles   String // "blanco" | "gris" | "madera_clara" | "madera_oscura"
+  cocinaRevestimiento String? // "ceramico_blanco" | "ceramico_gris" | "acero_inoxidable" | "otro"
+  cocinaColorMuebles  String? // "blanco" | "gris" | "madera_clara" | "madera_oscura"
 
   // Puertas y aberturas — puerta principal
-  puertaPrincipalTipo     String // "placa_simple" | "placa_vidrio_lateral" | "doble_hoja" | "corrediza"
-  puertaPrincipalMaterial String // "acero_pintado" | "aluminio" | "pvc"
-  puertaPrincipalColor    String // "blanco" | "negro" | "gris" | "igual_exterior"
+  puertaPrincipalTipo     String? // "placa_simple" | "placa_vidrio_lateral" | "doble_hoja" | "corrediza"
+  puertaPrincipalMaterial String? // "acero_pintado" | "aluminio" | "pvc"
+  puertaPrincipalColor    String? // "blanco" | "negro" | "gris" | "igual_exterior"
 
   // Puertas y aberturas — puerta interior
-  puertaInteriorTipo  String // "placa" | "corrediza" | "sin_puerta"
-  puertaInteriorColor String // "igual_paredes" | "blanco" | "natural_madera"
+  puertaInteriorTipo  String? // "placa" | "corrediza" | "sin_puerta"
+  puertaInteriorColor String? // "igual_paredes" | "blanco" | "natural_madera"
 
   // Puertas y aberturas — ventanas (todas incluyen DVH y mosquitero)
-  ventanaTipo String // "tipo_a" | "tipo_b" | "tipo_c"
+  ventanaTipo String? // "tipo_a" | "tipo_b" | "tipo_c"
 
-  estado String @default("enviado") // "enviado" | "revisado" | "confirmado"
+  estado String @default("pendiente") // "pendiente" | "enviado" | "revisado" | "confirmado"
 
   @@map("configuraciones_pedido")
 }

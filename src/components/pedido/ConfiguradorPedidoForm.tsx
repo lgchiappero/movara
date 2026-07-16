@@ -62,9 +62,15 @@ import {
   ventanaTipoLabelsEs,
 } from "@/lib/pdf/pedido-labels-es";
 
-const DEFAULT_VALUES: PedidoInput = {
-  clienteNombre: "",
-  clienteWhatsapp: "",
+function getDefaultValues(
+  configId: string,
+  initialNombre: string,
+  initialWhatsapp: string
+): PedidoInput {
+  return {
+  configId,
+  clienteNombre: initialNombre,
+  clienteWhatsapp: initialWhatsapp,
   clienteEmail: "",
   modelo: "20ft",
   zonaClimatica: "templada",
@@ -100,7 +106,8 @@ const DEFAULT_VALUES: PedidoInput = {
   puertaInteriorTipo: "placa",
   puertaInteriorColor: "blanco",
   ventanaTipo: "tipo_a",
-};
+  };
+}
 
 function base64ToBlob(base64: string, type: string): Blob {
   const bytes = atob(base64);
@@ -132,8 +139,20 @@ const selectClass =
 
 const checkboxRowClass = "flex items-center gap-2.5 text-sm text-[#2F2F2F]";
 
-export default function ConfiguradorPedidoForm() {
-  const [form, setForm] = useState<PedidoInput>(DEFAULT_VALUES);
+type Props = {
+  configId: string;
+  initialNombre?: string;
+  initialWhatsapp?: string;
+};
+
+export default function ConfiguradorPedidoForm({
+  configId,
+  initialNombre = "",
+  initialWhatsapp = "",
+}: Props) {
+  const [form, setForm] = useState<PedidoInput>(() =>
+    getDefaultValues(configId, initialNombre, initialWhatsapp)
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -204,12 +223,12 @@ export default function ConfiguradorPedidoForm() {
       <div className="max-w-lg mx-auto px-6 py-16 text-center">
         <div className="bg-[#2F2F2F] rounded-2xl p-8">
           <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-3">
-            Configuración recibida
+            ¡Listo!
           </p>
           <h1 className="text-white text-xl font-bold mb-3">¡Gracias, {form.clienteNombre}!</h1>
           <p className="text-stone-300 text-sm leading-relaxed mb-6">
-            Recibimos tu configuración. Te dejamos una copia del detalle. Luciano se va a
-            contactar para coordinar los próximos pasos.
+            Recibimos tu configuración. Luciano se va a poner en contacto para coordinar los
+            próximos pasos.
           </p>
           <button
             type="button"
@@ -270,7 +289,7 @@ export default function ConfiguradorPedidoForm() {
       </SectionCard>
 
       <SectionCard title="Modelo y zona">
-        <Field label="Modelo">
+        <Field label="Modelo de tu MOVARA">
           <select
             className={selectClass}
             value={form.modelo}
@@ -283,7 +302,7 @@ export default function ConfiguradorPedidoForm() {
             ))}
           </select>
         </Field>
-        <Field label="Zona climática de instalación">
+        <Field label="¿En qué zona lo vas a instalar?">
           <select
             className={selectClass}
             value={form.zonaClimatica}
@@ -362,7 +381,7 @@ export default function ConfiguradorPedidoForm() {
             checked={form.cocinaExtractor}
             onChange={(e) => update("cocinaExtractor", e.target.checked)}
           />
-          Extractor de olores
+          Extractor de cocina
         </label>
         <label className={checkboxRowClass}>
           <input
@@ -378,7 +397,7 @@ export default function ConfiguradorPedidoForm() {
             checked={form.cocinaVentana}
             onChange={(e) => update("cocinaVentana", e.target.checked)}
           />
-          Ventana cerca de la zona de cocción
+          Ventana cerca de la cocción
         </label>
       </SectionCard>
 
@@ -389,7 +408,7 @@ export default function ConfiguradorPedidoForm() {
             checked={form.aberturaRejas}
             onChange={(e) => update("aberturaRejas", e.target.checked)}
           />
-          Rejas de seguridad
+          Rejas
         </label>
         <label className={checkboxRowClass}>
           <input
@@ -405,7 +424,7 @@ export default function ConfiguradorPedidoForm() {
             checked={form.aberturaCortinas}
             onChange={(e) => update("aberturaCortinas", e.target.checked)}
           />
-          Cortinas incluidas
+          Cortinas
         </label>
       </SectionCard>
 
@@ -781,7 +800,7 @@ export default function ConfiguradorPedidoForm() {
         disabled={submitting}
         className="w-full py-4 bg-sage-500 hover:bg-sage-600 disabled:opacity-60 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
       >
-        {submitting ? "Enviando..." : "Enviar configuración"}
+        {submitting ? "Enviando..." : "Completar mi pedido"}
       </button>
     </form>
   );

@@ -30,8 +30,8 @@ export const banoDuchaLabels: Record<PedidoInput["banoDucha"], string> = {
 };
 
 export const cocinaTipoLabels: Record<PedidoInput["cocinaTipo"], string> = {
-  vitroceramica: "Ceramic cooktop",
-  espacio_gas: "Gas cooking space",
+  vitroceramica: "Built-in ceramic hob",
+  espacio_gas: "Space prepared for gas cooking",
 };
 
 export const lavarropaUbicacionLabels: Record<
@@ -44,20 +44,20 @@ export const lavarropaUbicacionLabels: Record<
 };
 
 export const energiaSolarLabels: Record<PedidoInput["energiaSolar"], string> = {
-  sin: "None",
-  preinstalacion: "Pre-installation only",
-  kit_incluido: "Kit included",
+  sin: "No solar installation",
+  preinstalacion: "Solar pre-installation",
+  kit_incluido: "Solar panel kit included",
 };
 
 export const calefonLabels: Record<PedidoInput["calefon"], string> = {
   sin: "None",
-  electrico: "Electric water heater",
+  electrico: "Electric water heater, factory installed",
 };
 
 export const galeriaLabels: Record<PedidoInput["galeria"], string> = {
-  sin: "None",
-  balcon_techo: "Balcony with roof",
-  galeria_perimetral: "Perimeter gallery",
+  sin: "No balcony or gallery",
+  balcon_techo: "Covered balcony",
+  galeria_perimetral: "Full perimeter gallery",
 };
 
 export function yesNo(value: boolean): string {

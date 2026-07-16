@@ -26,25 +26,28 @@ import {
   ventanaTipoLabels,
   yesNo,
 } from "@/lib/pdf/pedido-labels";
+import { MODEL_CODES } from "@/lib/pdf/model-codes";
 
-export type PedidoSpecSection = {
+export type SupplierSpecLine = { type: "line"; label: string; value: string };
+export type SupplierSpecGroup = {
+  type: "group";
   title: string;
   rows: { label: string; value: string }[];
   note?: string;
 };
+export type SupplierSpecItem = SupplierSpecLine | SupplierSpecGroup;
 
-export function buildPedidoSpecSections(data: PedidoInput): PedidoSpecSection[] {
+export function buildSupplierSpecItems(data: PedidoInput): SupplierSpecItem[] {
   return [
     {
-      title: "1. MODEL",
-      rows: [{ label: "Model", value: modeloLabels[data.modelo] }],
+      type: "line",
+      label: "MODEL",
+      value: `${data.modelo} (ref. code: ${MODEL_CODES[data.modelo]})`,
     },
+    { type: "line", label: "CLIMATE ZONE", value: zonaClimaticaLabels[data.zonaClimatica] },
     {
-      title: "2. INSTALLATION CLIMATE ZONE",
-      rows: [{ label: "Climate zone", value: zonaClimaticaLabels[data.zonaClimatica] }],
-    },
-    {
-      title: "3. BATHROOM CONFIGURATION",
+      type: "group",
+      title: "BATHROOM",
       rows: [
         { label: "Toilet", value: banoInodoroLabels[data.banoInodoro] },
         { label: "Mirror", value: banoEspejoLabels[data.banoEspejo] },
@@ -52,27 +55,30 @@ export function buildPedidoSpecSections(data: PedidoInput): PedidoSpecSection[] 
       ],
     },
     {
-      title: "4. KITCHEN CONFIGURATION",
+      type: "group",
+      title: "KITCHEN",
       rows: [
-        { label: "Cooking setup", value: cocinaTipoLabels[data.cocinaTipo] },
+        { label: "Cooking", value: cocinaTipoLabels[data.cocinaTipo] },
         { label: "Extractor hood", value: yesNo(data.cocinaExtractor) },
         { label: "Upper cabinets", value: yesNo(data.cocinaAlacena) },
         { label: "Window near cooking area", value: yesNo(data.cocinaVentana) },
       ],
     },
     {
-      title: "5. OPENINGS",
+      type: "group",
+      title: "OPENINGS",
       rows: [
         { label: "Security bars", value: yesNo(data.aberturaRejas) },
         { label: "Mosquito nets", value: yesNo(data.aberturaMosquitero) },
-        { label: "Curtains included", value: yesNo(data.aberturaCortinas) },
+        { label: "Curtains", value: yesNo(data.aberturaCortinas) },
       ],
     },
     {
-      title: "6. LAUNDRY / ENERGY / COMFORT",
+      type: "group",
+      title: "LAUNDRY / ENERGY / COMFORT",
       rows: [
         {
-          label: "Washing machine space",
+          label: "Washing machine",
           value: data.lavarropaIncluye
             ? `Yes — ${lavarropaUbicacionLabels[data.lavarropaUbicacion!]}`
             : "No",
@@ -82,11 +88,13 @@ export function buildPedidoSpecSections(data: PedidoInput): PedidoSpecSection[] 
       ],
     },
     {
-      title: "7. EXTERIOR / BALCONY",
-      rows: [{ label: "Configuration", value: galeriaLabels[data.galeria] }],
+      type: "group",
+      title: "EXTERIOR",
+      rows: [{ label: "Balcony/gallery", value: galeriaLabels[data.galeria] }],
     },
     {
-      title: "8. THERMAL EFFICIENCY UPGRADES",
+      type: "group",
+      title: "THERMAL UPGRADES",
       rows: [
         { label: "100mm wall panels", value: yesNo(data.mejoraParedes100) },
         { label: "Triple glazing", value: yesNo(data.mejoraTripleVidrio) },
@@ -94,7 +102,8 @@ export function buildPedidoSpecSections(data: PedidoInput): PedidoSpecSection[] 
       ],
     },
     {
-      title: "9. FINISHES & DESIGN",
+      type: "group",
+      title: "FINISHES & DESIGN",
       rows: [
         { label: "Interior wall color", value: paredInteriorColorLabels[data.paredInteriorColor] },
         {
@@ -107,13 +116,17 @@ export function buildPedidoSpecSections(data: PedidoInput): PedidoSpecSection[] 
           value: paredExteriorRevestimientoLabels[data.paredExteriorRevestimiento],
         },
         { label: "Bathroom wall cladding", value: banoRevestimientoLabels[data.banoRevestimiento] },
-        { label: "Bathroom fixtures color", value: banoColorSanitariosLabels[data.banoColorSanitarios] },
+        {
+          label: "Bathroom fixtures color",
+          value: banoColorSanitariosLabels[data.banoColorSanitarios],
+        },
         { label: "Kitchen wall cladding", value: cocinaRevestimientoLabels[data.cocinaRevestimiento] },
         { label: "Kitchen cabinets color", value: cocinaColorMueblesLabels[data.cocinaColorMuebles] },
       ],
     },
     {
-      title: "10. DOORS & OPENINGS",
+      type: "group",
+      title: "DOORS & OPENINGS",
       rows: [
         { label: "Main door type", value: puertaPrincipalTipoLabels[data.puertaPrincipalTipo] },
         {
@@ -128,25 +141,4 @@ export function buildPedidoSpecSections(data: PedidoInput): PedidoSpecSection[] 
       note: "All window types include double glazing (DVH) and mosquito net.",
     },
   ];
-}
-
-export function buildPedidoSpecText(
-  data: PedidoInput,
-  meta: { fecha: string; clienteNombre: string; clienteWhatsapp: string }
-): string {
-  const sections = buildPedidoSpecSections(data);
-  const body = sections
-    .map((s) => {
-      const rows = s.rows.map((r) => `   - ${r.label}: ${r.value}`).join("\n");
-      const note = s.note ? `\n   Note: ${s.note}` : "";
-      return `${s.title}\n${rows}${note}`;
-    })
-    .join("\n\n");
-
-  return `MOVARA ESPACIOS MODULARES — PURCHASE ORDER SPEC
-Date: ${meta.fecha}
-Client: ${meta.clienteNombre}
-Contact: ${meta.clienteWhatsapp}
-
-${body}`;
 }

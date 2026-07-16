@@ -3,16 +3,16 @@ import type { PedidoInput } from "@/lib/validators/pedido";
 // Etiquetas en español — compartidas entre el formulario UI y el PDF/comprobante del cliente.
 
 export const modeloLabelsEs: Record<PedidoInput["modelo"], string> = {
-  "10ft": "10ft (18m²)",
-  "20ft": "20ft (37m²)",
-  "40ft": "40ft (74m²)",
+  "10ft": "10ft — 18 m²",
+  "20ft": "20ft — 37 m²",
+  "40ft": "40ft — 74 m²",
 };
 
 export const zonaClimaticaLabelsEs: Record<PedidoInput["zonaClimatica"], string> = {
-  templada: "Templada",
-  frio_intenso: "Frío intenso",
-  calor_extremo: "Calor extremo",
-  humedad_alta: "Humedad alta",
+  templada: "Zona templada (centro del país)",
+  frio_intenso: "Frío intenso (Patagonia, cordillera)",
+  calor_extremo: "Calor extremo (norte, Chaco)",
+  humedad_alta: "Humedad alta (litoral, Mesopotamia)",
 };
 
 export const banoInodoroLabelsEs: Record<PedidoInput["banoInodoro"], string> = {
@@ -31,8 +31,8 @@ export const banoDuchaLabelsEs: Record<PedidoInput["banoDucha"], string> = {
 };
 
 export const cocinaTipoLabelsEs: Record<PedidoInput["cocinaTipo"], string> = {
-  vitroceramica: "Vitrocerámica",
-  espacio_gas: "Espacio para garrafa/gas",
+  vitroceramica: "Vitrocerámica incluida",
+  espacio_gas: "Espacio preparado para cocina a gas",
 };
 
 export const lavarropaUbicacionLabelsEs: Record<
@@ -45,20 +45,20 @@ export const lavarropaUbicacionLabelsEs: Record<
 };
 
 export const energiaSolarLabelsEs: Record<PedidoInput["energiaSolar"], string> = {
-  sin: "Sin energía solar",
-  preinstalacion: "Solo preinstalación",
-  kit_incluido: "Kit incluido",
+  sin: "Sin instalación solar",
+  preinstalacion: "Pre-instalación solar",
+  kit_incluido: "Kit de paneles incluido",
 };
 
 export const calefonLabelsEs: Record<PedidoInput["calefon"], string> = {
   sin: "Sin calefón",
-  electrico: "Calefón eléctrico",
+  electrico: "Calefón eléctrico de fábrica",
 };
 
 export const galeriaLabelsEs: Record<PedidoInput["galeria"], string> = {
-  sin: "Sin galería",
+  sin: "Sin galería ni balcón",
   balcon_techo: "Balcón con techo",
-  galeria_perimetral: "Galería perimetral",
+  galeria_perimetral: "Galería perimetral con techo",
 };
 
 export const paredInteriorColorLabelsEs: Record<PedidoInput["paredInteriorColor"], string> = {

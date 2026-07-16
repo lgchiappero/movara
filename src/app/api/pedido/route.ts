@@ -3,9 +3,8 @@ import { Resend } from "resend";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { db } from "@/lib/db";
 import { pedidoSchema } from "@/lib/validators/pedido";
-import { PedidoDocument } from "@/lib/pdf/PedidoDocument";
-import { PedidoDocumentEs } from "@/lib/pdf/PedidoDocumentEs";
-import { modeloLabels } from "@/lib/pdf/pedido-labels";
+import { PedidoDocumentBilingual } from "@/lib/pdf/PedidoDocumentBilingual";
+import { modeloLabelsEs } from "@/lib/pdf/pedido-labels-es";
 import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
 
 async function sendPedidoEmail(pdfBuffer: Buffer, clienteNombre: string, modelo: string) {
@@ -20,17 +19,17 @@ async function sendPedidoEmail(pdfBuffer: Buffer, clienteNombre: string, modelo:
     await resend.emails.send({
       from: fromEmail,
       to: contactEmail,
-      subject: `Nuevo pedido configurado — ${clienteNombre} — ${modelo}`,
+      subject: `Nueva configuración — ${clienteNombre} — ${modelo}`,
       html: `<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="utf-8"></head>
 <body style="margin:0;padding:20px;background:#f4f4f4;font-family:Arial,sans-serif;">
   <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
     <div style="background:#2F2F2F;padding:20px 24px;">
-      <p style="margin:0;color:#D4B06A;font-size:18px;font-weight:bold;">📦 Nuevo pedido configurado</p>
+      <p style="margin:0;color:#D4B06A;font-size:18px;font-weight:bold;">📦 Nueva configuración</p>
     </div>
     <div style="padding:24px;">
-      <p style="color:#555;line-height:1.6;">${clienteNombre} completó el configurador de pedido para un módulo ${modelo}. El detalle técnico completo está en el PDF adjunto.</p>
+      <p style="color:#555;line-height:1.6;">${clienteNombre} completó el configurador de pedido para un módulo ${modelo}. El detalle completo (resumen para el cliente + spec técnica para el proveedor) está en el PDF adjunto.</p>
     </div>
   </div>
 </body>
@@ -66,12 +65,14 @@ export async function POST(req: NextRequest) {
     const data = parsed.data;
 
     try {
-      await db.configuracionPedido.create({
+      const result = await db.configuracionPedido.updateMany({
+        where: { id: data.configId, estado: "pendiente" },
         data: {
           leadId: data.leadId || null,
           clienteNombre: data.clienteNombre,
           clienteEmail: data.clienteEmail || null,
           clienteWhatsapp: data.clienteWhatsapp,
+          estado: "enviado",
           modelo: data.modelo,
           zonaClimatica: data.zonaClimatica,
           banoInodoro: data.banoInodoro,
@@ -108,33 +109,37 @@ export async function POST(req: NextRequest) {
           ventanaTipo: data.ventanaTipo,
         },
       });
+
+      if (result.count === 0) {
+        return NextResponse.json(
+          { error: "Esta configuración ya fue enviada o no existe" },
+          { status: 409 }
+        );
+      }
     } catch (dbErr) {
       console.error("[pedido] DB error:", dbErr);
       return NextResponse.json({ error: "Error al guardar el pedido" }, { status: 500 });
     }
 
-    const fechaEn = new Date().toLocaleDateString("en-US", {
+    const now = new Date();
+    const fechaEs = now.toLocaleDateString("es-AR", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
-    const fechaEs = new Date().toLocaleDateString("es-AR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const fechaIso = now.toISOString().slice(0, 10);
 
-    // PDF en inglés: va por email al proveedor. PDF en español: lo ve/descarga el cliente.
-    const [pdfBufferEn, pdfBufferEs] = await Promise.all([
-      renderToBuffer(PedidoDocument({ data, fecha: fechaEn })),
-      renderToBuffer(PedidoDocumentEs({ data, fecha: fechaEs })),
-    ]);
+    // Un solo PDF bilingüe: resumen en español para el cliente + spec técnica
+    // en inglés para el proveedor, en el mismo documento.
+    const pdfBuffer = await renderToBuffer(
+      PedidoDocumentBilingual({ data, fechaEs, fechaIso })
+    );
 
-    await sendPedidoEmail(pdfBufferEn, data.clienteNombre, modeloLabels[data.modelo]);
+    await sendPedidoEmail(pdfBuffer, data.clienteNombre, modeloLabelsEs[data.modelo]);
 
     return NextResponse.json({
       ok: true,
-      pdfBase64: pdfBufferEs.toString("base64"),
+      pdfBase64: pdfBuffer.toString("base64"),
     });
   } catch (err) {
     console.error("[pedido]", err);

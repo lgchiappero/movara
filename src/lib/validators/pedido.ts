@@ -92,6 +92,9 @@ export const ventanaTipoOptions = ["tipo_a", "tipo_b", "tipo_c"] as const;
 // ─── Schema ────────────────────────────────────────────────
 
 const baseSchema = z.object({
+  // Registro pendiente creado desde /admin/configuraciones al que este envío corresponde
+  configId: z.string().min(1),
+
   // Contacto
   leadId: z.string().cuid().optional(),
   clienteNombre: nombreSchema,
