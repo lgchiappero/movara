@@ -5,6 +5,7 @@ export const structure: StructureResolver = (S) =>
     .title('MOVARA CMS')
     .items([
       S.listItem()
+        .id('modelos')
         .title('Modelos')
         .child(S.documentTypeList('modelo').title('Modelos')),
 
