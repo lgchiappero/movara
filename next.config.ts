@@ -7,7 +7,7 @@ function buildCsp(frameAncestors: string): string {
   return [
     "default-src 'self'",
     // Next.js requires unsafe-eval/unsafe-inline for client-side hydration
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com",
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com https://core.sanity-cdn.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
