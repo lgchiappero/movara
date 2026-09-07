@@ -1,21 +1,28 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getAdminUser } from "@/lib/admin/current-user";
+import { isAllowedForRole } from "@/lib/admin/auth-users";
+import { ADMIN_NAV_ITEMS } from "@/lib/admin/nav-items";
+import AdminShell from "@/components/admin/AdminShell";
 
 export const metadata: Metadata = {
   title: "Admin — MOVARA",
   robots: { index: false, follow: false },
 };
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await getAdminUser();
+  if (!session) {
+    // src/proxy.ts ya bloquea todo /admin/:path* sin credenciales válidas —
+    // esto es defensivo por si alguna vez queda una ruta sin cubrir.
+    redirect("/");
+  }
+
+  const navItems = ADMIN_NAV_ITEMS.filter((item) => isAllowedForRole(session.rol, item.href));
+
   return (
-    <div className="min-h-screen bg-[#F9F5EE]">
-      <header className="py-6 flex justify-center">
-        <Link href="/admin/configuraciones">
-          <Image src="/Logo.jpeg" alt="MOVARA" width={40} height={40} className="rounded-lg" />
-        </Link>
-      </header>
+    <AdminShell navItems={navItems} user={session.user} rol={session.rol}>
       {children}
-    </div>
+    </AdminShell>
   );
 }
