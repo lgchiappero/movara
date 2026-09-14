@@ -48,7 +48,7 @@ export const PRODUCTO_SECCIONES: ProductoSeccion[] = [
     beneficios: [
       "No se oxida, no se pudre, no la comen las termitas",
       "No necesita mantenimiento",
-      "Garantía de fábrica de 3 años sobre la estructura",
+      "Garantía MOVARA de 12 meses sobre la estructura",
     ],
     grupos: [],
   },
@@ -130,7 +130,7 @@ export const PRODUCTO_SECCIONES: ProductoSeccion[] = [
     numero: "09",
     titulo: "La garantía",
     descripcion:
-      "3 años de garantía de fábrica sobre la estructura y los componentes principales. Por escrito, desde el primer día.",
+      "12 meses de garantía MOVARA sobre la estructura y los componentes principales. Por escrito, desde el primer día.",
     beneficios: [],
     grupos: [],
   },

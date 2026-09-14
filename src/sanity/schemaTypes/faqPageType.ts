@@ -331,7 +331,7 @@ export const faqPageType = defineType({
             {
               pregunta: '¿Cuánto dura una MOVARA comparada con una casa tradicional?',
               respuesta:
-                'Una casa de material bien construida dura décadas. Una mal construida se fisura, humedece y deteriora en pocos años.\n\nUna MOVARA tiene garantía de 3 años de fábrica y una vida útil estimada de más de 30 años con mantenimiento básico. La estructura de acero galvanizado no se oxida ni se degrada. Los paneles de lana de roca no se pudren ni pierden propiedades con el tiempo.\n\nLa diferencia clave: con MOVARA sabés exactamente lo que recibís antes de pagar. Con la construcción tradicional, no.',
+                'Una casa de material bien construida dura décadas. Una mal construida se fisura, humedece y deteriora en pocos años.\n\nUna MOVARA tiene garantía MOVARA de 12 meses y una vida útil estimada de más de 30 años con mantenimiento básico. La estructura de acero galvanizado no se oxida ni se degrada. Los paneles de lana de roca no se pudren ni pierden propiedades con el tiempo.\n\nLa diferencia clave: con MOVARA sabés exactamente lo que recibís antes de pagar. Con la construcción tradicional, no.',
             },
             {
               pregunta: '¿El techo de MOVARA es mejor que el techo tradicional?',

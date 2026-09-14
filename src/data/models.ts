@@ -78,7 +78,7 @@ const SPECS_FAMILIAR: ModelSpecs = {
   instalaciones: "Eléctrica, sanitaria, gas natural/GLP",
   terminaciones: "Piso vinílico SPC, pintura látex premium",
   tiempo: "60–90 días desde aprobación",
-  garantia: "5 años estructura · 2 años cubierta",
+  garantia: "12 meses de garantía MOVARA",
 };
 
 const SPECS_TURISTICO: ModelSpecs = {
@@ -89,7 +89,7 @@ const SPECS_TURISTICO: ModelSpecs = {
   instalaciones: "Eléctrica, sanitaria, split de calefacción",
   terminaciones: "Deck de madera, revestimiento de madera terciada",
   tiempo: "45–75 días desde aprobación",
-  garantia: "5 años estructura · 2 años cubierta",
+  garantia: "12 meses de garantía MOVARA",
 };
 
 const SPECS_OFICINA: ModelSpecs = {
@@ -100,7 +100,7 @@ const SPECS_OFICINA: ModelSpecs = {
   instalaciones: "Eléctrica trifásica, datos CAT6, split inverter",
   terminaciones: "Piso flotante laminado, pintura antihumedad",
   tiempo: "30–60 días desde aprobación",
-  garantia: "5 años estructura · 2 años cubierta",
+  garantia: "12 meses de garantía MOVARA",
 };
 
 export const MODELS: ProductModel[] = [

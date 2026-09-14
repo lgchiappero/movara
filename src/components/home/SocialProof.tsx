@@ -2,7 +2,7 @@ const STATS = [
   { value: "+50",    label: "Casas entregadas" },
   { value: "+8",     label: "Años de experiencia" },
   { value: "100%",   label: "Fabricación argentina" },
-  { value: "5 años", label: "Garantía estructural" },
+  { value: "12 meses", label: "Garantía MOVARA" },
 ];
 
 export default function SocialProof() {

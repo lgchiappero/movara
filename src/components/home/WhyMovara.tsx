@@ -21,7 +21,7 @@ const FALLBACK_PILLARS = [
     icon: <ShieldIcon />,
     title: "Soporte post-venta",
     description:
-      "5 años de garantía estructural. Atención permanente para consultas, reparaciones o ampliaciones.",
+      "12 meses de garantía MOVARA. Atención permanente para consultas, reparaciones o ampliaciones.",
   },
 ];
 
