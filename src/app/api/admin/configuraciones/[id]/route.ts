@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { estadoPedidoOptions, type EstadoPedido } from "@/lib/pedido/estado-pedido";
 import { ensureNumeroPedido } from "@/lib/pedido/numero-pedido";
 import { buildEstadoEmail } from "@/lib/email/pedido-estado-email";
+import { calcularGarantiaFechaFin } from "@/lib/pedido/garantia";
 
 const numberOrNull = z.union([z.number(), z.null()]);
 const stringOrNull = z.union([z.string(), z.null()]).transform((v) => (v === "" ? null : v));
@@ -30,6 +31,36 @@ const GestionSchema = z.object({
   costoFlete: numberOrNull,
   costoAduana: numberOrNull,
   costoOtros: numberOrNull,
+
+  // ─── Gestión comercial ────────────────────────────────────
+  vendedorAsignado: stringOrNull,
+  piProveedor: stringOrNull,
+  fechaPIPagado: dateOrNull,
+  montoPI: numberOrNull,
+  // piUrl/comprobantePagoUrl/comprobanteSaldoUrl/seguroUrl/inspeccionUrl/
+  // fotosUrl NO se editan acá — solo los setea el endpoint de documentos al
+  // subir un archivo (ver src/lib/validators/documentos.ts, campoDestino).
+
+  // ─── Logística y aduana ────────────────────────────────────
+  seguroTransporte: z.boolean(),
+  inspeccionFabrica: z.boolean(),
+  fotosDespachadas: z.boolean(),
+  notasDespachador: stringOrNull,
+  gastosDespachante: numberOrNull,
+  impuestosAduana: numberOrNull,
+  gastosPortuarios: numberOrNull,
+
+  // ─── Entrega e instalación ──────────────────────────────────
+  costoGruaDescarga: numberOrNull,
+  costoTransporteLocal: numberOrNull,
+  instalacionFecha: dateOrNull,
+  instalacionNotas: stringOrNull,
+  satisfaccionCliente: stringOrNull,
+
+  // ─── Garantía MOVARA ────────────────────────────────────────
+  garantiaActivada: z.boolean(),
+  garantiaFechaInicio: dateOrNull,
+  // garantiaFechaFin se calcula server-side, no viaja en el input.
 });
 
 export async function PATCH(
@@ -65,6 +96,8 @@ export async function PATCH(
   const margenPorcentaje =
     margenUSD != null && data.precioFinal ? (margenUSD / data.precioFinal) * 100 : null;
 
+  const garantiaFechaFin = calcularGarantiaFechaFin(data.garantiaFechaInicio);
+
   try {
     const previous = await db.configuracionPedido.findUnique({
       where: { id },
@@ -79,6 +112,7 @@ export async function PATCH(
         costoTotal,
         margenUSD,
         margenPorcentaje,
+        garantiaFechaFin,
       },
     });
 

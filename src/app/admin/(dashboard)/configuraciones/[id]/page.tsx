@@ -6,9 +6,15 @@ import { buildPedidoNarrativeEs } from "@/lib/pdf/pedido-narrative-es";
 import type { PedidoInput } from "@/lib/validators/pedido";
 import { MATERIAL_CATEGORY_GROUPS, findMaterialOption } from "@/data/material-catalog";
 import { estadoPedidoLabels, type EstadoPedido } from "@/lib/pedido/estado-pedido";
+import { getSignedUrl } from "@/lib/admin/storage";
 import GestionPedidoPanel from "@/components/admin/GestionPedidoPanel";
+import DocumentosPedidoSection, { type DocumentoConUrl } from "@/components/admin/DocumentosPedidoSection";
 
 export const dynamic = "force-dynamic";
+
+async function resolveUrl(path: string | null): Promise<string | null> {
+  return path ? getSignedUrl(path) : null;
+}
 
 export default async function ConfiguracionDetailPage({
   params,
@@ -19,6 +25,36 @@ export default async function ConfiguracionDetailPage({
   const config = await db.configuracionPedido.findUnique({ where: { id } });
 
   if (!config) notFound();
+
+  const [vendedores, documentos] = await Promise.all([
+    db.adminUser.findMany({
+      where: { rol: "vendedor", activo: true },
+      select: { email: true, nombre: true },
+      orderBy: { nombre: "asc" },
+    }),
+    db.documentoPedido.findMany({ where: { pedidoId: id }, orderBy: { createdAt: "desc" } }),
+  ]);
+
+  const [piUrl, comprobantePagoUrl, comprobanteSaldoUrl, seguroUrl, inspeccionUrl, fotosUrl, documentosConUrl] =
+    await Promise.all([
+      resolveUrl(config.piUrl),
+      resolveUrl(config.comprobantePagoUrl),
+      resolveUrl(config.comprobanteSaldoUrl),
+      resolveUrl(config.seguroUrl),
+      resolveUrl(config.inspeccionUrl),
+      resolveUrl(config.fotosUrl),
+      Promise.all(
+        documentos.map(async (d): Promise<DocumentoConUrl> => ({
+          id: d.id,
+          tipo: d.tipo,
+          nombre: d.nombre,
+          notas: d.notas,
+          subidoPor: d.subidoPor,
+          createdAt: d.createdAt.toISOString(),
+          signedUrl: await getSignedUrl(d.url),
+        }))
+      ),
+    ]);
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">
@@ -76,7 +112,7 @@ export default async function ConfiguracionDetailPage({
         <MaterialesConImagenes materiales={(config.materiales as Record<string, string | null>) ?? {}} />
       </div>
 
-      <div>
+      <div className="space-y-6">
         <GestionPedidoPanel
           id={id}
           numeroPedido={config.numeroPedido}
@@ -98,8 +134,35 @@ export default async function ConfiguracionDetailPage({
             costoFlete: config.costoFlete,
             costoAduana: config.costoAduana,
             costoOtros: config.costoOtros,
+
+            vendedorAsignado: config.vendedorAsignado,
+            piProveedor: config.piProveedor,
+            fechaPIPagado: config.fechaPIPagado?.toISOString() ?? null,
+            montoPI: config.montoPI,
+
+            seguroTransporte: config.seguroTransporte,
+            inspeccionFabrica: config.inspeccionFabrica,
+            fotosDespachadas: config.fotosDespachadas,
+            notasDespachador: config.notasDespachador,
+            gastosDespachante: config.gastosDespachante,
+            impuestosAduana: config.impuestosAduana,
+            gastosPortuarios: config.gastosPortuarios,
+
+            costoGruaDescarga: config.costoGruaDescarga,
+            costoTransporteLocal: config.costoTransporteLocal,
+            instalacionFecha: config.instalacionFecha?.toISOString() ?? null,
+            instalacionNotas: config.instalacionNotas,
+            satisfaccionCliente: config.satisfaccionCliente,
+
+            garantiaActivada: config.garantiaActivada,
+            garantiaFechaInicio: config.garantiaFechaInicio?.toISOString() ?? null,
+            garantiaFechaFin: config.garantiaFechaFin?.toISOString() ?? null,
           }}
+          documentUrls={{ piUrl, comprobantePagoUrl, comprobanteSaldoUrl, seguroUrl, inspeccionUrl, fotosUrl }}
+          vendedores={vendedores}
         />
+
+        <DocumentosPedidoSection pedidoId={id} documentos={documentosConUrl} />
       </div>
     </div>
   );

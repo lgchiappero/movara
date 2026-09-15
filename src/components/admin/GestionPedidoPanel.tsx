@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { estadoPedidoOptions, estadoPedidoLabels } from "@/lib/pedido/estado-pedido";
+import DocumentUploadField from "@/components/admin/DocumentUploadField";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-sage-500";
 const labelClass = "text-sm font-medium text-[#2F2F2F]";
 const readonlyClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-stone-500 bg-[#F4F4F4]";
+const checkboxRowClass = "flex items-center gap-2 text-sm text-[#2F2F2F]";
 
 type Gestion = {
   estadoPedido: string;
@@ -28,12 +30,48 @@ type Gestion = {
   costoFlete: number | null;
   costoAduana: number | null;
   costoOtros: number | null;
+
+  vendedorAsignado: string | null;
+  piProveedor: string | null;
+  fechaPIPagado: string | null;
+  montoPI: number | null;
+
+  seguroTransporte: boolean;
+  inspeccionFabrica: boolean;
+  fotosDespachadas: boolean;
+  notasDespachador: string | null;
+  gastosDespachante: number | null;
+  impuestosAduana: number | null;
+  gastosPortuarios: number | null;
+
+  costoGruaDescarga: number | null;
+  costoTransporteLocal: number | null;
+  instalacionFecha: string | null;
+  instalacionNotas: string | null;
+  satisfaccionCliente: string | null;
+
+  garantiaActivada: boolean;
+  garantiaFechaInicio: string | null;
+  garantiaFechaFin: string | null;
 };
+
+type DocumentUrls = {
+  piUrl: string | null;
+  comprobantePagoUrl: string | null;
+  comprobanteSaldoUrl: string | null;
+  seguroUrl: string | null;
+  inspeccionUrl: string | null;
+  fotosUrl: string | null;
+};
+
+type Vendedor = { email: string; nombre: string };
 
 type Props = {
   id: string;
   numeroPedido: string | null;
   initial: Gestion;
+  documentUrls: DocumentUrls;
+  vendedores: Vendedor[];
 };
 
 function toDateInput(value: string | null): string {
@@ -44,7 +82,7 @@ function toNumberOrNull(value: string): number | null {
   return value.trim() === "" ? null : Number(value);
 }
 
-export default function GestionPedidoPanel({ id, numeroPedido, initial }: Props) {
+export default function GestionPedidoPanel({ id, numeroPedido, initial, documentUrls, vendedores }: Props) {
   const router = useRouter();
   const [form, setForm] = useState({
     estadoPedido: initial.estadoPedido,
@@ -64,13 +102,35 @@ export default function GestionPedidoPanel({ id, numeroPedido, initial }: Props)
     costoFlete: initial.costoFlete?.toString() ?? "",
     costoAduana: initial.costoAduana?.toString() ?? "",
     costoOtros: initial.costoOtros?.toString() ?? "",
+
+    vendedorAsignado: initial.vendedorAsignado ?? "",
+    piProveedor: initial.piProveedor ?? "",
+    fechaPIPagado: toDateInput(initial.fechaPIPagado),
+    montoPI: initial.montoPI?.toString() ?? "",
+
+    seguroTransporte: initial.seguroTransporte,
+    inspeccionFabrica: initial.inspeccionFabrica,
+    fotosDespachadas: initial.fotosDespachadas,
+    notasDespachador: initial.notasDespachador ?? "",
+    gastosDespachante: initial.gastosDespachante?.toString() ?? "",
+    impuestosAduana: initial.impuestosAduana?.toString() ?? "",
+    gastosPortuarios: initial.gastosPortuarios?.toString() ?? "",
+
+    costoGruaDescarga: initial.costoGruaDescarga?.toString() ?? "",
+    costoTransporteLocal: initial.costoTransporteLocal?.toString() ?? "",
+    instalacionFecha: toDateInput(initial.instalacionFecha),
+    instalacionNotas: initial.instalacionNotas ?? "",
+    satisfaccionCliente: initial.satisfaccionCliente ?? "",
+
+    garantiaActivada: initial.garantiaActivada,
+    garantiaFechaInicio: toDateInput(initial.garantiaFechaInicio),
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [numeroLocal, setNumeroLocal] = useState(numeroPedido);
   const [generandoNumero, setGenerandoNumero] = useState(false);
 
-  function set<K extends keyof typeof form>(key: K, value: string) {
+  function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
@@ -117,6 +177,28 @@ export default function GestionPedidoPanel({ id, numeroPedido, initial }: Props)
           costoFlete,
           costoAduana,
           costoOtros,
+
+          vendedorAsignado: form.vendedorAsignado || null,
+          piProveedor: form.piProveedor || null,
+          fechaPIPagado: form.fechaPIPagado || null,
+          montoPI: toNumberOrNull(form.montoPI),
+
+          seguroTransporte: form.seguroTransporte,
+          inspeccionFabrica: form.inspeccionFabrica,
+          fotosDespachadas: form.fotosDespachadas,
+          notasDespachador: form.notasDespachador || null,
+          gastosDespachante: toNumberOrNull(form.gastosDespachante),
+          impuestosAduana: toNumberOrNull(form.impuestosAduana),
+          gastosPortuarios: toNumberOrNull(form.gastosPortuarios),
+
+          costoGruaDescarga: toNumberOrNull(form.costoGruaDescarga),
+          costoTransporteLocal: toNumberOrNull(form.costoTransporteLocal),
+          instalacionFecha: form.instalacionFecha || null,
+          instalacionNotas: form.instalacionNotas || null,
+          satisfaccionCliente: form.satisfaccionCliente || null,
+
+          garantiaActivada: form.garantiaActivada,
+          garantiaFechaInicio: form.garantiaFechaInicio || null,
         }),
       });
       if (!res.ok) throw new Error("request-failed");
@@ -320,6 +402,297 @@ export default function GestionPedidoPanel({ id, numeroPedido, initial }: Props)
           >
             Generar PDF proveedor
           </a>
+        </div>
+      </div>
+
+      {/* ─── Gestión comercial ─────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600">
+          Gestión comercial
+        </h2>
+
+        <label className="block space-y-1.5">
+          <span className={labelClass}>Vendedor asignado</span>
+          <select
+            className={inputClass}
+            value={form.vendedorAsignado}
+            onChange={(e) => set("vendedorAsignado", e.target.value)}
+          >
+            <option value="">Sin asignar</option>
+            {vendedores.map((v) => (
+              <option key={v.email} value={v.email}>
+                {v.nombre} — {v.email}
+              </option>
+            ))}
+            {form.vendedorAsignado && !vendedores.some((v) => v.email === form.vendedorAsignado) && (
+              <option value={form.vendedorAsignado}>{form.vendedorAsignado} (inactivo)</option>
+            )}
+          </select>
+        </label>
+
+        <div className="grid grid-cols-2 gap-4">
+          <label className="block space-y-1.5">
+            <span className={labelClass}>Número de PI del proveedor</span>
+            <input
+              className={inputClass}
+              value={form.piProveedor}
+              onChange={(e) => set("piProveedor", e.target.value)}
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className={labelClass}>Monto del PI (USD)</span>
+            <input
+              type="number"
+              step="0.01"
+              className={inputClass}
+              value={form.montoPI}
+              onChange={(e) => set("montoPI", e.target.value)}
+            />
+          </label>
+        </div>
+        <label className="block space-y-1.5">
+          <span className={labelClass}>Fecha de pago del PI</span>
+          <input
+            type="date"
+            className={inputClass}
+            value={form.fechaPIPagado}
+            onChange={(e) => set("fechaPIPagado", e.target.value)}
+          />
+        </label>
+
+        <DocumentUploadField
+          pedidoId={id}
+          tipo="pi_proveedor"
+          campo="piUrl"
+          label="Documento del PI"
+          currentUrl={documentUrls.piUrl}
+          onUploaded={() => router.refresh()}
+        />
+      </div>
+
+      {/* ─── Comprobantes de pago ──────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600">
+          Comprobantes de pago
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <DocumentUploadField
+            pedidoId={id}
+            tipo="comprobante_pago"
+            campo="comprobantePagoUrl"
+            label="Comprobante de anticipo"
+            currentUrl={documentUrls.comprobantePagoUrl}
+            onUploaded={() => router.refresh()}
+          />
+          <DocumentUploadField
+            pedidoId={id}
+            tipo="comprobante_pago"
+            campo="comprobanteSaldoUrl"
+            label="Comprobante de saldo"
+            currentUrl={documentUrls.comprobanteSaldoUrl}
+            onUploaded={() => router.refresh()}
+          />
+        </div>
+      </div>
+
+      {/* ─── Logística y aduana ────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600">
+          Logística y aduana
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label className={checkboxRowClass}>
+              <input
+                type="checkbox"
+                checked={form.seguroTransporte}
+                onChange={(e) => set("seguroTransporte", e.target.checked)}
+              />
+              Seguro de transporte
+            </label>
+            <DocumentUploadField
+              pedidoId={id}
+              tipo="seguro"
+              campo="seguroUrl"
+              label="Póliza"
+              currentUrl={documentUrls.seguroUrl}
+              onUploaded={() => router.refresh()}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className={checkboxRowClass}>
+              <input
+                type="checkbox"
+                checked={form.inspeccionFabrica}
+                onChange={(e) => set("inspeccionFabrica", e.target.checked)}
+              />
+              Inspección en fábrica
+            </label>
+            <DocumentUploadField
+              pedidoId={id}
+              tipo="inspeccion"
+              campo="inspeccionUrl"
+              label="Informe"
+              currentUrl={documentUrls.inspeccionUrl}
+              onUploaded={() => router.refresh()}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className={checkboxRowClass}>
+              <input
+                type="checkbox"
+                checked={form.fotosDespachadas}
+                onChange={(e) => set("fotosDespachadas", e.target.checked)}
+              />
+              Fotos de despacho
+            </label>
+            <DocumentUploadField
+              pedidoId={id}
+              tipo="otro"
+              campo="fotosUrl"
+              label="Fotos"
+              currentUrl={documentUrls.fotosUrl}
+              onUploaded={() => router.refresh()}
+            />
+          </div>
+        </div>
+
+        <label className="block space-y-1.5">
+          <span className={labelClass}>Notas del despachante</span>
+          <textarea
+            className={inputClass}
+            rows={2}
+            value={form.notasDespachador}
+            onChange={(e) => set("notasDespachador", e.target.value)}
+          />
+        </label>
+
+        <div className="grid grid-cols-3 gap-4">
+          <label className="block space-y-1.5">
+            <span className={labelClass}>Gastos despachante (USD)</span>
+            <input
+              type="number"
+              step="0.01"
+              className={inputClass}
+              value={form.gastosDespachante}
+              onChange={(e) => set("gastosDespachante", e.target.value)}
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className={labelClass}>Impuestos aduana (USD)</span>
+            <input
+              type="number"
+              step="0.01"
+              className={inputClass}
+              value={form.impuestosAduana}
+              onChange={(e) => set("impuestosAduana", e.target.value)}
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className={labelClass}>Gastos portuarios (USD)</span>
+            <input
+              type="number"
+              step="0.01"
+              className={inputClass}
+              value={form.gastosPortuarios}
+              onChange={(e) => set("gastosPortuarios", e.target.value)}
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* ─── Entrega e instalación ─────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600">
+          Entrega e instalación
+        </h2>
+
+        <div className="grid grid-cols-2 gap-4">
+          <label className="block space-y-1.5">
+            <span className={labelClass}>Costo grúa descarga (USD)</span>
+            <input
+              type="number"
+              step="0.01"
+              className={inputClass}
+              value={form.costoGruaDescarga}
+              onChange={(e) => set("costoGruaDescarga", e.target.value)}
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className={labelClass}>Costo transporte local (USD)</span>
+            <input
+              type="number"
+              step="0.01"
+              className={inputClass}
+              value={form.costoTransporteLocal}
+              onChange={(e) => set("costoTransporteLocal", e.target.value)}
+            />
+          </label>
+        </div>
+
+        <label className="block space-y-1.5">
+          <span className={labelClass}>Fecha de instalación</span>
+          <input
+            type="date"
+            className={inputClass}
+            value={form.instalacionFecha}
+            onChange={(e) => set("instalacionFecha", e.target.value)}
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className={labelClass}>Notas de instalación</span>
+          <textarea
+            className={inputClass}
+            rows={2}
+            value={form.instalacionNotas}
+            onChange={(e) => set("instalacionNotas", e.target.value)}
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className={labelClass}>Feedback del cliente</span>
+          <textarea
+            className={inputClass}
+            rows={2}
+            value={form.satisfaccionCliente}
+            onChange={(e) => set("satisfaccionCliente", e.target.value)}
+          />
+        </label>
+      </div>
+
+      {/* ─── Garantía ───────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600">
+          Garantía MOVARA (12 meses)
+        </h2>
+
+        <label className={checkboxRowClass}>
+          <input
+            type="checkbox"
+            checked={form.garantiaActivada}
+            onChange={(e) => set("garantiaActivada", e.target.checked)}
+          />
+          Garantía activada
+        </label>
+
+        <div className="grid grid-cols-2 gap-4">
+          <label className="block space-y-1.5">
+            <span className={labelClass}>Fecha inicio</span>
+            <input
+              type="date"
+              className={inputClass}
+              value={form.garantiaFechaInicio}
+              onChange={(e) => set("garantiaFechaInicio", e.target.value)}
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className={labelClass}>Fecha fin (calculada)</span>
+            <p className={readonlyClass}>
+              {initial.garantiaFechaFin
+                ? new Date(initial.garantiaFechaFin).toLocaleDateString("es-AR", { timeZone: "UTC" })
+                : "—"}
+            </p>
+          </label>
         </div>
       </div>
 
