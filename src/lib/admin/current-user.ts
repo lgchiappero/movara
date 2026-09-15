@@ -1,13 +1,16 @@
 import { headers } from "next/headers";
-import type { AdminRole } from "@/lib/admin/auth-users";
+import type { AdminRole } from "@/lib/admin/roles";
 
-export type AdminSession = { user: string; rol: AdminRole };
+export type AdminSession = { id: string; nombre: string; email: string; rol: AdminRole };
 
-/** Lee el usuario/rol seteado por src/proxy.ts tras validar Basic Auth. */
+/** Lee el usuario/rol seteado por src/proxy.ts tras verificar la sesión JWT
+ * contra el estado en vivo del usuario en la base. */
 export async function getAdminUser(): Promise<AdminSession | null> {
   const h = await headers();
-  const user = h.get("x-admin-user");
+  const id = h.get("x-admin-id");
+  const nombre = h.get("x-admin-nombre");
+  const email = h.get("x-admin-email");
   const rol = h.get("x-admin-rol") as AdminRole | null;
-  if (!user || !rol) return null;
-  return { user, rol };
+  if (!id || !nombre || !email || !rol) return null;
+  return { id, nombre, email, rol };
 }

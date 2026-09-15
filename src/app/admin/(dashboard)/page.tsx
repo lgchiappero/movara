@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { estadoPedidoOptions, estadoPedidoLabels, type EstadoPedido } from "@/lib/pedido/estado-pedido";
 import { getAdminUser } from "@/lib/admin/current-user";
-import { isAllowedForRole } from "@/lib/admin/auth-users";
+import { isAllowedForRole } from "@/lib/admin/roles";
 import { ADMIN_NAV_ITEMS } from "@/lib/admin/nav-items";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +41,7 @@ export default async function AdminDashboardPage() {
     getAdminUser(),
   ]);
 
-  const rol = session?.rol ?? "editor";
+  const rol = session?.rol ?? "vendedor";
   const countByEstado = Object.fromEntries(
     estadoCounts.map((e) => [e.estadoPedido, e._count._all])
   ) as Record<string, number>;

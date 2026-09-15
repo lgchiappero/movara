@@ -1,38 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseAdminUsers, isAllowedForRole } from "@/lib/admin/auth-users";
+import { db } from "@/lib/db";
+import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/admin/session";
+import { isAllowedForRole, type AdminRole } from "@/lib/admin/roles";
 
 export const config = {
   matcher: ["/admin/:path*", "/api/admin/:path*"],
 };
 
-export function proxy(req: NextRequest) {
-  const users = parseAdminUsers();
+// Rutas que no requieren sesión — son la puerta de entrada (login) o están
+// protegidas por su propio mecanismo (bootstrap usa un secreto de header).
+const PUBLIC_PATHS = ["/admin/login", "/api/admin/auth/login", "/api/admin/auth/logout", "/api/admin/bootstrap"];
 
-  if (users.length === 0) {
-    console.error("[admin] Ningún usuario configurado (ADMIN_USERS o ADMIN_USER/ADMIN_PASSWORD)");
-    return new NextResponse("Panel de administración no configurado", { status: 503 });
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+function unauthorized(req: NextRequest, pathname: string) {
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Sesión inválida o expirada" }, { status: 401 });
   }
+  return NextResponse.redirect(new URL("/admin/login", req.url));
+}
 
-  const authHeader = req.headers.get("authorization");
-  let matched = null as (typeof users)[number] | null;
-
-  if (authHeader?.startsWith("Basic ")) {
-    const decoded = Buffer.from(authHeader.slice(6), "base64").toString("utf-8");
-    const separatorIndex = decoded.indexOf(":");
-    const suppliedUser = decoded.slice(0, separatorIndex);
-    const suppliedPassword = decoded.slice(separatorIndex + 1);
-    matched = users.find((u) => u.user === suppliedUser && u.pass === suppliedPassword) ?? null;
-  }
-
-  if (!matched) {
-    return new NextResponse("Autenticación requerida", {
-      status: 401,
-      headers: { "WWW-Authenticate": 'Basic realm="MOVARA Admin"' },
-    });
-  }
-
+export async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
-  if (!isAllowedForRole(matched.rol, pathname)) {
+
+  if (isPublicPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
+  const payload = token ? await verifySessionToken(token) : null;
+  if (!payload) {
+    return unauthorized(req, pathname);
+  }
+
+  // El rol y el estado "activo" se leen en vivo de la base en cada request
+  // (no viajan en el JWT) — así desactivar un usuario o cambiarle el rol
+  // aplica de inmediato, no cuando expire el token.
+  const user = await db.adminUser.findUnique({ where: { id: payload.sub } });
+  if (!user || !user.activo) {
+    return unauthorized(req, pathname);
+  }
+
+  const rol = user.rol as AdminRole;
+  if (!isAllowedForRole(rol, pathname)) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "No tenés permiso para esta sección" }, { status: 403 });
     }
@@ -40,7 +52,9 @@ export function proxy(req: NextRequest) {
   }
 
   const requestHeaders = new Headers(req.headers);
-  requestHeaders.set("x-admin-user", matched.user);
-  requestHeaders.set("x-admin-rol", matched.rol);
+  requestHeaders.set("x-admin-id", user.id);
+  requestHeaders.set("x-admin-nombre", user.nombre);
+  requestHeaders.set("x-admin-email", user.email);
+  requestHeaders.set("x-admin-rol", rol);
   return NextResponse.next({ request: { headers: requestHeaders } });
 }

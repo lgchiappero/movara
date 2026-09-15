@@ -11,12 +11,9 @@ function isActive(pathname: string, href: string): boolean {
   return pathname.startsWith(href);
 }
 
-function handleLogout() {
-  // Basic Auth no tiene invalidación real de sesión — pisamos las
-  // credenciales cacheadas por el browser con una inválida (truco
-  // estándar) y volvemos a una ruta pública.
-  const bogus = Math.random().toString(36).slice(2);
-  window.location.href = `${window.location.protocol}//logout:${bogus}@${window.location.host}/`;
+async function handleLogout() {
+  await fetch("/api/admin/auth/logout", { method: "POST" }).catch(() => {});
+  window.location.href = "/admin/login";
 }
 
 function NavLinks({ navItems, pathname, onNavigate }: { navItems: AdminNavItem[]; pathname: string; onNavigate?: () => void }) {
@@ -53,12 +50,12 @@ function SidebarLogo() {
 
 export default function AdminShell({
   navItems,
-  user,
+  nombre,
   rol,
   children,
 }: {
   navItems: AdminNavItem[];
-  user: string;
+  nombre: string;
   rol: string;
   children: React.ReactNode;
 }) {
@@ -110,14 +107,14 @@ export default function AdminShell({
           <div className="hidden md:block" />
           <div className="flex items-center gap-3 text-sm">
             <span className="text-stone-600">
-              {user} <span className="text-stone-400">· {rol}</span>
+              {nombre} <span className="text-stone-400">· {rol}</span>
             </span>
             <button
               type="button"
               onClick={handleLogout}
               className="px-3 py-1.5 border border-stone-300 rounded-lg text-stone-600 hover:bg-stone-50 font-medium transition-colors"
             >
-              Salir
+              Cerrar sesión
             </button>
           </div>
         </header>
