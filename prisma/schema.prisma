@@ -164,5 +164,73 @@ model ConfiguracionPedido {
   margenUSD        Float?
   margenPorcentaje Float?
 
+  // ─── Gestión comercial ─────────────────────────────────────
+  vendedorAsignado String? // email del vendedor responsable (AdminUser.email)
+  piProveedor      String? // número de PI (Proforma Invoice) del proveedor
+  piUrl            String? // path del documento PI en Supabase Storage
+  fechaPIPagado    DateTime?
+  montoPI          Float?
+
+  // ─── Comprobantes de pago ──────────────────────────────────
+  comprobantePagoUrl  String? // path del comprobante de anticipo
+  comprobanteSaldoUrl String? // path del comprobante de saldo
+
+  // ─── Logística y aduana ─────────────────────────────────────
+  seguroTransporte  Boolean @default(false)
+  seguroUrl         String? // path de la póliza
+  inspeccionFabrica Boolean @default(false)
+  inspeccionUrl     String? // path del informe de inspección
+  fotosDespachadas  Boolean @default(false)
+  fotosUrl          String? // path o carpeta con fotos de despacho
+  notasDespachador  String?
+  gastosDespachante Float?
+  impuestosAduana   Float?
+  gastosPortuarios  Float?
+
+  // ─── Entrega e instalación ──────────────────────────────────
+  costoGruaDescarga    Float?
+  costoTransporteLocal Float?
+  instalacionFecha     DateTime?
+  instalacionNotas     String?
+  satisfaccionCliente  String?
+
+  // ─── Garantía MOVARA (12 meses) ─────────────────────────────
+  garantiaActivada    Boolean   @default(false)
+  garantiaFechaInicio DateTime?
+  garantiaFechaFin    DateTime? // calculada server-side = garantiaFechaInicio + 12 meses
+
+  documentos DocumentoPedido[]
+
   @@map("configuraciones_pedido")
+}
+
+model DocumentoPedido {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  pedidoId String
+  pedido   ConfiguracionPedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  tipo   String // "comprobante_pago" | "pi_proveedor" | "bl" | "otro"
+  nombre String // nombre descriptivo del documento
+  url    String // path del archivo en Supabase Storage
+  notas  String?
+
+  subidoPor String // email del admin/vendedor que lo subió
+
+  @@map("documentos_pedido")
+}
+
+model AdminUser {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  nombre      String
+  email       String    @unique
+  password    String // hash bcrypt
+  rol         String    @default("vendedor") // "admin" | "vendedor"
+  activo      Boolean   @default(true)
+  ultimoLogin DateTime?
+
+  @@map("admin_users")
 }
