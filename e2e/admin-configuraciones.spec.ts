@@ -1,11 +1,5 @@
-import { test, expect, type APIRequestContext } from "@playwright/test";
-
-test.use({
-  httpCredentials: {
-    username: process.env.ADMIN_USER ?? "luciano",
-    password: process.env.ADMIN_PASSWORD ?? "Lunes12!",
-  },
-});
+import { test, expect, type Page } from "@playwright/test";
+import { loginAsAdmin } from "./helpers/login";
 
 const basePatchBody = {
   estadoPedido: "consulta",
@@ -25,6 +19,24 @@ const basePatchBody = {
   costoFlete: null,
   costoAduana: null,
   costoOtros: null,
+  vendedorAsignado: null,
+  piProveedor: null,
+  fechaPIPagado: null,
+  montoPI: null,
+  seguroTransporte: false,
+  inspeccionFabrica: false,
+  fotosDespachadas: false,
+  notasDespachador: null,
+  gastosDespachante: null,
+  impuestosAduana: null,
+  gastosPortuarios: null,
+  costoGruaDescarga: null,
+  costoTransporteLocal: null,
+  instalacionFecha: null,
+  instalacionNotas: null,
+  satisfaccionCliente: null,
+  garantiaActivada: false,
+  garantiaFechaInicio: null,
 };
 
 function pedidoPayload(clienteNombre: string) {
@@ -49,15 +61,20 @@ function pedidoPayload(clienteNombre: string) {
 }
 
 /** Simula el submit del configurador público — es como llegan los registros
- * reales, ya que /admin/configuraciones ya no crea nada. */
-async function seedPedido(request: APIRequestContext, clienteNombre: string) {
-  const res = await request.post("/api/pedido", { data: pedidoPayload(clienteNombre) });
+ * reales, ya que /admin/configuraciones ya no crea nada. Ruta pública, no
+ * necesita sesión. */
+async function seedPedido(page: Page, clienteNombre: string) {
+  const res = await page.request.post("/api/pedido", { data: pedidoPayload(clienteNombre) });
   const json = await res.json();
   return { res, ...json };
 }
 
 test.describe("/admin/configuraciones", () => {
-  test("Test 1: responde 200 con credenciales correctas", async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+  });
+
+  test("Test 1: responde 200 con sesión válida", async ({ page }) => {
     const response = await page.goto("/admin/configuraciones");
     expect(response?.status()).toBe(200);
     await expect(
@@ -67,9 +84,8 @@ test.describe("/admin/configuraciones", () => {
 
   test("Test 2: una consulta enviada desde /configurador aparece en el panel admin", async ({
     page,
-    request,
   }) => {
-    const { res, numeroConsulta } = await seedPedido(request, "Playwright Cliente Prueba");
+    const { res, numeroConsulta } = await seedPedido(page, "Playwright Cliente Prueba");
     expect(res.status()).toBe(200);
     expect(numeroConsulta).toMatch(/^MOV-CONSULTA-\d{4}-\d{3}$/);
 
@@ -81,18 +97,15 @@ test.describe("/admin/configuraciones", () => {
     await expect(row.getByText("Playwright Cliente Prueba")).toBeVisible();
   });
 
-  test("Test 3: el campo updatedAt existe y se actualiza en cada cambio", async ({
-    page,
-    request,
-  }) => {
-    const { numeroConsulta } = await seedPedido(request, "Playwright Cliente UpdatedAt");
+  test("Test 3: el campo updatedAt existe y se actualiza en cada cambio", async ({ page }) => {
+    const { numeroConsulta } = await seedPedido(page, "Playwright Cliente UpdatedAt");
 
     await page.goto("/admin/configuraciones");
     const row = page.locator("tr", { hasText: numeroConsulta });
     const href = await row.getByRole("link", { name: "Ver detalle" }).getAttribute("href");
     const id = href!.split("/").pop()!;
 
-    const patch1 = await request.patch(`/api/admin/configuraciones/${id}`, {
+    const patch1 = await page.request.patch(`/api/admin/configuraciones/${id}`, {
       data: basePatchBody,
     });
     expect(patch1.status()).toBe(200);
@@ -101,7 +114,7 @@ test.describe("/admin/configuraciones", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 1100));
 
-    const patch2 = await request.patch(`/api/admin/configuraciones/${id}`, {
+    const patch2 = await page.request.patch(`/api/admin/configuraciones/${id}`, {
       data: { ...basePatchBody, notasInternas: "cambio de prueba" },
     });
     const json2 = await patch2.json();

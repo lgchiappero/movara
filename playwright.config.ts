@@ -1,4 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
+import { loadEnvConfig } from "@next/env";
+
+// El proceso de Playwright es Node puro, no Next.js — no carga .env.local
+// automáticamente como sí hace `next dev`. Los tests necesitan
+// ADMIN_INITIAL_EMAIL/ADMIN_INITIAL_PASSWORD/ADMIN_BOOTSTRAP_SECRET para
+// loguearse (ver e2e/helpers/login.ts), así que se cargan acá explícito —
+// mismo mecanismo que ya usa prisma.config.ts.
+loadEnvConfig(process.cwd());
 
 export default defineConfig({
   testDir: "./e2e",

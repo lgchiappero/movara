@@ -1,17 +1,43 @@
 import { test, expect, type Page } from "@playwright/test";
+import { loginAsAdmin } from "./helpers/login";
 
-const adminAuthHeader =
-  "Basic " +
-  Buffer.from(
-    `${process.env.ADMIN_USER ?? "luciano"}:${process.env.ADMIN_PASSWORD ?? "Lunes12!"}`
-  ).toString("base64");
-
-test.use({
-  httpCredentials: {
-    username: process.env.ADMIN_USER ?? "luciano",
-    password: process.env.ADMIN_PASSWORD ?? "Lunes12!",
-  },
-});
+const basePatchBody = {
+  estadoPedido: "confirmado",
+  precioFinal: null,
+  anticipo: null,
+  numeroFabrica: null,
+  numeroContenedor: null,
+  numeroBL: null,
+  fechaConfirmacion: null,
+  fechaProduccion: null,
+  fechaDespacho: null,
+  fechaArriboEstimado: null,
+  fechaEntrega: null,
+  notasInternas: null,
+  notasCliente: "Gracias por elegirnos",
+  costoProveedor: null,
+  costoFlete: null,
+  costoAduana: null,
+  costoOtros: null,
+  vendedorAsignado: null,
+  piProveedor: null,
+  fechaPIPagado: null,
+  montoPI: null,
+  seguroTransporte: false,
+  inspeccionFabrica: false,
+  fotosDespachadas: false,
+  notasDespachador: null,
+  gastosDespachante: null,
+  impuestosAduana: null,
+  gastosPortuarios: null,
+  costoGruaDescarga: null,
+  costoTransporteLocal: null,
+  instalacionFecha: null,
+  instalacionNotas: null,
+  satisfaccionCliente: null,
+  garantiaActivada: false,
+  garantiaFechaInicio: null,
+};
 
 async function getIdByNumeroConsulta(page: Page, numeroConsulta: string): Promise<string> {
   await page.goto("/admin/configuraciones");
@@ -29,13 +55,10 @@ test.describe("/mi-pedido", () => {
     await expect(page.getByText("No encontramos un pedido con ese código")).toBeVisible();
   });
 
-  test("Test 2: código válido muestra la línea de tiempo del pedido", async ({
-    page,
-    request,
-  }) => {
+  test("Test 2: código válido muestra la línea de tiempo del pedido", async ({ page }) => {
     // Simula el submit real del configurador público — /admin/configuraciones
-    // ya no crea nada, solo gestiona lo que llega desde ahí.
-    const seedRes = await request.post("/api/pedido", {
+    // ya no crea nada, solo gestiona lo que llega desde ahí. Ruta pública.
+    const seedRes = await page.request.post("/api/pedido", {
       data: {
         clienteNombre: "Playwright Mi Pedido",
         clienteWhatsapp: "+5491100000002",
@@ -55,36 +78,15 @@ test.describe("/mi-pedido", () => {
         upgrades: [],
       },
     });
-
     const { numeroConsulta: seedNumeroConsulta } = await seedRes.json();
+
+    // A partir de acá sí hace falta sesión (leer/editar en el panel admin).
+    await loginAsAdmin(page);
     const id = await getIdByNumeroConsulta(page, seedNumeroConsulta);
 
-    await request.patch(`/api/admin/configuraciones/${id}`, {
-      headers: { Authorization: adminAuthHeader },
-      data: {
-        estadoPedido: "confirmado",
-        precioFinal: null,
-        anticipo: null,
-        numeroFabrica: null,
-        numeroContenedor: null,
-        numeroBL: null,
-        fechaConfirmacion: null,
-        fechaProduccion: null,
-        fechaDespacho: null,
-        fechaArriboEstimado: null,
-        fechaEntrega: null,
-        notasInternas: null,
-        notasCliente: "Gracias por elegirnos",
-        costoProveedor: null,
-        costoFlete: null,
-        costoAduana: null,
-        costoOtros: null,
-      },
-    });
+    await page.request.patch(`/api/admin/configuraciones/${id}`, { data: basePatchBody });
 
-    const numeroRes = await request.post(`/api/admin/configuraciones/${id}/numero`, {
-      headers: { Authorization: adminAuthHeader },
-    });
+    const numeroRes = await page.request.post(`/api/admin/configuraciones/${id}/numero`);
     const { numeroPedido } = await numeroRes.json();
 
     await page.goto("/mi-pedido");

@@ -1,13 +1,11 @@
 import { test, expect } from "@playwright/test";
-
-test.use({
-  httpCredentials: {
-    username: process.env.ADMIN_USER ?? "luciano",
-    password: process.env.ADMIN_PASSWORD ?? "Lunes12!",
-  },
-});
+import { loginAsAdmin } from "./helpers/login";
 
 test.describe("Panel admin unificado", () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+  });
+
   test("Test 1: dashboard responde 200 y muestra las secciones principales", async ({ page }) => {
     const response = await page.goto("/admin");
     expect(response?.status()).toBe(200);
@@ -16,7 +14,9 @@ test.describe("Panel admin unificado", () => {
     await expect(page.getByText("Google Analytics 4")).toBeVisible();
   });
 
-  test("Test 2: sidebar tiene los links de navegación esperados", async ({ page }) => {
+  test("Test 2: sidebar tiene los links de navegación esperados (admin ve todo)", async ({
+    page,
+  }) => {
     await page.goto("/admin");
     const sidebar = page.locator("aside");
     await expect(sidebar.getByRole("link", { name: /Dashboard/ })).toBeVisible();
@@ -24,6 +24,7 @@ test.describe("Panel admin unificado", () => {
     await expect(sidebar.getByRole("link", { name: /Pedidos/ })).toBeVisible();
     await expect(sidebar.getByRole("link", { name: /Contenido/ })).toBeVisible();
     await expect(sidebar.getByRole("link", { name: /Modelos/ })).toBeVisible();
+    await expect(sidebar.getByRole("link", { name: /Usuarios/ })).toBeVisible();
     await expect(sidebar.getByRole("link", { name: /Configuración/ })).toBeVisible();
   });
 
