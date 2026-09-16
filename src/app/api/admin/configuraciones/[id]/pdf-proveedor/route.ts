@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { db } from "@/lib/db";
 import { PedidoDocumentProveedor } from "@/lib/pdf/PedidoDocumentProveedor";
-import type { PedidoInput } from "@/lib/validators/pedido";
+import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 
 export async function GET(
   _req: NextRequest,
@@ -19,7 +19,10 @@ export async function GET(
 
   const pdfBuffer = await renderToBuffer(
     PedidoDocumentProveedor({
-      data: config as unknown as PedidoInput,
+      data: {
+        ...config,
+        materiales: config.materiales as Record<string, string | null> | null,
+      } satisfies PedidoRecord,
       fechaIso,
       numeroPedido: config.numeroPedido,
       numeroFabrica: config.numeroFabrica,

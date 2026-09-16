@@ -1,13 +1,13 @@
 import path from "path";
 import { Document, Page, View, Text, Image } from "@react-pdf/renderer";
-import type { PedidoInput } from "@/lib/validators/pedido";
+import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { buildPedidoNarrativeEs } from "@/lib/pdf/pedido-narrative-es";
 import { pedidoPdfStyles as styles } from "@/lib/pdf/pedido-pdf-styles";
 
 const logoPath = path.join(process.cwd(), "public", "Logo.jpeg");
 
 type Props = {
-  data: PedidoInput;
+  data: PedidoRecord;
   fechaEs: string;
   numeroPedido: string | null;
   precioFinal: number | null;

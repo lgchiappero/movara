@@ -1,10 +1,10 @@
 import { Document, Page, View, Text } from "@react-pdf/renderer";
-import type { PedidoInput } from "@/lib/validators/pedido";
+import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { buildSupplierSpecItems } from "@/lib/pdf/pedido-spec";
 import { pedidoPdfStyles as styles } from "@/lib/pdf/pedido-pdf-styles";
 
 type Props = {
-  data: PedidoInput;
+  data: PedidoRecord;
   fechaIso: string;
   numeroPedido: string | null;
   numeroFabrica: string | null;

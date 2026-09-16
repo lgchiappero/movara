@@ -1,7 +1,8 @@
-import type { PedidoInput } from "@/lib/validators/pedido";
 import { getModeloKey, REGIONAL_MODELS } from "@/data/regional-models";
 import { findUpgrade } from "@/data/configurador-catalog";
 import { MATERIAL_CATEGORY_GROUPS, findMaterialOption } from "@/data/material-catalog";
+import type { PedidoRecord } from "@/lib/pdf/pedido-record";
+import { labelOrFallback, SIN_ESPECIFICAR } from "@/lib/pdf/pedido-record";
 import {
   modeloLabelsEs,
   finalidadLabelsEs,
@@ -31,18 +32,19 @@ export type NarrativeLine = { type: "line"; label: string; value: string };
 export type NarrativeGroup = { type: "group"; title: string; bullets: string[]; note?: string };
 export type NarrativeItem = NarrativeLine | NarrativeGroup;
 
-export function buildPedidoNarrativeEs(data: PedidoInput): NarrativeItem[] {
-  const regionalKey = getModeloKey(data.provincia, data.localidad);
+export function buildPedidoNarrativeEs(data: PedidoRecord): NarrativeItem[] {
+  const regionalKey = getModeloKey(data.provincia ?? "", data.localidad ?? undefined);
   const regional = REGIONAL_MODELS[regionalKey];
+  const materiales = data.materiales ?? {};
 
   const cocinaTxt = data.incluyeCocina
-    ? tipoCocinaLabelsEs[data.tipoCocina]
+    ? labelOrFallback(tipoCocinaLabelsEs, data.tipoCocina)
     : "Sin cocina";
   const banoTxt = data.incluyeBano
-    ? `Con baño — ${tipoAguaLabelsEs[data.tipoAgua].toLowerCase()}`
+    ? `Con baño — ${labelOrFallback(tipoAguaLabelsEs, data.tipoAgua).toLowerCase()}`
     : "Sin baño";
 
-  const upgradeBullets = data.upgrades
+  const upgradeBullets = (data.upgrades ?? [])
     .map((key) => findUpgrade(regionalKey, key)?.nombre)
     .filter((n): n is string => Boolean(n));
 
@@ -52,7 +54,7 @@ export function buildPedidoNarrativeEs(data: PedidoInput): NarrativeItem[] {
     for (const selector of group.selectors) {
       if (seenKeys.has(selector.key)) continue;
       seenKeys.add(selector.key);
-      const found = findMaterialOption(selector.key, data.materiales[selector.key] ?? null);
+      const found = findMaterialOption(selector.key, materiales[selector.key] ?? null);
       const nombreCampo = SELECTOR_LABELS_ES[selector.key] ?? selector.key;
       bullets.push(found ? `${nombreCampo}: ${found.option.label}` : `${nombreCampo}: no incluye`);
     }
@@ -60,22 +62,22 @@ export function buildPedidoNarrativeEs(data: PedidoInput): NarrativeItem[] {
   });
 
   return [
-    { type: "line", label: "Modelo", value: modeloLabelsEs[data.modelo] },
-    { type: "line", label: "Finalidad", value: finalidadLabelsEs[data.finalidad] },
+    { type: "line", label: "Modelo", value: labelOrFallback(modeloLabelsEs, data.modelo) },
+    { type: "line", label: "Finalidad", value: labelOrFallback(finalidadLabelsEs, data.finalidad) },
     {
       type: "line",
       label: "Ubicación",
-      value: [data.localidad, data.provincia].filter(Boolean).join(", "),
+      value: [data.localidad, data.provincia].filter(Boolean).join(", ") || SIN_ESPECIFICAR,
     },
     { type: "line", label: "Zona", value: regional?.region ?? regionalKey },
     {
       type: "group",
       title: "Configuración del espacio",
       bullets: [
-        `Habitaciones: ${data.habitaciones}`,
+        `Habitaciones: ${data.habitaciones ?? SIN_ESPECIFICAR}`,
         `Cocina: ${cocinaTxt}`,
         `Baño: ${banoTxt}`,
-        `Lavarropas: ${lavarropasLabelsEs[data.lavarropas].toLowerCase()}`,
+        `Lavarropas: ${labelOrFallback(lavarropasLabelsEs, data.lavarropas).toLowerCase()}`,
       ],
     },
     ...materialGroups,

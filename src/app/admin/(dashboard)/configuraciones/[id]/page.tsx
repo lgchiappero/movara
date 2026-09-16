@@ -3,7 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { buildPedidoNarrativeEs } from "@/lib/pdf/pedido-narrative-es";
-import type { PedidoInput } from "@/lib/validators/pedido";
+import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { MATERIAL_CATEGORY_GROUPS, findMaterialOption } from "@/data/material-catalog";
 import { estadoPedidoLabels, type EstadoPedido } from "@/lib/pedido/estado-pedido";
 import { getSignedUrl } from "@/lib/admin/storage";
@@ -102,7 +102,12 @@ export default async function ConfiguracionDetailPage({
         <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600 mb-4">
           Configuración completa
         </h2>
-        <NarrativeView data={config as unknown as PedidoInput} />
+        <NarrativeView
+          data={{
+            ...config,
+            materiales: config.materiales as Record<string, string | null> | null,
+          }}
+        />
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 mb-6">
@@ -168,7 +173,7 @@ export default async function ConfiguracionDetailPage({
   );
 }
 
-function NarrativeView({ data }: { data: PedidoInput }) {
+function NarrativeView({ data }: { data: PedidoRecord }) {
   const items = buildPedidoNarrativeEs(data);
   return (
     <div className="space-y-3 text-sm">

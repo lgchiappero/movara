@@ -1,7 +1,8 @@
-import type { PedidoInput } from "@/lib/validators/pedido";
 import { getModeloKey, REGIONAL_MODELS } from "@/data/regional-models";
 import { findUpgrade } from "@/data/configurador-catalog";
 import { MATERIAL_CATEGORY_GROUPS, findMaterialOption } from "@/data/material-catalog";
+import type { PedidoRecord } from "@/lib/pdf/pedido-record";
+import { labelOrFallback, SIN_ESPECIFICAR } from "@/lib/pdf/pedido-record";
 import {
   finalidadLabels,
   tipoCocinaLabels,
@@ -28,6 +29,9 @@ const SELECTOR_LABELS_EN: Record<string, string> = {
   galeria: "Covered gallery",
 };
 
+const MODEL_CODES_LOOSE = MODEL_CODES as Record<string, string>;
+const TBD = "To be defined";
+
 export type SupplierSpecLine = { type: "line"; label: string; value: string };
 export type SupplierSpecGroup = {
   type: "group";
@@ -37,11 +41,12 @@ export type SupplierSpecGroup = {
 };
 export type SupplierSpecItem = SupplierSpecLine | SupplierSpecGroup;
 
-export function buildSupplierSpecItems(data: PedidoInput): SupplierSpecItem[] {
-  const regionalKey = getModeloKey(data.provincia, data.localidad);
+export function buildSupplierSpecItems(data: PedidoRecord): SupplierSpecItem[] {
+  const regionalKey = getModeloKey(data.provincia ?? "", data.localidad ?? undefined);
   const regional = REGIONAL_MODELS[regionalKey];
+  const materiales = data.materiales ?? {};
 
-  const upgradeRows = data.upgrades
+  const upgradeRows = (data.upgrades ?? [])
     .map((key) => findUpgrade(regionalKey, key)?.nombre)
     .filter((n): n is string => Boolean(n))
     .map((nombre) => ({ label: "Upgrade", value: nombre }));
@@ -52,7 +57,7 @@ export function buildSupplierSpecItems(data: PedidoInput): SupplierSpecItem[] {
     for (const selector of group.selectors) {
       if (seenKeys.has(selector.key)) continue;
       seenKeys.add(selector.key);
-      const found = findMaterialOption(selector.key, data.materiales[selector.key] ?? null);
+      const found = findMaterialOption(selector.key, materiales[selector.key] ?? null);
       rows.push({
         label: SELECTOR_LABELS_EN[selector.key] ?? selector.key,
         value: found ? found.option.label : "Not included",
@@ -61,19 +66,35 @@ export function buildSupplierSpecItems(data: PedidoInput): SupplierSpecItem[] {
     return { type: "group", title: group.title, rows };
   });
 
+  const modeloCode = data.modelo ? (MODEL_CODES_LOOSE[data.modelo] ?? TBD) : TBD;
+
   return [
-    { type: "line", label: "MODEL", value: `${data.modelo} (ref. code: ${MODEL_CODES[data.modelo]})` },
-    { type: "line", label: "PURPOSE", value: finalidadLabels[data.finalidad] },
-    { type: "line", label: "LOCATION", value: `${data.localidad}, ${data.provincia}` },
+    {
+      type: "line",
+      label: "MODEL",
+      value: data.modelo ? `${data.modelo} (ref. code: ${modeloCode})` : TBD,
+    },
+    { type: "line", label: "PURPOSE", value: labelOrFallback(finalidadLabels, data.finalidad, TBD) },
+    {
+      type: "line",
+      label: "LOCATION",
+      value: [data.localidad, data.provincia].filter(Boolean).join(", ") || SIN_ESPECIFICAR,
+    },
     { type: "line", label: "REGION", value: regional?.region ?? regionalKey },
     {
       type: "group",
       title: "LAYOUT",
       rows: [
-        { label: "Bedrooms", value: String(data.habitaciones) },
-        { label: "Kitchen", value: data.incluyeCocina ? tipoCocinaLabels[data.tipoCocina] : "Not included" },
-        { label: "Bathroom", value: data.incluyeBano ? tipoAguaLabels[data.tipoAgua] : "Not included" },
-        { label: "Washing machine", value: lavarropasLabels[data.lavarropas] },
+        { label: "Bedrooms", value: data.habitaciones != null ? String(data.habitaciones) : TBD },
+        {
+          label: "Kitchen",
+          value: data.incluyeCocina ? labelOrFallback(tipoCocinaLabels, data.tipoCocina, TBD) : "Not included",
+        },
+        {
+          label: "Bathroom",
+          value: data.incluyeBano ? labelOrFallback(tipoAguaLabels, data.tipoAgua, TBD) : "Not included",
+        },
+        { label: "Washing machine", value: labelOrFallback(lavarropasLabels, data.lavarropas, TBD) },
       ],
     },
     ...materialGroups,
