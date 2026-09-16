@@ -1,10 +1,13 @@
 import { db } from "@/lib/db";
 import { fechaKeyToDate, dateToFechaKey, hoyFechaKey } from "@/lib/agenda/fecha";
 
-/** Horarios libres de un día — ya excluye los ocupados por una cita activa.
- * Devuelve [] si el día no está habilitado o ya pasó. */
-export async function getHorariosDisponibles(fechaKey: string): Promise<string[]> {
-  if (fechaKey < hoyFechaKey()) return [];
+/** Horarios habilitados de un día y cuáles ya están ocupados por una cita
+ * activa — para poder mostrar los ocupados en gris (no solo omitirlos).
+ * Devuelve ambos vacíos si el día no está habilitado o ya pasó. */
+export async function getEstadoHorariosDelDia(
+  fechaKey: string
+): Promise<{ habilitados: string[]; ocupados: string[] }> {
+  if (fechaKey < hoyFechaKey()) return { habilitados: [], ocupados: [] };
   const fecha = fechaKeyToDate(fechaKey);
 
   const [disponibilidad, citas] = await Promise.all([
@@ -15,10 +18,15 @@ export async function getHorariosDisponibles(fechaKey: string): Promise<string[]
     }),
   ]);
 
-  if (!disponibilidad || !disponibilidad.habilitada) return [];
+  if (!disponibilidad || !disponibilidad.habilitada) return { habilitados: [], ocupados: [] };
+  return { habilitados: disponibilidad.horarios, ocupados: citas.map((c) => c.horario) };
+}
 
-  const ocupados = new Set(citas.map((c) => c.horario));
-  return disponibilidad.horarios.filter((h) => !ocupados.has(h));
+/** Horarios libres de un día — ya excluye los ocupados por una cita activa. */
+export async function getHorariosDisponibles(fechaKey: string): Promise<string[]> {
+  const { habilitados, ocupados } = await getEstadoHorariosDelDia(fechaKey);
+  const ocupadosSet = new Set(ocupados);
+  return habilitados.filter((h) => !ocupadosSet.has(h));
 }
 
 /** Set de "YYYY-MM-DD" del mes `anio`-`mes` (1-12) que tienen al menos un

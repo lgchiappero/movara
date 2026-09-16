@@ -94,11 +94,11 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
   const textoCierre =
     content?.textoCierre ??
     "No comprás una promesa. Comprás un producto que ya fue testeado, certificado y aprobado antes de llegar a tu terreno.";
-  const showroomTitulo = content?.showroomTitulo ?? "Showroom próximamente en Sunchales, Santa Fe";
+  const showroomTitulo = content?.showroomTitulo ?? "Showroom MOVARA en Sunchales, Santa Fe";
   const showroomDesc =
     content?.showroomDesc ??
-    "Vas a poder recorrer un modelo real, tocar los materiales y hablar con nuestro equipo.";
-  const showroomChip = content?.showroomChip ?? "Próximamente";
+    "Recorré un modelo real, tocá los materiales y hablá con nuestro equipo.";
+  const showroomChip = content?.showroomChip ?? "Visitas con turno";
 
   return (
     <section className="py-24 bg-[#1A1A1A]">
@@ -177,13 +177,13 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
           {/* Header */}
           <div className="p-8 pb-6">
             <div className="flex items-center gap-3 mb-4">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#D4B06A]/10 border border-[#D4B06A]/30 text-[#D4B06A] text-xs font-bold uppercase tracking-widest animate-pulse">
-                🔨 En construcción — Próximamente
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#D4B06A]/10 border border-[#D4B06A]/30 text-[#D4B06A] text-xs font-bold uppercase tracking-widest">
+                📍 {showroomChip}
               </span>
             </div>
             <h3 className="text-white text-2xl font-bold mb-2">{showroomTitulo}</h3>
             <p className="text-stone-300 text-base font-medium leading-relaxed mb-1">
-              Nuestro primer showroom está en camino. Vas a poder ver, tocar y recorrer una unidad MOVARA real.
+              {showroomDesc}
             </p>
             <div className="flex items-center gap-2 mt-3 text-stone-400 text-sm">
               <span>📍</span>
@@ -217,11 +217,16 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
           </a>
 
           {/* Footer */}
-          <div className="p-6 pt-5 border-t border-white/10">
+          <div className="p-6 pt-5 border-t border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <p className="text-stone-400 text-sm leading-relaxed">
-              La dirección exacta se confirmará próximamente.{" "}
-              <span className="text-[#D4B06A] font-medium">Registrate para recibir la invitación al evento de apertura.</span>
+              Coordiná un horario y recorré una unidad MOVARA en persona.
             </p>
+            <a
+              href="/agendar"
+              className="w-full sm:w-auto flex-shrink-0 text-center px-6 py-3 bg-[#D4B06A] hover:bg-[#BF9A52] text-[#1A1A1A] font-bold text-sm rounded-xl transition-colors"
+            >
+              Agendar tu visita
+            </a>
           </div>
         </motion.div>
       </div>
