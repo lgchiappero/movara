@@ -248,6 +248,7 @@ export default function ConfiguracionEspacioForm({ id, initial }: { id: string; 
             </label>
             {form.incluyeCocina && (
               <select
+                aria-label="Tipo de cocción"
                 className={inputClass}
                 value={form.tipoCocina}
                 onChange={(e) => set("tipoCocina", e.target.value)}
@@ -272,6 +273,7 @@ export default function ConfiguracionEspacioForm({ id, initial }: { id: string; 
             </label>
             {form.incluyeBano && (
               <select
+                aria-label="Tipo de agua caliente"
                 className={inputClass}
                 value={form.tipoAgua}
                 onChange={(e) => set("tipoAgua", e.target.value)}
