@@ -238,3 +238,38 @@ model AdminUser {
 
   @@map("admin_users")
 }
+
+// ─── Agenda de visitas al showroom ──────────────────────────────
+model Cita {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fecha   DateTime // fecha del turno, guardada a medianoche UTC (date-only)
+  horario String // "10:00" | "11:00" | "12:00" | "15:00" | "16:00" | "17:00"
+  estado  String   @default("confirmada") // "confirmada" | "cancelada" | "completada"
+
+  tipoCliente String // "particular" | "empresa"
+  nombre      String
+  email       String
+  telefono    String
+  razonSocial String?
+  consulta    String // breve descripción de qué busca
+
+  canceladaPor      String? // "cliente" | "admin"
+  motivoCancelacion String?
+
+  recordatorioEnviado Boolean @default(false)
+
+  @@index([fecha, horario])
+  @@map("citas")
+}
+
+model DisponibilidadAgenda {
+  id         String   @id @default(cuid())
+  fecha      DateTime @unique // date-only, medianoche UTC
+  habilitada Boolean  @default(true)
+  horarios   String[] // subconjunto de HORARIOS_AGENDA disponible ese día
+
+  @@map("disponibilidad_agenda")
+}
