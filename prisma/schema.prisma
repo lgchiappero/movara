@@ -131,6 +131,10 @@ model ConfiguracionPedido {
   materiales Json?
   upgrades   String[] @default([])
 
+  // Notas adicionales del cliente sobre la configuración del espacio,
+  // cargadas manualmente por el admin (pedidos sin configurador público).
+  notasConfiguracion String?
+
   tipoCliente    String? // "particular" | "empresa"
   razonSocial    String?
   nombreContacto String?

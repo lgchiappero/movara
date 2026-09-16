@@ -1,5 +1,6 @@
 import { getModeloKey, REGIONAL_MODELS } from "@/data/regional-models";
 import { findUpgrade } from "@/data/configurador-catalog";
+import { findAdminExtraLabel } from "@/data/admin-extras";
 import { MATERIAL_CATEGORY_GROUPS, findMaterialOption } from "@/data/material-catalog";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { labelOrFallback, SIN_ESPECIFICAR } from "@/lib/pdf/pedido-record";
@@ -47,7 +48,7 @@ export function buildSupplierSpecItems(data: PedidoRecord): SupplierSpecItem[] {
   const materiales = data.materiales ?? {};
 
   const upgradeRows = (data.upgrades ?? [])
-    .map((key) => findUpgrade(regionalKey, key)?.nombre)
+    .map((key) => findUpgrade(regionalKey, key)?.nombre ?? findAdminExtraLabel(key))
     .filter((n): n is string => Boolean(n))
     .map((nombre) => ({ label: "Upgrade", value: nombre }));
 
@@ -57,10 +58,11 @@ export function buildSupplierSpecItems(data: PedidoRecord): SupplierSpecItem[] {
     for (const selector of group.selectors) {
       if (seenKeys.has(selector.key)) continue;
       seenKeys.add(selector.key);
-      const found = findMaterialOption(selector.key, materiales[selector.key] ?? null);
+      const raw = materiales[selector.key] ?? null;
+      const found = findMaterialOption(selector.key, raw);
       rows.push({
         label: SELECTOR_LABELS_EN[selector.key] ?? selector.key,
-        value: found ? found.option.label : "Not included",
+        value: found ? found.option.label : raw ? raw : "Not included",
       });
     }
     return { type: "group", title: group.title, rows };

@@ -23,6 +23,7 @@ export type PedidoRecord = {
   lavarropas: string | null;
   materiales: Record<string, string | null> | null;
   upgrades: string[];
+  notasConfiguracion: string | null;
 };
 
 export const SIN_ESPECIFICAR = "No especificado";

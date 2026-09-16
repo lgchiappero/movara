@@ -9,6 +9,7 @@ import { estadoPedidoLabels, type EstadoPedido } from "@/lib/pedido/estado-pedid
 import { getSignedUrl } from "@/lib/admin/storage";
 import GestionPedidoPanel from "@/components/admin/GestionPedidoPanel";
 import DocumentosPedidoSection, { type DocumentoConUrl } from "@/components/admin/DocumentosPedidoSection";
+import ConfiguracionEspacioForm from "@/components/admin/ConfiguracionEspacioForm";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +97,27 @@ export default async function ConfiguracionDetailPage({
             {config.createdAt.toLocaleDateString("es-AR")}
           </span>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <ConfiguracionEspacioForm
+          id={id}
+          initial={{
+            modelo: config.modelo,
+            finalidad: config.finalidad,
+            provincia: config.provincia,
+            localidad: config.localidad,
+            habitaciones: config.habitaciones,
+            incluyeCocina: config.incluyeCocina,
+            tipoCocina: config.tipoCocina,
+            incluyeBano: config.incluyeBano,
+            tipoAgua: config.tipoAgua,
+            lavarropas: config.lavarropas,
+            materiales: config.materiales as Record<string, string | null> | null,
+            upgrades: config.upgrades,
+            notasConfiguracion: config.notasConfiguracion,
+          }}
+        />
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 mb-6">
