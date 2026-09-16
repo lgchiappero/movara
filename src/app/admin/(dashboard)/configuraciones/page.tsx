@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { modeloLabelsEs } from "@/lib/pdf/pedido-labels-es";
 import { estadoPedidoLabels, type EstadoPedido } from "@/lib/pedido/estado-pedido";
 import type { PedidoInput } from "@/lib/validators/pedido";
+import NuevoPedidoManualForm from "@/components/admin/NuevoPedidoManualForm";
 
 export const dynamic = "force-dynamic";
 
@@ -31,16 +32,30 @@ async function getConfiguraciones() {
   });
 }
 
+async function getVendedores() {
+  return db.adminUser.findMany({
+    where: { rol: "vendedor", activo: true },
+    select: { email: true, nombre: true },
+    orderBy: { nombre: "asc" },
+  });
+}
+
 export default async function AdminConfiguracionesPage() {
-  const configuraciones = await getConfiguraciones();
+  const [configuraciones, vendedores] = await Promise.all([
+    getConfiguraciones(),
+    getVendedores(),
+  ]);
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12">
-      <div className="mb-8">
-        <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">
-          Panel MOVARA
-        </p>
-        <h1 className="text-2xl font-bold text-[#2F2F2F]">Configuraciones de pedido</h1>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">
+            Panel MOVARA
+          </p>
+          <h1 className="text-2xl font-bold text-[#2F2F2F]">Configuraciones de pedido</h1>
+        </div>
+        <NuevoPedidoManualForm vendedores={vendedores} />
       </div>
 
       {configuraciones.length === 0 ? (
