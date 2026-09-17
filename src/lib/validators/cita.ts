@@ -5,10 +5,7 @@ import { isFechaKeyValida, hoyFechaKey } from "@/lib/agenda/fecha";
 
 export const tipoClienteAgendaOptions = ["particular", "empresa"] as const;
 
-export const consultaSchema = z
-  .string()
-  .min(20, "Contanos un poco más — mínimo 20 caracteres")
-  .max(1000, "Máximo 1000 caracteres");
+export const consultaSchema = z.string().max(1000, "Máximo 1000 caracteres").optional();
 
 export const citaSchema = z
   .object({

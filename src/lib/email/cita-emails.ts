@@ -11,6 +11,8 @@ export type CitaEmailData = {
   tipoCliente: string;
   razonSocial: string | null;
   consulta: string;
+  canceladaPor?: string | null;
+  motivoCancelacion?: string | null;
 };
 
 function fechaEs(fecha: Date): string {
@@ -76,7 +78,7 @@ export function buildNuevaVisitaAdminEmail(cita: CitaEmailData): { subject: stri
     ["Email", cita.email],
     ["Teléfono", cita.telefono],
     ...(cita.razonSocial ? ([["Razón social", cita.razonSocial]] as [string, string][]) : []),
-    ["Qué busca", cita.consulta],
+    ...(cita.consulta.trim() ? ([["Qué busca", cita.consulta]] as [string, string][]) : []),
   ];
   const html = layout(
     "📅 Nueva visita agendada",
@@ -119,11 +121,13 @@ export function buildRecordatorioEmail(cita: CitaEmailData): { subject: string; 
 }
 
 export function buildCancelacionClienteEmail(cita: CitaEmailData): { subject: string; html: string } {
+  const motivo = cita.motivoCancelacion?.trim();
   const html = layout(
     "MOVARA — Visita cancelada",
     `
     <p style="margin:0 0 12px;color:#222;font-size:15px;">Hola ${cita.nombre},</p>
-    <p style="margin:0;color:#555;font-size:15px;line-height:1.6;">Confirmamos que cancelaste tu visita del ${fechaEs(cita.fecha)} a las ${cita.horario} hs. Cuando quieras, podés agendar un nuevo turno en movara.com.ar/agendar.</p>
+    <p style="margin:0 0 ${motivo ? "12px" : "0"};color:#555;font-size:15px;line-height:1.6;">Confirmamos que cancelaste tu visita del ${fechaEs(cita.fecha)} a las ${cita.horario} hs. Cuando quieras, podés agendar un nuevo turno en movara.com.ar/agendar.</p>
+    ${motivo ? `<div style="padding:12px 16px;background:#f9f5ee;border-left:4px solid #D4B06A;border-radius:4px;font-size:13px;color:#555;">Motivo: ${motivo}</div>` : ""}
     <p style="margin:20px 0 0;color:#888;font-size:13px;">— El equipo MOVARA</p>
     `
   );
@@ -131,13 +135,14 @@ export function buildCancelacionClienteEmail(cita: CitaEmailData): { subject: st
 }
 
 export function buildCancelacionAdminEmail(cita: CitaEmailData): { subject: string; html: string } {
-  const canceladoPorTxt = "el cliente";
+  const canceladoPorTxt = cita.canceladaPor === "admin" ? "el equipo MOVARA" : "el cliente";
   const rows: [string, string][] = [
     ["Fecha", fechaEs(cita.fecha)],
     ["Horario", `${cita.horario} hs`],
     ["Nombre", cita.nombre],
     ["Email", cita.email],
     ["Teléfono", cita.telefono],
+    ...(cita.motivoCancelacion?.trim() ? ([["Motivo", cita.motivoCancelacion.trim()]] as [string, string][]) : []),
   ];
   const html = layout(
     "❌ Visita cancelada",

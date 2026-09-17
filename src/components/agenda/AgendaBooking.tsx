@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { HORARIOS_AGENDA } from "@/lib/agenda/horarios";
 import { tipoClienteAgendaOptions, consultaSchema } from "@/lib/validators/cita";
 import {
@@ -217,6 +218,12 @@ export default function AgendaBooking() {
             Código de referencia: <span className="font-mono">{citaId}</span>
           </p>
         )}
+        <Link
+          href="/"
+          className="inline-block mt-6 px-6 py-3 bg-[#D4B06A] hover:bg-[#c19f5a] text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
+        >
+          Volver al inicio
+        </Link>
       </div>
     );
   }
@@ -420,14 +427,14 @@ export default function AgendaBooking() {
           </div>
 
           <label className="block space-y-1.5">
-            <span className={labelClass}>¿Qué estás buscando o necesitás saber? *</span>
+            <span className={labelClass}>¿Qué estás buscando o necesitás saber? (opcional)</span>
             <textarea
               className={inputClassFor(errors.consulta, touched.consulta || intentoEnviar)}
               rows={3}
               value={form.consulta}
               onChange={(e) => setForm((f) => ({ ...f, consulta: e.target.value }))}
               onBlur={() => touch("consulta")}
-              placeholder="Contanos brevemente qué te interesa o qué consultas tenés para aprovechar mejor la visita."
+              placeholder="Contanos brevemente qué te interesa o qué consultas tenés para aprovechar mejor la visita (opcional)."
             />
             <FieldError msg={(touched.consulta || intentoEnviar) ? errors.consulta : null} />
           </label>

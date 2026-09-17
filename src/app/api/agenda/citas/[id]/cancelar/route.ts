@@ -64,6 +64,8 @@ export async function POST(
     tipoCliente: actualizada.tipoCliente,
     razonSocial: actualizada.razonSocial,
     consulta: actualizada.consulta,
+    canceladaPor: actualizada.canceladaPor,
+    motivoCancelacion: actualizada.motivoCancelacion,
   });
 
   return NextResponse.json({ ok: true });

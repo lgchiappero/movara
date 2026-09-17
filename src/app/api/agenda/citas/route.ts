@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
           email: data.email,
           telefono: data.telefono,
           razonSocial: data.razonSocial || null,
-          consulta: data.consulta,
+          consulta: data.consulta ?? "",
         },
       });
     });

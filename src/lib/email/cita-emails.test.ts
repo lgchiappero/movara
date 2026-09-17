@@ -47,6 +47,15 @@ describe("cita-emails", () => {
     expect(htmlParticular).not.toContain("Razón social");
   });
 
+  it("buildNuevaVisitaAdminEmail omite la fila 'Qué busca' si la consulta viene vacía (ahora es opcional)", () => {
+    const sinConsulta: CitaEmailData = { ...cita, consulta: "" };
+    const { html } = buildNuevaVisitaAdminEmail(sinConsulta);
+    expect(html).not.toContain("Qué busca");
+
+    const { html: htmlConConsulta } = buildNuevaVisitaAdminEmail(cita);
+    expect(htmlConConsulta).toContain("Qué busca");
+  });
+
   it("buildRecordatorioEmail incluye el link de cancelación", () => {
     const { subject, html } = buildRecordatorioEmail(cita);
     expect(subject).toContain("mañana");
@@ -59,10 +68,34 @@ describe("cita-emails", () => {
     expect(html).toContain("cancelaste");
   });
 
+  it("buildCancelacionClienteEmail incluye el motivo cuando está presente", () => {
+    const conMotivo: CitaEmailData = { ...cita, motivoCancelacion: "Se le complicó el horario" };
+    const { html } = buildCancelacionClienteEmail(conMotivo);
+    expect(html).toContain("Se le complicó el horario");
+
+    const { html: sinMotivo } = buildCancelacionClienteEmail(cita);
+    expect(sinMotivo).not.toContain("Motivo:");
+  });
+
   it("buildCancelacionAdminEmail incluye los datos de contacto del cliente", () => {
     const { subject, html } = buildCancelacionAdminEmail(cita);
     expect(subject).toBe("MOVARA — Se canceló una visita");
     expect(html).toContain("juan@example.com");
     expect(html).toContain("+54 9 11 1234-5678");
+  });
+
+  it("buildCancelacionAdminEmail incluye el motivo y distingue quién canceló", () => {
+    const canceladaPorAdmin: CitaEmailData = {
+      ...cita,
+      canceladaPor: "admin",
+      motivoCancelacion: "Cliente avisó por WhatsApp que no podía asistir",
+    };
+    const { html } = buildCancelacionAdminEmail(canceladaPorAdmin);
+    expect(html).toContain("el equipo MOVARA");
+    expect(html).toContain("Cliente avisó por WhatsApp que no podía asistir");
+
+    const canceladaPorCliente: CitaEmailData = { ...cita, canceladaPor: "cliente" };
+    const { html: htmlCliente } = buildCancelacionAdminEmail(canceladaPorCliente);
+    expect(htmlCliente).toContain("el cliente");
   });
 });

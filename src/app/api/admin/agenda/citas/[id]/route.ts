@@ -2,17 +2,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { citaAdminActionSchema } from "@/lib/validators/admin-agenda";
-import { buildCancelacionClienteEmail, type CitaEmailData } from "@/lib/email/cita-emails";
+import {
+  buildCancelacionClienteEmail,
+  buildCancelacionAdminEmail,
+  type CitaEmailData,
+} from "@/lib/email/cita-emails";
 
-async function avisarCancelacionAlCliente(cita: CitaEmailData) {
+async function enviarEmailsCancelacion(cita: CitaEmailData) {
   const apiKey = process.env.RESEND_API_KEY;
+  const contactEmail = process.env.CONTACT_EMAIL;
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? "MOVARA <onboarding@resend.dev>";
   if (!apiKey) return;
+
+  const resend = new Resend(apiKey);
+
   try {
     const { subject, html } = buildCancelacionClienteEmail(cita);
-    await new Resend(apiKey).emails.send({ from: fromEmail, to: cita.email, subject, html });
+    await resend.emails.send({ from: fromEmail, to: cita.email, subject, html });
   } catch (err) {
     console.error("[admin/agenda/citas] Error avisando cancelación al cliente:", err);
+  }
+
+  if (contactEmail) {
+    try {
+      const { subject, html } = buildCancelacionAdminEmail(cita);
+      await resend.emails.send({ from: fromEmail, to: contactEmail, subject, html });
+    } catch (err) {
+      console.error("[admin/agenda/citas] Error avisando cancelación al admin:", err);
+    }
   }
 }
 
@@ -41,7 +58,7 @@ export async function PATCH(
         motivoCancelacion: parsed.data.motivo?.trim() || null,
       },
     });
-    await avisarCancelacionAlCliente({
+    await enviarEmailsCancelacion({
       id: actualizada.id,
       fecha: actualizada.fecha,
       horario: actualizada.horario,
@@ -51,6 +68,8 @@ export async function PATCH(
       tipoCliente: actualizada.tipoCliente,
       razonSocial: actualizada.razonSocial,
       consulta: actualizada.consulta,
+      canceladaPor: actualizada.canceladaPor,
+      motivoCancelacion: actualizada.motivoCancelacion,
     });
     return NextResponse.json({ ok: true, cita: actualizada });
   }

@@ -238,7 +238,9 @@ export default function AgendaVistaPanel({
             {seleccionada.razonSocial && <p><span className="text-stone-500">Razón social:</span> <span className="font-medium text-[#2F2F2F]">{seleccionada.razonSocial}</span></p>}
             <p><span className="text-stone-500">Email:</span> <span className="font-medium text-[#2F2F2F]">{seleccionada.email}</span></p>
             <p><span className="text-stone-500">Teléfono:</span> <span className="font-medium text-[#2F2F2F]">{seleccionada.telefono}</span></p>
-            <p><span className="text-stone-500">Qué busca:</span> <span className="text-[#2F2F2F]">{seleccionada.consulta}</span></p>
+            {seleccionada.consulta.trim() && (
+              <p><span className="text-stone-500">Qué busca:</span> <span className="text-[#2F2F2F]">{seleccionada.consulta}</span></p>
+            )}
             <p><span className="text-stone-500">Estado:</span> <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${ESTADO_CLASSES[seleccionada.estado] ?? ""}`}>{seleccionada.estado}</span></p>
             {seleccionada.estado === "cancelada" && (
               <p className="text-stone-500 text-xs">

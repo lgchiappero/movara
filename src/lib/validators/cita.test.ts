@@ -36,8 +36,22 @@ describe("citaSchema", () => {
     expect(citaSchema.safeParse({ ...valid, fecha: "16/09/2026" }).success).toBe(false);
   });
 
-  it("rechaza consulta menor a 20 caracteres", () => {
-    expect(citaSchema.safeParse({ ...valid, consulta: "muy corta" }).success).toBe(false);
+  it("acepta consulta corta — ya no tiene mínimo de caracteres", () => {
+    expect(citaSchema.safeParse({ ...valid, consulta: "corta" }).success).toBe(true);
+  });
+
+  it("acepta sin consulta — es opcional", () => {
+    const { consulta, ...sinConsulta } = valid;
+    void consulta;
+    expect(citaSchema.safeParse(sinConsulta).success).toBe(true);
+  });
+
+  it("acepta consulta vacía", () => {
+    expect(citaSchema.safeParse({ ...valid, consulta: "" }).success).toBe(true);
+  });
+
+  it("rechaza consulta mayor a 1000 caracteres", () => {
+    expect(citaSchema.safeParse({ ...valid, consulta: "a".repeat(1001) }).success).toBe(false);
   });
 
   it("rechaza empresa sin razón social", () => {
@@ -64,10 +78,15 @@ describe("citaSchema", () => {
 });
 
 describe("consultaSchema", () => {
-  it("exporta el mismo schema que usa citaSchema.consulta — se consume directo en el form público", () => {
+  it("es opcional y sin mínimo — se consume directo en el form público", () => {
     expect(consultaSchema.safeParse("Estoy buscando un módulo de 38m2 para vivienda").success).toBe(
       true
     );
-    expect(consultaSchema.safeParse("muy corta").success).toBe(false);
+    expect(consultaSchema.safeParse("corta").success).toBe(true);
+    expect(consultaSchema.safeParse(undefined).success).toBe(true);
+  });
+
+  it("rechaza más de 1000 caracteres", () => {
+    expect(consultaSchema.safeParse("a".repeat(1001)).success).toBe(false);
   });
 });
