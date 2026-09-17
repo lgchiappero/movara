@@ -35,7 +35,7 @@ describe("disponibilidadDiaSchema", () => {
       disponibilidadDiaSchema.safeParse({
         fecha: "2026-10-05",
         habilitada: true,
-        horarios: ["09:00"],
+        horarios: ["13:00"],
       }).success
     ).toBe(false);
   });

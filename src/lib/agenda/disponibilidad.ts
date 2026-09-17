@@ -29,9 +29,16 @@ export async function getHorariosDisponibles(fechaKey: string): Promise<string[]
   return habilitados.filter((h) => !ocupadosSet.has(h));
 }
 
-/** Set de "YYYY-MM-DD" del mes `anio`-`mes` (1-12) que tienen al menos un
- * horario libre — para resaltar el calendario público. */
-export async function getDiasDisponiblesDelMes(anio: number, mes: number): Promise<Set<string>> {
+export type EstadoDiaMes = "disponible" | "completo";
+
+/** Estado de cada día habilitado del mes `anio`-`mes` (1-12) para el
+ * calendario público — "disponible" tiene al menos un horario libre,
+ * "completo" está habilitado pero todos sus horarios ya están ocupados.
+ * Un día que no aparece en el resultado no está habilitado (o ya pasó). */
+export async function getEstadoDiasDelMes(
+  anio: number,
+  mes: number
+): Promise<Record<string, EstadoDiaMes>> {
   const desde = new Date(Date.UTC(anio, mes - 1, 1));
   const hasta = new Date(Date.UTC(anio, mes, 1));
 
@@ -53,13 +60,13 @@ export async function getDiasDisponiblesDelMes(anio: number, mes: number): Promi
   }
 
   const hoy = hoyFechaKey();
-  const disponibles = new Set<string>();
+  const resultado: Record<string, EstadoDiaMes> = {};
   for (const d of disponibilidades) {
     const key = dateToFechaKey(d.fecha);
-    if (key < hoy) continue;
+    if (key < hoy || d.horarios.length === 0) continue;
     const ocupados = ocupadosPorDia.get(key) ?? new Set();
     const libres = d.horarios.filter((h) => !ocupados.has(h));
-    if (libres.length > 0) disponibles.add(key);
+    resultado[key] = libres.length > 0 ? "disponible" : "completo";
   }
-  return disponibles;
+  return resultado;
 }

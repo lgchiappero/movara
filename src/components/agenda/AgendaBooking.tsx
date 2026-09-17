@@ -35,8 +35,8 @@ export default function AgendaBooking() {
   const [anio, setAnio] = useState(now.getFullYear());
   const [mesIdx0, setMesIdx0] = useState(now.getMonth());
   const mesKey = `${anio}-${mesIdx0}`;
-  const [diasPorMes, setDiasPorMes] = useState<Record<string, Set<string>>>({});
-  const diasDisponibles = diasPorMes[mesKey] ?? new Set<string>();
+  const [diasPorMes, setDiasPorMes] = useState<Record<string, Record<string, "disponible" | "completo">>>({});
+  const estadoDiasMes = diasPorMes[mesKey] ?? {};
   const cargandoMes = !(mesKey in diasPorMes);
 
   const [fechaSel, setFechaSel] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export default function AgendaBooking() {
       .then((r) => r.json())
       .then((json) => {
         if (cancelado) return;
-        setDiasPorMes((prev) => ({ ...prev, [mesKey]: new Set<string>(json.dias ?? []) }));
+        setDiasPorMes((prev) => ({ ...prev, [mesKey]: json.dias ?? {} }));
       });
     return () => {
       cancelado = true;
@@ -231,22 +231,35 @@ export default function AgendaBooking() {
           ))}
           {Array.from({ length: diasEnMes }, (_, i) => i + 1).map((dia) => {
             const key = fechaKey(anio, mesIdx0, dia);
-            const disponible = !cargandoMes && diasDisponibles.has(key) && key >= hoyKey();
+            const estado = estadoDiasMes[key]; // "disponible" | "completo" | undefined
+            const disponible = !cargandoMes && estado === "disponible" && key >= hoyKey();
+            const completo = !cargandoMes && estado === "completo";
             const esHoy = key === hoyKey();
             const seleccionado = key === fechaSel;
+
+            let clases: string;
+            let title: string | undefined;
+            if (seleccionado) {
+              clases = "border-2 border-[#D4B06A] bg-[#D4B06A]/20 text-[#2F2F2F] font-bold";
+            } else if (disponible) {
+              clases = "bg-[#D4B06A] text-[#2F2F2F] hover:bg-[#c19f5a] cursor-pointer";
+            } else if (completo) {
+              clases = "bg-stone-300 text-stone-500 cursor-not-allowed";
+              title = "Sin turnos disponibles";
+            } else {
+              clases = "bg-stone-100 text-stone-300 cursor-not-allowed";
+            }
+
             return (
               <button
                 key={dia}
                 type="button"
                 disabled={!disponible}
                 onClick={() => seleccionarDia(key)}
-                className={`aspect-square rounded-lg text-sm font-medium transition-colors ${
-                  seleccionado
-                    ? "bg-[#2F2F2F] text-white"
-                    : disponible
-                      ? "bg-[#D4B06A]/20 text-[#8a6a2e] hover:bg-[#D4B06A] hover:text-[#2F2F2F] cursor-pointer"
-                      : "bg-stone-100 text-stone-300 cursor-not-allowed"
-                } ${esHoy && !seleccionado ? "ring-1 ring-[#D4B06A]" : ""}`}
+                title={title}
+                className={`aspect-square rounded-lg text-sm font-medium transition-colors ${clases} ${
+                  esHoy && !seleccionado ? "ring-1 ring-[#D4B06A]" : ""
+                }`}
               >
                 {dia}
               </button>
@@ -357,13 +370,13 @@ export default function AgendaBooking() {
           </div>
 
           <label className="block space-y-1.5">
-            <span className={labelClass}>¿Qué estás buscando? *</span>
+            <span className={labelClass}>¿Qué estás buscando o necesitás saber? *</span>
             <textarea
               className={inputClass}
               rows={3}
               value={form.consulta}
               onChange={(e) => setForm((f) => ({ ...f, consulta: e.target.value }))}
-              placeholder="Contanos qué modelo te interesa, para qué lo necesitás, etc. (mínimo 20 caracteres)"
+              placeholder="Contanos brevemente qué te interesa o qué consultas tenés para aprovechar mejor la visita."
             />
           </label>
 

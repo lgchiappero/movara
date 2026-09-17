@@ -47,7 +47,7 @@ export default async function AgendaAdminPage({
   const desdeDisp = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
   const hastaDisp = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 3, 1));
 
-  const [citasDelMes, todasLasCitas, disponibilidadRows] = await Promise.all([
+  const [citasDelMes, todasLasCitas, disponibilidadRows, citasEnRangoDisp] = await Promise.all([
     db.cita.findMany({
       where: { fecha: { gte: desdeMes, lt: hastaMes } },
       orderBy: [{ fecha: "asc" }, { horario: "asc" }],
@@ -56,6 +56,10 @@ export default async function AgendaAdminPage({
       ? db.cita.findMany({ orderBy: [{ fecha: "desc" }, { horario: "asc" }] })
       : Promise.resolve([]),
     db.disponibilidadAgenda.findMany({ where: { fecha: { gte: desdeDisp, lt: hastaDisp } } }),
+    db.cita.findMany({
+      where: { fecha: { gte: desdeDisp, lt: hastaDisp }, estado: { not: "cancelada" } },
+      select: { fecha: true },
+    }),
   ]);
 
   const disponibilidad: DiaDisponibilidad[] = disponibilidadRows.map((d) => ({
@@ -63,6 +67,8 @@ export default async function AgendaAdminPage({
     habilitada: d.habilitada,
     horarios: d.horarios,
   }));
+
+  const diasConCitas = Array.from(new Set(citasEnRangoDisp.map((c) => dateToFechaKey(c.fecha))));
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12 space-y-10">
@@ -94,6 +100,7 @@ export default async function AgendaAdminPage({
           anioInicial={now.getFullYear()}
           mesInicial={now.getMonth()}
           disponibilidad={disponibilidad}
+          diasConCitas={diasConCitas}
         />
       </section>
     </div>

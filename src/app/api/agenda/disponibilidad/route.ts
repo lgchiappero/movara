@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDiasDisponiblesDelMes, getEstadoHorariosDelDia } from "@/lib/agenda/disponibilidad";
+import { getEstadoDiasDelMes, getEstadoHorariosDelDia } from "@/lib/agenda/disponibilidad";
 import { isFechaKeyValida } from "@/lib/agenda/fecha";
 
 export async function GET(req: NextRequest) {
@@ -20,6 +20,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Parámetros inválidos" }, { status: 400 });
   }
 
-  const dias = await getDiasDisponiblesDelMes(anio, mes);
-  return NextResponse.json({ dias: Array.from(dias) });
+  const dias = await getEstadoDiasDelMes(anio, mes);
+  return NextResponse.json({ dias });
 }
