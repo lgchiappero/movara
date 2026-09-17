@@ -81,16 +81,27 @@ export async function POST(req: NextRequest) {
       });
     });
 
-    await db.lead
-      .create({
-        data: {
-          nombre: data.nombre,
-          telefono: data.telefono,
-          email: data.email,
-          mensaje: `[Turno agendado ${data.fecha} ${data.horario}hs] ${data.consulta}`,
-        },
-      })
-      .catch((err) => console.error("[agenda/citas] Error guardando lead:", err));
+    try {
+      const leadExistente = await db.lead.findFirst({ where: { email: data.email } });
+      if (!leadExistente) {
+        const fechaEs = fecha.toLocaleDateString("es-AR", {
+          timeZone: "UTC",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        await db.lead.create({
+          data: {
+            nombre: data.nombre,
+            telefono: data.telefono,
+            email: data.email,
+            mensaje: `Agendó visita al showroom para ${fechaEs} a las ${data.horario}hs`,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("[agenda/citas] Error guardando lead:", err);
+    }
 
     await enviarEmails({
       id: cita.id,

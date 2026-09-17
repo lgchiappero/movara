@@ -5,6 +5,11 @@ import { isFechaKeyValida, hoyFechaKey } from "@/lib/agenda/fecha";
 
 export const tipoClienteAgendaOptions = ["particular", "empresa"] as const;
 
+export const consultaSchema = z
+  .string()
+  .min(20, "Contanos un poco más — mínimo 20 caracteres")
+  .max(1000, "Máximo 1000 caracteres");
+
 export const citaSchema = z
   .object({
     fecha: z.string().refine(isFechaKeyValida, "Fecha inválida").refine(
@@ -17,10 +22,7 @@ export const citaSchema = z
     email: emailSchema,
     telefono: telefonoSchema,
     razonSocial: razonSocialSchema.optional(),
-    consulta: z
-      .string()
-      .min(20, "Contanos un poco más — mínimo 20 caracteres")
-      .max(1000, "Máximo 1000 caracteres"),
+    consulta: consultaSchema,
   })
   .refine((data) => data.tipoCliente !== "empresa" || !!data.razonSocial?.trim(), {
     message: "La razón social es obligatoria para clientes tipo empresa",

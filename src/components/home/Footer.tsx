@@ -151,6 +151,14 @@ export default async function Footer() {
                   </a>
                 </li>
               ))}
+              <li>
+                <Link
+                  href="/agendar"
+                  className="text-sm font-semibold text-[#D4B06A] hover:text-[#e0c084] transition-colors"
+                >
+                  Agendar visita al showroom →
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

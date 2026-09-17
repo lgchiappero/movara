@@ -55,8 +55,14 @@ export default function Navbar() {
           ))}
         </ul>
 
-        {/* Desktop CTA */}
-        <div className="hidden md:block">
+        {/* Desktop CTAs */}
+        <div className="hidden md:flex items-center gap-3">
+          <Link
+            href="/agendar"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#D4B06A] hover:bg-[#BF9A52] text-[#1A1A1A] text-xs font-bold rounded-lg transition-colors"
+          >
+            Agendar visita
+          </Link>
           <Link
             href="/modelos"
             className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-sage-500 hover:bg-sage-600 text-white text-sm font-semibold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-sage-500/25 hover:-translate-y-px"
@@ -88,7 +94,14 @@ export default function Navbar() {
               {label}
             </Link>
           ))}
-          <div className="pt-3">
+          <div className="pt-3 space-y-2">
+            <Link
+              href="/agendar"
+              onClick={() => setMenuOpen(false)}
+              className="block text-center px-5 py-3 bg-[#D4B06A] hover:bg-[#BF9A52] text-[#1A1A1A] font-bold rounded-xl transition-colors"
+            >
+              Agendar visita
+            </Link>
             <Link
               href="/modelos"
               onClick={() => setMenuOpen(false)}

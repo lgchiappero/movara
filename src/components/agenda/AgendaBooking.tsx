@@ -2,12 +2,36 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { HORARIOS_AGENDA } from "@/lib/agenda/horarios";
-import { tipoClienteAgendaOptions } from "@/lib/validators/cita";
+import { tipoClienteAgendaOptions, consultaSchema } from "@/lib/validators/cita";
+import {
+  nombreSchema,
+  telefonoSchema,
+  emailSchema,
+  razonSocialSchema,
+  validateField,
+} from "@/lib/validators/configurador";
 import { SHOWROOM_DIRECCION } from "@/lib/agenda/showroom";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
 const labelClass = "text-sm font-medium text-[#2F2F2F]";
+
+function inputClassFor(error: string | null, isTouched: boolean): string {
+  if (!isTouched) return inputClass;
+  return error
+    ? `${inputClass} border-red-300 focus:ring-red-300`
+    : `${inputClass} border-emerald-400 focus:ring-emerald-300`;
+}
+
+function FieldError({ msg }: { msg: string | null }) {
+  if (!msg) return null;
+  return (
+    <p className="text-xs text-red-500 mt-1 flex items-start gap-1">
+      <span className="shrink-0">⚠</span>
+      {msg}
+    </p>
+  );
+}
 
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -58,6 +82,12 @@ export default function AgendaBooking() {
   });
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [intentoEnviar, setIntentoEnviar] = useState(false);
+
+  function touch(field: string) {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  }
 
   useEffect(() => {
     if (mesKey in diasPorMes) return;
@@ -104,15 +134,27 @@ export default function AgendaBooking() {
     setError(null);
   }
 
+  const errors = {
+    nombre: validateField(nombreSchema, form.nombre.trim()),
+    email: validateField(emailSchema, form.email.trim()),
+    telefono: validateField(telefonoSchema, form.telefono.trim()),
+    consulta: validateField(consultaSchema, form.consulta.trim()),
+    razonSocial:
+      form.tipoCliente === "empresa" ? validateField(razonSocialSchema, form.razonSocial.trim()) : null,
+  };
+
   const puedeConfirmar =
-    form.nombre.trim().length >= 3 &&
-    form.email.trim().length > 3 &&
-    form.telefono.trim().length >= 8 &&
-    form.consulta.trim().length >= 20 &&
-    (form.tipoCliente !== "empresa" || form.razonSocial.trim().length >= 3);
+    !!fechaSel &&
+    !!horarioSel &&
+    !errors.nombre &&
+    !errors.email &&
+    !errors.telefono &&
+    !errors.consulta &&
+    !errors.razonSocial;
 
   async function confirmarVisita() {
-    if (!fechaSel || !horarioSel) return;
+    setIntentoEnviar(true);
+    if (!fechaSel || !horarioSel || !puedeConfirmar) return;
     setError(null);
     setEnviando(true);
     try {
@@ -335,56 +377,66 @@ export default function AgendaBooking() {
               <label className="block space-y-1.5">
                 <span className={labelClass}>Razón social *</span>
                 <input
-                  className={inputClass}
+                  className={inputClassFor(errors.razonSocial, touched.razonSocial || intentoEnviar)}
                   value={form.razonSocial}
                   onChange={(e) => setForm((f) => ({ ...f, razonSocial: e.target.value }))}
+                  onBlur={() => touch("razonSocial")}
                 />
+                <FieldError msg={(touched.razonSocial || intentoEnviar) ? errors.razonSocial : null} />
               </label>
             )}
             <label className="block space-y-1.5">
               <span className={labelClass}>Nombre completo *</span>
               <input
-                className={inputClass}
+                className={inputClassFor(errors.nombre, touched.nombre || intentoEnviar)}
                 value={form.nombre}
                 onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+                onBlur={() => touch("nombre")}
               />
+              <FieldError msg={(touched.nombre || intentoEnviar) ? errors.nombre : null} />
             </label>
             <label className="block space-y-1.5">
               <span className={labelClass}>Email *</span>
               <input
                 type="email"
-                className={inputClass}
+                className={inputClassFor(errors.email, touched.email || intentoEnviar)}
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                onBlur={() => touch("email")}
               />
+              <FieldError msg={(touched.email || intentoEnviar) ? errors.email : null} />
             </label>
             <label className="block space-y-1.5">
               <span className={labelClass}>Teléfono / WhatsApp *</span>
               <input
-                className={inputClass}
+                className={inputClassFor(errors.telefono, touched.telefono || intentoEnviar)}
                 value={form.telefono}
                 onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
+                onBlur={() => touch("telefono")}
                 placeholder="+54 9 11 1234-5678"
               />
+              <FieldError msg={(touched.telefono || intentoEnviar) ? errors.telefono : null} />
             </label>
           </div>
 
           <label className="block space-y-1.5">
             <span className={labelClass}>¿Qué estás buscando o necesitás saber? *</span>
             <textarea
-              className={inputClass}
+              className={inputClassFor(errors.consulta, touched.consulta || intentoEnviar)}
               rows={3}
               value={form.consulta}
               onChange={(e) => setForm((f) => ({ ...f, consulta: e.target.value }))}
+              onBlur={() => touch("consulta")}
               placeholder="Contanos brevemente qué te interesa o qué consultas tenés para aprovechar mejor la visita."
             />
+            <FieldError msg={(touched.consulta || intentoEnviar) ? errors.consulta : null} />
           </label>
 
           {error && <p className="text-xs text-red-600">{error}</p>}
 
           <button
             type="button"
-            disabled={enviando || !puedeConfirmar}
+            disabled={enviando}
             onClick={confirmarVisita}
             className="w-full py-3 bg-[#D4B06A] hover:bg-[#c19f5a] disabled:opacity-50 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
           >

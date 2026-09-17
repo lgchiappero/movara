@@ -14,6 +14,19 @@ function parseMesParam(mes?: string): { anio: number; mesIdx0: number } {
   return { anio: now.getFullYear(), mesIdx0: now.getMonth() };
 }
 
+/** Como el pasado no se gestiona, un dispDesde anterior al mes actual se
+ * ignora y vuelve al default — sin tope hacia adelante. */
+function parseDispDesdeParam(dispDesde: string | undefined, now: Date): { anio: number; mesIdx0: number } {
+  const nowTotal = now.getFullYear() * 12 + now.getMonth();
+  if (dispDesde && /^\d{4}-\d{2}$/.test(dispDesde)) {
+    const [y, m] = dispDesde.split("-").map(Number);
+    if (m >= 1 && m <= 12 && y * 12 + (m - 1) >= nowTotal) {
+      return { anio: y, mesIdx0: m - 1 };
+    }
+  }
+  return { anio: now.getFullYear(), mesIdx0: now.getMonth() };
+}
+
 function serializeCita(c: {
   id: string;
   fecha: Date;
@@ -34,7 +47,7 @@ function serializeCita(c: {
 export default async function AgendaAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mes?: string; vista?: string; tab?: string }>;
+  searchParams: Promise<{ mes?: string; vista?: string; tab?: string; dispDesde?: string }>;
 }) {
   const sp = await searchParams;
   const { anio, mesIdx0 } = parseMesParam(sp.mes);
@@ -44,8 +57,9 @@ export default async function AgendaAdminPage({
   const hastaMes = new Date(Date.UTC(anio, mesIdx0 + 1, 1));
 
   const now = new Date();
-  const desdeDisp = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
-  const hastaDisp = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 3, 1));
+  const { anio: dispAnio, mesIdx0: dispMesIdx0 } = parseDispDesdeParam(sp.dispDesde, now);
+  const desdeDisp = new Date(Date.UTC(dispAnio, dispMesIdx0, 1));
+  const hastaDisp = new Date(Date.UTC(dispAnio, dispMesIdx0 + 3, 1));
 
   const [citasDelMes, todasLasCitas, disponibilidadRows, citasEnRangoDisp] = await Promise.all([
     db.cita.findMany({
@@ -97,8 +111,8 @@ export default async function AgendaAdminPage({
           Gestión de disponibilidad
         </h2>
         <DisponibilidadPanel
-          anioInicial={now.getFullYear()}
-          mesInicial={now.getMonth()}
+          anioInicial={dispAnio}
+          mesInicial={dispMesIdx0}
           disponibilidad={disponibilidad}
           diasConCitas={diasConCitas}
         />

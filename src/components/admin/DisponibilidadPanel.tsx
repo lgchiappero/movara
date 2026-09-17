@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { HORARIOS_AGENDA, esDiaHabil } from "@/lib/agenda/horarios";
 
 export type DiaDisponibilidad = {
@@ -165,6 +166,8 @@ export default function DisponibilidadPanel({
   diasConCitas: string[];
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // Derivado de las props (siempre fresco tras router.refresh()), con un
   // pequeño overlay optimista para reflejar la última acción al instante
@@ -282,8 +285,51 @@ export default function DisponibilidadPanel({
     .filter((d) => d.habilitada && d.horarios.length > 0)
     .sort((a, b) => a.fechaKey.localeCompare(b.fechaKey));
 
+  // Navegación mes a mes de la ventana de 3 meses — sin tope hacia
+  // adelante; hacia atrás no se puede pasar del mes actual (no tiene
+  // sentido gestionar disponibilidad de fechas ya pasadas).
+  const hoy = new Date();
+  const esMesActual = anioInicial === hoy.getFullYear() && mesInicial === hoy.getMonth();
+  const totalActual = anioInicial * 12 + mesInicial;
+  const prevTotal = totalActual - 1;
+  const nextTotal = totalActual + 1;
+  const prevNav = { anio: Math.floor(prevTotal / 12), mesIdx0: ((prevTotal % 12) + 12) % 12 };
+  const nextNav = { anio: Math.floor(nextTotal / 12), mesIdx0: nextTotal % 12 };
+
+  function hrefParaVentana(anio: number, mesIdx0: number): string {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("dispDesde", `${anio}-${pad2(mesIdx0 + 1)}`);
+    return `${pathname}?${params.toString()}`;
+  }
+
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+          {MESES[mesInicial]} {anioInicial} — {MESES[meses[2].mesIdx0]} {meses[2].anio}
+        </p>
+        <div className="flex items-center gap-2">
+          <Link
+            href={hrefParaVentana(prevNav.anio, prevNav.mesIdx0)}
+            aria-disabled={esMesActual}
+            tabIndex={esMesActual ? -1 : undefined}
+            className={`w-8 h-8 flex items-center justify-center rounded-full border border-[#E5E5E5] text-stone-500 hover:bg-stone-50 transition-colors ${
+              esMesActual ? "pointer-events-none opacity-30" : ""
+            }`}
+            aria-label="Mes anterior"
+          >
+            ‹
+          </Link>
+          <Link
+            href={hrefParaVentana(nextNav.anio, nextNav.mesIdx0)}
+            className="w-8 h-8 flex items-center justify-center rounded-full border border-[#E5E5E5] text-stone-500 hover:bg-stone-50 transition-colors"
+            aria-label="Mes siguiente"
+          >
+            ›
+          </Link>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {meses.map(({ anio, mesIdx0 }) => {
           const mesKey = `${anio}-${mesIdx0 + 1}`;
