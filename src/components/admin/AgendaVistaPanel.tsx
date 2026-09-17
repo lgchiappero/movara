@@ -24,6 +24,9 @@ const MESES = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
+const DIAS_SEMANA_LARGO = [
+  "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo",
+];
 
 const ESTADO_CLASSES: Record<string, string> = {
   confirmada: "bg-[#D4B06A]/20 text-[#8a6a2e]",
@@ -48,6 +51,12 @@ function fechaEsDesdeKey(key: string): string {
     month: "long",
     day: "numeric",
   });
+}
+
+function fechaConDiaYHora(fechaKey: string, horario: string): string {
+  const [y, m, d] = fechaKey.split("-").map(Number);
+  const diaSemanaIdx = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7; // 0=lunes
+  return `${DIAS_SEMANA_LARGO[diaSemanaIdx]} ${pad2(d)}/${pad2(m)}/${y} a las ${horario}hs`;
 }
 
 export default function AgendaVistaPanel({
@@ -181,8 +190,7 @@ export default function AgendaVistaPanel({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#E5E5E5] text-left text-stone-500 text-xs uppercase tracking-wide">
-                <th className="px-4 py-3 font-medium">Fecha</th>
-                <th className="px-4 py-3 font-medium">Horario</th>
+                <th className="px-4 py-3 font-medium">Fecha y horario</th>
                 <th className="px-4 py-3 font-medium">Nombre</th>
                 <th className="px-4 py-3 font-medium">Estado</th>
               </tr>
@@ -194,9 +202,13 @@ export default function AgendaVistaPanel({
                   onClick={() => setSeleccionadaId(c.id)}
                   className="border-b border-[#F0F0F0] last:border-0 cursor-pointer hover:bg-stone-50"
                 >
-                  <td className="px-4 py-3 text-stone-600">{c.fechaKey}</td>
-                  <td className="px-4 py-3 text-stone-600">{c.horario}</td>
-                  <td className="px-4 py-3 font-medium text-[#2F2F2F]">{c.nombre}</td>
+                  <td className="px-4 py-3 text-stone-600 capitalize">{fechaConDiaYHora(c.fechaKey, c.horario)}</td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-[#2F2F2F]">{c.nombre}</p>
+                    {c.consulta.trim() && (
+                      <p className="italic text-stone-400 text-xs mt-0.5">{c.consulta}</p>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${ESTADO_CLASSES[c.estado] ?? "bg-stone-100 text-stone-500"}`}>
                       {c.estado}
@@ -206,7 +218,7 @@ export default function AgendaVistaPanel({
               ))}
               {todasLasCitas.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-stone-400">
+                  <td colSpan={3} className="px-4 py-8 text-center text-stone-400">
                     Todavía no hay visitas agendadas.
                   </td>
                 </tr>
