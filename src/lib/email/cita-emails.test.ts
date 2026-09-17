@@ -5,7 +5,9 @@ import {
   buildRecordatorioEmail,
   buildCancelacionClienteEmail,
   buildCancelacionAdminEmail,
+  buildReagendacionAdminEmail,
   type CitaEmailData,
+  type ReagendacionEmailData,
 } from "@/lib/email/cita-emails";
 
 const cita: CitaEmailData = {
@@ -97,5 +99,25 @@ describe("cita-emails", () => {
     const canceladaPorCliente: CitaEmailData = { ...cita, canceladaPor: "cliente" };
     const { html: htmlCliente } = buildCancelacionAdminEmail(canceladaPorCliente);
     expect(htmlCliente).toContain("el cliente");
+  });
+
+  it("buildReagendacionAdminEmail incluye ambas fechas, el nombre y los datos de contacto", () => {
+    const reagendacion: ReagendacionEmailData = {
+      nombre: "Juan García",
+      email: "juan@example.com",
+      telefono: "+54 9 11 1234-5678",
+      fechaAnterior: new Date(Date.UTC(2026, 8, 20)), // 2026-09-20
+      horarioAnterior: "11:00",
+      fechaNueva: new Date(Date.UTC(2026, 8, 25)), // 2026-09-25
+      horarioNueva: "15:00",
+    };
+    const { subject, html } = buildReagendacionAdminEmail(reagendacion);
+    expect(subject).toBe("MOVARA — Reagendación de visita");
+    expect(html).toContain("Juan García");
+    expect(html).toContain("reagendó su visita");
+    expect(html).toContain("11:00");
+    expect(html).toContain("15:00");
+    expect(html).toContain("juan@example.com");
+    expect(html).toContain("+54 9 11 1234-5678");
   });
 });

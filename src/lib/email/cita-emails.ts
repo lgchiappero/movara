@@ -134,6 +134,42 @@ export function buildCancelacionClienteEmail(cita: CitaEmailData): { subject: st
   return { subject: "MOVARA — Tu visita fue cancelada", html };
 }
 
+export type ReagendacionEmailData = {
+  nombre: string;
+  email: string;
+  telefono: string;
+  fechaAnterior: Date;
+  horarioAnterior: string;
+  fechaNueva: Date;
+  horarioNueva: string;
+};
+
+export function buildReagendacionAdminEmail(
+  data: ReagendacionEmailData
+): { subject: string; html: string } {
+  const html = layout(
+    "🔄 Reagendación de visita",
+    `
+    <p style="margin:0 0 16px;color:#555;font-size:14px;">${data.nombre} reagendó su visita.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:10px 0;color:#888;width:150px;vertical-align:top">Cita cancelada</td>
+        <td style="padding:10px 0;color:#222;font-weight:500">${fechaEs(data.fechaAnterior)} a las ${data.horarioAnterior} hs</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:10px 0;color:#888;vertical-align:top">Nueva cita</td>
+        <td style="padding:10px 0;color:#222;font-weight:600">${fechaEs(data.fechaNueva)} a las ${data.horarioNueva} hs</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 0;color:#888;vertical-align:top">Contacto</td>
+        <td style="padding:10px 0;color:#222;font-weight:500">${data.email} | ${data.telefono}</td>
+      </tr>
+    </table>
+    `
+  );
+  return { subject: "MOVARA — Reagendación de visita", html };
+}
+
 export function buildCancelacionAdminEmail(cita: CitaEmailData): { subject: string; html: string } {
   const canceladoPorTxt = cita.canceladaPor === "admin" ? "el equipo MOVARA" : "el cliente";
   const rows: [string, string][] = [

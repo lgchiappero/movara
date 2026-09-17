@@ -2,21 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { citaSchema } from "@/lib/validators/cita";
-import { fechaKeyToDate } from "@/lib/agenda/fecha";
+import { fechaKeyToDate, hoyFechaKey, dateToFechaKey } from "@/lib/agenda/fecha";
 import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
 import {
   buildConfirmacionClienteEmail,
   buildNuevaVisitaAdminEmail,
+  buildReagendacionAdminEmail,
   type CitaEmailData,
 } from "@/lib/email/cita-emails";
 
-async function enviarEmails(cita: CitaEmailData) {
+function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
-  const contactEmail = process.env.CONTACT_EMAIL;
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? "MOVARA <onboarding@resend.dev>";
-  if (!apiKey) return;
+  if (!apiKey) return null;
+  return { resend: new Resend(apiKey), fromEmail };
+}
 
-  const resend = new Resend(apiKey);
+async function enviarEmails(cita: CitaEmailData) {
+  const setup = getResend();
+  if (!setup) return;
+  const { resend, fromEmail } = setup;
+  const contactEmail = process.env.CONTACT_EMAIL;
 
   const cliente = buildConfirmacionClienteEmail(cita);
   try {
@@ -35,6 +41,40 @@ async function enviarEmails(cita: CitaEmailData) {
   }
 }
 
+async function enviarEmailsReagendacion(
+  cita: CitaEmailData,
+  citaAnterior: { fecha: Date; horario: string }
+) {
+  const setup = getResend();
+  if (!setup) return;
+  const { resend, fromEmail } = setup;
+  const contactEmail = process.env.CONTACT_EMAIL;
+
+  const cliente = buildConfirmacionClienteEmail(cita);
+  try {
+    await resend.emails.send({ from: fromEmail, to: cita.email, subject: cliente.subject, html: cliente.html });
+  } catch (err) {
+    console.error("[agenda/citas] Error enviando confirmación de reagendación al cliente:", err);
+  }
+
+  if (contactEmail) {
+    const admin = buildReagendacionAdminEmail({
+      nombre: cita.nombre,
+      email: cita.email,
+      telefono: cita.telefono,
+      fechaAnterior: citaAnterior.fecha,
+      horarioAnterior: citaAnterior.horario,
+      fechaNueva: cita.fecha,
+      horarioNueva: cita.horario,
+    });
+    try {
+      await resend.emails.send({ from: fromEmail, to: contactEmail, subject: admin.subject, html: admin.html });
+    } catch (err) {
+      console.error("[agenda/citas] Error enviando aviso de reagendación al admin:", err);
+    }
+  }
+}
+
 export async function POST(req: NextRequest) {
   const ip = getClientIP(req);
   const { allowed } = checkRateLimit(ip);
@@ -43,6 +83,11 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
+  const reemplazarCitaId =
+    body && typeof body === "object" && typeof (body as Record<string, unknown>).reemplazarCitaId === "string"
+      ? ((body as Record<string, unknown>).reemplazarCitaId as string)
+      : null;
+
   const parsed = citaSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -53,7 +98,38 @@ export async function POST(req: NextRequest) {
   const data = parsed.data;
   const fecha = fechaKeyToDate(data.fecha);
 
+  // Si el cliente ya tiene una visita confirmada a futuro con este email,
+  // no se agenda de una — se avisa y se le da a elegir. `reemplazarCitaId`
+  // es la confirmación explícita de "sí, cancelá la anterior".
+  if (!reemplazarCitaId) {
+    const citaFuturaExistente = await db.cita.findFirst({
+      where: { email: data.email, estado: "confirmada", fecha: { gt: fechaKeyToDate(hoyFechaKey()) } },
+      orderBy: { fecha: "asc" },
+    });
+    if (citaFuturaExistente) {
+      return NextResponse.json(
+        {
+          error: "Ya tenés una visita agendada",
+          code: "cita-duplicada",
+          citaExistente: {
+            id: citaFuturaExistente.id,
+            fecha: dateToFechaKey(citaFuturaExistente.fecha),
+            horario: citaFuturaExistente.horario,
+          },
+        },
+        { status: 409 }
+      );
+    }
+  }
+
   try {
+    // Re-verificada server-side: si ya no coincide (otra sesión la canceló,
+    // etc.) simplemente no se cancela nada y se agenda como una reserva
+    // normal — no es motivo para hacer fallar el pedido del cliente.
+    const citaAnterior = reemplazarCitaId
+      ? await db.cita.findFirst({ where: { id: reemplazarCitaId, email: data.email, estado: "confirmada" } })
+      : null;
+
     const cita = await db.$transaction(async (tx) => {
       const disponibilidad = await tx.disponibilidadAgenda.findUnique({ where: { fecha } });
       if (!disponibilidad || !disponibilidad.habilitada || !disponibilidad.horarios.includes(data.horario)) {
@@ -65,6 +141,17 @@ export async function POST(req: NextRequest) {
       });
       if (ocupado) {
         throw new Error("horario-ya-reservado");
+      }
+
+      if (citaAnterior) {
+        await tx.cita.update({
+          where: { id: citaAnterior.id },
+          data: {
+            estado: "cancelada",
+            canceladaPor: "cliente",
+            motivoCancelacion: "Reagendado por el cliente",
+          },
+        });
       }
 
       return tx.cita.create({
@@ -103,7 +190,7 @@ export async function POST(req: NextRequest) {
       console.error("[agenda/citas] Error guardando lead:", err);
     }
 
-    await enviarEmails({
+    const emailData: CitaEmailData = {
       id: cita.id,
       fecha: cita.fecha,
       horario: cita.horario,
@@ -113,7 +200,16 @@ export async function POST(req: NextRequest) {
       tipoCliente: cita.tipoCliente,
       razonSocial: cita.razonSocial,
       consulta: cita.consulta,
-    });
+    };
+
+    if (citaAnterior) {
+      await enviarEmailsReagendacion(emailData, {
+        fecha: citaAnterior.fecha,
+        horario: citaAnterior.horario,
+      });
+    } else {
+      await enviarEmails(emailData);
+    }
 
     return NextResponse.json({ ok: true, id: cita.id }, { status: 201 });
   } catch (err) {
