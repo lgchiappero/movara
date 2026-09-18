@@ -18,6 +18,7 @@ async function sendNotificationEmail(clienteNombre: string, modelo: string, nume
     await resend.emails.send({
       from: fromEmail,
       to: contactEmail,
+      replyTo: "lucianogchiappero@gmail.com",
       subject: `Nueva consulta — ${clienteNombre} — ${modelo} — ${numeroConsulta}`,
       html: `<!DOCTYPE html>
 <html lang="es">

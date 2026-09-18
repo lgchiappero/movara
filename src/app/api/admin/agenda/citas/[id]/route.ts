@@ -18,7 +18,7 @@ async function enviarEmailsCancelacion(cita: CitaEmailData) {
 
   try {
     const { subject, html } = buildCancelacionClienteEmail(cita);
-    await resend.emails.send({ from: fromEmail, to: cita.email, subject, html });
+    await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "lucianogchiappero@gmail.com", subject, html });
   } catch (err) {
     console.error("[admin/agenda/citas] Error avisando cancelación al cliente:", err);
   }
@@ -26,7 +26,7 @@ async function enviarEmailsCancelacion(cita: CitaEmailData) {
   if (contactEmail) {
     try {
       const { subject, html } = buildCancelacionAdminEmail(cita);
-      await resend.emails.send({ from: fromEmail, to: contactEmail, subject, html });
+      await resend.emails.send({ from: fromEmail, to: contactEmail, replyTo: "lucianogchiappero@gmail.com", subject, html });
     } catch (err) {
       console.error("[admin/agenda/citas] Error avisando cancelación al admin:", err);
     }

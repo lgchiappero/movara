@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     };
     const { subject, html } = buildRecordatorioEmail(data);
     try {
-      await resend.emails.send({ from: fromEmail, to: cita.email, subject, html });
+      await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "lucianogchiappero@gmail.com", subject, html });
     } catch (err) {
       console.error("[cron/recordatorios] Error enviando a", cita.email, err);
       continue; // no marca recordatorioEnviado si el envío falló

@@ -26,7 +26,7 @@ async function enviarEmails(cita: CitaEmailData) {
 
   const cliente = buildConfirmacionClienteEmail(cita);
   try {
-    await resend.emails.send({ from: fromEmail, to: cita.email, subject: cliente.subject, html: cliente.html });
+    await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "lucianogchiappero@gmail.com", subject: cliente.subject, html: cliente.html });
   } catch (err) {
     console.error("[agenda/citas] Error enviando confirmación al cliente:", err);
   }
@@ -34,7 +34,7 @@ async function enviarEmails(cita: CitaEmailData) {
   if (contactEmail) {
     const admin = buildNuevaVisitaAdminEmail(cita);
     try {
-      await resend.emails.send({ from: fromEmail, to: contactEmail, subject: admin.subject, html: admin.html });
+      await resend.emails.send({ from: fromEmail, to: contactEmail, replyTo: "lucianogchiappero@gmail.com", subject: admin.subject, html: admin.html });
     } catch (err) {
       console.error("[agenda/citas] Error enviando notificación al admin:", err);
     }
@@ -52,7 +52,7 @@ async function enviarEmailsReagendacion(
 
   const cliente = buildConfirmacionClienteEmail(cita);
   try {
-    await resend.emails.send({ from: fromEmail, to: cita.email, subject: cliente.subject, html: cliente.html });
+    await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "lucianogchiappero@gmail.com", subject: cliente.subject, html: cliente.html });
   } catch (err) {
     console.error("[agenda/citas] Error enviando confirmación de reagendación al cliente:", err);
   }
@@ -68,7 +68,7 @@ async function enviarEmailsReagendacion(
       horarioNueva: cita.horario,
     });
     try {
-      await resend.emails.send({ from: fromEmail, to: contactEmail, subject: admin.subject, html: admin.html });
+      await resend.emails.send({ from: fromEmail, to: contactEmail, replyTo: "lucianogchiappero@gmail.com", subject: admin.subject, html: admin.html });
     } catch (err) {
       console.error("[agenda/citas] Error enviando aviso de reagendación al admin:", err);
     }

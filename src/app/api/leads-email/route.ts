@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
         await resend.emails.send({
           from: fromEmail,
           to: contactEmail,
+          replyTo: "lucianogchiappero@gmail.com",
           subject: "MOVARA | Nuevo email capturado — exit intent",
           html: `<!DOCTYPE html>
 <html lang="es">
