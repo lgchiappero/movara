@@ -33,10 +33,25 @@ export async function uploadDocument(
   contentType: string
 ): Promise<void> {
   const client = getStorageClient();
-  const { error } = await client.storage.from(bucket).upload(path, bytes, {
-    contentType,
-    upsert: false,
-  });
+
+  const attemptUpload = () =>
+    client.storage.from(bucket).upload(path, bytes, { contentType, upsert: false });
+
+  let { error } = await attemptUpload();
+
+  // El bucket nunca se provisionó desde código — hasta ahora alguien lo
+  // creaba a mano en el dashboard de Supabase. Si no existe, lo creamos acá
+  // (privado, como todos los de este proyecto) y reintentamos una vez, así
+  // un bucket nuevo (ej. al sumar una entidad con documentos) no requiere
+  // ningún paso manual.
+  if (error && /bucket not found/i.test(error.message)) {
+    const { error: createError } = await client.storage.createBucket(bucket, { public: false });
+    if (createError && !/already exists/i.test(createError.message)) {
+      throw new Error(`[storage] Error al crear el bucket "${bucket}": ${createError.message}`);
+    }
+    ({ error } = await attemptUpload());
+  }
+
   if (error) throw new Error(`[storage] Error al subir: ${error.message}`);
 }
 
