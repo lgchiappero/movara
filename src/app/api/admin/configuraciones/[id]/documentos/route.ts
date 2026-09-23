@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { validateFile } from "@/lib/admin/file-validation";
-import { buildStoragePath, uploadDocument } from "@/lib/admin/storage";
+import { buildStoragePath, uploadDocument, BUCKET_PEDIDOS } from "@/lib/admin/storage";
 import { tipoDocumentoOptions, campoDestinoOptions } from "@/lib/validators/documentos";
 
 export async function POST(
@@ -47,11 +47,11 @@ export async function POST(
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
-  const path = buildStoragePath(pedidoId, file.name);
+  const path = buildStoragePath("pedidos", pedidoId, file.name);
   const bytes = await file.arrayBuffer();
 
   try {
-    await uploadDocument(path, bytes, file.type);
+    await uploadDocument(BUCKET_PEDIDOS, path, bytes, file.type);
   } catch (err) {
     console.error("[documentos]", err);
     return NextResponse.json({ error: "No pudimos subir el archivo" }, { status: 500 });

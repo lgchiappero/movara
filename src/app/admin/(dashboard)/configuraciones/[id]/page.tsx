@@ -6,7 +6,7 @@ import { buildPedidoNarrativeEs } from "@/lib/pdf/pedido-narrative-es";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { MATERIAL_CATEGORY_GROUPS, findMaterialOption } from "@/data/material-catalog";
 import { estadoPedidoLabels, type EstadoPedido } from "@/lib/pedido/estado-pedido";
-import { getSignedUrl } from "@/lib/admin/storage";
+import { getSignedUrl, BUCKET_PEDIDOS } from "@/lib/admin/storage";
 import GestionPedidoPanel from "@/components/admin/GestionPedidoPanel";
 import DocumentosPedidoSection, { type DocumentoConUrl } from "@/components/admin/DocumentosPedidoSection";
 import ConfiguracionEspacioForm from "@/components/admin/ConfiguracionEspacioForm";
@@ -14,7 +14,7 @@ import ConfiguracionEspacioForm from "@/components/admin/ConfiguracionEspacioFor
 export const dynamic = "force-dynamic";
 
 async function resolveUrl(path: string | null): Promise<string | null> {
-  return path ? getSignedUrl(path) : null;
+  return path ? getSignedUrl(BUCKET_PEDIDOS, path) : null;
 }
 
 export default async function ConfiguracionDetailPage({
@@ -52,7 +52,7 @@ export default async function ConfiguracionDetailPage({
           notas: d.notas,
           subidoPor: d.subidoPor,
           createdAt: d.createdAt.toISOString(),
-          signedUrl: await getSignedUrl(d.url),
+          signedUrl: await getSignedUrl(BUCKET_PEDIDOS, d.url),
         }))
       ),
     ]);
