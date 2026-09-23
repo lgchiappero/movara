@@ -273,3 +273,128 @@ model DisponibilidadAgenda {
 
   @@map("disponibilidad_agenda")
 }
+
+// ─── Gestión de envíos y unidades ───────────────────────────────
+model Cliente {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  nombre    String
+  dni       String?
+  cuit      String?
+  domicilio String?
+  email     String?
+  telefono  String?
+  notas     String?
+
+  unidades Unidad[]
+
+  @@map("clientes")
+}
+
+model Envio {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  numeroPI         String? // Proforma Invoice del proveedor
+  numeroBL         String? // Bill of Lading
+  numeroContenedor String?
+
+  fechaEmbarque       DateTime?
+  fechaArriboEstimado DateTime?
+  fechaArribo         DateTime?
+
+  costoPI                 Float? // costo total de la PI en USD
+  costoFlete              Float? // flete internacional
+  costoSeguro             Float? // seguro de carga
+  costoAduana             Float? // gastos aduaneros
+  costoOtrosInternacional Float? // otros costos internacionales
+
+  notas String?
+
+  unidades   Unidad[]
+  documentos DocumentoEnvio[]
+
+  @@map("envios")
+}
+
+model Unidad {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  numeroUnidad String? // MOV-UNIDAD-2026-001
+
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id])
+  envioId   String?
+  envio     Envio?  @relation(fields: [envioId], references: [id])
+
+  // ─── Configuración del producto ────────────────────────────
+  modelo        String? // "Flex 18" | "Flex 38" | "Flex 77"
+  configuracion Json? // configuración completa de la unidad
+  precioCliente Float? // precio acordado con el cliente en USD
+
+  // ─── Estado de fabricación (individual por unidad) ─────────
+  estadoFabricacion String @default("pendiente")
+  // pendiente | en_produccion | produccion_completa | embarcado |
+  // en_transito | en_aduana | en_destino | entregado
+
+  // ─── Logística nacional (individual por unidad) ────────────
+  provinciaDestino        String?
+  localidadDestino        String?
+  direccionEntrega        String?
+  costoTransporteNacional Float?
+  costoGrua               Float?
+  fechaEntregaEstimada    DateTime?
+  fechaEntrega            DateTime?
+
+  // ─── Garantía ────────────────────────────────────────────────
+  garantiaActivada Boolean   @default(false)
+  garantiaInicio   DateTime?
+  garantiaFin      DateTime?
+
+  notas String?
+
+  documentos DocumentoUnidad[]
+
+  @@map("unidades")
+}
+
+model DocumentoEnvio {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  envioId String
+  envio   Envio  @relation(fields: [envioId], references: [id])
+
+  seccion     String // "04_produccion" | "05_embarque" | "06_despacho"
+  nombre      String
+  descripcion String?
+  url         String
+  tipo        String? // mime type
+
+  subidoPor String
+
+  @@map("documentos_envio")
+}
+
+model DocumentoUnidad {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  unidadId String
+  unidad   Unidad @relation(fields: [unidadId], references: [id])
+
+  seccion     String // "01_cliente" | "02_contrato" | "03_pagos" | "07_entrega" | "08_garantia" | "09_reclamos"
+  nombre      String
+  descripcion String?
+  url         String
+  tipo        String?
+
+  subidoPor String
+
+  @@map("documentos_unidad")
+}
