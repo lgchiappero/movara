@@ -27,7 +27,10 @@ export default async function UnidadDetailPage({
 
   const [clientes, envios, documentosUnidadConUrl, documentosEnvioConUrl] = await Promise.all([
     db.cliente.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
-    db.envio.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, numeroPI: true } }),
+    db.envio.findMany({
+      orderBy: { createdAt: "desc" },
+      select: { id: true, numeroPI: true, numeroContenedor: true, fechaArriboEstimado: true },
+    }),
     Promise.all(
       unidad.documentos.map(async (d): Promise<DocumentoSeccionConUrl> => ({
         id: d.id,
@@ -78,7 +81,12 @@ export default async function UnidadDetailPage({
       <UnidadDetailForm
         id={id}
         clientes={clientes}
-        envios={envios}
+        envios={envios.map((e) => ({
+          id: e.id,
+          numeroPI: e.numeroPI,
+          numeroContenedor: e.numeroContenedor,
+          fechaArriboEstimado: e.fechaArriboEstimado?.toISOString() ?? null,
+        }))}
         initial={{
           clienteId: unidad.clienteId,
           envioId: unidad.envioId,

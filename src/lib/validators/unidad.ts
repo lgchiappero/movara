@@ -49,3 +49,12 @@ export const unidadEditSchema = z.object({
   notas: stringOrNull,
 });
 export type UnidadEditInput = z.infer<typeof unidadEditSchema>;
+
+// Asociar/desasociar una unidad de un envío — un PATCH chico y específico
+// en vez de reusar unidadEditSchema (que exige el objeto completo), para
+// que el detalle del envío pueda mover unidades sin tener que cargar/enviar
+// el resto de sus campos.
+export const unidadEnvioSchema = z.object({
+  envioId: stringOrNull,
+});
+export type UnidadEnvioInput = z.infer<typeof unidadEnvioSchema>;

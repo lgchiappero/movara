@@ -26,7 +26,12 @@ const PROVINCIAS = [
 ];
 
 type Cliente = { id: string; nombre: string };
-type Envio = { id: string; numeroPI: string | null };
+type Envio = {
+  id: string;
+  numeroPI: string | null;
+  numeroContenedor: string | null;
+  fechaArriboEstimado: string | null;
+};
 
 type Unidad = {
   clienteId: string;
@@ -119,6 +124,8 @@ export default function UnidadDetailForm({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const envioSeleccionado = envios.find((e) => e.id === form.envioId) ?? null;
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -216,6 +223,28 @@ export default function UnidadDetailForm({
             </select>
           </label>
         </div>
+        {envioSeleccionado && (
+          <div className="bg-[#F4F4F4] rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div>
+              <p className="text-xs text-stone-500">N° PI</p>
+              <p className="font-medium text-[#2F2F2F]">{envioSeleccionado.numeroPI || "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-stone-500">N° Contenedor</p>
+              <p className="font-medium text-[#2F2F2F]">{envioSeleccionado.numeroContenedor || "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-stone-500">Arribo estimado</p>
+              <p className="font-medium text-[#2F2F2F]">
+                {envioSeleccionado.fechaArriboEstimado
+                  ? new Date(envioSeleccionado.fechaArriboEstimado).toLocaleDateString("es-AR", {
+                      timeZone: "UTC",
+                    })
+                  : "—"}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">

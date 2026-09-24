@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSignedUrl, BUCKET_MOVARA } from "@/lib/admin/storage";
-import { SECCIONES_ENVIO, estadoFabricacionLabels, type EstadoFabricacion } from "@/lib/envios/constantes";
+import { SECCIONES_ENVIO } from "@/lib/envios/constantes";
 import EnvioDetailForm from "@/components/admin/EnvioDetailForm";
 import DocumentosPorSeccion, { type DocumentoSeccionConUrl } from "@/components/admin/DocumentosPorSeccion";
+import AgregarUnidadSelector from "@/components/admin/AgregarUnidadSelector";
+import UnidadEnvioRow from "@/components/admin/UnidadEnvioRow";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +16,20 @@ export default async function EnvioDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const envio = await db.envio.findUnique({
-    where: { id },
-    include: {
-      unidades: { orderBy: { createdAt: "desc" }, include: { cliente: { select: { nombre: true } } } },
-      documentos: { orderBy: { createdAt: "desc" } },
-    },
-  });
+  const [envio, unidadesDisponibles] = await Promise.all([
+    db.envio.findUnique({
+      where: { id },
+      include: {
+        unidades: { orderBy: { createdAt: "desc" }, include: { cliente: { select: { nombre: true } } } },
+        documentos: { orderBy: { createdAt: "desc" } },
+      },
+    }),
+    db.unidad.findMany({
+      where: { envioId: null },
+      select: { id: true, numeroUnidad: true, cliente: { select: { nombre: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   if (!envio) notFound();
 
@@ -69,29 +78,35 @@ export default async function EnvioDetailPage({
         }}
       />
 
-      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
-        <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600 mb-4">
+      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600">
           Unidades en este envío ({envio.unidades.length})
         </h2>
+
+        <AgregarUnidadSelector
+          envioId={id}
+          unidadesDisponibles={unidadesDisponibles.map((u) => ({
+            id: u.id,
+            numeroUnidad: u.numeroUnidad,
+            clienteNombre: u.cliente.nombre,
+          }))}
+        />
+
         {envio.unidades.length === 0 ? (
           <p className="text-sm text-stone-400">Todavía no hay unidades asignadas a este envío.</p>
         ) : (
           <div className="space-y-1.5">
             {envio.unidades.map((u) => (
-              <Link
+              <UnidadEnvioRow
                 key={u.id}
-                href={`/admin/unidades/${u.id}`}
-                className="flex items-center justify-between gap-3 text-sm py-2 px-3 rounded-lg border border-[#F0F0F0] hover:bg-stone-50 transition-colors"
-              >
-                <div>
-                  <span className="font-medium text-[#2F2F2F]">{u.numeroUnidad ?? "Sin número"}</span>
-                  <span className="text-stone-400 ml-2">{u.cliente.nombre}</span>
-                  <span className="text-stone-400 ml-2">{u.modelo ?? "Modelo sin definir"}</span>
-                </div>
-                <span className="px-2 py-1 rounded-full text-xs font-bold bg-stone-100 text-stone-600">
-                  {estadoFabricacionLabels[u.estadoFabricacion as EstadoFabricacion] ?? u.estadoFabricacion}
-                </span>
-              </Link>
+                unidad={{
+                  id: u.id,
+                  numeroUnidad: u.numeroUnidad,
+                  clienteNombre: u.cliente.nombre,
+                  modelo: u.modelo,
+                  estadoFabricacion: u.estadoFabricacion,
+                }}
+              />
             ))}
           </div>
         )}
