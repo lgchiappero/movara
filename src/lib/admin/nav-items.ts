@@ -2,6 +2,7 @@ export type AdminNavItem = { href: string; label: string; icon: string };
 
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
+  { href: "/admin/buscar", label: "Buscar", icon: "🔍" },
   { href: "/admin/leads", label: "Leads", icon: "👥" },
   { href: "/admin/configuraciones", label: "Pedidos", icon: "📦" },
   { href: "/admin/agenda", label: "Agenda", icon: "📅" },
