@@ -1,12 +1,18 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import MarcarContactadoButton from "@/components/admin/MarcarContactadoButton";
 
 export const dynamic = "force-dynamic";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
 
-function buildWhere(desde?: string, hasta?: string, provincia?: string): Prisma.LeadWhereInput {
+function buildWhere(
+  desde?: string,
+  hasta?: string,
+  provincia?: string,
+  sinResponder?: string
+): Prisma.LeadWhereInput {
   const where: Prisma.LeadWhereInput = {};
 
   if (desde || hasta) {
@@ -19,16 +25,26 @@ function buildWhere(desde?: string, hasta?: string, provincia?: string): Prisma.
     where.provincia = { contains: provincia, mode: "insensitive" };
   }
 
+  // Mismo criterio que la alerta del dashboard: sin marcar como contactado
+  // y con más de 48hs desde que llegó.
+  if (sinResponder === "1") {
+    where.contactado = false;
+    where.createdAt = {
+      ...(typeof where.createdAt === "object" ? where.createdAt : {}),
+      lte: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    };
+  }
+
   return where;
 }
 
 export default async function AdminLeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ desde?: string; hasta?: string; provincia?: string }>;
+  searchParams: Promise<{ desde?: string; hasta?: string; provincia?: string; sinResponder?: string }>;
 }) {
-  const { desde, hasta, provincia } = await searchParams;
-  const where = buildWhere(desde, hasta, provincia);
+  const { desde, hasta, provincia, sinResponder } = await searchParams;
+  const where = buildWhere(desde, hasta, provincia, sinResponder);
 
   const leads = await db.lead.findMany({
     where,
@@ -79,6 +95,10 @@ export default async function AdminLeadsPage({
             className={inputClass}
           />
         </label>
+        <label className="flex items-center gap-2 text-sm text-stone-600 sm:col-span-1">
+          <input type="checkbox" name="sinResponder" value="1" defaultChecked={sinResponder === "1"} />
+          Sin responder (+48hs)
+        </label>
         <div className="flex items-end gap-2">
           <button
             type="submit"
@@ -86,7 +106,7 @@ export default async function AdminLeadsPage({
           >
             Filtrar
           </button>
-          {(desde || hasta || provincia) && (
+          {(desde || hasta || provincia || sinResponder) && (
             <a
               href="/admin/leads"
               className="flex-1 text-center py-2 border border-stone-300 text-stone-600 hover:bg-stone-50 font-medium text-sm rounded-lg transition-colors"
@@ -112,6 +132,7 @@ export default async function AdminLeadsPage({
                 <th className="px-5 py-3 font-medium">Provincia</th>
                 <th className="px-5 py-3 font-medium">Fecha</th>
                 <th className="px-5 py-3 font-medium">Mensaje</th>
+                <th className="px-5 py-3 font-medium">Estado</th>
               </tr>
             </thead>
             <tbody>
@@ -127,6 +148,9 @@ export default async function AdminLeadsPage({
                     {lead.createdAt.toLocaleDateString("es-AR")}
                   </td>
                   <td className="px-5 py-3 text-stone-600 max-w-xs">{lead.mensaje || "—"}</td>
+                  <td className="px-5 py-3">
+                    <MarcarContactadoButton id={lead.id} contactado={lead.contactado} />
+                  </td>
                 </tr>
               ))}
             </tbody>
