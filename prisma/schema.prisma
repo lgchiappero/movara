@@ -95,6 +95,11 @@ model Lead {
   mensaje   String?
   createdAt DateTime @default(now())
 
+  // Para la alerta de "leads sin respuesta hace más de 48hs" del dashboard
+  // — no existía ninguna noción de respuesta hasta ahora.
+  contactado   Boolean   @default(false)
+  contactadoEn DateTime?
+
   pedidos ConfiguracionPedido[]
 
   @@map("leads")
