@@ -32,6 +32,20 @@ export function estadoFabricacionIndex(estado: string): number {
   return estadoFabricacionOptions.indexOf(estado as EstadoFabricacion);
 }
 
+// Colores de los contadores por estado en el dashboard operativo — pedido
+// explícito por el usuario (gris/azul/verde claro/naranja/amarillo/rojo/
+// verde/gris oscuro), un color bien distinguible por estado.
+export const estadoFabricacionColors: Record<EstadoFabricacion, string> = {
+  pendiente: "bg-stone-100 text-stone-600",
+  en_produccion: "bg-blue-100 text-blue-700",
+  produccion_completa: "bg-emerald-50 text-emerald-600",
+  embarcado: "bg-orange-100 text-orange-700",
+  en_transito: "bg-yellow-100 text-yellow-700",
+  en_aduana: "bg-red-100 text-red-700",
+  en_destino: "bg-green-100 text-green-700",
+  entregado: "bg-stone-700 text-white",
+};
+
 export type SeccionInfo = { key: string; titulo: string; guia: string; permiteDescripcion: boolean };
 
 // Las 9 carpetas del detalle de unidad. 04/05/06 en realidad cuelgan del

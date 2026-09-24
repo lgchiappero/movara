@@ -3,6 +3,7 @@ import {
   estadoFabricacionOptions,
   estadoFabricacionLabels,
   estadoFabricacionIndex,
+  estadoFabricacionColors,
   SECCIONES_UNIDAD,
   SECCIONES_ENVIO,
   seccionUnidadKeys,
@@ -13,6 +14,12 @@ describe("estadoFabricacion", () => {
   it("tiene un label para cada estado", () => {
     for (const estado of estadoFabricacionOptions) {
       expect(estadoFabricacionLabels[estado]).toBeTruthy();
+    }
+  });
+
+  it("tiene un color para cada estado", () => {
+    for (const estado of estadoFabricacionOptions) {
+      expect(estadoFabricacionColors[estado]).toBeTruthy();
     }
   });
 
