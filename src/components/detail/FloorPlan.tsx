@@ -78,7 +78,7 @@ function DimLine({ x1, y1, x2, y2, label }: { x1: number; y1: number; x2: number
   );
 }
 
-function Door({ x, y, width = 28, direction = "right" }: { x: number; y: number; width?: number; direction?: "right" | "left" | "up" | "down" }) {
+export function Door({ x, y, width = 28, direction = "right" }: { x: number; y: number; width?: number; direction?: "right" | "left" | "up" | "down" }) {
   const arc = direction === "right"
     ? `M ${x},${y} L ${x + width},${y} A ${width},${width} 0 0,0 ${x},${y + width}`
     : direction === "left"

@@ -142,6 +142,21 @@ describe("buildWhatsAppMessage", () => {
     expect(buildWhatsAppMessage(state)).toContain("Otro");
   });
 
+  it("uso null cae al lookup con string vacío, sin traducción, y muestra el valor crudo", () => {
+    const state = {
+      model: MODEL,
+      habitaciones: 1,
+      cocina: false,
+      banio: false,
+      ciudad: "La Plata",
+      provincia: "Buenos Aires",
+      uso: null,
+      consulta: "",
+    } as unknown as WizardStore;
+
+    expect(buildWhatsAppMessage(state)).toContain("🎯 Uso: null.");
+  });
+
   it("usa el valor crudo para uso desconocido", () => {
     const state = {
       model: MODEL,

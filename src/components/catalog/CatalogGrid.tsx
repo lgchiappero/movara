@@ -14,11 +14,10 @@ const SIZE_FILTERS: { value: SizeFilter; label: string; desc: string }[] = [
 ];
 
 function matchesSize(model: ProductModel, filter: SizeFilter): boolean {
-  if (filter === "all")     return true;
   if (filter === "compact") return model.size <= 45;
   if (filter === "medium")  return model.size >= 50 && model.size <= 80;
   if (filter === "large")   return model.size >= 90;
-  return true;
+  return true; // "all"
 }
 
 export default function CatalogGrid({ models }: { models: ProductModel[] }) {

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { z } from "zod";
 import {
   nombreSchema,
   razonSocialSchema,
@@ -278,6 +279,15 @@ describe("validateField", () => {
   it("funciona con telefonoSchema", () => {
     expect(validateField(telefonoSchema, "123")).not.toBeNull();
     expect(validateField(telefonoSchema, "+54 9 11 1234-5678")).toBeNull();
+  });
+
+  it("usa el mensaje de fallback cuando el resultado no trae issues (defensivo)", () => {
+    // Zod real siempre deja al menos un issue en un safeParse fallido — este
+    // fake ejercita la rama `?? "Valor inválido"` que protege ese caso.
+    const fakeSchema = {
+      safeParse: () => ({ success: false, error: { issues: [] } }),
+    } as unknown as z.ZodTypeAny;
+    expect(validateField(fakeSchema, "x")).toBe("Valor inválido");
   });
 });
 

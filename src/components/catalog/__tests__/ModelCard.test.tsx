@@ -127,4 +127,72 @@ describe("ModelCard", () => {
     const link = screen.getByRole("link", { name: /ver detalles/i });
     expect(link).toHaveAttribute("href", "/modelos/familiar-65");
   });
+
+  it("modelo 'próximamente' muestra el badge y el mensaje, sin CTAs ni tag", () => {
+    const model = { ...FULL_MODEL, proximamente: true };
+    render(<ModelCard model={model} />);
+    expect(screen.getByText("Próximamente")).toBeInTheDocument();
+    expect(screen.getByText("Estamos trabajando en este modelo.")).toBeInTheDocument();
+    expect(screen.queryByText("Más elegido")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /ver detalles/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /me interesa/i })).not.toBeInTheDocument();
+  });
+
+  it("usa <img> de Sanity (no CameraPlaceholder) cuando la imagen trae asset", () => {
+    const model = {
+      ...FULL_MODEL,
+      images: [{ asset: { _ref: "image-abc-800x600-jpg", _type: "reference" }, label: "Fachada" }],
+    } as unknown as ProductModel;
+    render(<ModelCard model={model} />);
+    const img = document.querySelector("img");
+    expect(img).toBeTruthy();
+    expect(img).toHaveAttribute("src", "https://cdn.sanity.io/test.jpg");
+    expect(img).toHaveAttribute("alt", "Fachada");
+  });
+
+  it("imagen de Sanity sin label usa el nombre del modelo como alt", () => {
+    const model = {
+      ...FULL_MODEL,
+      images: [{ asset: { _ref: "image-abc-800x600-jpg", _type: "reference" } }],
+    } as unknown as ProductModel;
+    render(<ModelCard model={model} />);
+    expect(document.querySelector("img")).toHaveAttribute("alt", "Familiar 65");
+  });
+
+  it("modelo próximamente con imagen de Sanity aplica la clase de opacidad, no la de hover-scale", () => {
+    const model = {
+      ...FULL_MODEL,
+      proximamente: true,
+      images: [{ asset: { _ref: "image-abc-800x600-jpg", _type: "reference" }, label: "Fachada" }],
+    } as unknown as ProductModel;
+    render(<ModelCard model={model} />);
+    const img = document.querySelector("img")!;
+    expect(img.className).toContain("opacity-60");
+    expect(img.className).not.toContain("group-hover:scale-105");
+  });
+
+  it("muestra 'ambiente' en singular con 1 habitación y 'baño' en singular con 1 baño", () => {
+    const model = { ...FULL_MODEL, rooms: 1, baths: 1 };
+    render(<ModelCard model={model} />);
+    expect(screen.getByText("1 ambiente")).toBeInTheDocument();
+    expect(screen.getByText("1 baño")).toBeInTheDocument();
+  });
+
+  it("muestra el badge de Video cuando model.video.url está presente", () => {
+    const model = { ...FULL_MODEL, video: { url: "https://youtu.be/abc123" } };
+    render(<ModelCard model={model} />);
+    expect(screen.getByText("Video")).toBeInTheDocument();
+  });
+
+  it("muestra el badge de Video cuando model.videos trae al menos un elemento", () => {
+    const model = { ...FULL_MODEL, videos: [{ url: "https://youtu.be/abc123" }] };
+    render(<ModelCard model={model} />);
+    expect(screen.getByText("Video")).toBeInTheDocument();
+  });
+
+  it("no muestra el badge de Video cuando videos es un array vacío", () => {
+    const model = { ...FULL_MODEL, videos: [] };
+    render(<ModelCard model={model} />);
+    expect(screen.queryByText("Video")).not.toBeInTheDocument();
+  });
 });
