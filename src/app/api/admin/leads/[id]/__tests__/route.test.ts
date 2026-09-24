@@ -52,6 +52,16 @@ describe("PATCH /api/admin/leads/[id]", () => {
     });
   });
 
+  it("400 si el body no es JSON válido", async () => {
+    const req = new NextRequest("http://localhost/api/admin/leads/lead1", {
+      method: "PATCH",
+      body: "no-es-json",
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "lead1" }) });
+    expect(res.status).toBe(400);
+  });
+
   it("400 si el body no tiene 'contactado' booleano", async () => {
     const res = await PATCH(makeRequest({ contactado: "si" }), {
       params: Promise.resolve({ id: "lead1" }),

@@ -54,6 +54,16 @@ describe("PATCH /api/admin/unidades/[id]/envio", () => {
     expect(mockUpdate).toHaveBeenCalledWith({ where: { id: "u1" }, data: { envioId: null } });
   });
 
+  it("400 si el body no es JSON válido", async () => {
+    const req = new NextRequest("http://localhost/api/admin/unidades/u1/envio", {
+      method: "PATCH",
+      body: "no-es-json",
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "u1" }) });
+    expect(res.status).toBe(400);
+  });
+
   it("400 si falta envioId del body", async () => {
     const res = await PATCH(makeRequest({}), { params: Promise.resolve({ id: "u1" }) });
     expect(res.status).toBe(400);
