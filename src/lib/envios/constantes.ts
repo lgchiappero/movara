@@ -78,6 +78,12 @@ export const SECCIONES_UNIDAD: SeccionInfo[] = [
 ];
 export const seccionUnidadKeys = SECCIONES_UNIDAD.map((s) => s.key) as [string, ...string[]];
 
+// Secciones cuya ausencia de documentos es operativamente urgente (el
+// dashboard las usa para la alerta de "documentación incompleta") — el
+// resto (01_cliente, 08_garantia, 09_reclamos) no bloquea el flujo si
+// todavía no tienen archivos.
+export const SECCIONES_CRITICAS_UNIDAD = ["02_contrato", "03_pagos", "07_entrega"] as const;
+
 // Las 3 carpetas del envío — compartidas por todas las unidades de ese
 // contenedor, por eso viven en DocumentoEnvio en vez de repetirse por
 // unidad.

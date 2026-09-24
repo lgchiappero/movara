@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { estadoFabricacionLabels, estadoFabricacionIndex, type EstadoFabricacion } from "@/lib/envios/constantes";
+import { estadoFabricacionLabels } from "@/lib/envios/constantes";
+import { estadoGeneralEnvio } from "@/lib/envios/estado-general";
 import NuevoEnvioButton from "@/components/admin/NuevoEnvioButton";
 
 export const dynamic = "force-dynamic";
@@ -10,16 +11,6 @@ async function getEnvios() {
     orderBy: { createdAt: "desc" },
     include: { unidades: { include: { cliente: { select: { nombre: true } } } } },
   });
-}
-
-/** El envío está tan avanzado como su unidad menos avanzada. */
-function estadoGeneral(unidades: { estadoFabricacion: string }[]): EstadoFabricacion | null {
-  if (unidades.length === 0) return null;
-  return unidades.reduce((min, u) => {
-    return estadoFabricacionIndex(u.estadoFabricacion) < estadoFabricacionIndex(min)
-      ? u.estadoFabricacion
-      : min;
-  }, unidades[0].estadoFabricacion) as EstadoFabricacion;
 }
 
 export default async function AdminEnviosPage() {
@@ -57,7 +48,7 @@ export default async function AdminEnviosPage() {
             </thead>
             <tbody>
               {envios.map((e) => {
-                const estado = estadoGeneral(e.unidades);
+                const estado = estadoGeneralEnvio(e.unidades);
                 const clientes = Array.from(new Set(e.unidades.map((u) => u.cliente.nombre)));
                 return (
                   <tr key={e.id} className="border-b border-[#F0F0F0] last:border-0">
