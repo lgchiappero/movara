@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ETAPA_OPTIONS, ETAPA_LABELS, ORIGEN_OPTIONS, ORIGEN_LABELS } from "@/lib/leads/constantes";
 import { buildWhatsAppLeadUrl } from "@/lib/leads/calc";
+import { useToast } from "@/components/admin/Toast";
 import type { LeadPipeline, Vendedor } from "@/components/admin/PipelineBoard";
 
 const inputClass =
@@ -39,6 +40,7 @@ export default function PipelineDetailPanel({
   const [saving, setSaving] = useState(false);
   const [converting, setConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showSuccess, showError } = useToast();
 
   async function guardar() {
     setError(null);
@@ -58,12 +60,17 @@ export default function PipelineDetailPanel({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "No pudimos guardar los cambios.");
+        const message = json.error ?? "No pudimos guardar los cambios.";
+        setError(message);
+        showError(message);
         return;
       }
+      showSuccess();
       onSaved();
     } catch {
-      setError("No pudimos guardar los cambios. Probá de nuevo.");
+      const message = "No pudimos guardar los cambios. Probá de nuevo.";
+      setError(message);
+      showError(message);
     } finally {
       setSaving(false);
     }
@@ -76,12 +83,17 @@ export default function PipelineDetailPanel({
       const res = await fetch(`/api/admin/leads/${lead.id}/convertir`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "No pudimos convertir el lead.");
+        const message = json.error ?? "No pudimos convertir el lead.";
+        setError(message);
+        showError(message);
         return;
       }
+      showSuccess("Convertido a cliente");
       onConverted();
     } catch {
-      setError("No pudimos convertir el lead. Probá de nuevo.");
+      const message = "No pudimos convertir el lead. Probá de nuevo.";
+      setError(message);
+      showError(message);
     } finally {
       setConverting(false);
     }

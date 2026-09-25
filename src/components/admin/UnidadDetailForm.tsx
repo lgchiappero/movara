@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/Toast";
 import {
   estadoFabricacionOptions,
   estadoFabricacionLabels,
@@ -124,6 +125,7 @@ export default function UnidadDetailForm({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showSuccess, showError } = useToast();
 
   const envioSeleccionado = envios.find((e) => e.id === form.envioId) ?? null;
 
@@ -139,7 +141,9 @@ export default function UnidadDetailForm({
       try {
         configuracion = JSON.parse(form.configuracionTexto);
       } catch {
-        setError("La configuración no es un JSON válido.");
+        const message = "La configuración no es un JSON válido.";
+        setError(message);
+        showError(message);
         return;
       }
     }
@@ -168,10 +172,19 @@ export default function UnidadDetailForm({
           notas: form.notas || null,
         }),
       });
-      if (!res.ok) throw new Error("request-failed");
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const message = json?.error ?? "No pudimos guardar los cambios.";
+        setError(message);
+        showError(message);
+        return;
+      }
+      showSuccess();
       router.refresh();
     } catch {
-      setError("No pudimos guardar los cambios. Probá de nuevo.");
+      const message = "No pudimos guardar los cambios. Probá de nuevo.";
+      setError(message);
+      showError(message);
     } finally {
       setSaving(false);
     }

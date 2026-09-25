@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/Toast";
 import { estadoPedidoOptions, estadoPedidoLabels } from "@/lib/pedido/estado-pedido";
 import DocumentUploadField from "@/components/admin/DocumentUploadField";
 
@@ -129,6 +130,7 @@ export default function GestionPedidoPanel({ id, numeroPedido, initial, document
   const [error, setError] = useState<string | null>(null);
   const [numeroLocal, setNumeroLocal] = useState(numeroPedido);
   const [generandoNumero, setGenerandoNumero] = useState(false);
+  const { showSuccess, showError } = useToast();
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -201,10 +203,19 @@ export default function GestionPedidoPanel({ id, numeroPedido, initial, document
           garantiaFechaInicio: form.garantiaFechaInicio || null,
         }),
       });
-      if (!res.ok) throw new Error("request-failed");
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const message = json?.error ?? "No pudimos guardar los cambios.";
+        setError(message);
+        showError(message);
+        return;
+      }
+      showSuccess();
       router.refresh();
     } catch {
-      setError("No pudimos guardar los cambios. Probá de nuevo.");
+      const message = "No pudimos guardar los cambios. Probá de nuevo.";
+      setError(message);
+      showError(message);
     } finally {
       setSaving(false);
     }
@@ -215,12 +226,20 @@ export default function GestionPedidoPanel({ id, numeroPedido, initial, document
     setError(null);
     try {
       const res = await fetch(`/api/admin/configuraciones/${id}/numero`, { method: "POST" });
-      if (!res.ok) throw new Error("request-failed");
-      const json = await res.json();
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const message = json?.error ?? "No pudimos generar el número de pedido.";
+        setError(message);
+        showError(message);
+        return;
+      }
       setNumeroLocal(json.numeroPedido);
+      showSuccess("Número de pedido generado");
       router.refresh();
     } catch {
-      setError("No pudimos generar el número de pedido.");
+      const message = "No pudimos generar el número de pedido.";
+      setError(message);
+      showError(message);
     } finally {
       setGenerandoNumero(false);
     }

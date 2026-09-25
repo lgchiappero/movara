@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/Toast";
 import { MOVARA_MODELS, FINALIDADES } from "@/data/configurador-catalog";
 import { ADMIN_EXTRAS } from "@/data/admin-extras";
 import {
@@ -78,6 +79,7 @@ export default function ConfiguracionEspacioForm({ id, initial }: { id: string; 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const { showSuccess, showError } = useToast();
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -126,13 +128,18 @@ export default function ConfiguracionEspacioForm({ id, initial }: { id: string; 
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) {
-        setError(json?.error ?? "No pudimos guardar la configuración.");
+        const message = json?.error ?? "No pudimos guardar la configuración.";
+        setError(message);
+        showError(message);
         return;
       }
       setSaved(true);
+      showSuccess();
       router.refresh();
     } catch {
-      setError("No pudimos guardar la configuración. Probá de nuevo.");
+      const message = "No pudimos guardar la configuración. Probá de nuevo.";
+      setError(message);
+      showError(message);
     } finally {
       setSaving(false);
     }

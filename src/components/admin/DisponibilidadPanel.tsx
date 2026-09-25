@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useToast } from "@/components/admin/Toast";
 import { HORARIOS_AGENDA, esDiaHabil } from "@/lib/agenda/horarios";
 
 export type DiaDisponibilidad = {
@@ -210,6 +211,7 @@ export default function DisponibilidadPanel({
 
   const [habilitandoMes, setHabilitandoMes] = useState<string | null>(null);
   const [mensajePorMes, setMensajePorMes] = useState<Record<string, string>>({});
+  const { showSuccess, showError } = useToast();
 
   function abrirDia(key: string) {
     const info = mapa.get(key);
@@ -231,9 +233,12 @@ export default function DisponibilidadPanel({
       if (!res.ok) throw new Error("request-failed");
       setOverrides((prev) => new Map(prev).set(key, { fechaKey: key, habilitada, horarios }));
       setDiaEditando(null);
+      showSuccess();
       router.refresh();
     } catch {
-      setErrorDia("No pudimos guardar la disponibilidad. Probá de nuevo.");
+      const message = "No pudimos guardar la disponibilidad. Probá de nuevo.";
+      setErrorDia(message);
+      showError(message);
     } finally {
       setBusyDia(false);
     }
@@ -268,9 +273,11 @@ export default function DisponibilidadPanel({
       });
 
       setMensajePorMes((prev) => ({ ...prev, [mesKey]: `${json.dias} días habilitados` }));
+      showSuccess(`${json.dias} días habilitados`);
       router.refresh();
     } catch {
       setMensajePorMes((prev) => ({ ...prev, [mesKey]: "No pudimos habilitar el mes. Probá de nuevo." }));
+      showError("No pudimos habilitar el mes. Probá de nuevo.");
     } finally {
       setHabilitandoMes(null);
     }

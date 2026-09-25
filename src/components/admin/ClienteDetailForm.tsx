@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/Toast";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-sage-500";
@@ -30,6 +31,7 @@ export default function ClienteDetailForm({ id, initial }: { id: string; initial
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showSuccess, showError } = useToast();
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -52,10 +54,19 @@ export default function ClienteDetailForm({ id, initial }: { id: string; initial
           notas: form.notas.trim() || null,
         }),
       });
-      if (!res.ok) throw new Error("request-failed");
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const message = json?.error ?? "No pudimos guardar los cambios.";
+        setError(message);
+        showError(message);
+        return;
+      }
+      showSuccess();
       router.refresh();
     } catch {
-      setError("No pudimos guardar los cambios. Probá de nuevo.");
+      const message = "No pudimos guardar los cambios. Probá de nuevo.";
+      setError(message);
+      showError(message);
     } finally {
       setSaving(false);
     }

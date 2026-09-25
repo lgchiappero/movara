@@ -48,23 +48,14 @@ async function savePipeline(
   return res.ok;
 }
 
-const TOAST_DURATION_MS = 2500;
-
 export default function PipelineBoard({ leads, vendedores }: { leads: LeadPipeline[]; vendedores: Vendedor[] }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const selectedLead = leads.find((l) => l.id === selectedId) ?? null;
-
-  function showToast(message: string) {
-    setToast(message);
-    setTimeout(() => setToast(null), TOAST_DURATION_MS);
-  }
 
   function handlePanelSaved() {
     router.refresh();
     setSelectedId(null);
-    showToast("Guardado");
   }
 
   async function handleVendedorChange(lead: LeadPipeline, vendedorId: string) {
@@ -175,15 +166,6 @@ export default function PipelineBoard({ leads, vendedores }: { leads: LeadPipeli
           onSaved={handlePanelSaved}
           onConverted={() => router.refresh()}
         />
-      )}
-
-      {toast && (
-        <div
-          role="status"
-          className="fixed bottom-6 right-6 z-[60] bg-[#2F2F2F] text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg"
-        >
-          {toast}
-        </div>
       )}
     </>
   );

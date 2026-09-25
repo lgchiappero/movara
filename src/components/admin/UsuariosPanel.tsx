@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/Toast";
 import { adminRoles, type AdminRole } from "@/lib/admin/roles";
 import { MAX_USUARIOS } from "@/lib/validators/admin-usuarios";
 
@@ -36,6 +37,7 @@ export default function UsuariosPanel({ initialUsuarios }: { initialUsuarios: Us
   const [editId, setEditId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { showSuccess, showError } = useToast();
 
   function abrirNuevo(rol?: AdminRole) {
     setRolFijo(rol);
@@ -57,7 +59,9 @@ export default function UsuariosPanel({ initialUsuarios }: { initialUsuarios: Us
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "No pudimos crear el usuario.");
+        const message = json.error ?? "No pudimos crear el usuario.";
+        setError(message);
+        showError(message);
         return;
       }
       setUsuarios((prev) => [
@@ -65,9 +69,12 @@ export default function UsuariosPanel({ initialUsuarios }: { initialUsuarios: Us
         { id: json.id, nombre: data.nombre, email: data.email, rol: data.rol, activo: true, ultimoLogin: null },
       ]);
       setShowNuevo(false);
+      showSuccess(`${ROL_LABELS[data.rol]} creado correctamente`);
       refreshAndSync();
     } catch {
-      setError("No pudimos crear el usuario. Probá de nuevo.");
+      const message = "No pudimos crear el usuario. Probá de nuevo.";
+      setError(message);
+      showError(message);
     } finally {
       setBusy(false);
     }
@@ -84,14 +91,19 @@ export default function UsuariosPanel({ initialUsuarios }: { initialUsuarios: Us
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "No pudimos guardar los cambios.");
+        const message = json.error ?? "No pudimos guardar los cambios.";
+        setError(message);
+        showError(message);
         return;
       }
       setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)));
       setEditId(null);
+      showSuccess();
       refreshAndSync();
     } catch {
-      setError("No pudimos guardar los cambios. Probá de nuevo.");
+      const message = "No pudimos guardar los cambios. Probá de nuevo.";
+      setError(message);
+      showError(message);
     } finally {
       setBusy(false);
     }

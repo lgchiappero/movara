@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/Toast";
 
 export type CitaAdmin = {
   id: string;
@@ -76,6 +77,7 @@ export default function AgendaVistaPanel({
   const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showSuccess, showError } = useToast();
 
   const lista = vista === "lista" ? todasLasCitas : citasDelMes;
   const seleccionada = lista.find((c) => c.id === seleccionadaId) ?? null;
@@ -104,9 +106,12 @@ export default function AgendaVistaPanel({
         body: JSON.stringify(accion === "cancelar" ? { accion, motivo } : { accion }),
       });
       if (!res.ok) throw new Error("request-failed");
+      showSuccess(accion === "cancelar" ? "Visita cancelada" : "Visita completada");
       router.refresh();
     } catch {
-      setError("No pudimos actualizar la visita. Probá de nuevo.");
+      const message = "No pudimos actualizar la visita. Probá de nuevo.";
+      setError(message);
+      showError(message);
     } finally {
       setBusy(false);
     }
