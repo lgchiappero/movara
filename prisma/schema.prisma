@@ -100,6 +100,17 @@ model Lead {
   contactado   Boolean   @default(false)
   contactadoEn DateTime?
 
+  // ─── Pipeline de ventas simplificado (/admin/pipeline) ──────────────
+  etapa          String    @default("nuevo") // nuevo | en_contacto | propuesta_enviada | ganado | perdido
+  origen         String? // web | instagram | whatsapp | referido | cliente_recurrente
+  vendedorId     String? // referencia a AdminUser.id — sin relación formal en Prisma
+  // (AdminUser no tiene FK entrante desde acá) para no acoplar el borrado
+  // de un usuario a las filas de leads que tuvo asignadas.
+  notasVenta     String?
+  motivoPerdida  String? // solo tiene sentido si etapa = "perdido"
+  clienteId      String? // referencia a Cliente.id una vez convertido — mismo criterio sin FK formal
+  valorEstimado  Float?
+
   pedidos ConfiguracionPedido[]
 
   @@map("leads")
