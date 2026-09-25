@@ -44,7 +44,7 @@ export default async function AdminPipelinePage({
   const [leads, vendedores, totalActivos, nuevosHoy, enPropuesta, ganadosMes, totalMes] = await Promise.all([
     db.lead.findMany({ where, orderBy: { createdAt: "desc" } }),
     db.adminUser.findMany({
-      where: { rol: "vendedor", activo: true },
+      where: { rol: { in: ["vendedor", "admin"] }, activo: true },
       select: { id: true, nombre: true },
       orderBy: { nombre: "asc" },
     }),

@@ -19,11 +19,16 @@ export default function PipelineDetailPanel({
   vendedores,
   onClose,
   onSaved,
+  onConverted,
 }: {
   lead: LeadPipeline;
   vendedores: Vendedor[];
   onClose: () => void;
+  /** Guardado de etapa/origen/vendedor/notas/valor — cierra el panel y
+   * muestra la confirmación (a diferencia de convertir, que se queda
+   * abierto mostrando el link al cliente recién creado). */
   onSaved: () => void;
+  onConverted: () => void;
 }) {
   const [etapa, setEtapa] = useState(lead.etapa);
   const [origen, setOrigen] = useState(lead.origen ?? "");
@@ -74,7 +79,7 @@ export default function PipelineDetailPanel({
         setError(json.error ?? "No pudimos convertir el lead.");
         return;
       }
-      onSaved();
+      onConverted();
     } catch {
       setError("No pudimos convertir el lead. Probá de nuevo.");
     } finally {

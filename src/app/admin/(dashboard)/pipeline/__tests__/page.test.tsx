@@ -114,6 +114,13 @@ describe("AdminPipelinePage", () => {
     expect(screen.getByText(/PipelineBoard leads=1 vendedores=1/)).toBeInTheDocument();
   });
 
+  it("el selector de vendedor carga tanto rol vendedor como admin, ambos activos", async () => {
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
+    expect(mockFindManyVendedor).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { rol: { in: ["vendedor", "admin"] }, activo: true } })
+    );
+  });
+
   it("calcula la tasa de conversión del mes como porcentaje redondeado", async () => {
     mockCountLead.mockImplementation(async (args: { where?: Record<string, unknown> }) => {
       const where = args?.where ?? {};

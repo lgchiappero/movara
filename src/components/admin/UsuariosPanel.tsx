@@ -8,6 +8,12 @@ import { MAX_USUARIOS } from "@/lib/validators/admin-usuarios";
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
 
+const ROL_LABELS: Record<AdminRole, string> = { admin: "Admin", vendedor: "Vendedor" };
+const ROL_COLORS: Record<AdminRole, string> = {
+  admin: "bg-purple-100 text-purple-700",
+  vendedor: "bg-blue-100 text-blue-700",
+};
+
 type Usuario = {
   id: string;
   nombre: string;
@@ -26,9 +32,15 @@ export default function UsuariosPanel({ initialUsuarios }: { initialUsuarios: Us
   const router = useRouter();
   const [usuarios, setUsuarios] = useState(initialUsuarios);
   const [showNuevo, setShowNuevo] = useState(false);
+  const [rolFijo, setRolFijo] = useState<AdminRole | undefined>(undefined);
   const [editId, setEditId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function abrirNuevo(rol?: AdminRole) {
+    setRolFijo(rol);
+    setShowNuevo(true);
+  }
 
   function refreshAndSync() {
     router.refresh();
@@ -127,8 +139,12 @@ export default function UsuariosPanel({ initialUsuarios }: { initialUsuarios: Us
                   <td className="px-5 py-3 font-medium text-[#1a1a1a]">{u.nombre}</td>
                   <td className="px-5 py-3 text-stone-600">{u.email}</td>
                   <td className="px-5 py-3">
-                    <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#f5f5f5] text-stone-600">
-                      {u.rol}
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        ROL_COLORS[u.rol as AdminRole] ?? "bg-[#f5f5f5] text-stone-600"
+                      }`}
+                    >
+                      {ROL_LABELS[u.rol as AdminRole] ?? u.rol}
                     </span>
                   </td>
                   <td className="px-5 py-3">
@@ -169,16 +185,31 @@ export default function UsuariosPanel({ initialUsuarios }: { initialUsuarios: Us
       </div>
 
       {showNuevo ? (
-        <NuevoUsuarioForm busy={busy} onCancel={() => setShowNuevo(false)} onCreate={crearUsuario} />
+        <NuevoUsuarioForm
+          busy={busy}
+          rolFijo={rolFijo}
+          onCancel={() => setShowNuevo(false)}
+          onCreate={crearUsuario}
+        />
+      ) : alTope ? (
+        <p className="text-sm text-stone-500 px-1">Máximo de {MAX_USUARIOS} usuarios alcanzado.</p>
       ) : (
-        <button
-          type="button"
-          disabled={alTope}
-          onClick={() => setShowNuevo(true)}
-          className="px-5 py-3 bg-[#D4B06A] hover:bg-[#c19f5a] disabled:opacity-50 disabled:cursor-not-allowed text-[#1a1a1a] font-bold text-sm rounded-xl transition-colors"
-        >
-          {alTope ? `Máximo de ${MAX_USUARIOS} usuarios alcanzado` : "+ Nuevo usuario"}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => abrirNuevo("vendedor")}
+            className="px-5 py-3 bg-[#D4B06A] hover:bg-[#c19f5a] text-[#1a1a1a] font-bold text-sm rounded-xl transition-colors"
+          >
+            + Nuevo vendedor
+          </button>
+          <button
+            type="button"
+            onClick={() => abrirNuevo(undefined)}
+            className="px-5 py-3 border border-stone-300 text-stone-600 hover:bg-stone-50 font-bold text-sm rounded-xl transition-colors"
+          >
+            + Nuevo usuario
+          </button>
+        </div>
       )}
     </div>
   );
@@ -186,21 +217,28 @@ export default function UsuariosPanel({ initialUsuarios }: { initialUsuarios: Us
 
 function NuevoUsuarioForm({
   busy,
+  rolFijo,
   onCancel,
   onCreate,
 }: {
   busy: boolean;
+  /** Cuando viene seteado (ej. desde "+ Nuevo vendedor"), el rol queda fijo
+   * y no se muestra el selector — un ABM más claro que dejar el mismo
+   * formulario genérico para las dos cosas. */
+  rolFijo?: AdminRole;
   onCancel: () => void;
   onCreate: (data: { nombre: string; email: string; password: string; rol: AdminRole }) => void;
 }) {
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rol, setRol] = useState<AdminRole>("vendedor");
+  const [rol, setRol] = useState<AdminRole>(rolFijo ?? "vendedor");
 
   return (
     <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
-      <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500">Nuevo usuario</h2>
+      <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500">
+        {rolFijo ? `Nuevo ${ROL_LABELS[rolFijo].toLowerCase()}` : "Nuevo usuario"}
+      </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-stone-500">Nombre</span>
@@ -224,16 +262,23 @@ function NuevoUsuarioForm({
             onChange={(e) => setPassword(e.target.value)}
           />
         </label>
-        <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-stone-500">Rol</span>
-          <select className={inputClass} value={rol} onChange={(e) => setRol(e.target.value as AdminRole)}>
-            {adminRoles.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-        </label>
+        {rolFijo ? (
+          <div className="block space-y-1.5">
+            <span className="text-xs font-medium text-stone-500">Rol</span>
+            <p className={`${inputClass} bg-[#F4F4F4] text-stone-500`}>{ROL_LABELS[rolFijo]}</p>
+          </div>
+        ) : (
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-stone-500">Rol</span>
+            <select className={inputClass} value={rol} onChange={(e) => setRol(e.target.value as AdminRole)}>
+              {adminRoles.map((r) => (
+                <option key={r} value={r}>
+                  {ROL_LABELS[r]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
       <div className="flex gap-3">
         <button
@@ -281,7 +326,7 @@ function EditRow({
         <select className={inputClass} value={rol} onChange={(e) => setRol(e.target.value as AdminRole)}>
           {adminRoles.map((r) => (
             <option key={r} value={r}>
-              {r}
+              {ROL_LABELS[r]}
             </option>
           ))}
         </select>
