@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { estadoPedidoOptions, estadoPedidoLabels, type EstadoPedido } from "@/lib/pedido/estado-pedido";
+import { estadoPedidoOptions, estadoPedidoLabels } from "@/lib/pedido/estado-pedido";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { isAllowedForRole } from "@/lib/admin/roles";
 import { ADMIN_NAV_ITEMS } from "@/lib/admin/nav-items";
@@ -12,9 +12,13 @@ import {
   SECCIONES_CRITICAS_UNIDAD,
   type EstadoFabricacion,
 } from "@/lib/envios/constantes";
+import { ETAPA_LABELS, ETAPA_COLORS, type Etapa } from "@/lib/leads/constantes";
 import { estadoGeneralEnvio } from "@/lib/envios/estado-general";
 import { diasHasta, seccionesFaltantes } from "@/lib/dashboard/calc";
 import { hoyFechaKey, fechaKeyToDate } from "@/lib/agenda/fecha";
+import UnidadesEnMovimientoGrid, {
+  type UnidadMovimiento,
+} from "@/components/admin/UnidadesEnMovimientoGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -24,17 +28,23 @@ function startOfDay(d: Date): Date {
   return x;
 }
 
-function startOfMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
+function startOfWeek(d: Date): Date {
+  const x = startOfDay(d);
+  const day = x.getDay();
+  const diffToMonday = day === 0 ? 6 : day - 1;
+  x.setDate(x.getDate() - diffToMonday);
+  return x;
 }
 
-// Cita.fecha se guarda a medianoche UTC (date-only) — mismo criterio que
-// src/lib/agenda/disponibilidad.ts, no el huso horario local del server.
-function startOfMonthUTC(d: Date): Date {
-  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), 1));
+function endOfWeek(d: Date): Date {
+  const start = startOfWeek(d);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+  return end;
 }
-function startOfNextMonthUTC(d: Date): Date {
-  return new Date(Date.UTC(d.getFullYear(), d.getMonth() + 1, 1));
+
+function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
 const SECCION_TITULOS: Record<string, string> = Object.fromEntries(
@@ -48,17 +58,26 @@ function diasRestantesLabel(dias: number | null): string {
   return `${dias} día${dias === 1 ? "" : "s"}`;
 }
 
+function formatUSD(value: number | null): string {
+  return `USD ${(value ?? 0).toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
+}
+
 export default async function AdminDashboardPage() {
   const now = new Date();
   const hace48hs = new Date(now.getTime() - 48 * 60 * 60 * 1000);
   const hace24hs = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const hace15dias = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
+  const hace7dias = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const fechaHoy = fechaKeyToDate(hoyFechaKey());
+  const inicioMes = startOfMonth(now);
+  const inicioSemana = startOfWeek(now);
+  const finSemana = endOfWeek(now);
 
   const [
     leadsHoy,
-    leadsMes,
+    leadsEnNegociacion,
+    leadsGanadosMes,
     estadoCounts,
-    ultimasConsultas,
     session,
     unidadesActivas,
     unidadesActualizadas24h,
@@ -66,21 +85,28 @@ export default async function AdminDashboardPage() {
     envios,
     citasHoy,
     leadsSinRespuesta,
-    citasMes,
-    clientesTotal,
+    unidadesEntregadasMes,
+    sumaPrecioGanadasMesAgg,
+    sumaPendienteCobroAgg,
+    unidadesCobroPendienteSemana,
+    unidadesEnAduanaLargas,
+    cobrosVencidos,
+    leadsPipelineResumen,
   ] = await Promise.all([
     db.lead.count({ where: { createdAt: { gte: startOfDay(now) } } }),
-    db.lead.count({ where: { createdAt: { gte: startOfMonth(now) } } }),
+    db.lead.count({ where: { etapa: { in: ["nuevo", "en_contacto", "propuesta_enviada"] } } }),
+    // "Ganados este mes" usa la misma cohorte por createdAt que /admin/pipeline
+    // (Lead no tiene un timestamp de "pasó a ganado").
+    db.lead.count({ where: { etapa: "ganado", createdAt: { gte: inicioMes } } }),
     db.configuracionPedido.groupBy({ by: ["estadoPedido"], _count: { _all: true } }),
-    db.configuracionPedido.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: { id: true, clienteNombre: true, numeroConsulta: true, estadoPedido: true, createdAt: true },
-    }),
     getAdminUser(),
     db.unidad.findMany({
       where: { estadoFabricacion: { not: "entregado" } },
-      include: { documentos: { select: { seccion: true } }, cliente: { select: { nombre: true } } },
+      include: {
+        documentos: { select: { seccion: true } },
+        cliente: { select: { nombre: true } },
+        envio: { select: { numeroPI: true, fechaEmbarque: true, fechaArriboEstimado: true } },
+      },
       orderBy: { createdAt: "desc" },
     }),
     db.unidad.findMany({
@@ -102,8 +128,38 @@ export default async function AdminDashboardPage() {
     }),
     db.cita.findMany({ where: { fecha: fechaHoy }, orderBy: { horario: "asc" } }),
     db.lead.count({ where: { contactado: false, createdAt: { lte: hace48hs } } }),
-    db.cita.count({ where: { fecha: { gte: startOfMonthUTC(now), lt: startOfNextMonthUTC(now) } } }),
-    db.cliente.count(),
+    db.unidad.count({ where: { estadoFabricacion: "entregado", fechaEntrega: { gte: inicioMes } } }),
+    // "Ganadas este mes" a nivel Unidad: no existe un estado "ganado" para
+    // unidades (solo para leads) — una Unidad se crea recién cuando la venta
+    // ya se confirmó, así que su fecha de creación es el proxy más fiel a
+    // "cuándo se ganó" que hay disponible sin ampliar el schema.
+    db.unidad.aggregate({ _sum: { precioCliente: true }, where: { createdAt: { gte: inicioMes } } }),
+    db.unidad.aggregate({
+      _sum: { precioCliente: true },
+      where: { estadoFabricacion: { not: "entregado" } },
+    }),
+    db.unidad.count({
+      where: {
+        estadoFabricacion: { not: "entregado" },
+        fechaEntregaEstimada: { gte: inicioSemana, lt: finSemana },
+      },
+    }),
+    // Proxy: "hace más de 15 días" se mide contra updatedAt (no hay un
+    // timestamp de "entró a aduana") — mismo criterio que ya usa esta
+    // página para "unidades actualizadas (24hs)".
+    db.unidad.count({ where: { estadoFabricacion: "en_aduana", updatedAt: { lte: hace15dias } } }),
+    // Unidad no tiene campos de anticipo/cobro — este dato vive en
+    // ConfiguracionPedido (anticipo + fechaConfirmacion), así que el alert
+    // de "cobros vencidos" consulta ese modelo en vez de Unidad.
+    db.configuracionPedido.count({
+      where: { estadoPedido: "confirmado", anticipo: null, fechaConfirmacion: { lte: hace7dias } },
+    }),
+    db.lead.findMany({
+      where: { etapa: { notIn: ["ganado", "perdido"] } },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, nombre: true, apellido: true, etapa: true, createdAt: true },
+    }),
   ]);
 
   const rol = session?.rol ?? "vendedor";
@@ -126,6 +182,19 @@ export default async function AdminDashboardPage() {
     }))
     .filter((u) => u.faltantes.length > 0);
 
+  const unidadesEnMovimiento: UnidadMovimiento[] = unidadesActivas.map((u) => ({
+    id: u.id,
+    numeroUnidad: u.numeroUnidad,
+    clienteNombre: u.cliente.nombre,
+    modelo: u.modelo,
+    envioNumeroPI: u.envio?.numeroPI ?? null,
+    estadoFabricacion: u.estadoFabricacion,
+    tienePrecio: u.precioCliente != null,
+    fechaEmbarque: u.envio?.fechaEmbarque?.toISOString() ?? null,
+    fechaArriboEstimado: u.envio?.fechaArriboEstimado?.toISOString() ?? null,
+    provinciaDestino: u.provinciaDestino,
+  }));
+
   const enviosConDerivados = envios.map((e) => ({
     ...e,
     estado: estadoGeneralEnvio(e.unidades),
@@ -143,7 +212,9 @@ export default async function AdminDashboardPage() {
     unidadesConFaltantes.length > 0 ||
     enviosProximosArribo.length > 0 ||
     citasHoyPendientes.length > 0 ||
-    leadsSinRespuesta > 0;
+    leadsSinRespuesta > 0 ||
+    unidadesEnAduanaLargas > 0 ||
+    cobrosVencidos > 0;
 
   const accesosRapidos = ADMIN_NAV_ITEMS.filter(
     (item) => item.href !== "/admin" && isAllowedForRole(rol, item.href)
@@ -201,17 +272,91 @@ export default async function AdminDashboardPage() {
                 </Link>
               </li>
             )}
+            {unidadesEnAduanaLargas > 0 && (
+              <li>
+                <strong>{unidadesEnAduanaLargas}</strong> unidad{unidadesEnAduanaLargas === 1 ? "" : "es"} en
+                aduana hace más de 15 días —{" "}
+                <Link href="/admin/unidades?estado=en_aduana" className="underline font-medium">
+                  ver unidades
+                </Link>
+              </li>
+            )}
+            {cobrosVencidos > 0 && (
+              <li>
+                <strong>{cobrosVencidos}</strong> pedido{cobrosVencidos === 1 ? "" : "s"} confirmado
+                {cobrosVencidos === 1 ? "" : "s"} sin anticipo registrado hace más de 7 días —{" "}
+                <Link href="/admin/configuraciones" className="underline font-medium">
+                  ver pedidos
+                </Link>
+              </li>
+            )}
           </ul>
         </div>
       )}
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <KpiColumn
+          title="💼 Ventas"
+          items={[
+            { label: "Leads nuevos hoy", value: leadsHoy },
+            { label: "En negociación", value: leadsEnNegociacion },
+            { label: "Ganados este mes", value: leadsGanadosMes },
+          ]}
+        />
+        <KpiColumn
+          title="📦 Operaciones"
+          items={[
+            { label: "Unidades activas", value: unidadesActivas.length },
+            { label: "En aduana ahora", value: countByEstadoUnidad["en_aduana"] ?? 0 },
+            { label: "Entregadas este mes", value: unidadesEntregadasMes },
+          ]}
+        />
+        <KpiColumn
+          title="💰 Financiero"
+          items={[
+            { label: "Ganado este mes", value: formatUSD(sumaPrecioGanadasMesAgg._sum.precioCliente) },
+            { label: "Pendiente de cobro", value: formatUSD(sumaPendienteCobroAgg._sum.precioCliente) },
+            { label: "Cobro pendiente esta semana", value: unidadesCobroPendienteSemana },
+          ]}
+        />
+      </div>
+
+      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">
+          Unidades en movimiento
+        </h2>
+        <UnidadesEnMovimientoGrid unidades={unidadesEnMovimiento} />
+      </div>
+
+      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">Pipeline de leads</h2>
+        {leadsPipelineResumen.length === 0 ? (
+          <p className="text-sm text-stone-400">No hay leads activos en el pipeline.</p>
+        ) : (
+          <ul className="divide-y divide-[#F0F0F0]">
+            {leadsPipelineResumen.map((l) => (
+              <li key={l.id} className="py-3 flex items-center justify-between text-sm">
+                <div>
+                  <p className="font-medium text-[#1a1a1a]">
+                    {l.nombre} {l.apellido ?? ""}
+                  </p>
+                  <p className="text-xs text-stone-400">{l.createdAt.toLocaleDateString("es-AR")}</p>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-bold ${ETAPA_COLORS[l.etapa as Etapa]}`}>
+                  {ETAPA_LABELS[l.etapa as Etapa] ?? l.etapa}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Link href="/admin/pipeline" className="inline-block mt-4 text-sm text-[#D4B06A] font-bold hover:underline">
+          Ver pipeline completo →
+        </Link>
+      </div>
+
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
         <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500">Resumen del día</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-[#f5f5f5] rounded-xl p-4 flex flex-col justify-center">
-            <p className="text-3xl font-bold text-[#1a1a1a]">{leadsHoy}</p>
-            <p className="text-sm text-stone-500 mt-1">Leads nuevos hoy</p>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-[#f5f5f5] rounded-xl p-4">
             <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-2">
               Citas de showroom hoy ({citasHoy.length})
@@ -359,17 +504,6 @@ export default async function AdminDashboardPage() {
         )}
       </div>
 
-      <div>
-        <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">Métricas generales</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-          <StatCard label="Clientes" value={clientesTotal} />
-          <StatCard label="Unidades activas" value={unidadesActivas.length} />
-          <StatCard label="Envíos activos" value={enviosActivos.length} />
-          <StatCard label="Leads del mes" value={leadsMes} />
-          <StatCard label="Citas del mes" value={citasMes} />
-        </div>
-      </div>
-
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
         <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">Pedidos por estado</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -380,40 +514,6 @@ export default async function AdminDashboardPage() {
             </div>
           ))}
         </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
-        <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">Últimas consultas</h2>
-        {ultimasConsultas.length === 0 ? (
-          <p className="text-sm text-stone-400">Todavía no llegó ninguna consulta.</p>
-        ) : (
-          <ul className="divide-y divide-[#F0F0F0]">
-            {ultimasConsultas.map((c) => (
-              <li key={c.id} className="py-3 flex items-center justify-between text-sm">
-                <div>
-                  <p className="font-medium text-[#1a1a1a]">{c.clienteNombre}</p>
-                  <p className="text-xs text-stone-400 font-mono">{c.numeroConsulta ?? "—"}</p>
-                </div>
-                <div className="text-right">
-                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#f5f5f5] text-stone-600">
-                    {estadoPedidoLabels[c.estadoPedido as EstadoPedido] ?? c.estadoPedido}
-                  </span>
-                  <p className="text-xs text-stone-400 mt-1">
-                    {c.createdAt.toLocaleDateString("es-AR")}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        {isAllowedForRole(rol, "/admin/configuraciones") && (
-          <Link
-            href="/admin/configuraciones"
-            className="inline-block mt-4 text-sm text-[#D4B06A] font-bold hover:underline"
-          >
-            Ver todos los pedidos →
-          </Link>
-        )}
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
@@ -444,11 +544,24 @@ export default async function AdminDashboardPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function KpiColumn({
+  title,
+  items,
+}: {
+  title: string;
+  items: { label: string; value: string | number }[];
+}) {
   return (
-    <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
-      <p className="text-3xl font-bold text-[#1a1a1a]">{value}</p>
-      <p className="text-sm text-stone-500 mt-1">{label}</p>
+    <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
+      <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">{title}</h3>
+      <div className="space-y-3">
+        {items.map((item) => (
+          <div key={item.label} className="flex items-center justify-between gap-2">
+            <span className="text-sm text-stone-500">{item.label}</span>
+            <span className="text-xl font-bold text-[#2F2F2F] whitespace-nowrap">{item.value}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
