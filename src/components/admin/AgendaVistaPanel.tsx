@@ -66,15 +66,17 @@ export default function AgendaVistaPanel({
   vista,
   citasDelMes,
   todasLasCitas,
+  citaIdInicial,
 }: {
   anio: number;
   mesIdx0: number;
   vista: "calendario" | "lista";
   citasDelMes: CitaAdmin[];
   todasLasCitas: CitaAdmin[];
+  citaIdInicial?: string | null;
 }) {
   const router = useRouter();
-  const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
+  const [seleccionadaId, setSeleccionadaId] = useState<string | null>(citaIdInicial ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { showSuccess, showError } = useToast();
@@ -178,7 +180,9 @@ export default function AgendaVistaPanel({
                         key={c.id}
                         type="button"
                         onClick={() => setSeleccionadaId(c.id)}
-                        className={`w-full text-left text-[10px] px-1 py-0.5 rounded truncate ${ESTADO_CLASSES[c.estado] ?? "bg-stone-100 text-stone-500"}`}
+                        className={`w-full text-left text-[10px] px-1 py-0.5 rounded truncate ${ESTADO_CLASSES[c.estado] ?? "bg-stone-100 text-stone-500"} ${
+                          c.id === citaIdInicial ? "ring-2 ring-[#D4B06A]" : ""
+                        }`}
                         title={`${c.horario} — ${c.nombre}`}
                       >
                         {c.horario} {c.nombre}
@@ -205,7 +209,9 @@ export default function AgendaVistaPanel({
                 <tr
                   key={c.id}
                   onClick={() => setSeleccionadaId(c.id)}
-                  className="border-b border-[#F0F0F0] last:border-0 cursor-pointer hover:bg-stone-50"
+                  className={`border-b border-[#F0F0F0] last:border-0 cursor-pointer hover:bg-stone-50 ${
+                    c.id === citaIdInicial ? "bg-[#D4B06A]/10" : ""
+                  }`}
                 >
                   <td className="px-4 py-3 text-stone-600 capitalize">{fechaConDiaYHora(c.fechaKey, c.horario)}</td>
                   <td className="px-4 py-3">

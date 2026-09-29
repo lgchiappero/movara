@@ -69,6 +69,22 @@ describe("AdminUnidadesPage", () => {
     );
   });
 
+  it("estado=activo (sintético) filtra por estadoFabricacion distinto de entregado", async () => {
+    mockFindManyUnidad.mockResolvedValueOnce([]);
+    await AdminUnidadesPage({ searchParams: Promise.resolve({ estado: "activo" }) });
+    expect(mockFindManyUnidad).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { estadoFabricacion: { not: "entregado" } } })
+    );
+  });
+
+  it("periodo=mes agrega el filtro de fechaEntrega desde el inicio del mes", async () => {
+    mockFindManyUnidad.mockResolvedValueOnce([]);
+    await AdminUnidadesPage({ searchParams: Promise.resolve({ estado: "entregado", periodo: "mes" }) });
+    const call = mockFindManyUnidad.mock.calls[0][0];
+    expect(call.where.estadoFabricacion).toBe("entregado");
+    expect(call.where.fechaEntrega.gte).toBeInstanceOf(Date);
+  });
+
   it("renderiza las opciones de los 3 selectores (cliente/envío/provincia) a partir de la data real", async () => {
     mockFindManyCliente.mockResolvedValueOnce([{ id: "c1", nombre: "Juan García" }]);
     mockFindManyEnvio.mockResolvedValueOnce([{ id: "e1", numeroPI: "PI-001" }]);

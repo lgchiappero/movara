@@ -19,9 +19,17 @@ vi.mock("next/link", () => ({
   ),
 }));
 vi.mock("@/components/admin/PipelineBoard", () => ({
-  default: ({ leads, vendedores }: { leads: unknown[]; vendedores: unknown[] }) => (
+  default: ({
+    leads,
+    vendedores,
+    highlightLeadId,
+  }: {
+    leads: unknown[];
+    vendedores: unknown[];
+    highlightLeadId?: string | null;
+  }) => (
     <div>
-      PipelineBoard leads={leads.length} vendedores={vendedores.length}
+      PipelineBoard leads={leads.length} vendedores={vendedores.length} highlightLeadId={highlightLeadId ?? "none"}
     </div>
   ),
 }));
@@ -112,6 +120,57 @@ describe("AdminPipelinePage", () => {
     mockFindManyVendedor.mockResolvedValueOnce([{ id: "v1", nombre: "Vendedor 1" }]);
     render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText(/PipelineBoard leads=1 vendedores=1/)).toBeInTheDocument();
+  });
+
+  it("pasa leadId como highlightLeadId a PipelineBoard (deep link 'resaltado' desde el dashboard)", async () => {
+    mockFindManyLead.mockResolvedValueOnce([LEAD]);
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({ leadId: "l1" }) }));
+    expect(screen.getByText(/highlightLeadId=l1/)).toBeInTheDocument();
+  });
+
+  it("sin leadId en el querystring, highlightLeadId es 'none'", async () => {
+    mockFindManyLead.mockResolvedValueOnce([LEAD]);
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByText(/highlightLeadId=none/)).toBeInTheDocument();
+  });
+
+  it("etapa acepta una lista separada por comas (deep link de KPI 'En negociación')", async () => {
+    render(
+      await AdminPipelinePage({
+        searchParams: Promise.resolve({ etapa: "en_contacto,propuesta_enviada" }),
+      })
+    );
+    expect(mockFindManyLead).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { etapa: { in: ["en_contacto", "propuesta_enviada"] } } })
+    );
+  });
+
+  it("una lista de etapas con algún valor inválido descarta solo el inválido", async () => {
+    render(
+      await AdminPipelinePage({
+        searchParams: Promise.resolve({ etapa: "en_contacto,no-existe" }),
+      })
+    );
+    expect(mockFindManyLead).toHaveBeenCalledWith(expect.objectContaining({ where: { etapa: "en_contacto" } }));
+  });
+
+  it("desde=hoy filtra por createdAt desde el inicio del día", async () => {
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({ etapa: "nuevo", desde: "hoy" }) }));
+    const call = mockFindManyLead.mock.calls[0][0];
+    expect(call.where.etapa).toBe("nuevo");
+    expect(call.where.createdAt.gte).toBeInstanceOf(Date);
+  });
+
+  it("periodo=mes filtra por createdAt desde el inicio del mes", async () => {
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({ etapa: "ganado", periodo: "mes" }) }));
+    const call = mockFindManyLead.mock.calls[0][0];
+    expect(call.where.etapa).toBe("ganado");
+    expect(call.where.createdAt.gte).toBeInstanceOf(Date);
+  });
+
+  it("sinContactar=1 filtra por contactado: false (deep link de la alerta 'leads sin contactar')", async () => {
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({ sinContactar: "1" }) }));
+    expect(mockFindManyLead).toHaveBeenCalledWith(expect.objectContaining({ where: { contactado: false } }));
   });
 
   it("el selector de vendedor carga tanto rol vendedor como admin, ambos activos", async () => {

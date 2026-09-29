@@ -161,6 +161,42 @@ describe("AdminDashboardPage", () => {
     expect(screen.getByText("Ganado este mes").nextElementSibling?.textContent).toBe("USD 0");
   });
 
+  // ── KPIs clickeables ──────────────────────────────────────────────────
+
+  it("los KPIs de Ventas y Operaciones navegan a la sección filtrada correspondiente", async () => {
+    render(await AdminDashboardPage());
+    expect(screen.getByText("Leads nuevos hoy").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/pipeline?etapa=nuevo&desde=hoy"
+    );
+    expect(screen.getByText("En negociación").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/pipeline?etapa=en_contacto,propuesta_enviada"
+    );
+    expect(screen.getByText("Ganados este mes").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/pipeline?etapa=ganado&periodo=mes"
+    );
+    expect(screen.getByText("Unidades activas").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/unidades?estado=activo"
+    );
+    expect(screen.getByText("En aduana ahora").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/unidades?estado=en_aduana"
+    );
+    expect(screen.getByText("Entregadas este mes").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/unidades?estado=entregado&periodo=mes"
+    );
+  });
+
+  it("los KPIs Financieros no son clickeables (no forman parte del pedido)", async () => {
+    render(await AdminDashboardPage());
+    expect(screen.getByText("Pendiente de cobro").closest("a")).toBeNull();
+    expect(screen.getByText("Cobro pendiente esta semana").closest("a")).toBeNull();
+  });
+
   // ── Grilla de operaciones (activas + entregadas) ─────────────────────
 
   it("pasa las unidades activas serializadas a UnidadesEnMovimientoGrid", async () => {
@@ -230,6 +266,14 @@ describe("AdminDashboardPage", () => {
     expect(screen.getByRole("link", { name: /ver pipeline completo/i })).toHaveAttribute("href", "/admin/pipeline");
   });
 
+  it("cada lead del pipeline resumido linkea a /admin/pipeline?leadId=X (resaltado)", async () => {
+    mockLeadFindMany.mockResolvedValueOnce([
+      { id: "l1", nombre: "Juan", apellido: "García", etapa: "propuesta_enviada", createdAt: new Date("2026-01-01T00:00:00.000Z") },
+    ]);
+    render(await AdminDashboardPage());
+    expect(screen.getByText(/Juan García/).closest("a")).toHaveAttribute("href", "/admin/pipeline?leadId=l1");
+  });
+
   it("la query de leads del pipeline excluye ganado y perdido, ordena por más reciente y trae 5", async () => {
     render(await AdminDashboardPage());
     expect(mockLeadFindMany).toHaveBeenCalledWith(
@@ -248,13 +292,13 @@ describe("AdminDashboardPage", () => {
     expect(screen.queryByText(/alertas y acciones urgentes/i)).not.toBeInTheDocument();
   });
 
-  it("alerta: unidades en aduana hace más de 15 días", async () => {
+  it("alerta: unidades en aduana hace más de 15 días, con botón Ver hacia /admin/unidades filtrado", async () => {
     mockUnidadCount.mockReset();
     mockUnidadCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(2);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("2 unidades en aduana hace más de 15 días");
-    expect(screen.getByRole("link", { name: /ver unidades/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute(
       "href",
       "/admin/unidades?estado=en_aduana"
     );
@@ -267,12 +311,42 @@ describe("AdminDashboardPage", () => {
     expect(call.where.updatedAt.lte).toBeInstanceOf(Date);
   });
 
-  it("alerta: cobros vencidos (pedidos confirmados sin anticipo hace más de 7 días)", async () => {
+  it("alerta: cobros vencidos (pedidos confirmados sin anticipo hace más de 7 días), con botón Ver", async () => {
     mockConfigCount.mockResolvedValueOnce(5);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("5 pedidos confirmados sin anticipo registrado hace más de 7 días");
-    expect(screen.getByRole("link", { name: /ver pedidos/i })).toHaveAttribute("href", "/admin/configuraciones");
+    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/configuraciones");
+  });
+
+  it("alerta: leads sin contactar tiene botón Ver hacia /admin/pipeline?sinContactar=1", async () => {
+    mockLeadCount.mockReset();
+    mockLeadCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(3);
+    render(await AdminDashboardPage());
+    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/pipeline?sinContactar=1");
+  });
+
+  it("alerta: documentación faltante con una sola unidad linkea directo a /admin/unidades/[id]", async () => {
+    mockUnidadFindMany.mockReset();
+    mockUnidadFindMany.mockResolvedValueOnce([
+      { id: "u1", numeroUnidad: "MOV-1", cliente: { nombre: "Juan" }, envio: null, documentos: [], modelo: null, precioCliente: null, provinciaDestino: null, estadoFabricacion: "pendiente" },
+    ]);
+    mockUnidadFindMany.mockResolvedValueOnce([]);
+    mockUnidadFindMany.mockResolvedValueOnce([]);
+    render(await AdminDashboardPage());
+    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/unidades/u1");
+  });
+
+  it("alerta: documentación faltante con más de una unidad linkea al ancla #documentacion-faltante", async () => {
+    mockUnidadFindMany.mockReset();
+    mockUnidadFindMany.mockResolvedValueOnce([
+      { id: "u1", numeroUnidad: "MOV-1", cliente: { nombre: "Juan" }, envio: null, documentos: [], modelo: null, precioCliente: null, provinciaDestino: null, estadoFabricacion: "pendiente" },
+      { id: "u2", numeroUnidad: "MOV-2", cliente: { nombre: "Ana" }, envio: null, documentos: [], modelo: null, precioCliente: null, provinciaDestino: null, estadoFabricacion: "pendiente" },
+    ]);
+    mockUnidadFindMany.mockResolvedValueOnce([]);
+    mockUnidadFindMany.mockResolvedValueOnce([]);
+    render(await AdminDashboardPage());
+    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "#documentacion-faltante");
   });
 
   it("singular correcto para 1 pedido con cobro vencido", async () => {
@@ -328,6 +402,8 @@ describe("AdminDashboardPage", () => {
     expect(screen.getByText("Confirmada")).toBeInTheDocument();
     expect(screen.getByText("Ana López")).toBeInTheDocument();
     expect(screen.getByText("Completada")).toBeInTheDocument();
+    expect(screen.getByText("Juan Pérez").closest("a")).toHaveAttribute("href", "/admin/agenda?citaId=c1");
+    expect(screen.getByText("Ana López").closest("a")).toHaveAttribute("href", "/admin/agenda?citaId=c2");
   });
 
   it("Agenda del día: un estado de cita fuera del catálogo conocido se muestra tal cual", async () => {

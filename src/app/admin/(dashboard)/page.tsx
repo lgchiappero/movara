@@ -63,6 +63,9 @@ const CITA_ESTADO_COLORS: Record<string, string> = {
   completada: "bg-emerald-100 text-emerald-700",
 };
 
+const BOTON_VER_ALERTA =
+  "flex-shrink-0 px-3 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-700 font-bold text-xs rounded-lg transition-colors whitespace-nowrap";
+
 function diasRestantesLabel(dias: number | null): string {
   if (dias === null) return "—";
   if (dias < 0) return "Vencido";
@@ -282,39 +285,54 @@ export default async function AdminDashboardPage() {
           </h2>
           <ul className="space-y-2 text-sm text-red-800">
             {leadsSinRespuesta > 0 && (
-              <li>
-                <strong>{leadsSinRespuesta}</strong> lead{leadsSinRespuesta === 1 ? "" : "s"} sin respuesta hace
-                más de 48hs —{" "}
-                <Link href="/admin/leads?sinResponder=1" className="underline font-medium">
-                  ver leads
+              <li className="flex items-center justify-between gap-3">
+                <span>
+                  <strong>{leadsSinRespuesta}</strong> lead{leadsSinRespuesta === 1 ? "" : "s"} sin respuesta hace
+                  más de 48hs
+                </span>
+                <Link href="/admin/pipeline?sinContactar=1" className={BOTON_VER_ALERTA}>
+                  Ver →
                 </Link>
               </li>
             )}
             {unidadesConFaltantes.length > 0 && (
-              <li>
-                <strong>{unidadesConFaltantes.length}</strong> unidad
-                {unidadesConFaltantes.length === 1 ? "" : "es"} con documentación incompleta en secciones
-                críticas —{" "}
-                <a href="#documentacion-faltante" className="underline font-medium">
-                  ver detalle
-                </a>
+              <li className="flex items-center justify-between gap-3">
+                <span>
+                  <strong>{unidadesConFaltantes.length}</strong> unidad
+                  {unidadesConFaltantes.length === 1 ? "" : "es"} con documentación incompleta en secciones
+                  críticas
+                </span>
+                <Link
+                  href={
+                    unidadesConFaltantes.length === 1
+                      ? `/admin/unidades/${unidadesConFaltantes[0].id}`
+                      : "#documentacion-faltante"
+                  }
+                  className={BOTON_VER_ALERTA}
+                >
+                  Ver →
+                </Link>
               </li>
             )}
             {cobrosVencidos > 0 && (
-              <li>
-                <strong>{cobrosVencidos}</strong> pedido{cobrosVencidos === 1 ? "" : "s"} confirmado
-                {cobrosVencidos === 1 ? "" : "s"} sin anticipo registrado hace más de 7 días —{" "}
-                <Link href="/admin/configuraciones" className="underline font-medium">
-                  ver pedidos
+              <li className="flex items-center justify-between gap-3">
+                <span>
+                  <strong>{cobrosVencidos}</strong> pedido{cobrosVencidos === 1 ? "" : "s"} confirmado
+                  {cobrosVencidos === 1 ? "" : "s"} sin anticipo registrado hace más de 7 días
+                </span>
+                <Link href="/admin/configuraciones" className={BOTON_VER_ALERTA}>
+                  Ver →
                 </Link>
               </li>
             )}
             {unidadesEnAduanaLargas > 0 && (
-              <li>
-                <strong>{unidadesEnAduanaLargas}</strong> unidad{unidadesEnAduanaLargas === 1 ? "" : "es"} en
-                aduana hace más de 15 días —{" "}
-                <Link href="/admin/unidades?estado=en_aduana" className="underline font-medium">
-                  ver unidades
+              <li className="flex items-center justify-between gap-3">
+                <span>
+                  <strong>{unidadesEnAduanaLargas}</strong> unidad{unidadesEnAduanaLargas === 1 ? "" : "es"} en
+                  aduana hace más de 15 días
+                </span>
+                <Link href="/admin/unidades?estado=en_aduana" className={BOTON_VER_ALERTA}>
+                  Ver →
                 </Link>
               </li>
             )}
@@ -332,18 +350,23 @@ export default async function AdminDashboardPage() {
         ) : (
           <ul className="divide-y divide-[#F0F0F0]">
             {citasHoy.map((c) => (
-              <li key={c.id} className="py-3 flex items-center justify-between gap-3 text-sm">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-stone-500 text-xs font-bold whitespace-nowrap">{c.horario}</span>
-                  <span className="font-medium text-[#1a1a1a] truncate">{c.nombre}</span>
-                </div>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                    CITA_ESTADO_COLORS[c.estado] ?? "bg-stone-100 text-stone-500"
-                  }`}
+              <li key={c.id}>
+                <Link
+                  href={`/admin/agenda?citaId=${c.id}`}
+                  className="py-3 flex items-center justify-between gap-3 text-sm -mx-2 px-2 rounded-lg hover:bg-stone-50 transition-colors"
                 >
-                  {CITA_ESTADO_LABELS[c.estado] ?? c.estado}
-                </span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-stone-500 text-xs font-bold whitespace-nowrap">{c.horario}</span>
+                    <span className="font-medium text-[#1a1a1a] truncate">{c.nombre}</span>
+                  </div>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                      CITA_ESTADO_COLORS[c.estado] ?? "bg-stone-100 text-stone-500"
+                    }`}
+                  >
+                    {CITA_ESTADO_LABELS[c.estado] ?? c.estado}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
@@ -355,17 +378,29 @@ export default async function AdminDashboardPage() {
         <KpiColumn
           title="💼 Ventas"
           items={[
-            { label: "Leads nuevos hoy", value: leadsHoy },
-            { label: "En negociación", value: leadsEnNegociacion },
-            { label: "Ganados este mes", value: leadsGanadosMes },
+            { label: "Leads nuevos hoy", value: leadsHoy, href: "/admin/pipeline?etapa=nuevo&desde=hoy" },
+            {
+              label: "En negociación",
+              value: leadsEnNegociacion,
+              href: "/admin/pipeline?etapa=en_contacto,propuesta_enviada",
+            },
+            { label: "Ganados este mes", value: leadsGanadosMes, href: "/admin/pipeline?etapa=ganado&periodo=mes" },
           ]}
         />
         <KpiColumn
           title="📦 Operaciones"
           items={[
-            { label: "Unidades activas", value: unidadesActivas.length },
-            { label: "En aduana ahora", value: countByEstadoUnidad["en_aduana"] ?? 0 },
-            { label: "Entregadas este mes", value: unidadesEntregadasMes },
+            { label: "Unidades activas", value: unidadesActivas.length, href: "/admin/unidades?estado=activo" },
+            {
+              label: "En aduana ahora",
+              value: countByEstadoUnidad["en_aduana"] ?? 0,
+              href: "/admin/unidades?estado=en_aduana",
+            },
+            {
+              label: "Entregadas este mes",
+              value: unidadesEntregadasMes,
+              href: "/admin/unidades?estado=entregado&periodo=mes",
+            },
           ]}
         />
         <KpiColumn
@@ -386,16 +421,21 @@ export default async function AdminDashboardPage() {
         ) : (
           <ul className="divide-y divide-[#F0F0F0]">
             {leadsPipelineResumen.map((l) => (
-              <li key={l.id} className="py-3 flex items-center justify-between text-sm">
-                <div>
-                  <p className="font-medium text-[#1a1a1a]">
-                    {l.nombre} {l.apellido ?? ""}
-                  </p>
-                  <p className="text-xs text-stone-400">{l.createdAt.toLocaleDateString("es-AR")}</p>
-                </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-bold ${ETAPA_COLORS[l.etapa as Etapa]}`}>
-                  {ETAPA_LABELS[l.etapa as Etapa] ?? l.etapa}
-                </span>
+              <li key={l.id}>
+                <Link
+                  href={`/admin/pipeline?leadId=${l.id}`}
+                  className="py-3 flex items-center justify-between text-sm -mx-2 px-2 rounded-lg hover:bg-stone-50 transition-colors"
+                >
+                  <div>
+                    <p className="font-medium text-[#1a1a1a]">
+                      {l.nombre} {l.apellido ?? ""}
+                    </p>
+                    <p className="text-xs text-stone-400">{l.createdAt.toLocaleDateString("es-AR")}</p>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${ETAPA_COLORS[l.etapa as Etapa]}`}>
+                    {ETAPA_LABELS[l.etapa as Etapa] ?? l.etapa}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
@@ -589,18 +629,29 @@ function KpiColumn({
   items,
 }: {
   title: string;
-  items: { label: string; value: string | number }[];
+  items: { label: string; value: string | number; href?: string }[];
 }) {
   return (
     <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
       <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">{title}</h3>
       <div className="space-y-3">
-        {items.map((item) => (
-          <div key={item.label} className="flex items-center justify-between gap-2">
-            <span className="text-sm text-stone-500">{item.label}</span>
-            <span className="text-xl font-bold text-[#2F2F2F] whitespace-nowrap">{item.value}</span>
-          </div>
-        ))}
+        {items.map((item) =>
+          item.href ? (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="flex items-center justify-between gap-2 -mx-2 px-2 py-1 rounded-lg hover:bg-stone-50 transition-colors"
+            >
+              <span className="text-sm text-stone-500">{item.label}</span>
+              <span className="text-xl font-bold text-[#2F2F2F] whitespace-nowrap">{item.value}</span>
+            </Link>
+          ) : (
+            <div key={item.label} className="flex items-center justify-between gap-2 px-2 py-1">
+              <span className="text-sm text-stone-500">{item.label}</span>
+              <span className="text-xl font-bold text-[#2F2F2F] whitespace-nowrap">{item.value}</span>
+            </div>
+          )
+        )}
       </div>
     </div>
   );

@@ -47,7 +47,7 @@ function serializeCita(c: {
 export default async function AgendaAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mes?: string; vista?: string; tab?: string; dispDesde?: string }>;
+  searchParams: Promise<{ mes?: string; vista?: string; tab?: string; dispDesde?: string; citaId?: string }>;
 }) {
   const sp = await searchParams;
   const { anio, mesIdx0 } = parseMesParam(sp.mes);
@@ -103,6 +103,7 @@ export default async function AgendaAdminPage({
           vista={vistaLista ? "lista" : "calendario"}
           citasDelMes={citasDelMes.map(serializeCita)}
           todasLasCitas={todasLasCitas.map(serializeCita)}
+          citaIdInicial={sp.citaId ?? null}
         />
       </section>
 

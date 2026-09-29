@@ -10,9 +10,24 @@ vi.mock("@/lib/db", () => ({
   db: { cita: { findMany: mockFindManyCita }, disponibilidadAgenda: { findMany: mockFindManyDisp } },
 }));
 vi.mock("@/components/admin/AgendaVistaPanel", () => ({
-  default: ({ anio, mesIdx0, vista, citasDelMes, todasLasCitas }: { anio: number; mesIdx0: number; vista: string; citasDelMes: unknown[]; todasLasCitas: unknown[] }) => (
+  default: ({
+    anio,
+    mesIdx0,
+    vista,
+    citasDelMes,
+    todasLasCitas,
+    citaIdInicial,
+  }: {
+    anio: number;
+    mesIdx0: number;
+    vista: string;
+    citasDelMes: unknown[];
+    todasLasCitas: unknown[];
+    citaIdInicial?: string | null;
+  }) => (
     <div>
-      AgendaVistaPanel: {anio}-{mesIdx0} {vista} citasDelMes={citasDelMes.length} todas={todasLasCitas.length}
+      AgendaVistaPanel: {anio}-{mesIdx0} {vista} citasDelMes={citasDelMes.length} todas={todasLasCitas.length}{" "}
+      citaIdInicial={citaIdInicial ?? "none"}
     </div>
   ),
 }));
@@ -46,6 +61,16 @@ describe("AgendaAdminPage", () => {
     vi.clearAllMocks();
     mockFindManyCita.mockResolvedValue([]);
     mockFindManyDisp.mockResolvedValue([]);
+  });
+
+  it("pasa citaId como citaIdInicial a AgendaVistaPanel (deep link 'resaltada' desde el dashboard)", async () => {
+    render(await AgendaAdminPage({ searchParams: Promise.resolve({ citaId: "c1" }) }));
+    expect(screen.getByText(/citaIdInicial=c1/)).toBeInTheDocument();
+  });
+
+  it("sin citaId en el querystring, citaIdInicial es 'none'", async () => {
+    render(await AgendaAdminPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByText(/citaIdInicial=none/)).toBeInTheDocument();
   });
 
   it("sin parámetro 'mes', usa el mes actual", async () => {

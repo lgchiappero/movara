@@ -21,25 +21,66 @@ const TABS = ["todos", ...ETAPA_OPTIONS] as const;
 export default async function AdminPipelinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ etapa?: string; vendedorId?: string; origen?: string }>;
+  searchParams: Promise<{
+    etapa?: string;
+    vendedorId?: string;
+    origen?: string;
+    desde?: string;
+    periodo?: string;
+    sinContactar?: string;
+    leadId?: string;
+  }>;
 }) {
   const sp = await searchParams;
-  const etapaValida = (ETAPA_OPTIONS as readonly string[]).includes(sp.etapa ?? "")
-    ? (sp.etapa as Etapa)
-    : undefined;
+
+  // "etapa" acepta una lista separada por comas (ej. desde los KPIs del
+  // dashboard: etapa=en_contacto,propuesta_enviada) además del valor único
+  // de siempre. Con exactamente 1 etapa válida se mantiene el shape previo
+  // (etapa: string) para no romper los tabs ni los tests existentes; con 2+
+  // se arma un { in: [...] }.
+  const etapasValidas = (sp.etapa ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter((e): e is Etapa => (ETAPA_OPTIONS as readonly string[]).includes(e));
+  const etapaValida = etapasValidas.length === 1 ? etapasValidas[0] : undefined;
+  const etapaWhere =
+    etapasValidas.length === 1
+      ? { etapa: etapasValidas[0] }
+      : etapasValidas.length > 1
+        ? { etapa: { in: etapasValidas } }
+        : {};
+
   const origenValido = (ORIGEN_OPTIONS as readonly string[]).includes(sp.origen ?? "")
     ? (sp.origen as Origen)
     : undefined;
 
+  const now = new Date();
+  const hoyParaFiltro = startOfDay(now);
+  const inicioMesParaFiltro = startOfMonth(now);
+
+  // "desde=hoy" y "periodo=mes" filtran por createdAt — mismo criterio que
+  // usan las tarjetas del dashboard para "Leads nuevos hoy" y "Ganados este
+  // mes". Si llegaran los dos a la vez, "desde=hoy" gana (es el filtro más
+  // específico).
+  const fechaWhere =
+    sp.desde === "hoy"
+      ? { createdAt: { gte: hoyParaFiltro } }
+      : sp.periodo === "mes"
+        ? { createdAt: { gte: inicioMesParaFiltro } }
+        : {};
+
+  const sinContactarWhere = sp.sinContactar === "1" ? { contactado: false } : {};
+
   const where = {
-    ...(etapaValida ? { etapa: etapaValida } : {}),
+    ...etapaWhere,
     ...(sp.vendedorId ? { vendedorId: sp.vendedorId } : {}),
     ...(origenValido ? { origen: origenValido } : {}),
+    ...fechaWhere,
+    ...sinContactarWhere,
   };
 
-  const now = new Date();
-  const hoy = startOfDay(now);
-  const inicioMes = startOfMonth(now);
+  const hoy = hoyParaFiltro;
+  const inicioMes = inicioMesParaFiltro;
 
   const [leads, vendedores, totalActivos, nuevosHoy, enPropuesta, ganadosMes, totalMes] = await Promise.all([
     db.lead.findMany({ where, orderBy: { createdAt: "desc" } }),
@@ -61,7 +102,14 @@ export default async function AdminPipelinePage({
   // más allá del pedido.
   const tasa = tasaConversion(ganadosMes, totalMes);
 
-  const hayFiltros = Boolean(etapaValida || sp.vendedorId || origenValido);
+  const hayFiltros = Boolean(
+    etapasValidas.length > 0 ||
+      sp.vendedorId ||
+      origenValido ||
+      sp.desde === "hoy" ||
+      sp.periodo === "mes" ||
+      sp.sinContactar === "1"
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 space-y-6">
@@ -174,6 +222,7 @@ export default async function AdminPipelinePage({
             valorEstimado: l.valorEstimado,
           }))}
           vendedores={vendedores}
+          highlightLeadId={sp.leadId ?? null}
         />
       )}
     </div>

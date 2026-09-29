@@ -5,18 +5,38 @@ import NuevaUnidadForm from "@/components/admin/NuevaUnidadForm";
 
 export const dynamic = "force-dynamic";
 
+function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
 export default async function AdminUnidadesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string; clienteId?: string; envioId?: string; provincia?: string }>;
+  searchParams: Promise<{ estado?: string; clienteId?: string; envioId?: string; provincia?: string; periodo?: string }>;
 }) {
   const sp = await searchParams;
 
+  // "activo" es un valor sintético (no existe como estadoFabricacion real):
+  // agrupa todo lo que no está entregado — mismo criterio que "Unidades
+  // activas" en el dashboard.
+  const estadoWhere =
+    sp.estado === "activo"
+      ? { estadoFabricacion: { not: "entregado" } }
+      : sp.estado
+        ? { estadoFabricacion: sp.estado }
+        : {};
+
+  // "periodo=mes" filtra por fechaEntrega — pensado para combinarse con
+  // estado=entregado (ej. "Entregadas este mes" del dashboard). Sin
+  // unidades entregadas no tiene efecto visible, pero no rompe nada.
+  const periodoWhere = sp.periodo === "mes" ? { fechaEntrega: { gte: startOfMonth(new Date()) } } : {};
+
   const where = {
-    ...(sp.estado ? { estadoFabricacion: sp.estado } : {}),
+    ...estadoWhere,
     ...(sp.clienteId ? { clienteId: sp.clienteId } : {}),
     ...(sp.envioId ? { envioId: sp.envioId } : {}),
     ...(sp.provincia ? { provinciaDestino: sp.provincia } : {}),
+    ...periodoWhere,
   };
 
   const [unidades, clientes, envios, provinciasRows] = await Promise.all([
@@ -62,6 +82,7 @@ export default async function AdminUnidadesPage({
             className="rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#2F2F2F] bg-white"
           >
             <option value="">Todos</option>
+            <option value="activo">Activas (todas)</option>
             {estadoFabricacionOptions.map((e) => (
               <option key={e} value={e}>
                 {estadoFabricacionLabels[e]}

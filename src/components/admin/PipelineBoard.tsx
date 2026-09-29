@@ -48,9 +48,17 @@ async function savePipeline(
   return res.ok;
 }
 
-export default function PipelineBoard({ leads, vendedores }: { leads: LeadPipeline[]; vendedores: Vendedor[] }) {
+export default function PipelineBoard({
+  leads,
+  vendedores,
+  highlightLeadId,
+}: {
+  leads: LeadPipeline[];
+  vendedores: Vendedor[];
+  highlightLeadId?: string | null;
+}) {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(highlightLeadId ?? null);
   const selectedLead = leads.find((l) => l.id === selectedId) ?? null;
 
   function handlePanelSaved() {
@@ -90,7 +98,9 @@ export default function PipelineBoard({ leads, vendedores }: { leads: LeadPipeli
             {leads.map((lead) => (
               <tr
                 key={lead.id}
-                className="border-b border-[#F0F0F0] last:border-0 hover:bg-stone-50 cursor-pointer"
+                className={`border-b border-[#F0F0F0] last:border-0 hover:bg-stone-50 cursor-pointer ${
+                  lead.id === highlightLeadId ? "bg-[#D4B06A]/10" : ""
+                }`}
                 onClick={() => setSelectedId(lead.id)}
               >
                 <td className="px-4 py-3 font-medium text-[#2F2F2F] whitespace-nowrap">
