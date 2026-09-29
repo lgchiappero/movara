@@ -43,7 +43,11 @@ vi.mock("next/link", () => ({
   ),
 }));
 vi.mock("@/components/admin/UnidadesEnMovimientoGrid", () => ({
-  default: ({ unidades }: { unidades: unknown[] }) => <div>UnidadesEnMovimientoGrid: {unidades.length}</div>,
+  default: ({ activas, entregadas }: { activas: unknown[]; entregadas: unknown[] }) => (
+    <div>
+      UnidadesEnMovimientoGrid activas:{activas.length} entregadas:{entregadas.length}
+    </div>
+  ),
 }));
 
 import AdminDashboardPage from "../page";
@@ -65,6 +69,7 @@ function setupDefaults() {
   mockUnidadFindMany.mockReset();
   mockUnidadFindMany.mockResolvedValueOnce([]); // unidadesActivas
   mockUnidadFindMany.mockResolvedValueOnce([]); // unidadesActualizadas24h
+  mockUnidadFindMany.mockResolvedValueOnce([]); // unidadesEntregadas
 
   mockUnidadGroupBy.mockResolvedValue([]);
 
@@ -86,6 +91,19 @@ describe("AdminDashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupDefaults();
+  });
+
+  // ── Orden de secciones (día a día) ──────────────────────────────────
+
+  it("respeta el orden: Agenda del día, KPIs, Pipeline activo, Unidades en movimiento", async () => {
+    render(await AdminDashboardPage());
+    const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+    const idxAgenda = headings.findIndex((t) => t?.startsWith("Agenda del día"));
+    const idxPipeline = headings.indexOf("Pipeline activo");
+    const idxUnidades = headings.indexOf("Unidades en movimiento");
+    expect(idxAgenda).toBeGreaterThanOrEqual(0);
+    expect(idxPipeline).toBeGreaterThan(idxAgenda);
+    expect(idxUnidades).toBeGreaterThan(idxPipeline);
   });
 
   // ── KPIs unificados ───────────────────────────────────────────────────
@@ -113,6 +131,7 @@ describe("AdminDashboardPage", () => {
       { id: "u1", numeroUnidad: "MOV-1", cliente: { nombre: "Juan" }, envio: null, documentos: [], modelo: null, precioCliente: null, provinciaDestino: null, estadoFabricacion: "pendiente" },
       { id: "u2", numeroUnidad: "MOV-2", cliente: { nombre: "Ana" }, envio: null, documentos: [], modelo: null, precioCliente: null, provinciaDestino: null, estadoFabricacion: "en_aduana" },
     ]);
+    mockUnidadFindMany.mockResolvedValueOnce([]);
     mockUnidadFindMany.mockResolvedValueOnce([]);
     mockUnidadGroupBy.mockResolvedValueOnce([{ estadoFabricacion: "en_aduana", _count: { _all: 4 } }]);
     mockUnidadCount.mockReset();
@@ -142,7 +161,7 @@ describe("AdminDashboardPage", () => {
     expect(screen.getByText("Ganado este mes").nextElementSibling?.textContent).toBe("USD 0");
   });
 
-  // ── Grilla de operaciones ────────────────────────────────────────────
+  // ── Grilla de operaciones (activas + entregadas) ─────────────────────
 
   it("pasa las unidades activas serializadas a UnidadesEnMovimientoGrid", async () => {
     mockUnidadFindMany.mockReset();
@@ -160,12 +179,41 @@ describe("AdminDashboardPage", () => {
       },
     ]);
     mockUnidadFindMany.mockResolvedValueOnce([]);
+    mockUnidadFindMany.mockResolvedValueOnce([]);
     render(await AdminDashboardPage());
     expect(screen.getByText("Unidades en movimiento")).toBeInTheDocument();
-    expect(screen.getByText("UnidadesEnMovimientoGrid: 1")).toBeInTheDocument();
+    expect(screen.getByText(/UnidadesEnMovimientoGrid activas:1 entregadas:0/)).toBeInTheDocument();
   });
 
-  // ── Pipeline de leads resumido ───────────────────────────────────────
+  it("pasa las unidades entregadas serializadas (con fechaEntrega) a UnidadesEnMovimientoGrid", async () => {
+    mockUnidadFindMany.mockReset();
+    mockUnidadFindMany.mockResolvedValueOnce([]);
+    mockUnidadFindMany.mockResolvedValueOnce([]);
+    mockUnidadFindMany.mockResolvedValueOnce([
+      {
+        id: "u9",
+        numeroUnidad: "MOV-9",
+        cliente: { nombre: "Delivered Co" },
+        envio: { numeroPI: "PI-9", fechaEmbarque: null, fechaArriboEstimado: null },
+        modelo: "Flex 38",
+        precioCliente: 80000,
+        provinciaDestino: "Mendoza",
+        estadoFabricacion: "entregado",
+        fechaEntrega: new Date("2026-03-01"),
+      },
+    ]);
+    render(await AdminDashboardPage());
+    expect(screen.getByText(/UnidadesEnMovimientoGrid activas:0 entregadas:1/)).toBeInTheDocument();
+  });
+
+  it("la query de unidades entregadas filtra por estadoFabricacion 'entregado' y ordena por fechaEntrega desc", async () => {
+    render(await AdminDashboardPage());
+    const call = mockUnidadFindMany.mock.calls[2][0];
+    expect(call.where).toEqual({ estadoFabricacion: "entregado" });
+    expect(call.orderBy).toEqual({ fechaEntrega: "desc" });
+  });
+
+  // ── Pipeline activo (resumido) ───────────────────────────────────────
 
   it("muestra el mensaje vacío cuando no hay leads activos en el pipeline", async () => {
     render(await AdminDashboardPage());
@@ -193,14 +241,14 @@ describe("AdminDashboardPage", () => {
     );
   });
 
-  // ── Alertas ──────────────────────────────────────────────────────────
+  // ── Alertas (solo las 4 pedidas) ─────────────────────────────────────
 
   it("sin ninguna condición, no muestra la sección de alertas", async () => {
     render(await AdminDashboardPage());
     expect(screen.queryByText(/alertas y acciones urgentes/i)).not.toBeInTheDocument();
   });
 
-  it("alerta nueva: unidades en aduana hace más de 15 días", async () => {
+  it("alerta: unidades en aduana hace más de 15 días", async () => {
     mockUnidadCount.mockReset();
     mockUnidadCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(2);
     render(await AdminDashboardPage());
@@ -219,7 +267,7 @@ describe("AdminDashboardPage", () => {
     expect(call.where.updatedAt.lte).toBeInstanceOf(Date);
   });
 
-  it("alerta nueva: cobros vencidos (pedidos confirmados sin anticipo hace más de 7 días)", async () => {
+  it("alerta: cobros vencidos (pedidos confirmados sin anticipo hace más de 7 días)", async () => {
     mockConfigCount.mockResolvedValueOnce(5);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
@@ -243,7 +291,7 @@ describe("AdminDashboardPage", () => {
     );
   });
 
-  it("alerta existente: leads sin respuesta hace más de 48hs", async () => {
+  it("alerta: leads sin respuesta hace más de 48hs", async () => {
     mockLeadCount.mockReset();
     mockLeadCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(4);
     render(await AdminDashboardPage());
@@ -251,24 +299,61 @@ describe("AdminDashboardPage", () => {
     expect(alertBox.textContent).toContain("4 leads sin respuesta hace más de 48hs");
   });
 
-  // ── Resumen del día (ya no incluye 'Leads nuevos hoy' — está en KPIs) ──
+  it("documentación faltante y cobros vencidos activan alertas independientemente de citas o envíos", async () => {
+    mockCitaFindMany.mockResolvedValueOnce([{ id: "c1", nombre: "Juan", horario: "10:00", estado: "confirmada" }]);
+    mockEnvioFindMany.mockResolvedValueOnce([
+      { id: "e1", numeroPI: "PI-1", numeroContenedor: null, fechaArriboEstimado: new Date(), unidades: [{ estadoFabricacion: "en_transito" }] },
+    ]);
+    render(await AdminDashboardPage());
+    expect(screen.queryByText(/alertas y acciones urgentes/i)).not.toBeInTheDocument();
+  });
+
+  // ── Agenda del día ────────────────────────────────────────────────────
+
+  it("Agenda del día muestra el mensaje vacío cuando no hay citas hoy", async () => {
+    render(await AdminDashboardPage());
+    expect(screen.getByText("Agenda del día (0)")).toBeInTheDocument();
+    expect(screen.getByText("Sin citas agendadas hoy.")).toBeInTheDocument();
+  });
+
+  it("Agenda del día lista las citas de hoy con nombre, horario y estado", async () => {
+    mockCitaFindMany.mockResolvedValueOnce([
+      { id: "c1", nombre: "Juan Pérez", horario: "10:00", estado: "confirmada" },
+      { id: "c2", nombre: "Ana López", horario: "15:00", estado: "completada" },
+    ]);
+    render(await AdminDashboardPage());
+    expect(screen.getByText("Agenda del día (2)")).toBeInTheDocument();
+    expect(screen.getByText("Juan Pérez")).toBeInTheDocument();
+    expect(screen.getByText("10:00")).toBeInTheDocument();
+    expect(screen.getByText("Confirmada")).toBeInTheDocument();
+    expect(screen.getByText("Ana López")).toBeInTheDocument();
+    expect(screen.getByText("Completada")).toBeInTheDocument();
+  });
+
+  it("Agenda del día: un estado de cita fuera del catálogo conocido se muestra tal cual", async () => {
+    mockCitaFindMany.mockResolvedValueOnce([
+      { id: "c1", nombre: "Juan", horario: "10:00", estado: "estado-raro" },
+    ]);
+    render(await AdminDashboardPage());
+    expect(screen.getByText("estado-raro")).toBeInTheDocument();
+  });
+
+  // ── Resumen del día (solo unidades actualizadas — citas viven en Agenda) ──
 
   it("'Leads nuevos hoy' aparece una sola vez en toda la página (solo en el KPI de Ventas)", async () => {
     render(await AdminDashboardPage());
     expect(screen.getAllByText("Leads nuevos hoy")).toHaveLength(1);
   });
 
-  it("Resumen del día muestra las citas de hoy y las unidades actualizadas", async () => {
-    mockCitaFindMany.mockResolvedValueOnce([
-      { id: "c1", nombre: "Juan", horario: "10:00", estado: "confirmada" },
-    ]);
+  it("Resumen del día muestra solo las unidades actualizadas (24hs)", async () => {
     mockUnidadFindMany.mockReset();
     mockUnidadFindMany.mockResolvedValueOnce([]);
     mockUnidadFindMany.mockResolvedValueOnce([
       { id: "u1", numeroUnidad: "MOV-1", estadoFabricacion: "en_produccion", cliente: { nombre: "Ana" } },
     ]);
+    mockUnidadFindMany.mockResolvedValueOnce([]);
     render(await AdminDashboardPage());
-    expect(screen.getByText("Citas de showroom hoy (1)")).toBeInTheDocument();
+    expect(screen.getByText("Resumen del día")).toBeInTheDocument();
     expect(screen.getByText(/MOV-1 · Ana/)).toBeInTheDocument();
   });
 
@@ -303,6 +388,7 @@ describe("AdminDashboardPage", () => {
     mockUnidadFindMany.mockResolvedValueOnce([
       { id: "u1", numeroUnidad: "MOV-1", cliente: { nombre: "Juan" }, envio: null, documentos: [], modelo: null, precioCliente: null, provinciaDestino: null, estadoFabricacion: "pendiente" },
     ]);
+    mockUnidadFindMany.mockResolvedValueOnce([]);
     mockUnidadFindMany.mockResolvedValueOnce([]);
     render(await AdminDashboardPage());
     expect(screen.getByText("Documentación faltante")).toBeInTheDocument();
@@ -382,13 +468,6 @@ describe("AdminDashboardPage", () => {
 
   // ── Singulares en las alertas ────────────────────────────────────────
 
-  it("singular correcto para 1 cita pendiente hoy", async () => {
-    mockCitaFindMany.mockResolvedValueOnce([{ id: "c1", nombre: "Juan", horario: "10:00", estado: "confirmada" }]);
-    render(await AdminDashboardPage());
-    const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
-    expect(alertBox.textContent).toContain("1 cita de showroom pendientes hoy");
-  });
-
   it("singular correcto para 1 lead sin respuesta", async () => {
     mockLeadCount.mockReset();
     mockLeadCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(1);
@@ -424,6 +503,7 @@ describe("AdminDashboardPage", () => {
     mockUnidadFindMany.mockResolvedValueOnce([
       { id: "u1", numeroUnidad: null, estadoFabricacion: "estado-raro", cliente: { nombre: "Ana" } },
     ]);
+    mockUnidadFindMany.mockResolvedValueOnce([]);
     render(await AdminDashboardPage());
     expect(screen.getByText(/Sin número · Ana/)).toBeInTheDocument();
     expect(screen.getByText("estado-raro")).toBeInTheDocument();
@@ -444,6 +524,7 @@ describe("AdminDashboardPage", () => {
         estadoFabricacion: "pendiente",
       },
     ]);
+    mockUnidadFindMany.mockResolvedValueOnce([]);
     mockUnidadFindMany.mockResolvedValueOnce([]);
     render(await AdminDashboardPage());
     expect(screen.getByText(/Sin número · Juan/)).toBeInTheDocument();
@@ -466,6 +547,7 @@ describe("AdminDashboardPage", () => {
     }));
     mockUnidadFindMany.mockReset();
     mockUnidadFindMany.mockResolvedValueOnce(unidades);
+    mockUnidadFindMany.mockResolvedValueOnce([]);
     mockUnidadFindMany.mockResolvedValueOnce([]);
     render(await AdminDashboardPage());
     expect(screen.getByText(/Ver las 2 restantes en \/admin\/unidades/)).toBeInTheDocument();

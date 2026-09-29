@@ -51,6 +51,18 @@ const SECCION_TITULOS: Record<string, string> = Object.fromEntries(
   SECCIONES_UNIDAD.map((s) => [s.key, s.titulo])
 );
 
+const CITA_ESTADO_LABELS: Record<string, string> = {
+  confirmada: "Confirmada",
+  cancelada: "Cancelada",
+  completada: "Completada",
+};
+
+const CITA_ESTADO_COLORS: Record<string, string> = {
+  confirmada: "bg-[#D4B06A]/20 text-[#8a6a2e]",
+  cancelada: "bg-stone-200 text-stone-500",
+  completada: "bg-emerald-100 text-emerald-700",
+};
+
 function diasRestantesLabel(dias: number | null): string {
   if (dias === null) return "—";
   if (dias < 0) return "Vencido";
@@ -60,6 +72,34 @@ function diasRestantesLabel(dias: number | null): string {
 
 function formatUSD(value: number | null): string {
   return `USD ${(value ?? 0).toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
+}
+
+type UnidadParaGrilla = {
+  id: string;
+  numeroUnidad: string | null;
+  modelo: string | null;
+  precioCliente: number | null;
+  provinciaDestino: string | null;
+  estadoFabricacion: string;
+  fechaEntrega: Date | null;
+  cliente: { nombre: string };
+  envio: { numeroPI: string | null; fechaEmbarque: Date | null; fechaArriboEstimado: Date | null } | null;
+};
+
+function toUnidadMovimiento(u: UnidadParaGrilla): UnidadMovimiento {
+  return {
+    id: u.id,
+    numeroUnidad: u.numeroUnidad,
+    clienteNombre: u.cliente.nombre,
+    modelo: u.modelo,
+    envioNumeroPI: u.envio?.numeroPI ?? null,
+    estadoFabricacion: u.estadoFabricacion,
+    tienePrecio: u.precioCliente != null,
+    fechaEmbarque: u.envio?.fechaEmbarque?.toISOString() ?? null,
+    fechaArriboEstimado: u.envio?.fechaArriboEstimado?.toISOString() ?? null,
+    fechaEntrega: u.fechaEntrega?.toISOString() ?? null,
+    provinciaDestino: u.provinciaDestino,
+  };
 }
 
 export default async function AdminDashboardPage() {
@@ -81,6 +121,7 @@ export default async function AdminDashboardPage() {
     session,
     unidadesActivas,
     unidadesActualizadas24h,
+    unidadesEntregadas,
     unidadesPorEstadoRaw,
     envios,
     citasHoy,
@@ -114,6 +155,21 @@ export default async function AdminDashboardPage() {
       select: { id: true, numeroUnidad: true, estadoFabricacion: true, cliente: { select: { nombre: true } } },
       orderBy: { updatedAt: "desc" },
       take: 10,
+    }),
+    db.unidad.findMany({
+      where: { estadoFabricacion: "entregado" },
+      select: {
+        id: true,
+        numeroUnidad: true,
+        modelo: true,
+        precioCliente: true,
+        provinciaDestino: true,
+        estadoFabricacion: true,
+        fechaEntrega: true,
+        cliente: { select: { nombre: true } },
+        envio: { select: { numeroPI: true, fechaEmbarque: true, fechaArriboEstimado: true } },
+      },
+      orderBy: { fechaEntrega: "desc" },
     }),
     db.unidad.groupBy({ by: ["estadoFabricacion"], _count: { _all: true } }),
     db.envio.findMany({
@@ -182,18 +238,8 @@ export default async function AdminDashboardPage() {
     }))
     .filter((u) => u.faltantes.length > 0);
 
-  const unidadesEnMovimiento: UnidadMovimiento[] = unidadesActivas.map((u) => ({
-    id: u.id,
-    numeroUnidad: u.numeroUnidad,
-    clienteNombre: u.cliente.nombre,
-    modelo: u.modelo,
-    envioNumeroPI: u.envio?.numeroPI ?? null,
-    estadoFabricacion: u.estadoFabricacion,
-    tienePrecio: u.precioCliente != null,
-    fechaEmbarque: u.envio?.fechaEmbarque?.toISOString() ?? null,
-    fechaArriboEstimado: u.envio?.fechaArriboEstimado?.toISOString() ?? null,
-    provinciaDestino: u.provinciaDestino,
-  }));
+  const unidadesEnMovimiento: UnidadMovimiento[] = unidadesActivas.map(toUnidadMovimiento);
+  const unidadesEntregadasGrilla: UnidadMovimiento[] = unidadesEntregadas.map(toUnidadMovimiento);
 
   const enviosConDerivados = envios.map((e) => ({
     ...e,
@@ -202,19 +248,18 @@ export default async function AdminDashboardPage() {
     cantidadUnidades: e.unidades.length,
   }));
   const enviosActivos = enviosConDerivados.filter((e) => e.estado !== "entregado");
-  const enviosProximosArribo = enviosConDerivados.filter(
-    (e) => e.dias !== null && e.dias >= 0 && e.dias <= 7
-  );
 
-  const citasHoyPendientes = citasHoy.filter((c) => c.estado === "confirmada");
-
+  // Alertas urgentes: exactamente las 4 condiciones pedidas (leads sin
+  // contactar +48hs, documentación faltante, cobros vencidos, unidades en
+  // aduana +15 días). Los avisos de "envíos con arribo próximo" y "citas
+  // pendientes hoy" que antes vivían acá se sacaron de este bloque: el
+  // segundo ya se cubre en detalle en "Agenda del día", y el primero no
+  // forma parte de la lista pedida.
   const hayAlertas =
-    unidadesConFaltantes.length > 0 ||
-    enviosProximosArribo.length > 0 ||
-    citasHoyPendientes.length > 0 ||
     leadsSinRespuesta > 0 ||
-    unidadesEnAduanaLargas > 0 ||
-    cobrosVencidos > 0;
+    unidadesConFaltantes.length > 0 ||
+    cobrosVencidos > 0 ||
+    unidadesEnAduanaLargas > 0;
 
   const accesosRapidos = ADMIN_NAV_ITEMS.filter(
     (item) => item.href !== "/admin" && isAllowedForRole(rol, item.href)
@@ -229,12 +274,22 @@ export default async function AdminDashboardPage() {
         <h1 className="text-2xl font-bold text-[#1a1a1a]">Dashboard</h1>
       </div>
 
+      {/* 1. Alertas urgentes */}
       {hayAlertas && (
         <div className="rounded-2xl border border-[#F3C6C6] p-5 space-y-3" style={{ backgroundColor: "#fff0f0" }}>
           <h2 className="text-sm font-bold uppercase tracking-widest text-red-700">
             ⚠️ Alertas y acciones urgentes
           </h2>
           <ul className="space-y-2 text-sm text-red-800">
+            {leadsSinRespuesta > 0 && (
+              <li>
+                <strong>{leadsSinRespuesta}</strong> lead{leadsSinRespuesta === 1 ? "" : "s"} sin respuesta hace
+                más de 48hs —{" "}
+                <Link href="/admin/leads?sinResponder=1" className="underline font-medium">
+                  ver leads
+                </Link>
+              </li>
+            )}
             {unidadesConFaltantes.length > 0 && (
               <li>
                 <strong>{unidadesConFaltantes.length}</strong> unidad
@@ -245,30 +300,12 @@ export default async function AdminDashboardPage() {
                 </a>
               </li>
             )}
-            {enviosProximosArribo.length > 0 && (
+            {cobrosVencidos > 0 && (
               <li>
-                <strong>{enviosProximosArribo.length}</strong> envío{enviosProximosArribo.length === 1 ? "" : "s"}{" "}
-                con arribo en los próximos 7 días —{" "}
-                <Link href="/admin/envios" className="underline font-medium">
-                  ver envíos
-                </Link>
-              </li>
-            )}
-            {citasHoyPendientes.length > 0 && (
-              <li>
-                <strong>{citasHoyPendientes.length}</strong> cita{citasHoyPendientes.length === 1 ? "" : "s"} de
-                showroom pendientes hoy —{" "}
-                <Link href="/admin/agenda" className="underline font-medium">
-                  ver agenda
-                </Link>
-              </li>
-            )}
-            {leadsSinRespuesta > 0 && (
-              <li>
-                <strong>{leadsSinRespuesta}</strong> lead{leadsSinRespuesta === 1 ? "" : "s"} sin respuesta hace
-                más de 48hs —{" "}
-                <Link href="/admin/leads?sinResponder=1" className="underline font-medium">
-                  ver leads
+                <strong>{cobrosVencidos}</strong> pedido{cobrosVencidos === 1 ? "" : "s"} confirmado
+                {cobrosVencidos === 1 ? "" : "s"} sin anticipo registrado hace más de 7 días —{" "}
+                <Link href="/admin/configuraciones" className="underline font-medium">
+                  ver pedidos
                 </Link>
               </li>
             )}
@@ -281,19 +318,39 @@ export default async function AdminDashboardPage() {
                 </Link>
               </li>
             )}
-            {cobrosVencidos > 0 && (
-              <li>
-                <strong>{cobrosVencidos}</strong> pedido{cobrosVencidos === 1 ? "" : "s"} confirmado
-                {cobrosVencidos === 1 ? "" : "s"} sin anticipo registrado hace más de 7 días —{" "}
-                <Link href="/admin/configuraciones" className="underline font-medium">
-                  ver pedidos
-                </Link>
-              </li>
-            )}
           </ul>
         </div>
       )}
 
+      {/* 2. Agenda del día */}
+      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">
+          Agenda del día ({citasHoy.length})
+        </h2>
+        {citasHoy.length === 0 ? (
+          <p className="text-sm text-stone-400">Sin citas agendadas hoy.</p>
+        ) : (
+          <ul className="divide-y divide-[#F0F0F0]">
+            {citasHoy.map((c) => (
+              <li key={c.id} className="py-3 flex items-center justify-between gap-3 text-sm">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-stone-500 text-xs font-bold whitespace-nowrap">{c.horario}</span>
+                  <span className="font-medium text-[#1a1a1a] truncate">{c.nombre}</span>
+                </div>
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                    CITA_ESTADO_COLORS[c.estado] ?? "bg-stone-100 text-stone-500"
+                  }`}
+                >
+                  {CITA_ESTADO_LABELS[c.estado] ?? c.estado}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* 3. KPIs unificados */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <KpiColumn
           title="💼 Ventas"
@@ -321,15 +378,9 @@ export default async function AdminDashboardPage() {
         />
       </div>
 
+      {/* 4. Pipeline activo */}
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
-        <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">
-          Unidades en movimiento
-        </h2>
-        <UnidadesEnMovimientoGrid unidades={unidadesEnMovimiento} />
-      </div>
-
-      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
-        <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">Pipeline de leads</h2>
+        <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">Pipeline activo</h2>
         {leadsPipelineResumen.length === 0 ? (
           <p className="text-sm text-stone-400">No hay leads activos en el pipeline.</p>
         ) : (
@@ -354,47 +405,36 @@ export default async function AdminDashboardPage() {
         </Link>
       </div>
 
+      {/* 5. Grilla de unidades en movimiento (con tabs Activas/Entregadas + búsqueda) */}
+      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">
+          Unidades en movimiento
+        </h2>
+        <UnidadesEnMovimientoGrid activas={unidadesEnMovimiento} entregadas={unidadesEntregadasGrilla} />
+      </div>
+
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
         <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500">Resumen del día</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-[#f5f5f5] rounded-xl p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-2">
-              Citas de showroom hoy ({citasHoy.length})
-            </p>
-            {citasHoy.length === 0 ? (
-              <p className="text-sm text-stone-400">Sin citas agendadas hoy.</p>
-            ) : (
-              <ul className="space-y-1">
-                {citasHoy.map((c) => (
-                  <li key={c.id} className="text-sm flex items-center justify-between gap-2">
-                    <span className="truncate">{c.nombre}</span>
-                    <span className="text-stone-500 text-xs whitespace-nowrap">{c.horario}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <div className="bg-[#f5f5f5] rounded-xl p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-2">
-              Unidades actualizadas (24hs)
-            </p>
-            {unidadesActualizadas24h.length === 0 ? (
-              <p className="text-sm text-stone-400">Sin cambios en las últimas 24hs.</p>
-            ) : (
-              <ul className="space-y-1">
-                {unidadesActualizadas24h.map((u) => (
-                  <li key={u.id} className="text-sm flex items-center justify-between gap-2">
-                    <span className="truncate">
-                      {u.numeroUnidad ?? "Sin número"} · {u.cliente.nombre}
-                    </span>
-                    <span className="text-stone-500 text-xs whitespace-nowrap">
-                      {estadoFabricacionLabels[u.estadoFabricacion as EstadoFabricacion] ?? u.estadoFabricacion}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+        <div className="bg-[#f5f5f5] rounded-xl p-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-2">
+            Unidades actualizadas (24hs)
+          </p>
+          {unidadesActualizadas24h.length === 0 ? (
+            <p className="text-sm text-stone-400">Sin cambios en las últimas 24hs.</p>
+          ) : (
+            <ul className="space-y-1">
+              {unidadesActualizadas24h.map((u) => (
+                <li key={u.id} className="text-sm flex items-center justify-between gap-2">
+                  <span className="truncate">
+                    {u.numeroUnidad ?? "Sin número"} · {u.cliente.nombre}
+                  </span>
+                  <span className="text-stone-500 text-xs whitespace-nowrap">
+                    {estadoFabricacionLabels[u.estadoFabricacion as EstadoFabricacion] ?? u.estadoFabricacion}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
