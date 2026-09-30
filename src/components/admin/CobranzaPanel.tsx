@@ -151,9 +151,12 @@ export default function CobranzaPanel({
               type="button"
               onClick={() => {
                 if (t === "personalizado") {
-                  if (desdePersonalizado && hastaPersonalizado) {
-                    cambiarPeriodo(t, desdePersonalizado, hastaPersonalizado);
-                  }
+                  // Primer click: solo revela los date pickers (navega con
+                  // el período personalizado, que cae al mes actual por
+                  // default hasta que el usuario elija fechas y confirme
+                  // con "Aplicar"). Sin este caso, con los pickers todavía
+                  // vacíos el botón no hacía nada — nunca llegabas a verlos.
+                  cambiarPeriodo(t, desdePersonalizado || undefined, hastaPersonalizado || undefined);
                 } else {
                   cambiarPeriodo(t);
                 }
