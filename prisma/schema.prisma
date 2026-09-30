@@ -475,3 +475,35 @@ model Movimiento {
 
   @@map("movimientos")
 }
+
+model CierrePeriodo {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  mes       Int // 1-12
+  anio      Int
+
+  cerradoPor String // email del admin
+  notas      String?
+
+  totalCobradoUSD Float @default(0)
+  totalCobradoARS Float @default(0)
+  totalPagadoUSD  Float @default(0)
+  totalPagadoARS  Float @default(0)
+  margenUSD       Float @default(0)
+
+  @@unique([mes, anio])
+  @@map("cierres_periodo")
+}
+
+model TipoCambio {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  fecha     DateTime
+
+  usdArs Float // cotización USD → ARS del día
+  fuente String? // "oficial" | "blue" | "manual"
+
+  cargadoPor String
+
+  @@map("tipos_cambio")
+}
