@@ -16,6 +16,7 @@ const {
   mockCuotaCount,
   mockFindUniqueCierre,
   mockCountMovimiento,
+  mockFindManyMovimiento,
 } = vi.hoisted(() => ({
   mockLeadCount: vi.fn(),
   mockLeadFindMany: vi.fn(),
@@ -31,6 +32,7 @@ const {
   mockCuotaCount: vi.fn(),
   mockFindUniqueCierre: vi.fn(),
   mockCountMovimiento: vi.fn(),
+  mockFindManyMovimiento: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -42,7 +44,7 @@ vi.mock("@/lib/db", () => ({
     cita: { findMany: mockCitaFindMany },
     cuota: { count: mockCuotaCount },
     cierrePeriodo: { findUnique: mockFindUniqueCierre },
-    movimiento: { count: mockCountMovimiento },
+    movimiento: { count: mockCountMovimiento, findMany: mockFindManyMovimiento },
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -101,6 +103,7 @@ function setupDefaults() {
 
   mockFindUniqueCierre.mockResolvedValue({ id: "cierre1" }); // mes anterior YA cerrado por default
   mockCountMovimiento.mockResolvedValue(0); // mesAnteriorTuvoMovimientos
+  mockFindManyMovimiento.mockResolvedValue([]); // primerCobroPorUnidad
 }
 
 describe("AdminDashboardPage", () => {

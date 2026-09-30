@@ -20,6 +20,8 @@ import UnidadesEnMovimientoGrid, {
   type UnidadMovimiento,
 } from "@/components/admin/UnidadesEnMovimientoGrid";
 import { inicioSemana as inicioSemanaCobranza, finSemana as finSemanaCobranza } from "@/lib/cobranza/periodo";
+import { proximoPasoCorto } from "@/lib/envios/timeline";
+import { primerCobroPorUnidad } from "@/lib/cobranza/primer-cobro";
 
 const MESES_LABEL = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -85,17 +87,19 @@ function formatUSD(value: number | null): string {
 
 type UnidadParaGrilla = {
   id: string;
+  clienteId: string;
   numeroUnidad: string | null;
   modelo: string | null;
   precioCliente: number | null;
   provinciaDestino: string | null;
   estadoFabricacion: string;
+  createdAt: Date;
   fechaEntrega: Date | null;
   cliente: { nombre: string };
   envio: { numeroPI: string | null; fechaEmbarque: Date | null; fechaArriboEstimado: Date | null } | null;
 };
 
-function toUnidadMovimiento(u: UnidadParaGrilla): UnidadMovimiento {
+function toUnidadMovimiento(u: UnidadParaGrilla, primerCobroMap: Map<string, Date>): UnidadMovimiento {
   return {
     id: u.id,
     numeroUnidad: u.numeroUnidad,
@@ -108,6 +112,16 @@ function toUnidadMovimiento(u: UnidadParaGrilla): UnidadMovimiento {
     fechaArriboEstimado: u.envio?.fechaArriboEstimado?.toISOString() ?? null,
     fechaEntrega: u.fechaEntrega?.toISOString() ?? null,
     provinciaDestino: u.provinciaDestino,
+    proximoPaso: proximoPasoCorto({
+      clienteId: u.clienteId,
+      modelo: u.modelo,
+      precioCliente: u.precioCliente,
+      estadoFabricacion: u.estadoFabricacion,
+      createdAt: u.createdAt,
+      fechaEntrega: u.fechaEntrega,
+      fechaEmbarque: u.envio?.fechaEmbarque ?? null,
+      primerCobroFecha: primerCobroMap.get(u.id) ?? null,
+    }),
   };
 }
 
@@ -176,11 +190,13 @@ export default async function AdminDashboardPage() {
       where: { estadoFabricacion: "entregado" },
       select: {
         id: true,
+        clienteId: true,
         numeroUnidad: true,
         modelo: true,
         precioCliente: true,
         provinciaDestino: true,
         estadoFabricacion: true,
+        createdAt: true,
         fechaEntrega: true,
         cliente: { select: { nombre: true } },
         envio: { select: { numeroPI: true, fechaEmbarque: true, fechaArriboEstimado: true } },
@@ -272,8 +288,16 @@ export default async function AdminDashboardPage() {
     }))
     .filter((u) => u.faltantes.length > 0);
 
-  const unidadesEnMovimiento: UnidadMovimiento[] = unidadesActivas.map(toUnidadMovimiento);
-  const unidadesEntregadasGrilla: UnidadMovimiento[] = unidadesEntregadas.map(toUnidadMovimiento);
+  const primerCobroMap = await primerCobroPorUnidad([
+    ...unidadesActivas.map((u) => u.id),
+    ...unidadesEntregadas.map((u) => u.id),
+  ]);
+  const unidadesEnMovimiento: UnidadMovimiento[] = unidadesActivas.map((u) =>
+    toUnidadMovimiento(u, primerCobroMap)
+  );
+  const unidadesEntregadasGrilla: UnidadMovimiento[] = unidadesEntregadas.map((u) =>
+    toUnidadMovimiento(u, primerCobroMap)
+  );
 
   const enviosConDerivados = envios.map((e) => ({
     ...e,

@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { mockFindManyUnidad, mockFindManyCliente, mockFindManyEnvio } = vi.hoisted(() => ({
+const { mockFindManyUnidad, mockFindManyCliente, mockFindManyEnvio, mockFindManyMovimiento } = vi.hoisted(() => ({
   mockFindManyUnidad: vi.fn(),
   mockFindManyCliente: vi.fn().mockResolvedValue([]),
   mockFindManyEnvio: vi.fn().mockResolvedValue([]),
+  mockFindManyMovimiento: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -12,6 +13,7 @@ vi.mock("@/lib/db", () => ({
     unidad: { findMany: mockFindManyUnidad },
     cliente: { findMany: mockFindManyCliente },
     envio: { findMany: mockFindManyEnvio },
+    movimiento: { findMany: mockFindManyMovimiento },
   },
 }));
 vi.mock("next/link", () => ({
@@ -32,6 +34,7 @@ describe("AdminUnidadesPage", () => {
     mockFindManyUnidad.mockResolvedValue([]);
     mockFindManyCliente.mockResolvedValue([]);
     mockFindManyEnvio.mockResolvedValue([]);
+    mockFindManyMovimiento.mockResolvedValue([]);
   });
 
   it("muestra el mensaje genérico de vacío sin filtros", async () => {
@@ -108,20 +111,26 @@ describe("AdminUnidadesPage", () => {
     mockFindManyUnidad.mockResolvedValueOnce([
       {
         id: "u1",
+        clienteId: "c1",
         numeroUnidad: "MOV-UNIDAD-2026-001",
         modelo: "Flex 18",
         estadoFabricacion: "pendiente",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        fechaEntrega: null,
         localidadDestino: "Bariloche",
         provinciaDestino: "Río Negro",
         precioCliente: 50000,
         cliente: { nombre: "Juan" },
-        envio: { numeroPI: "PI-001" },
+        envio: { numeroPI: "PI-001", fechaEmbarque: null },
       },
       {
         id: "u2",
+        clienteId: null,
         numeroUnidad: null,
         modelo: null,
         estadoFabricacion: "pendiente",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        fechaEntrega: null,
         localidadDestino: null,
         provinciaDestino: null,
         precioCliente: null,
@@ -133,5 +142,48 @@ describe("AdminUnidadesPage", () => {
     expect(screen.getByText("Bariloche, Río Negro")).toBeInTheDocument();
     expect(screen.getByText("USD 50.000")).toBeInTheDocument();
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+  });
+
+  it("muestra la columna 'Próximo paso' derivada de la lógica de la línea de tiempo", async () => {
+    mockFindManyMovimiento.mockResolvedValueOnce([
+      { fecha: new Date("2026-01-05T00:00:00.000Z"), acuerdo: { unidadId: "u1" } },
+      { fecha: new Date("2026-01-05T00:00:00.000Z"), acuerdo: { unidadId: "u2" } },
+    ]);
+    mockFindManyUnidad.mockResolvedValueOnce([
+      {
+        id: "u1",
+        clienteId: "c1",
+        numeroUnidad: "MOV-UNIDAD-2026-001",
+        modelo: "Flex 18",
+        estadoFabricacion: "en_produccion",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        fechaEntrega: null,
+        localidadDestino: null,
+        provinciaDestino: null,
+        precioCliente: 50000,
+        cliente: { nombre: "Juan" },
+        envio: { numeroPI: "PI-001", fechaEmbarque: null },
+      },
+      {
+        id: "u2",
+        clienteId: "c2",
+        numeroUnidad: "MOV-UNIDAD-2026-002",
+        modelo: "Flex 20",
+        estadoFabricacion: "entregado",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        // fechaEntrega ausente a propósito: el estado real ya es "entregado"
+        // pero sin la fecha registrada el paso "Entregado" sigue siendo el
+        // actual (gating por calidad de dato) → acción "Activar garantía".
+        fechaEntrega: null,
+        localidadDestino: null,
+        provinciaDestino: null,
+        precioCliente: 60000,
+        cliente: { nombre: "Ana" },
+        envio: { numeroPI: "PI-002", fechaEmbarque: new Date("2026-01-15T00:00:00.000Z") },
+      },
+    ]);
+    render(await AdminUnidadesPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByText("Registrar pago fábrica")).toBeInTheDocument();
+    expect(screen.getByText("Activar garantía")).toBeInTheDocument();
   });
 });

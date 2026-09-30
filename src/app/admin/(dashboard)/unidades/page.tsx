@@ -2,6 +2,8 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { estadoFabricacionOptions, estadoFabricacionLabels, type EstadoFabricacion } from "@/lib/envios/constantes";
 import NuevaUnidadForm from "@/components/admin/NuevaUnidadForm";
+import { proximoPasoCorto } from "@/lib/envios/timeline";
+import { primerCobroPorUnidad } from "@/lib/cobranza/primer-cobro";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +45,10 @@ export default async function AdminUnidadesPage({
     db.unidad.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { cliente: { select: { nombre: true } }, envio: { select: { numeroPI: true } } },
+      include: {
+        cliente: { select: { nombre: true } },
+        envio: { select: { numeroPI: true, fechaEmbarque: true } },
+      },
     }),
     db.cliente.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
     db.envio.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, numeroPI: true } }),
@@ -57,6 +62,23 @@ export default async function AdminUnidadesPage({
 
   const provincias = provinciasRows.map((r) => r.provinciaDestino!).filter(Boolean);
   const hayFiltros = Boolean(sp.estado || sp.clienteId || sp.envioId || sp.provincia);
+
+  const primerCobroMap = await primerCobroPorUnidad(unidades.map((u) => u.id));
+  const proximosPasos = new Map(
+    unidades.map((u) => [
+      u.id,
+      proximoPasoCorto({
+        clienteId: u.clienteId,
+        modelo: u.modelo,
+        precioCliente: u.precioCliente,
+        estadoFabricacion: u.estadoFabricacion,
+        createdAt: u.createdAt,
+        fechaEntrega: u.fechaEntrega,
+        fechaEmbarque: u.envio?.fechaEmbarque ?? null,
+        primerCobroFecha: primerCobroMap.get(u.id) ?? null,
+      }),
+    ])
+  );
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-12">
@@ -162,6 +184,7 @@ export default async function AdminUnidadesPage({
                 <th className="px-4 py-3 font-medium">Modelo</th>
                 <th className="px-4 py-3 font-medium">Envío</th>
                 <th className="px-4 py-3 font-medium">Estado fabricación</th>
+                <th className="px-4 py-3 font-medium">Próximo paso</th>
                 <th className="px-4 py-3 font-medium">Destino</th>
                 <th className="px-4 py-3 font-medium">Precio cliente USD</th>
                 <th className="px-4 py-3 font-medium">Acciones</th>
@@ -179,6 +202,7 @@ export default async function AdminUnidadesPage({
                       {estadoFabricacionLabels[u.estadoFabricacion as EstadoFabricacion] ?? u.estadoFabricacion}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-stone-600">{proximosPasos.get(u.id)}</td>
                   <td className="px-4 py-3 text-stone-600">
                     {[u.localidadDestino, u.provinciaDestino].filter(Boolean).join(", ") || "—"}
                   </td>

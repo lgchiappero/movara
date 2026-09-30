@@ -17,6 +17,7 @@ export type UnidadMovimiento = {
   fechaArriboEstimado: string | null;
   fechaEntrega: string | null;
   provinciaDestino: string | null;
+  proximoPaso: string;
 };
 
 type Tab = "activas" | "entregadas";
@@ -103,6 +104,7 @@ export default function UnidadesEnMovimientoGrid({
                 <th className="px-4 py-3 font-medium">Modelo</th>
                 <th className="px-4 py-3 font-medium">PI/Envío</th>
                 <th className="px-4 py-3 font-medium">Estado</th>
+                <th className="px-4 py-3 font-medium">Próximo paso</th>
                 <th className="px-4 py-3 font-medium">Precio</th>
                 <th className="px-4 py-3 font-medium">Embarque</th>
                 <th className="px-4 py-3 font-medium">Arribo estimado</th>
@@ -131,6 +133,7 @@ export default function UnidadesEnMovimientoGrid({
                       {estadoFabricacionLabels[u.estadoFabricacion as EstadoFabricacion] ?? u.estadoFabricacion}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-stone-600">{u.proximoPaso}</td>
                   <td className="px-4 py-3">
                     {u.tienePrecio ? (
                       <span className="px-2 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
