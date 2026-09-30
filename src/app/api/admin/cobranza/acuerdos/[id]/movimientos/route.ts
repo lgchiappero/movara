@@ -5,6 +5,7 @@ import { validateFileMovara } from "@/lib/admin/file-validation";
 import { buildStoragePath, uploadDocument, BUCKET_MOVARA } from "@/lib/admin/storage";
 import { registrarMovimientoSchema } from "@/lib/validators/cobranza";
 import { estadoCuota } from "@/lib/cobranza/calc";
+import { periodoEstaCerrado } from "@/lib/cobranza/periodo-cerrado";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: acuerdoId } = await params;
@@ -44,10 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const data = parsed.data;
 
   const fechaMovimiento = new Date(data.fecha);
-  const cierreDelMes = await db.cierrePeriodo.findUnique({
-    where: { mes_anio: { mes: fechaMovimiento.getMonth() + 1, anio: fechaMovimiento.getFullYear() } },
-  });
-  if (cierreDelMes) {
+  if (await periodoEstaCerrado(fechaMovimiento)) {
     return NextResponse.json(
       { error: "Ese período ya está cerrado — no se pueden cargar movimientos con esa fecha" },
       { status: 400 }

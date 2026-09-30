@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import {
   CONCEPTO_LABELS,
@@ -14,7 +15,9 @@ import {
 } from "@/lib/cobranza/constantes";
 import { sumaImportes, estadoAcuerdo } from "@/lib/cobranza/calc";
 import { inicioSemana, finSemana } from "@/lib/cobranza/periodo";
-import type { AcuerdoConDetalle } from "@/lib/cobranza/types";
+import { useToast } from "@/components/admin/Toast";
+import EditarMovimientoModal from "@/components/admin/EditarMovimientoModal";
+import type { AcuerdoConDetalle, MovimientoDetalle } from "@/lib/cobranza/types";
 
 type FiltroEstado = EstadoAcuerdo | "semana" | "todos";
 type FiltroMoneda = "USD" | "ARS" | "todos";
@@ -70,6 +73,30 @@ export default function GestionCobranzaTab({
   );
   const [busqueda, setBusqueda] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editando, setEditando] = useState<{ acuerdo: AcuerdoConDetalle; movimiento: MovimientoDetalle } | null>(
+    null
+  );
+  const router = useRouter();
+  const { showSuccess, showError } = useToast();
+
+  async function eliminarMovimiento(acuerdo: AcuerdoConDetalle, movimiento: MovimientoDetalle) {
+    const nombreAccion = acuerdo.tipo === "cobro" ? "este pago recibido" : "este pago realizado";
+    if (!window.confirm(`¿Eliminar ${nombreAccion}? Esta acción no se puede deshacer.`)) return;
+    try {
+      const res = await fetch(`/api/admin/cobranza/acuerdos/${acuerdo.id}/movimientos/${movimiento.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        showError(json.error ?? "No pudimos eliminar el pago.");
+        return;
+      }
+      showSuccess("Pago eliminado");
+      router.refresh();
+    } catch {
+      showError("No pudimos eliminar el pago. Probá de nuevo.");
+    }
+  }
 
   const ahora = new Date();
 
@@ -221,11 +248,25 @@ export default function GestionCobranzaTab({
                 expanded={expandedId === f.acuerdo.id}
                 onToggle={() => setExpandedId(expandedId === f.acuerdo.id ? null : f.acuerdo.id)}
                 onRegistrarMovimiento={() => onRegistrarMovimiento(f.acuerdo)}
+                onEditarMovimiento={(m) => setEditando({ acuerdo: f.acuerdo, movimiento: m })}
+                onEliminarMovimiento={(m) => eliminarMovimiento(f.acuerdo, m)}
               />
             ))}
           </tbody>
         </table>
       </div>
+
+      {editando && (
+        <EditarMovimientoModal
+          acuerdo={editando.acuerdo}
+          movimiento={editando.movimiento}
+          onClose={() => setEditando(null)}
+          onSaved={() => {
+            setEditando(null);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -239,6 +280,8 @@ function FilaAcuerdo({
   expanded,
   onToggle,
   onRegistrarMovimiento,
+  onEditarMovimiento,
+  onEliminarMovimiento,
 }: {
   acuerdo: AcuerdoConDetalle;
   movido: number;
@@ -248,6 +291,8 @@ function FilaAcuerdo({
   expanded: boolean;
   onToggle: () => void;
   onRegistrarMovimiento: () => void;
+  onEditarMovimiento: (movimiento: MovimientoDetalle) => void;
+  onEliminarMovimiento: (movimiento: MovimientoDetalle) => void;
 }) {
   return (
     <>
@@ -329,16 +374,36 @@ function FilaAcuerdo({
                           </span>
                         </div>
                         {m.notas && <p className="text-xs text-stone-400 mt-0.5">{m.notas}</p>}
-                        {m.comprobanteSignedUrl && (
-                          <a
-                            href={m.comprobanteSignedUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-sage-600 hover:text-sage-700 font-medium mt-0.5 inline-block"
-                          >
-                            Ver comprobante
-                          </a>
-                        )}
+                        <div className="flex items-center justify-between gap-2 mt-1">
+                          {m.comprobanteSignedUrl ? (
+                            <a
+                              href={m.comprobanteSignedUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-sage-600 hover:text-sage-700 font-medium"
+                            >
+                              Ver comprobante
+                            </a>
+                          ) : (
+                            <span />
+                          )}
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => onEditarMovimiento(m)}
+                              className="text-xs text-stone-500 hover:text-stone-700 font-medium"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onEliminarMovimiento(m)}
+                              className="text-xs text-red-500 hover:text-red-700 font-medium"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </div>
                       </li>
                     ))}
                   </ul>
