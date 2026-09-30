@@ -5,6 +5,8 @@ import { getSignedUrl, BUCKET_MOVARA } from "@/lib/admin/storage";
 import { SECCIONES_UNIDAD, SECCIONES_ENVIO } from "@/lib/envios/constantes";
 import UnidadDetailForm from "@/components/admin/UnidadDetailForm";
 import DocumentosPorSeccion, { type DocumentoSeccionConUrl } from "@/components/admin/DocumentosPorSeccion";
+import CobranzaUnidadSection from "@/components/admin/CobranzaUnidadSection";
+import { serializeAcuerdo } from "@/lib/cobranza/serialize";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,7 @@ export default async function UnidadDetailPage({
 
   if (!unidad) notFound();
 
-  const [clientes, envios, documentosUnidadConUrl, documentosEnvioConUrl] = await Promise.all([
+  const [clientes, envios, documentosUnidadConUrl, documentosEnvioConUrl, acuerdosRaw] = await Promise.all([
     db.cliente.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
     db.envio.findMany({
       orderBy: { createdAt: "desc" },
@@ -55,7 +57,18 @@ export default async function UnidadDetailPage({
           }))
         )
       : Promise.resolve([]),
+    db.acuerdoPago.findMany({
+      where: { unidadId: id },
+      include: {
+        unidad: { select: { numeroUnidad: true, cliente: { select: { nombre: true } } } },
+        cuotas: { orderBy: { vencimiento: "asc" } },
+        movimientos: { orderBy: { fecha: "desc" } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
+
+  const acuerdos = acuerdosRaw.map(serializeAcuerdo);
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 space-y-6">
@@ -175,6 +188,11 @@ export default async function UnidadDetailPage({
           </div>
         )}
       </div>
+
+      <CobranzaUnidadSection
+        unidad={{ id, numeroUnidad: unidad.numeroUnidad, clienteNombre: unidad.cliente.nombre }}
+        acuerdos={acuerdos}
+      />
     </div>
   );
 }

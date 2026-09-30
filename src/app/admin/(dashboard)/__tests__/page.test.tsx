@@ -13,6 +13,7 @@ const {
   mockUnidadAggregate,
   mockEnvioFindMany,
   mockCitaFindMany,
+  mockCuotaCount,
 } = vi.hoisted(() => ({
   mockLeadCount: vi.fn(),
   mockLeadFindMany: vi.fn(),
@@ -25,6 +26,7 @@ const {
   mockUnidadAggregate: vi.fn(),
   mockEnvioFindMany: vi.fn(),
   mockCitaFindMany: vi.fn(),
+  mockCuotaCount: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -34,6 +36,7 @@ vi.mock("@/lib/db", () => ({
     unidad: { findMany: mockUnidadFindMany, groupBy: mockUnidadGroupBy, count: mockUnidadCount, aggregate: mockUnidadAggregate },
     envio: { findMany: mockEnvioFindMany },
     cita: { findMany: mockCitaFindMany },
+    cuota: { count: mockCuotaCount },
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -85,6 +88,10 @@ function setupDefaults() {
   mockEnvioFindMany.mockResolvedValue([]);
   mockCitaFindMany.mockResolvedValue([]);
   mockLeadFindMany.mockResolvedValue([]); // leadsPipelineResumen
+
+  mockCuotaCount.mockReset();
+  mockCuotaCount.mockResolvedValueOnce(0); // cuotasCobroVencidas
+  mockCuotaCount.mockResolvedValueOnce(0); // cuotasPagoVencidas
 }
 
 describe("AdminDashboardPage", () => {
@@ -380,6 +387,49 @@ describe("AdminDashboardPage", () => {
     ]);
     render(await AdminDashboardPage());
     expect(screen.queryByText(/alertas y acciones urgentes/i)).not.toBeInTheDocument();
+  });
+
+  it("alerta: cuotas de cobro vencidas, con botón Ver hacia /admin/cobranza?tipo=cobro&estado=vencido", async () => {
+    mockCuotaCount.mockReset();
+    mockCuotaCount.mockResolvedValueOnce(3).mockResolvedValueOnce(0);
+    render(await AdminDashboardPage());
+    const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
+    expect(alertBox.textContent).toContain("3 cuotas de cobro vencidas sin pagar");
+    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute(
+      "href",
+      "/admin/cobranza?tipo=cobro&estado=vencido"
+    );
+  });
+
+  it("singular correcto para 1 cuota de cobro vencida", async () => {
+    mockCuotaCount.mockReset();
+    mockCuotaCount.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
+    render(await AdminDashboardPage());
+    const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
+    expect(alertBox.textContent).toContain("1 cuota de cobro vencida sin pagar");
+    expect(alertBox.textContent).not.toContain("1 cuotas");
+  });
+
+  it("alerta: cuotas de pago vencidas, con botón Ver hacia /admin/cobranza?tipo=pago&estado=vencido", async () => {
+    mockCuotaCount.mockReset();
+    mockCuotaCount.mockResolvedValueOnce(0).mockResolvedValueOnce(2);
+    render(await AdminDashboardPage());
+    const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
+    expect(alertBox.textContent).toContain("2 cuotas de pago vencidas sin pagar");
+    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute(
+      "href",
+      "/admin/cobranza?tipo=pago&estado=vencido"
+    );
+  });
+
+  it("cuenta cuotas vencidas por fecha y estado != pagado, filtradas por tipo de acuerdo (cobro/pago)", async () => {
+    render(await AdminDashboardPage());
+    const callCobro = mockCuotaCount.mock.calls[0][0];
+    expect(callCobro.where.estado).toEqual({ not: "pagado" });
+    expect(callCobro.where.vencimiento.lt).toBeInstanceOf(Date);
+    expect(callCobro.where.acuerdo).toEqual({ tipo: "cobro" });
+    const callPago = mockCuotaCount.mock.calls[1][0];
+    expect(callPago.where.acuerdo).toEqual({ tipo: "pago" });
   });
 
   // ── Agenda del día ────────────────────────────────────────────────────

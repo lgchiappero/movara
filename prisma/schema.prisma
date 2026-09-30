@@ -101,15 +101,15 @@ model Lead {
   contactadoEn DateTime?
 
   // ─── Pipeline de ventas simplificado (/admin/pipeline) ──────────────
-  etapa          String    @default("nuevo") // nuevo | en_contacto | propuesta_enviada | ganado | perdido
-  origen         String? // web | instagram | whatsapp | referido | cliente_recurrente
-  vendedorId     String? // referencia a AdminUser.id — sin relación formal en Prisma
+  etapa         String  @default("nuevo") // nuevo | en_contacto | propuesta_enviada | ganado | perdido
+  origen        String? // web | instagram | whatsapp | referido | cliente_recurrente
+  vendedorId    String? // referencia a AdminUser.id — sin relación formal en Prisma
   // (AdminUser no tiene FK entrante desde acá) para no acoplar el borrado
   // de un usuario a las filas de leads que tuvo asignadas.
-  notasVenta     String?
-  motivoPerdida  String? // solo tiene sentido si etapa = "perdido"
-  clienteId      String? // referencia a Cliente.id una vez convertido — mismo criterio sin FK formal
-  valorEstimado  Float?
+  notasVenta    String?
+  motivoPerdida String? // solo tiene sentido si etapa = "perdido"
+  clienteId     String? // referencia a Cliente.id una vez convertido — mismo criterio sin FK formal
+  valorEstimado Float?
 
   pedidos ConfiguracionPedido[]
 
@@ -374,7 +374,8 @@ model Unidad {
 
   notas String?
 
-  documentos DocumentoUnidad[]
+  documentos   DocumentoUnidad[]
+  acuerdosPago AcuerdoPago[]
 
   @@map("unidades")
 }
@@ -413,4 +414,64 @@ model DocumentoUnidad {
   subidoPor String
 
   @@map("documentos_unidad")
+}
+
+// ─── Cobranza contable ───────────────────────────────────────────────────
+
+model AcuerdoPago {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unidadId String
+  unidad   Unidad @relation(fields: [unidadId], references: [id], onDelete: Restrict)
+
+  tipo          String // "cobro" | "pago"
+  concepto      String // cobro: "venta" / pago: "fabrica"|"flete"|"aduana"|"despachante"|"transporte"|"grua"|"impuestos"|"otro"
+  descripcion   String?
+  contraparte   String // cobro: nombre del cliente / pago: nombre del proveedor
+  moneda        String // "ARS" | "USD"
+  totalAcordado Float
+
+  cuotas      Cuota[]
+  movimientos Movimiento[]
+
+  notas         String?
+  registradoPor String
+
+  @@map("acuerdos_pago")
+}
+
+model Cuota {
+  id        String      @id @default(cuid())
+  createdAt DateTime    @default(now())
+  acuerdoId String
+  acuerdo   AcuerdoPago @relation(fields: [acuerdoId], references: [id], onDelete: Cascade)
+
+  descripcion String // "Anticipo 30%", "Saldo 70%", "Cuota 1/3", etc.
+  importe     Float
+  vencimiento DateTime?
+  estado      String    @default("pendiente") // "pendiente" | "pagado" | "vencido"
+
+  movimientos Movimiento[]
+
+  @@map("cuotas")
+}
+
+model Movimiento {
+  id        String      @id @default(cuid())
+  createdAt DateTime    @default(now())
+  acuerdoId String
+  acuerdo   AcuerdoPago @relation(fields: [acuerdoId], references: [id], onDelete: Cascade)
+  cuotaId   String? // opcional — puede saldar una cuota específica o ser pago parcial
+  cuota     Cuota?      @relation(fields: [cuotaId], references: [id], onDelete: SetNull)
+
+  fecha          DateTime
+  importe        Float
+  modalidad      String // "transferencia" | "efectivo" | "cripto" | "otro"
+  comprobanteUrl String?
+  notas          String?
+  registradoPor  String
+
+  @@map("movimientos")
 }

@@ -1,10 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { mockFindUnique, mockFindManyCliente, mockFindManyEnvio, mockNotFound, mockGetSignedUrl } = vi.hoisted(() => ({
+const {
+  mockFindUnique,
+  mockFindManyCliente,
+  mockFindManyEnvio,
+  mockFindManyAcuerdo,
+  mockNotFound,
+  mockGetSignedUrl,
+} = vi.hoisted(() => ({
   mockFindUnique: vi.fn(),
   mockFindManyCliente: vi.fn().mockResolvedValue([]),
   mockFindManyEnvio: vi.fn().mockResolvedValue([]),
+  mockFindManyAcuerdo: vi.fn().mockResolvedValue([]),
   mockNotFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   }),
@@ -16,6 +24,7 @@ vi.mock("@/lib/db", () => ({
     unidad: { findUnique: mockFindUnique },
     cliente: { findMany: mockFindManyCliente },
     envio: { findMany: mockFindManyEnvio },
+    acuerdoPago: { findMany: mockFindManyAcuerdo },
   },
 }));
 vi.mock("next/navigation", () => ({ notFound: mockNotFound }));
@@ -32,6 +41,9 @@ vi.mock("@/components/admin/DocumentosPorSeccion", () => ({
       {uploadUrl} — {documentos.length} docs
     </div>
   ),
+}));
+vi.mock("@/components/admin/CobranzaUnidadSection", () => ({
+  default: ({ acuerdos }: { acuerdos: unknown[] }) => <div>CobranzaUnidadSection: {acuerdos.length}</div>,
 }));
 
 import UnidadDetailPage from "../page";
@@ -66,6 +78,7 @@ describe("UnidadDetailPage", () => {
     vi.clearAllMocks();
     mockFindManyCliente.mockResolvedValue([]);
     mockFindManyEnvio.mockResolvedValue([]);
+    mockFindManyAcuerdo.mockResolvedValue([]);
   });
 
   it("notFound() si la unidad no existe", async () => {
@@ -155,5 +168,29 @@ describe("UnidadDetailPage", () => {
     });
     render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
     expect(screen.getByText("/api/admin/unidades/u1/documentos — 1 docs")).toBeInTheDocument();
+  });
+
+  it("consulta los acuerdos de cobranza de la unidad y los pasa serializados a CobranzaUnidadSection", async () => {
+    mockFindUnique.mockResolvedValueOnce(UNIDAD_BASE);
+    mockFindManyAcuerdo.mockResolvedValueOnce([
+      {
+        id: "a1",
+        unidadId: "u1",
+        unidad: { numeroUnidad: "MOV-UNIDAD-2026-001", cliente: { nombre: "Juan García" } },
+        tipo: "cobro",
+        concepto: "venta",
+        descripcion: null,
+        contraparte: "Juan García",
+        moneda: "USD",
+        totalAcordado: 50000,
+        notas: null,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        cuotas: [],
+        movimientos: [],
+      },
+    ]);
+    render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
+    expect(mockFindManyAcuerdo).toHaveBeenCalledWith(expect.objectContaining({ where: { unidadId: "u1" } }));
+    expect(screen.getByText("CobranzaUnidadSection: 1")).toBeInTheDocument();
   });
 });

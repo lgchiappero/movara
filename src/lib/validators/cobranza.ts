@@ -1,0 +1,62 @@
+import { z } from "zod";
+import {
+  TIPO_ACUERDO_OPTIONS,
+  CONCEPTO_COBRO_OPTIONS,
+  CONCEPTO_PAGO_OPTIONS,
+  MONEDA_OPTIONS,
+  MODALIDAD_OPTIONS,
+} from "@/lib/cobranza/constantes";
+
+const stringOrNull = z.union([z.string(), z.null()]).transform((v) => (v === "" || v === null ? null : v));
+
+// Tolerancia entre la suma de cuotas y el total acordado — misma que usa
+// src/lib/cobranza/calc.ts para no duplicar el número mágico.
+const EPSILON = 0.01;
+
+const cuotaInputSchema = z.object({
+  descripcion: z.string().trim().min(1, "La cuota necesita una descripción"),
+  importe: z.number().positive("El importe de la cuota debe ser mayor a 0"),
+  vencimiento: z.union([z.string(), z.null()]).optional(),
+});
+
+export const crearAcuerdoSchema = z
+  .object({
+    tipo: z.enum(TIPO_ACUERDO_OPTIONS),
+    unidadId: z.string().min(1, "Falta la unidad"),
+    concepto: z.string().min(1, "Falta el concepto"),
+    descripcion: stringOrNull.optional(),
+    contraparte: z.string().trim().min(1, "Falta la contraparte"),
+    moneda: z.enum(MONEDA_OPTIONS),
+    totalAcordado: z.number().positive("El total acordado debe ser mayor a 0"),
+    notas: stringOrNull.optional(),
+    cuotas: z.array(cuotaInputSchema).min(1, "Agregá al menos una cuota"),
+  })
+  .superRefine((data, ctx) => {
+    const conceptosValidos: readonly string[] =
+      data.tipo === "cobro" ? CONCEPTO_COBRO_OPTIONS : CONCEPTO_PAGO_OPTIONS;
+    if (!conceptosValidos.includes(data.concepto)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["concepto"],
+        message: `Concepto inválido para tipo "${data.tipo}"`,
+      });
+    }
+    const sumaCuotas = data.cuotas.reduce((acc, c) => acc + c.importe, 0);
+    if (Math.abs(sumaCuotas - data.totalAcordado) > EPSILON) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["cuotas"],
+        message: `La suma de las cuotas (${sumaCuotas}) debe coincidir con el total acordado (${data.totalAcordado})`,
+      });
+    }
+  });
+export type CrearAcuerdoInput = z.infer<typeof crearAcuerdoSchema>;
+
+export const registrarMovimientoSchema = z.object({
+  fecha: z.string().min(1, "Falta la fecha"),
+  importe: z.number().positive("El importe debe ser mayor a 0"),
+  cuotaId: stringOrNull.optional(),
+  modalidad: z.enum(MODALIDAD_OPTIONS),
+  notas: stringOrNull.optional(),
+});
+export type RegistrarMovimientoInput = z.infer<typeof registrarMovimientoSchema>;

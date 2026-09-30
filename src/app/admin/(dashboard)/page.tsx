@@ -136,6 +136,8 @@ export default async function AdminDashboardPage() {
     unidadesEnAduanaLargas,
     cobrosVencidos,
     leadsPipelineResumen,
+    cuotasCobroVencidas,
+    cuotasPagoVencidas,
   ] = await Promise.all([
     db.lead.count({ where: { createdAt: { gte: startOfDay(now) } } }),
     db.lead.count({ where: { etapa: { in: ["nuevo", "en_contacto", "propuesta_enviada"] } } }),
@@ -219,6 +221,16 @@ export default async function AdminDashboardPage() {
       take: 5,
       select: { id: true, nombre: true, apellido: true, etapa: true, createdAt: true },
     }),
+    // Vencidas "en vivo" por fecha (no por el campo estado) — el barrido
+    // que marca Cuota.estado = "vencido" solo corre al cargar
+    // /admin/cobranza, así que estas dos alertas no pueden depender de que
+    // alguien haya visitado esa página antes.
+    db.cuota.count({
+      where: { vencimiento: { lt: startOfDay(now) }, estado: { not: "pagado" }, acuerdo: { tipo: "cobro" } },
+    }),
+    db.cuota.count({
+      where: { vencimiento: { lt: startOfDay(now) }, estado: { not: "pagado" }, acuerdo: { tipo: "pago" } },
+    }),
   ]);
 
   const rol = session?.rol ?? "vendedor";
@@ -262,7 +274,9 @@ export default async function AdminDashboardPage() {
     leadsSinRespuesta > 0 ||
     unidadesConFaltantes.length > 0 ||
     cobrosVencidos > 0 ||
-    unidadesEnAduanaLargas > 0;
+    unidadesEnAduanaLargas > 0 ||
+    cuotasCobroVencidas > 0 ||
+    cuotasPagoVencidas > 0;
 
   const accesosRapidos = ADMIN_NAV_ITEMS.filter(
     (item) => item.href !== "/admin" && isAllowedForRole(rol, item.href)
@@ -332,6 +346,28 @@ export default async function AdminDashboardPage() {
                   aduana hace más de 15 días
                 </span>
                 <Link href="/admin/unidades?estado=en_aduana" className={BOTON_VER_ALERTA}>
+                  Ver →
+                </Link>
+              </li>
+            )}
+            {cuotasCobroVencidas > 0 && (
+              <li className="flex items-center justify-between gap-3">
+                <span>
+                  <strong>{cuotasCobroVencidas}</strong> cuota{cuotasCobroVencidas === 1 ? "" : "s"} de cobro
+                  vencida{cuotasCobroVencidas === 1 ? "" : "s"} sin pagar
+                </span>
+                <Link href="/admin/cobranza?tipo=cobro&estado=vencido" className={BOTON_VER_ALERTA}>
+                  Ver →
+                </Link>
+              </li>
+            )}
+            {cuotasPagoVencidas > 0 && (
+              <li className="flex items-center justify-between gap-3">
+                <span>
+                  <strong>{cuotasPagoVencidas}</strong> cuota{cuotasPagoVencidas === 1 ? "" : "s"} de pago
+                  vencida{cuotasPagoVencidas === 1 ? "" : "s"} sin pagar
+                </span>
+                <Link href="/admin/cobranza?tipo=pago&estado=vencido" className={BOTON_VER_ALERTA}>
                   Ver →
                 </Link>
               </li>
