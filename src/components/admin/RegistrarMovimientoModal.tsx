@@ -31,6 +31,8 @@ export default function RegistrarMovimientoModal({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const nombreAccion = acuerdo.tipo === "cobro" ? "pago recibido" : "pago realizado";
+
   const cuotasPendientes = acuerdo.cuotas.filter((c) => c.estado !== "pagado");
 
   function elegirCuota(id: string) {
@@ -66,15 +68,15 @@ export default function RegistrarMovimientoModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "No pudimos registrar el movimiento.");
-        showError(json.error ?? "No pudimos registrar el movimiento.");
+        setError(json.error ?? `No pudimos registrar el ${nombreAccion}.`);
+        showError(json.error ?? `No pudimos registrar el ${nombreAccion}.`);
         return;
       }
-      showSuccess("Movimiento registrado");
+      showSuccess(`${acuerdo.tipo === "cobro" ? "Pago recibido" : "Pago realizado"} registrado`);
       onSaved();
     } catch {
-      setError("No pudimos registrar el movimiento. Probá de nuevo.");
-      showError("No pudimos registrar el movimiento. Probá de nuevo.");
+      setError(`No pudimos registrar el ${nombreAccion}. Probá de nuevo.`);
+      showError(`No pudimos registrar el ${nombreAccion}. Probá de nuevo.`);
     } finally {
       setBusy(false);
     }
@@ -88,7 +90,7 @@ export default function RegistrarMovimientoModal({
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">
-                {acuerdo.tipo === "cobro" ? "Registrar cobro" : "Registrar pago"}
+                {acuerdo.tipo === "cobro" ? "Registrar pago recibido" : "Registrar pago realizado"}
               </p>
               <h2 className="text-xl font-bold text-[#2F2F2F]">{acuerdo.contraparte}</h2>
             </div>
@@ -177,7 +179,7 @@ export default function RegistrarMovimientoModal({
               onClick={registrar}
               className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] disabled:opacity-50 text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
             >
-              {busy ? "Registrando…" : "Registrar movimiento"}
+              {busy ? "Registrando…" : acuerdo.tipo === "cobro" ? "Registrar pago recibido" : "Registrar pago realizado"}
             </button>
           </div>
         </div>
