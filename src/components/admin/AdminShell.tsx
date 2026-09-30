@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import type { AdminNavItem } from "@/lib/admin/nav-items";
+import AdminGuiaRapida from "@/components/admin/AdminGuiaRapida";
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/admin") return pathname === "/admin";
@@ -120,6 +121,8 @@ export default function AdminShell({
         </header>
         <main className="p-6">{children}</main>
       </div>
+
+      <AdminGuiaRapida />
     </div>
   );
 }
