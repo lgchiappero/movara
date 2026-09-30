@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { calcularRangoPeriodo, mesAnioUnico, inicioSemana, finSemana } from "@/lib/cobranza/periodo";
+import {
+  calcularRangoPeriodo,
+  mesAnioUnico,
+  inicioSemana,
+  finSemana,
+  contarPeriodosSinCerrar,
+} from "@/lib/cobranza/periodo";
 
 const HOY = new Date(2026, 5, 15); // 15 de junio de 2026
 
@@ -79,6 +85,39 @@ describe("mesAnioUnico", () => {
 
   it("un rango que no arranca el día 1 no es un único mes", () => {
     expect(mesAnioUnico({ desde: new Date(2026, 5, 10), hasta: new Date(2026, 6, 1) })).toBeNull();
+  });
+});
+
+describe("contarPeriodosSinCerrar", () => {
+  it("0 sin movimientos todavía", () => {
+    expect(contarPeriodosSinCerrar(null, HOY, [])).toBe(0);
+  });
+
+  it("cuenta desde el mes del primer movimiento hasta el mes anterior al actual (excluye el actual)", () => {
+    // HOY = 15 jun 2026. Primer movimiento en abril → abril y mayo cuentan, junio no.
+    expect(contarPeriodosSinCerrar(new Date(2026, 3, 5), HOY, [])).toBe(2);
+  });
+
+  it("descuenta los meses que ya tienen un cierre registrado", () => {
+    expect(contarPeriodosSinCerrar(new Date(2026, 3, 5), HOY, [{ mes: 4, anio: 2026 }])).toBe(1);
+  });
+
+  it("0 cuando todos los meses en rango ya están cerrados", () => {
+    expect(
+      contarPeriodosSinCerrar(new Date(2026, 3, 5), HOY, [
+        { mes: 4, anio: 2026 },
+        { mes: 5, anio: 2026 },
+      ])
+    ).toBe(0);
+  });
+
+  it("0 cuando el primer movimiento fue este mismo mes (el actual no cuenta)", () => {
+    expect(contarPeriodosSinCerrar(new Date(2026, 5, 2), HOY, [])).toBe(0);
+  });
+
+  it("cruza el límite de año correctamente", () => {
+    // primer movimiento en noviembre 2025, hoy en junio 2026 → nov, dic, ene..may = 7 meses
+    expect(contarPeriodosSinCerrar(new Date(2025, 10, 1), HOY, [])).toBe(7);
   });
 });
 

@@ -60,7 +60,14 @@ export default async function UnidadDetailPage({
     db.acuerdoPago.findMany({
       where: { unidadId: id },
       include: {
-        unidad: { select: { numeroUnidad: true, cliente: { select: { nombre: true } } } },
+        unidad: {
+          select: {
+            numeroUnidad: true,
+            modelo: true,
+            estadoFabricacion: true,
+            cliente: { select: { id: true, nombre: true } },
+          },
+        },
         cuotas: { orderBy: { vencimiento: "asc" } },
         movimientos: { orderBy: { fecha: "desc" } },
       },

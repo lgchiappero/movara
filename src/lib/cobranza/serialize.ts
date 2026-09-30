@@ -1,9 +1,14 @@
-import type { AcuerdoConDetalle } from "@/components/admin/CobranzaPanel";
+import type { AcuerdoConDetalle } from "@/lib/cobranza/types";
 
 type AcuerdoConIncludes = {
   id: string;
   unidadId: string;
-  unidad: { numeroUnidad: string | null; cliente: { nombre: string } };
+  unidad: {
+    numeroUnidad: string | null;
+    modelo: string | null;
+    estadoFabricacion: string;
+    cliente: { id: string; nombre: string };
+  };
   tipo: string;
   concepto: string;
   descripcion: string | null;
@@ -30,6 +35,9 @@ export function serializeAcuerdo(a: AcuerdoConIncludes): AcuerdoConDetalle {
     id: a.id,
     unidadId: a.unidadId,
     unidadNumero: a.unidad.numeroUnidad,
+    unidadModelo: a.unidad.modelo,
+    unidadEstado: a.unidad.estadoFabricacion,
+    clienteId: a.unidad.cliente.id,
     clienteNombre: a.unidad.cliente.nombre,
     tipo: a.tipo,
     concepto: a.concepto,

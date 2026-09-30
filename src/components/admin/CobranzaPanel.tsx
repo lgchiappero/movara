@@ -1,322 +1,331 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import * as XLSX from "xlsx";
+import Link from "next/link";
 import {
-  CONCEPTO_LABELS,
-  MODALIDAD_LABELS,
-  ESTADO_CUOTA_LABELS,
-  ESTADO_CUOTA_COLORS,
-  ESTADO_ACUERDO_LABELS,
-  ESTADO_ACUERDO_COLORS,
-  type EstadoAcuerdo,
-} from "@/lib/cobranza/constantes";
-import { sumaImportes, estadoAcuerdo, margenPorcentaje } from "@/lib/cobranza/calc";
+  PERIODO_TIPO_OPTIONS,
+  PERIODO_TIPO_LABELS,
+  type PeriodoTipo,
+} from "@/lib/cobranza/periodo";
+import type {
+  AcuerdoConDetalle,
+  UnidadOpcion,
+  ClienteOpcion,
+  TipoCambioRow,
+  CierreRow,
+} from "@/lib/cobranza/types";
+import { useToast } from "@/components/admin/Toast";
 import NuevoAcuerdoModal from "@/components/admin/NuevoAcuerdoModal";
 import RegistrarMovimientoModal from "@/components/admin/RegistrarMovimientoModal";
+import GestionCobranzaTab from "@/components/admin/cobranza/GestionCobranzaTab";
+import RentabilidadPorUnidadTab from "@/components/admin/cobranza/RentabilidadPorUnidadTab";
+import EstadoCuentaClienteTab from "@/components/admin/cobranza/EstadoCuentaClienteTab";
+import TipoCambioTab from "@/components/admin/cobranza/TipoCambioTab";
+import CierresTab from "@/components/admin/cobranza/CierresTab";
 
-export type Cuota = {
-  id: string;
-  descripcion: string;
-  importe: number;
-  vencimiento: string | null;
-  estado: string;
-};
+export type { AcuerdoConDetalle, UnidadOpcion, ClienteOpcion, TipoCambioRow, CierreRow };
 
-export type MovimientoDetalle = {
-  id: string;
-  fecha: string;
-  importe: number;
-  modalidad: string;
-  cuotaId: string | null;
-  comprobanteUrl: string | null;
-  notas: string | null;
-  registradoPor: string;
-};
+export type TabPrincipal = "gestion" | "rentabilidad" | "cuenta-cliente" | "tipo-cambio" | "cierres";
 
-export type AcuerdoConDetalle = {
-  id: string;
-  unidadId: string;
-  unidadNumero: string | null;
-  clienteNombre: string;
-  tipo: string;
-  concepto: string;
-  descripcion: string | null;
-  contraparte: string;
-  moneda: string;
-  totalAcordado: number;
-  notas: string | null;
-  createdAt: string;
-  cuotas: Cuota[];
-  movimientos: MovimientoDetalle[];
-};
-
-export type UnidadOpcion = { id: string; numeroUnidad: string | null; clienteNombre: string };
+const TABS: { key: TabPrincipal; label: string }[] = [
+  { key: "gestion", label: "Gestión de cobranza" },
+  { key: "rentabilidad", label: "Rentabilidad por unidad" },
+  { key: "cuenta-cliente", label: "Estado de cuenta por cliente" },
+  { key: "tipo-cambio", label: "Tipo de cambio" },
+  { key: "cierres", label: "Cierres" },
+];
 
 function formatMoneda(value: number, moneda: string): string {
   return `${moneda} ${value.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
-}
-
-function formatFecha(value: string | null): string {
-  return value ? new Date(value).toLocaleDateString("es-AR", { timeZone: "UTC" }) : "—";
 }
 
 export default function CobranzaPanel({
   acuerdosCobro,
   acuerdosPago,
   unidades,
+  clientes,
+  tiposCambio,
+  cierres,
+  rol,
+  periodo,
+  mesUnico,
+  cierreActual,
   metricas,
   tabInicial,
+  subInicial,
   estadoInicial,
+  monedaInicial,
+  clienteIdInicial,
 }: {
   acuerdosCobro: AcuerdoConDetalle[];
   acuerdosPago: AcuerdoConDetalle[];
   unidades: UnidadOpcion[];
-  metricas: { cobradoMes: number; pagadoMes: number; margenMes: number; cuotasVencidas: number };
-  tabInicial?: "cobros" | "pagos";
-  estadoInicial?: "vencido";
+  clientes: ClienteOpcion[];
+  tiposCambio: TipoCambioRow[];
+  cierres: CierreRow[];
+  rol: string;
+  periodo: { tipo: PeriodoTipo; desde: string; hasta: string };
+  mesUnico: { mes: number; anio: number } | null;
+  cierreActual: CierreRow | null;
+  metricas: {
+    usd: { cobrado: number; pagado: number; margen: number };
+    ars: { cobrado: number; pagado: number; margen: number };
+    cuotasVencidas: number;
+    cuotasVencenSemana: number;
+    periodosSinCerrar: number;
+  };
+  tabInicial?: TabPrincipal;
+  subInicial?: "cobros" | "pagos";
+  estadoInicial?: string;
+  monedaInicial?: "USD" | "ARS";
+  clienteIdInicial?: string;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"cobros" | "pagos" | "resumen">(tabInicial ?? "cobros");
-  const [filtroEstado, setFiltroEstado] = useState<EstadoAcuerdo | "todos">(estadoInicial ?? "todos");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { showSuccess, showError } = useToast();
+  const [tab, setTab] = useState<TabPrincipal>(tabInicial ?? "gestion");
   const [nuevoAcuerdoTipo, setNuevoAcuerdoTipo] = useState<"cobro" | "pago" | null>(null);
   const [movimientoAcuerdo, setMovimientoAcuerdo] = useState<AcuerdoConDetalle | null>(null);
+  const [desdePersonalizado, setDesdePersonalizado] = useState(
+    periodo.tipo === "personalizado" ? periodo.desde.slice(0, 10) : ""
+  );
+  const [hastaPersonalizado, setHastaPersonalizado] = useState(
+    periodo.tipo === "personalizado" ? periodo.hasta.slice(0, 10) : ""
+  );
+  const [cerrando, setCerrando] = useState(false);
 
-  const acuerdosConEstado = useMemo(() => {
-    const conEstado = (lista: AcuerdoConDetalle[]) =>
-      lista.map((a) => {
-        const pagado = sumaImportes(a.movimientos);
-        return {
-          acuerdo: a,
-          pagado,
-          pendiente: a.totalAcordado - pagado,
-          estado: estadoAcuerdo(a.totalAcordado, pagado, a.cuotas),
-        };
+  function cambiarPeriodo(tipo: PeriodoTipo, desde?: string, hasta?: string) {
+    const params = new URLSearchParams();
+    params.set("periodo", tipo);
+    if (tipo === "personalizado" && desde && hasta) {
+      params.set("desde", desde);
+      params.set("hasta", hasta);
+    }
+    params.set("tab", tab);
+    router.push(`/admin/cobranza?${params.toString()}`);
+  }
+
+  const ahora = new Date();
+  const periodoYaTermino = new Date(periodo.hasta) <= ahora;
+  const puedeCerrar = rol === "admin" && mesUnico !== null && periodoYaTermino && !cierreActual;
+
+  async function cerrarPeriodoActual() {
+    if (!mesUnico) return;
+    if (
+      !window.confirm(
+        `¿Cerrar el período ${mesUnico.mes}/${mesUnico.anio}? No se van a poder cargar más movimientos con fecha en ese mes.`
+      )
+    ) {
+      return;
+    }
+    const notas = window.prompt("Notas del cierre (opcional):") ?? undefined;
+    setCerrando(true);
+    try {
+      const res = await fetch("/api/admin/cobranza/cierres", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mes: mesUnico.mes, anio: mesUnico.anio, notas: notas || undefined }),
       });
-    return { cobros: conEstado(acuerdosCobro), pagos: conEstado(acuerdosPago) };
-  }, [acuerdosCobro, acuerdosPago]);
-
-  const filaAcuerdos = tab === "cobros" ? acuerdosConEstado.cobros : acuerdosConEstado.pagos;
-  const filaAcuerdosFiltradas =
-    filtroEstado === "todos" ? filaAcuerdos : filaAcuerdos.filter((f) => f.estado === filtroEstado);
-
-  const resumenPorUnidad = useMemo(() => {
-    const mapa = new Map<
-      string,
-      { unidadId: string; unidadNumero: string | null; clienteNombre: string; cobrado: number; pagado: number }
-    >();
-    for (const a of acuerdosCobro) {
-      if (a.moneda !== "USD") continue;
-      const entry = mapa.get(a.unidadId) ?? {
-        unidadId: a.unidadId,
-        unidadNumero: a.unidadNumero,
-        clienteNombre: a.clienteNombre,
-        cobrado: 0,
-        pagado: 0,
-      };
-      entry.cobrado += sumaImportes(a.movimientos);
-      mapa.set(a.unidadId, entry);
+      const json = await res.json();
+      if (!res.ok) {
+        showError(json.error ?? "No pudimos cerrar el período.");
+        return;
+      }
+      showSuccess("Período cerrado");
+      router.refresh();
+    } catch {
+      showError("No pudimos cerrar el período. Probá de nuevo.");
+    } finally {
+      setCerrando(false);
     }
-    for (const a of acuerdosPago) {
-      if (a.moneda !== "USD") continue;
-      const entry = mapa.get(a.unidadId) ?? {
-        unidadId: a.unidadId,
-        unidadNumero: a.unidadNumero,
-        clienteNombre: a.clienteNombre,
-        cobrado: 0,
-        pagado: 0,
-      };
-      entry.pagado += sumaImportes(a.movimientos);
-      mapa.set(a.unidadId, entry);
-    }
-    return Array.from(mapa.values()).map((e) => ({
-      ...e,
-      margenUSD: e.cobrado - e.pagado,
-      margenPct: margenPorcentaje(e.cobrado, e.pagado),
-    }));
-  }, [acuerdosCobro, acuerdosPago]);
-
-  function exportarExcel() {
-    let rows: Record<string, string | number>[];
-    let filename: string;
-    if (tab === "resumen") {
-      rows = resumenPorUnidad.map((r) => ({
-        Unidad: r.unidadNumero ?? "Sin número",
-        Cliente: r.clienteNombre,
-        "Total cobrado USD": r.cobrado,
-        "Total pagado USD": r.pagado,
-        "Margen USD": r.margenUSD,
-        "Margen %": r.margenPct !== null ? Math.round(r.margenPct * 10) / 10 : "",
-      }));
-      filename = "cobranza-resumen-por-unidad.xlsx";
-    } else {
-      rows = filaAcuerdosFiltradas.map(({ acuerdo, pagado, pendiente, estado }) => ({
-        Unidad: acuerdo.unidadNumero ?? "Sin número",
-        [tab === "cobros" ? "Cliente" : "Proveedor"]: acuerdo.contraparte,
-        Concepto: CONCEPTO_LABELS[acuerdo.concepto as keyof typeof CONCEPTO_LABELS] ?? acuerdo.concepto,
-        Moneda: acuerdo.moneda,
-        "Total acordado": acuerdo.totalAcordado,
-        [tab === "cobros" ? "Cobrado" : "Pagado"]: pagado,
-        Pendiente: pendiente,
-        Estado: ESTADO_ACUERDO_LABELS[estado],
-      }));
-      filename = `cobranza-${tab}.xlsx`;
-    }
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Cobranza");
-    XLSX.writeFile(wb, filename);
   }
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricaCard label="Cobrado USD (mes)" value={formatMoneda(metricas.cobradoMes, "USD")} />
-        <MetricaCard label="Pagado USD (mes)" value={formatMoneda(metricas.pagadoMes, "USD")} />
-        <MetricaCard
-          label="Margen USD (mes)"
-          value={formatMoneda(metricas.margenMes, "USD")}
-          tono={metricas.margenMes >= 0 ? "positivo" : "negativo"}
-        />
-        <MetricaCard label="Cuotas vencidas" value={String(metricas.cuotasVencidas)} tono="negativo" />
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2">
-          {(["cobros", "pagos", "resumen"] as const).map((t) => (
+      {/* Selector de período */}
+      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-4 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap gap-2">
+          {PERIODO_TIPO_OPTIONS.map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => {
-                setTab(t);
-                setExpandedId(null);
+                if (t === "personalizado") {
+                  if (desdePersonalizado && hastaPersonalizado) {
+                    cambiarPeriodo(t, desdePersonalizado, hastaPersonalizado);
+                  }
+                } else {
+                  cambiarPeriodo(t);
+                }
               }}
-              className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${
-                tab === t ? "bg-[#2F2F2F] text-white" : "bg-white border border-[#E5E5E5] text-stone-600"
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                periodo.tipo === t ? "bg-[#2F2F2F] text-white" : "bg-stone-100 text-stone-600"
               }`}
             >
-              {t === "cobros" ? "Cobros" : t === "pagos" ? "Pagos" : "Resumen por unidad"}
+              {PERIODO_TIPO_LABELS[t]}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          {tab !== "resumen" && (
-            <select
-              value={filtroEstado}
-              onChange={(e) => setFiltroEstado(e.target.value as EstadoAcuerdo | "todos")}
-              className="rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#2F2F2F] bg-white"
-            >
-              <option value="todos">Todos los estados</option>
-              {(Object.keys(ESTADO_ACUERDO_LABELS) as EstadoAcuerdo[]).map((e) => (
-                <option key={e} value={e}>
-                  {ESTADO_ACUERDO_LABELS[e]}
-                </option>
-              ))}
-            </select>
-          )}
-          <button
-            type="button"
-            onClick={exportarExcel}
-            className="px-4 py-2 bg-white border border-[#E5E5E5] hover:border-stone-300 text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
-          >
-            Exportar Excel
-          </button>
-          {tab !== "resumen" && (
+
+        {periodo.tipo === "personalizado" && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={desdePersonalizado}
+              onChange={(e) => setDesdePersonalizado(e.target.value)}
+              className="rounded-lg border border-[#E5E5E5] px-2 py-1.5 text-xs"
+            />
+            <span className="text-stone-400 text-xs">a</span>
+            <input
+              type="date"
+              value={hastaPersonalizado}
+              onChange={(e) => setHastaPersonalizado(e.target.value)}
+              className="rounded-lg border border-[#E5E5E5] px-2 py-1.5 text-xs"
+            />
             <button
               type="button"
-              onClick={() => setNuevoAcuerdoTipo(tab === "cobros" ? "cobro" : "pago")}
-              className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
+              onClick={() => desdePersonalizado && hastaPersonalizado && cambiarPeriodo("personalizado", desdePersonalizado, hastaPersonalizado)}
+              className="px-3 py-1.5 bg-[#D4B06A] text-[#2F2F2F] font-bold text-xs rounded-lg"
             >
-              + Nuevo acuerdo
+              Aplicar
+            </button>
+          </div>
+        )}
+
+        <div className="ml-auto flex items-center gap-2">
+          {cierreActual && (
+            <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-stone-800 text-white">
+              Período cerrado 🔒
+            </span>
+          )}
+          {puedeCerrar && (
+            <button
+              type="button"
+              disabled={cerrando}
+              onClick={cerrarPeriodoActual}
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition-colors"
+            >
+              {cerrando ? "Cerrando…" : "Cerrar período"}
             </button>
           )}
         </div>
       </div>
 
-      {tab === "resumen" ? (
-        <div className="bg-white rounded-2xl border border-[#E5E5E5] overflow-hidden overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[#E5E5E5] text-left text-stone-500 text-xs uppercase tracking-wide">
-                <th className="px-4 py-3 font-medium">Unidad</th>
-                <th className="px-4 py-3 font-medium">Cliente</th>
-                <th className="px-4 py-3 font-medium">Total cobrado</th>
-                <th className="px-4 py-3 font-medium">Total pagado</th>
-                <th className="px-4 py-3 font-medium">Margen USD</th>
-                <th className="px-4 py-3 font-medium">Margen %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {resumenPorUnidad.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-stone-400">
-                    Todavía no hay acuerdos en USD cargados.
-                  </td>
-                </tr>
-              )}
-              {resumenPorUnidad.map((r) => (
-                <tr
-                  key={r.unidadId}
-                  onClick={() => router.push(`/admin/unidades/${r.unidadId}`)}
-                  className="border-b border-[#F0F0F0] last:border-0 hover:bg-stone-50 cursor-pointer"
-                >
-                  <td className="px-4 py-3 font-medium text-[#2F2F2F]">{r.unidadNumero ?? "Sin número"}</td>
-                  <td className="px-4 py-3 text-stone-600">{r.clienteNombre}</td>
-                  <td className="px-4 py-3 text-stone-600">{formatMoneda(r.cobrado, "USD")}</td>
-                  <td className="px-4 py-3 text-stone-600">{formatMoneda(r.pagado, "USD")}</td>
-                  <td className={`px-4 py-3 font-medium ${r.margenUSD >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                    {formatMoneda(r.margenUSD, "USD")}
-                  </td>
-                  <td className="px-4 py-3 text-stone-600">
-                    {r.margenPct !== null ? `${Math.round(r.margenPct * 10) / 10}%` : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Métricas por moneda */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-3">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">USD</h3>
+          <div className="grid grid-cols-3 gap-3">
+            <MetricaMini label="Cobrado" value={formatMoneda(metricas.usd.cobrado, "USD")} />
+            <MetricaMini label="Pagado" value={formatMoneda(metricas.usd.pagado, "USD")} />
+            <MetricaMini
+              label="Margen"
+              value={formatMoneda(metricas.usd.margen, "USD")}
+              tono={metricas.usd.margen >= 0 ? "positivo" : "negativo"}
+            />
+          </div>
         </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-[#E5E5E5] overflow-hidden overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[#E5E5E5] text-left text-stone-500 text-xs uppercase tracking-wide">
-                <th className="px-4 py-3 font-medium">Unidad</th>
-                <th className="px-4 py-3 font-medium">{tab === "cobros" ? "Cliente" : "Proveedor"}</th>
-                <th className="px-4 py-3 font-medium">Concepto</th>
-                <th className="px-4 py-3 font-medium">Moneda</th>
-                <th className="px-4 py-3 font-medium">Total acordado</th>
-                <th className="px-4 py-3 font-medium">{tab === "cobros" ? "Cobrado" : "Pagado"}</th>
-                <th className="px-4 py-3 font-medium">Pendiente</th>
-                <th className="px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filaAcuerdosFiltradas.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-stone-400">
-                    {tab === "cobros" ? "Todavía no hay acuerdos de cobro cargados." : "Todavía no hay acuerdos de pago cargados."}
-                  </td>
-                </tr>
-              )}
-              {filaAcuerdosFiltradas.map(({ acuerdo, pagado, pendiente, estado }) => (
-                <FilaAcuerdo
-                  key={acuerdo.id}
-                  acuerdo={acuerdo}
-                  pagado={pagado}
-                  pendiente={pendiente}
-                  estado={estado}
-                  expanded={expandedId === acuerdo.id}
-                  onToggle={() => setExpandedId(expandedId === acuerdo.id ? null : acuerdo.id)}
-                  onRegistrarMovimiento={() => setMovimientoAcuerdo(acuerdo)}
-                />
-              ))}
-            </tbody>
-          </table>
+        <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-3">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">ARS</h3>
+          <div className="grid grid-cols-3 gap-3">
+            <MetricaMini label="Cobrado" value={formatMoneda(metricas.ars.cobrado, "ARS")} />
+            <MetricaMini label="Pagado" value={formatMoneda(metricas.ars.pagado, "ARS")} />
+            <MetricaMini
+              label="Margen"
+              value={formatMoneda(metricas.ars.margen, "ARS")}
+              tono={metricas.ars.margen >= 0 ? "positivo" : "negativo"}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Alertas */}
+      {(metricas.cuotasVencidas > 0 || metricas.cuotasVencenSemana > 0 || metricas.periodosSinCerrar > 0) && (
+        <div className="rounded-2xl border border-[#F3C6C6] p-4 space-y-2" style={{ backgroundColor: "#fff0f0" }}>
+          {metricas.cuotasVencidas > 0 && (
+            <div className="flex items-center justify-between gap-3 text-sm text-red-800">
+              <span>
+                <strong>{metricas.cuotasVencidas}</strong> cuota{metricas.cuotasVencidas === 1 ? "" : "s"} vencida
+                {metricas.cuotasVencidas === 1 ? "" : "s"}
+              </span>
+              <Link
+                href="/admin/cobranza?tab=gestion&estado=vencido"
+                className="px-3 py-1 bg-white border border-red-200 hover:bg-red-50 text-red-700 font-bold text-xs rounded-lg"
+              >
+                Ver →
+              </Link>
+            </div>
+          )}
+          {metricas.cuotasVencenSemana > 0 && (
+            <div className="flex items-center justify-between gap-3 text-sm text-red-800">
+              <span>
+                <strong>{metricas.cuotasVencenSemana}</strong> cuota{metricas.cuotasVencenSemana === 1 ? "" : "s"}{" "}
+                vence{metricas.cuotasVencenSemana === 1 ? "" : "n"} esta semana
+              </span>
+              <Link
+                href="/admin/cobranza?tab=gestion&estado=semana"
+                className="px-3 py-1 bg-white border border-red-200 hover:bg-red-50 text-red-700 font-bold text-xs rounded-lg"
+              >
+                Ver →
+              </Link>
+            </div>
+          )}
+          {metricas.periodosSinCerrar > 0 && (
+            <div className="flex items-center justify-between gap-3 text-sm text-red-800">
+              <span>
+                <strong>{metricas.periodosSinCerrar}</strong> período{metricas.periodosSinCerrar === 1 ? "" : "s"}{" "}
+                sin cerrar
+              </span>
+              <Link
+                href="/admin/cobranza?tab=cierres"
+                className="px-3 py-1 bg-white border border-red-200 hover:bg-red-50 text-red-700 font-bold text-xs rounded-lg"
+              >
+                Ver →
+              </Link>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Tabs principales */}
+      <div className="flex flex-wrap gap-2">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${
+              tab === t.key ? "bg-[#2F2F2F] text-white" : "bg-white border border-[#E5E5E5] text-stone-600"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "gestion" && (
+        <GestionCobranzaTab
+          acuerdosCobro={acuerdosCobro}
+          acuerdosPago={acuerdosPago}
+          subInicial={subInicial}
+          estadoInicial={estadoInicial}
+          monedaInicial={monedaInicial}
+          onNuevoAcuerdo={(tipo) => setNuevoAcuerdoTipo(tipo)}
+          onRegistrarMovimiento={(acuerdo) => setMovimientoAcuerdo(acuerdo)}
+        />
+      )}
+      {tab === "rentabilidad" && (
+        <RentabilidadPorUnidadTab acuerdosCobro={acuerdosCobro} acuerdosPago={acuerdosPago} periodo={periodo} />
+      )}
+      {tab === "cuenta-cliente" && (
+        <EstadoCuentaClienteTab
+          clientes={clientes}
+          acuerdosCobro={acuerdosCobro}
+          clienteIdInicial={clienteIdInicial}
+        />
+      )}
+      {tab === "tipo-cambio" && <TipoCambioTab tiposCambio={tiposCambio} onSaved={() => router.refresh()} />}
+      {tab === "cierres" && <CierresTab cierres={cierres} rol={rol} onSaved={() => router.refresh()} />}
 
       {nuevoAcuerdoTipo && (
         <NuevoAcuerdoModal
@@ -344,7 +353,7 @@ export default function CobranzaPanel({
   );
 }
 
-function MetricaCard({
+function MetricaMini({
   label,
   value,
   tono,
@@ -355,109 +364,9 @@ function MetricaCard({
 }) {
   const color = tono === "positivo" ? "text-emerald-700" : tono === "negativo" ? "text-red-700" : "text-[#2F2F2F]";
   return (
-    <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
-      <p className={`text-2xl font-bold ${color}`}>{value}</p>
-      <p className="text-xs text-stone-500 mt-1">{label}</p>
+    <div className="text-center">
+      <p className={`text-lg font-bold ${color}`}>{value}</p>
+      <p className="text-xs text-stone-500 mt-0.5">{label}</p>
     </div>
-  );
-}
-
-function FilaAcuerdo({
-  acuerdo,
-  pagado,
-  pendiente,
-  estado,
-  expanded,
-  onToggle,
-  onRegistrarMovimiento,
-}: {
-  acuerdo: AcuerdoConDetalle;
-  pagado: number;
-  pendiente: number;
-  estado: EstadoAcuerdo;
-  expanded: boolean;
-  onToggle: () => void;
-  onRegistrarMovimiento: () => void;
-}) {
-  return (
-    <>
-      <tr onClick={onToggle} className="border-b border-[#F0F0F0] last:border-0 hover:bg-stone-50 cursor-pointer">
-        <td className="px-4 py-3 font-medium text-[#2F2F2F] whitespace-nowrap">
-          {acuerdo.unidadNumero ?? "Sin número"}
-        </td>
-        <td className="px-4 py-3 text-stone-600">{acuerdo.contraparte}</td>
-        <td className="px-4 py-3 text-stone-600">
-          {CONCEPTO_LABELS[acuerdo.concepto as keyof typeof CONCEPTO_LABELS] ?? acuerdo.concepto}
-        </td>
-        <td className="px-4 py-3 text-stone-600">{acuerdo.moneda}</td>
-        <td className="px-4 py-3 text-stone-600">{formatMoneda(acuerdo.totalAcordado, acuerdo.moneda)}</td>
-        <td className="px-4 py-3 text-stone-600">{formatMoneda(pagado, acuerdo.moneda)}</td>
-        <td className="px-4 py-3 text-stone-600">{formatMoneda(pendiente, acuerdo.moneda)}</td>
-        <td className="px-4 py-3">
-          <span className={`px-2 py-1 rounded-full text-xs font-bold ${ESTADO_ACUERDO_COLORS[estado]}`}>
-            {ESTADO_ACUERDO_LABELS[estado]}
-          </span>
-        </td>
-        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            onClick={onRegistrarMovimiento}
-            className="px-2.5 py-1.5 bg-sage-500 hover:bg-sage-600 text-[#2F2F2F] font-bold text-xs rounded-lg transition-colors whitespace-nowrap"
-          >
-            Registrar movimiento
-          </button>
-        </td>
-      </tr>
-      {expanded && (
-        <tr className="bg-[#f5f5f5]">
-          <td colSpan={9} className="px-4 py-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-2">Cuotas</p>
-                {acuerdo.cuotas.length === 0 ? (
-                  <p className="text-sm text-stone-400">Sin cuotas.</p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {acuerdo.cuotas.map((c) => (
-                      <li key={c.id} className="text-sm flex items-center justify-between gap-2 bg-white rounded-lg px-3 py-2">
-                        <span className="truncate">
-                          {c.descripcion} · {formatMoneda(c.importe, acuerdo.moneda)}
-                          {c.vencimiento ? ` · vence ${formatFecha(c.vencimiento)}` : ""}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${ESTADO_CUOTA_COLORS[c.estado as keyof typeof ESTADO_CUOTA_COLORS] ?? "bg-stone-100 text-stone-500"}`}
-                        >
-                          {ESTADO_CUOTA_LABELS[c.estado as keyof typeof ESTADO_CUOTA_LABELS] ?? c.estado}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-2">Movimientos</p>
-                {acuerdo.movimientos.length === 0 ? (
-                  <p className="text-sm text-stone-400">Todavía no hay movimientos registrados.</p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {acuerdo.movimientos.map((m) => (
-                      <li key={m.id} className="text-sm bg-white rounded-lg px-3 py-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-[#2F2F2F]">
-                            {formatFecha(m.fecha)} · {formatMoneda(m.importe, acuerdo.moneda)}
-                          </span>
-                          <span className="text-stone-500 text-xs">{MODALIDAD_LABELS[m.modalidad as keyof typeof MODALIDAD_LABELS] ?? m.modalidad}</span>
-                        </div>
-                        {m.notas && <p className="text-xs text-stone-400 mt-0.5">{m.notas}</p>}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
   );
 }

@@ -64,6 +64,30 @@ export function mesAnioUnico(rango: RangoPeriodo): { mes: number; anio: number }
   return { mes: desde.getMonth() + 1, anio: desde.getFullYear() };
 }
 
+/** Cuenta los meses calendario, desde el mes del primer movimiento hasta
+ * el mes anterior al actual (el mes actual nunca cuenta: todavía no
+ * terminó, no se puede cerrar), que no tienen un cierre registrado. Sin
+ * movimientos todavía, no hay nada que cerrar. */
+export function contarPeriodosSinCerrar(
+  primerMovimiento: Date | null,
+  hoy: Date,
+  cerrados: { mes: number; anio: number }[]
+): number {
+  if (!primerMovimiento) return 0;
+  const cerradosSet = new Set(cerrados.map((c) => `${c.anio}-${c.mes}`));
+
+  let cursor = new Date(primerMovimiento.getFullYear(), primerMovimiento.getMonth(), 1);
+  const limite = new Date(hoy.getFullYear(), hoy.getMonth(), 1); // mes actual, exclusivo
+
+  let count = 0;
+  while (cursor.getTime() < limite.getTime()) {
+    const key = `${cursor.getFullYear()}-${cursor.getMonth() + 1}`;
+    if (!cerradosSet.has(key)) count++;
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+  }
+  return count;
+}
+
 export function inicioSemana(now: Date): Date {
   const x = new Date(now);
   x.setHours(0, 0, 0, 0);

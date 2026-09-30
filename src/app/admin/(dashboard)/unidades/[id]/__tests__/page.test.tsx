@@ -176,7 +176,12 @@ describe("UnidadDetailPage", () => {
       {
         id: "a1",
         unidadId: "u1",
-        unidad: { numeroUnidad: "MOV-UNIDAD-2026-001", cliente: { nombre: "Juan García" } },
+        unidad: {
+          numeroUnidad: "MOV-UNIDAD-2026-001",
+          modelo: "Flex 18",
+          estadoFabricacion: "pendiente",
+          cliente: { id: "c1", nombre: "Juan García" },
+        },
         tipo: "cobro",
         concepto: "venta",
         descripcion: null,
