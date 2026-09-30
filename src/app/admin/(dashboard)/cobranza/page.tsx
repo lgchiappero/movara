@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/admin/current-user";
 import CobranzaPanel from "@/components/admin/CobranzaPanel";
 import { serializeAcuerdo } from "@/lib/cobranza/serialize";
+import { conComprobantesFirmados } from "@/lib/cobranza/attach-signed-urls";
 import {
   calcularRangoPeriodo,
   mesAnioUnico,
@@ -119,8 +120,10 @@ export default async function AdminCobranzaPage({
       : Promise.resolve(null),
   ]);
 
-  const acuerdosCobro = acuerdosCobroRaw.map(serializeAcuerdo);
-  const acuerdosPago = acuerdosPagoRaw.map(serializeAcuerdo);
+  const [acuerdosCobro, acuerdosPago] = await Promise.all([
+    conComprobantesFirmados(acuerdosCobroRaw.map(serializeAcuerdo)),
+    conComprobantesFirmados(acuerdosPagoRaw.map(serializeAcuerdo)),
+  ]);
 
   const unidades: UnidadOpcion[] = unidadesRaw.map((u) => ({
     id: u.id,

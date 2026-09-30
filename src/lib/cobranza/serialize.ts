@@ -61,6 +61,9 @@ export function serializeAcuerdo(a: AcuerdoConIncludes): AcuerdoConDetalle {
       modalidad: m.modalidad,
       cuotaId: m.cuotaId,
       comprobanteUrl: m.comprobanteUrl,
+      // Se resuelve aparte (async) solo en las lecturas que necesitan
+      // mostrar el link — ver src/lib/cobranza/attach-signed-urls.ts.
+      comprobanteSignedUrl: null,
       notas: m.notas,
       registradoPor: m.registradoPor,
     })),

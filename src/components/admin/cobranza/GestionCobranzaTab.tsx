@@ -329,6 +329,16 @@ function FilaAcuerdo({
                           </span>
                         </div>
                         {m.notas && <p className="text-xs text-stone-400 mt-0.5">{m.notas}</p>}
+                        {m.comprobanteSignedUrl && (
+                          <a
+                            href={m.comprobanteSignedUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-sage-600 hover:text-sage-700 font-medium mt-0.5 inline-block"
+                          >
+                            Ver comprobante
+                          </a>
+                        )}
                       </li>
                     ))}
                   </ul>

@@ -12,6 +12,7 @@ const {
   mockFindManyCierre,
   mockFindUniqueCierre,
   mockAggregateMovimiento,
+  mockGetSignedUrl,
 } = vi.hoisted(() => ({
   mockGetAdminUser: vi.fn(),
   mockUpdateManyCuota: vi.fn(),
@@ -23,6 +24,7 @@ const {
   mockFindManyCierre: vi.fn(),
   mockFindUniqueCierre: vi.fn(),
   mockAggregateMovimiento: vi.fn(),
+  mockGetSignedUrl: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -37,6 +39,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
+vi.mock("@/lib/admin/storage", () => ({ getSignedUrl: mockGetSignedUrl, BUCKET_MOVARA: "documentos-movara" }));
 vi.mock("@/components/admin/CobranzaPanel", () => ({
   default: ({
     acuerdosCobro,
@@ -56,7 +59,7 @@ vi.mock("@/components/admin/CobranzaPanel", () => ({
     monedaInicial,
     clienteIdInicial,
   }: {
-    acuerdosCobro: unknown[];
+    acuerdosCobro: { movimientos: { comprobanteSignedUrl: string | null }[] }[];
     acuerdosPago: unknown[];
     unidades: unknown[];
     clientes: unknown[];
@@ -87,7 +90,8 @@ vi.mock("@/components/admin/CobranzaPanel", () => ({
       {metricas.usd.margen} arsCobrado={metricas.ars.cobrado} arsPagado={metricas.ars.pagado} arsMargen=
       {metricas.ars.margen} vencidas={metricas.cuotasVencidas} vencenSemana={metricas.cuotasVencenSemana}
       sinCerrar={metricas.periodosSinCerrar} tab={tabInicial ?? "none"} sub={subInicial ?? "none"} estado=
-      {estadoInicial ?? "none"} moneda={monedaInicial ?? "none"} clienteId={clienteIdInicial ?? "none"}
+      {estadoInicial ?? "none"} moneda={monedaInicial ?? "none"} clienteId={clienteIdInicial ?? "none"}{" "}
+      comprobante={acuerdosCobro[0]?.movimientos[0]?.comprobanteSignedUrl ?? "none"}
     </div>
   ),
 }));
@@ -126,6 +130,8 @@ function setupDefaults() {
   mockAggregateMovimiento.mockResolvedValueOnce({ _sum: { importe: null } }); // pagadoUSD
   mockAggregateMovimiento.mockResolvedValueOnce({ _sum: { importe: null } }); // pagadoARS
   mockAggregateMovimiento.mockResolvedValueOnce({ _min: { fecha: null } }); // primer movimiento
+  mockGetSignedUrl.mockReset();
+  mockGetSignedUrl.mockResolvedValue("https://signed.example/comprobante.pdf");
 }
 
 describe("AdminCobranzaPage", () => {
@@ -163,6 +169,34 @@ describe("AdminCobranzaPage", () => {
       },
     ]);
     expect(async () => render(await AdminCobranzaPage({ searchParams: Promise.resolve({}) }))).not.toThrow();
+  });
+
+  it("resuelve la URL firmada del comprobante cuando el movimiento tiene uno", async () => {
+    mockFindManyAcuerdo.mockResolvedValueOnce([
+      {
+        ...ACUERDO,
+        movimientos: [
+          { id: "m1", fecha: new Date("2026-01-15"), importe: 20000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: "cobranza/a1/comprobante.pdf", notas: null, registradoPor: "a@x.com" },
+        ],
+      },
+    ]);
+    render(await AdminCobranzaPage({ searchParams: Promise.resolve({}) }));
+    expect(mockGetSignedUrl).toHaveBeenCalledWith("documentos-movara", "cobranza/a1/comprobante.pdf");
+    expect(screen.getByText(/comprobante=https:\/\/signed\.example\/comprobante\.pdf/)).toBeInTheDocument();
+  });
+
+  it("no consulta una URL firmada cuando el movimiento no tiene comprobante", async () => {
+    mockFindManyAcuerdo.mockResolvedValueOnce([
+      {
+        ...ACUERDO,
+        movimientos: [
+          { id: "m1", fecha: new Date("2026-01-15"), importe: 20000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a@x.com" },
+        ],
+      },
+    ]);
+    render(await AdminCobranzaPage({ searchParams: Promise.resolve({}) }));
+    expect(mockGetSignedUrl).not.toHaveBeenCalled();
+    expect(screen.getByText(/comprobante=none/)).toBeInTheDocument();
   });
 
   it("por default usa el período 'mes_actual'", async () => {

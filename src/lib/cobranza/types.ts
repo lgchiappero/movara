@@ -13,6 +13,10 @@ export type MovimientoDetalle = {
   modalidad: string;
   cuotaId: string | null;
   comprobanteUrl: string | null;
+  // URL firmada de corta duración, resuelta server-side solo donde hace
+  // falta mostrar el link de ver/descargar (no en todas las lecturas de
+  // AcuerdoConDetalle) — null si no se resolvió o no hay comprobante.
+  comprobanteSignedUrl: string | null;
   notas: string | null;
   registradoPor: string;
 };
