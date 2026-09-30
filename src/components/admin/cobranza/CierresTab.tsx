@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { useToast } from "@/components/admin/Toast";
+import ResumenCierre from "@/components/admin/cobranza/ResumenCierre";
 import type { CierreRow } from "@/lib/cobranza/types";
 
 const inputClass =
@@ -180,25 +181,7 @@ export default function CierresTab({
                 {verResumenId === c.id && (
                   <tr className="bg-[#f5f5f5]">
                     <td colSpan={6} className="px-4 py-4">
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                        <div>
-                          <p className="text-stone-500 text-xs">Cobrado USD</p>
-                          <p className="font-bold text-[#2F2F2F]">{formatMoneda(c.totalCobradoUSD, "USD")}</p>
-                        </div>
-                        <div>
-                          <p className="text-stone-500 text-xs">Cobrado ARS</p>
-                          <p className="font-bold text-[#2F2F2F]">{formatMoneda(c.totalCobradoARS, "ARS")}</p>
-                        </div>
-                        <div>
-                          <p className="text-stone-500 text-xs">Pagado USD</p>
-                          <p className="font-bold text-[#2F2F2F]">{formatMoneda(c.totalPagadoUSD, "USD")}</p>
-                        </div>
-                        <div>
-                          <p className="text-stone-500 text-xs">Pagado ARS</p>
-                          <p className="font-bold text-[#2F2F2F]">{formatMoneda(c.totalPagadoARS, "ARS")}</p>
-                        </div>
-                      </div>
-                      {c.notas && <p className="text-sm text-stone-500 mt-3 italic">{c.notas}</p>}
+                      <ResumenCierre cierre={c} />
                     </td>
                   </tr>
                 )}
