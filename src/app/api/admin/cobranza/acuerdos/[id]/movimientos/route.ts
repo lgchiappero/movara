@@ -43,6 +43,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
   const data = parsed.data;
 
+  const fechaMovimiento = new Date(data.fecha);
+  const cierreDelMes = await db.cierrePeriodo.findUnique({
+    where: { mes_anio: { mes: fechaMovimiento.getMonth() + 1, anio: fechaMovimiento.getFullYear() } },
+  });
+  if (cierreDelMes) {
+    return NextResponse.json(
+      { error: "Ese período ya está cerrado — no se pueden cargar movimientos con esa fecha" },
+      { status: 400 }
+    );
+  }
+
   let cuota: { id: string; acuerdoId: string; importe: number; estado: string; vencimiento: Date | null } | null =
     null;
   if (data.cuotaId) {
@@ -73,7 +84,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     data: {
       acuerdoId,
       cuotaId: data.cuotaId,
-      fecha: new Date(data.fecha),
+      fecha: fechaMovimiento,
       importe: data.importe,
       modalidad: data.modalidad,
       comprobanteUrl,

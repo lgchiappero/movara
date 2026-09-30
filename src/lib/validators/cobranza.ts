@@ -60,3 +60,19 @@ export const registrarMovimientoSchema = z.object({
   notas: stringOrNull.optional(),
 });
 export type RegistrarMovimientoInput = z.infer<typeof registrarMovimientoSchema>;
+
+const FUENTE_TIPO_CAMBIO_OPTIONS = ["oficial", "blue", "manual"] as const;
+
+export const cargarTipoCambioSchema = z.object({
+  fecha: z.string().min(1, "Falta la fecha"),
+  usdArs: z.number().positive("La cotización debe ser mayor a 0"),
+  fuente: z.union([z.enum(FUENTE_TIPO_CAMBIO_OPTIONS), z.null()]).optional(),
+});
+export type CargarTipoCambioInput = z.infer<typeof cargarTipoCambioSchema>;
+
+export const cerrarPeriodoSchema = z.object({
+  mes: z.number().int().min(1).max(12),
+  anio: z.number().int().min(2020).max(2100),
+  notas: stringOrNull.optional(),
+});
+export type CerrarPeriodoInput = z.infer<typeof cerrarPeriodoSchema>;

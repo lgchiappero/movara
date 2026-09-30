@@ -13,6 +13,7 @@ const {
   mockFindManyMovimiento,
   mockUpdateCuota,
   mockUploadDocument,
+  mockFindUniqueCierre,
 } = vi.hoisted(() => ({
   mockGetAdminUser: vi.fn(),
   mockFindUniqueAcuerdo: vi.fn(),
@@ -21,6 +22,7 @@ const {
   mockFindManyMovimiento: vi.fn(),
   mockUpdateCuota: vi.fn(),
   mockUploadDocument: vi.fn().mockResolvedValue(undefined),
+  mockFindUniqueCierre: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -28,6 +30,7 @@ vi.mock("@/lib/db", () => ({
     acuerdoPago: { findUnique: mockFindUniqueAcuerdo },
     cuota: { findUnique: mockFindUniqueCuota, update: mockUpdateCuota },
     movimiento: { create: mockCreateMovimiento, findMany: mockFindManyMovimiento },
+    cierrePeriodo: { findUnique: mockFindUniqueCierre },
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -62,6 +65,7 @@ describe("POST /api/admin/cobranza/acuerdos/[id]/movimientos", () => {
     mockFindUniqueAcuerdo.mockResolvedValue({ id: "a1", tipo: "cobro" });
     mockCreateMovimiento.mockResolvedValue({ id: "m1" });
     mockFindManyMovimiento.mockResolvedValue([]);
+    mockFindUniqueCierre.mockResolvedValue(null);
   });
 
   it("401 sin sesión", async () => {
@@ -88,6 +92,23 @@ describe("POST /api/admin/cobranza/acuerdos/[id]/movimientos", () => {
     });
     const res = await POST(req, { params: Promise.resolve({ id: "a1" }) });
     expect(res.status).toBe(400);
+  });
+
+  it("400 si el período de la fecha del movimiento ya está cerrado", async () => {
+    mockFindUniqueCierre.mockResolvedValueOnce({ id: "c1", mes: 1, anio: 2026 });
+    const res = await POST(
+      makeFormRequest({ fecha: "2026-01-15", importe: "100", modalidad: "transferencia" }),
+      { params: Promise.resolve({ id: "a1" }) }
+    );
+    expect(res.status).toBe(400);
+    expect(mockCreateMovimiento).not.toHaveBeenCalled();
+  });
+
+  it("consulta el cierre del mes/año correspondientes a la fecha del movimiento", async () => {
+    await POST(makeFormRequest({ fecha: "2026-03-10", importe: "100", modalidad: "efectivo" }), {
+      params: Promise.resolve({ id: "a1" }),
+    });
+    expect(mockFindUniqueCierre).toHaveBeenCalledWith({ where: { mes_anio: { mes: 3, anio: 2026 } } });
   });
 
   it("400 si falta la fecha", async () => {
