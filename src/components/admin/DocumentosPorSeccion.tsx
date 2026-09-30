@@ -85,7 +85,7 @@ function SeccionCard({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-3">
+    <div id={`seccion-${seccion.key}`} className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-3">
       <div>
         <h3 className="text-sm font-bold text-[#2F2F2F]">{seccion.titulo}</h3>
         <p className="text-xs text-stone-400 mt-0.5">{seccion.guia}</p>

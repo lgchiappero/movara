@@ -37,7 +37,7 @@ export default function CobranzaUnidadSection({
   const pagadoUSD = sumaImportes(acuerdosPago.filter((a) => a.moneda === "USD").flatMap((a) => a.movimientos));
 
   return (
-    <div>
+    <div id="cobranza">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600">Cobranza</h2>
         <div className="flex gap-2">

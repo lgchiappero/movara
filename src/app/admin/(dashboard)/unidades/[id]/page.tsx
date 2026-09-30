@@ -6,7 +6,9 @@ import { SECCIONES_UNIDAD, SECCIONES_ENVIO } from "@/lib/envios/constantes";
 import UnidadDetailForm from "@/components/admin/UnidadDetailForm";
 import DocumentosPorSeccion, { type DocumentoSeccionConUrl } from "@/components/admin/DocumentosPorSeccion";
 import CobranzaUnidadSection from "@/components/admin/CobranzaUnidadSection";
+import UnidadTimeline from "@/components/admin/UnidadTimeline";
 import { serializeAcuerdo } from "@/lib/cobranza/serialize";
+import { calcularPasos, accionesPasoActual, type DatosTimelineUnidad } from "@/lib/envios/timeline";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +22,9 @@ export default async function UnidadDetailPage({
     where: { id },
     include: {
       cliente: { select: { id: true, nombre: true } },
-      envio: { select: { id: true, numeroPI: true, documentos: { orderBy: { createdAt: "desc" } } } },
+      envio: {
+        select: { id: true, numeroPI: true, fechaEmbarque: true, documentos: { orderBy: { createdAt: "desc" } } },
+      },
       documentos: { orderBy: { createdAt: "desc" } },
     },
   });
@@ -77,6 +81,26 @@ export default async function UnidadDetailPage({
 
   const acuerdos = acuerdosRaw.map(serializeAcuerdo);
 
+  // Primer cobro registrado para esta unidad — cualquiera de sus acuerdos
+  // de tipo "cobro", el movimiento más antiguo entre todos ellos.
+  const fechasCobro = acuerdos
+    .filter((a) => a.tipo === "cobro")
+    .flatMap((a) => a.movimientos.map((m) => new Date(m.fecha)))
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  const datosTimeline: DatosTimelineUnidad = {
+    clienteId: unidad.clienteId,
+    modelo: unidad.modelo,
+    precioCliente: unidad.precioCliente,
+    estadoFabricacion: unidad.estadoFabricacion,
+    createdAt: unidad.createdAt,
+    fechaEntrega: unidad.fechaEntrega,
+    fechaEmbarque: unidad.envio?.fechaEmbarque ?? null,
+    primerCobroFecha: fechasCobro[0] ?? null,
+  };
+  const pasosTimeline = calcularPasos(datosTimeline);
+  const accionActual = accionesPasoActual(datosTimeline);
+
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 space-y-6">
       <Link href="/admin/unidades" className="text-sm text-stone-500 hover:text-stone-700">
@@ -97,6 +121,8 @@ export default async function UnidadDetailPage({
           </Link>
         </div>
       </div>
+
+      <UnidadTimeline pasos={pasosTimeline} actual={accionActual} envioId={unidad.envioId} />
 
       <UnidadDetailForm
         id={id}

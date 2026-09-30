@@ -191,8 +191,8 @@ export default function UnidadDetailForm({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
+    <div id="datos-unidad" className="space-y-6">
+      <div id="estado-fabricacion" className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
         <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600">Estado de fabricación</h2>
         <EstadoTimeline estado={form.estadoFabricacion} />
         <label className="block space-y-1.5">
@@ -372,7 +372,7 @@ export default function UnidadDetailForm({
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
+      <div id="garantia" className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
         <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600">Garantía MOVARA (12 meses)</h2>
         <label className={checkboxRowClass}>
           <input

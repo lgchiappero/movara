@@ -71,6 +71,7 @@ const UNIDAD_BASE = {
   notas: null,
   clienteId: "c1",
   envioId: null,
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
 };
 
 describe("UnidadDetailPage", () => {
@@ -99,6 +100,124 @@ describe("UnidadDetailPage", () => {
     render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
     expect(screen.getByText("MOV-UNIDAD-2026-001")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Juan García" })).toHaveAttribute("href", "/admin/clientes/c1");
+  });
+
+  it("línea de tiempo: unidad sin modelo/precio muestra 'Unidad creada' como paso actual con su acción", async () => {
+    mockFindUnique.mockResolvedValueOnce(UNIDAD_BASE);
+    render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
+    expect(screen.getByText("Venta cerrada")).toBeInTheDocument();
+    expect(screen.getByText("Unidad creada")).toBeInTheDocument();
+    expect(screen.getByText("Cobro anticipo")).toBeInTheDocument();
+    expect(screen.getByText("En producción")).toBeInTheDocument();
+    expect(screen.getByText("Entregado")).toBeInTheDocument();
+    expect(screen.getByText("⚡ Próximo paso:")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Completar modelo y precio de la unidad/ })).toHaveAttribute(
+      "href",
+      "#datos-unidad"
+    );
+  });
+
+  it("línea de tiempo: con modelo, precio y un cobro registrado, 'En producción' pasa a ser el paso actual", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      ...UNIDAD_BASE,
+      modelo: "Flex 18",
+      precioCliente: 50000,
+      estadoFabricacion: "en_produccion",
+    });
+    mockFindManyAcuerdo.mockResolvedValueOnce([
+      {
+        id: "a1",
+        unidadId: "u1",
+        unidad: { numeroUnidad: "MOV-UNIDAD-2026-001", modelo: "Flex 18", estadoFabricacion: "pendiente", cliente: { id: "c1", nombre: "Juan García" } },
+        tipo: "cobro",
+        concepto: "venta",
+        descripcion: null,
+        contraparte: "Juan García",
+        moneda: "USD",
+        totalAcordado: 50000,
+        notas: null,
+        createdAt: new Date("2026-01-05T00:00:00.000Z"),
+        cuotas: [],
+        movimientos: [
+          // 2 pagos fuera de orden cronológico — ejercita el comparador del
+          // sort que busca el más antiguo (primerCobroFecha).
+          { id: "m2", fecha: new Date("2026-01-20T00:00:00.000Z"), importe: 10000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a@x.com" },
+          { id: "m1", fecha: new Date("2026-01-10T00:00:00.000Z"), importe: 15000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a@x.com" },
+        ],
+      },
+    ]);
+    render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
+    expect(screen.getByRole("link", { name: /Registrar pago primera cuota a fábrica/ })).toHaveAttribute(
+      "href",
+      "#cobranza"
+    );
+    expect(screen.getByRole("link", { name: /Subir PI en carpeta 04/ })).toHaveAttribute("href", "#datos-unidad");
+  });
+
+  it("línea de tiempo: con envío vinculado, la acción de carpeta 04 apunta al detalle del envío", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      ...UNIDAD_BASE,
+      modelo: "Flex 18",
+      precioCliente: 50000,
+      estadoFabricacion: "en_produccion",
+      envioId: "e1",
+    });
+    mockFindManyAcuerdo.mockResolvedValueOnce([
+      {
+        id: "a1",
+        unidadId: "u1",
+        unidad: { numeroUnidad: "MOV-UNIDAD-2026-001", modelo: "Flex 18", estadoFabricacion: "pendiente", cliente: { id: "c1", nombre: "Juan García" } },
+        tipo: "cobro",
+        concepto: "venta",
+        descripcion: null,
+        contraparte: "Juan García",
+        moneda: "USD",
+        totalAcordado: 50000,
+        notas: null,
+        createdAt: new Date("2026-01-05T00:00:00.000Z"),
+        cuotas: [],
+        movimientos: [
+          { id: "m1", fecha: new Date("2026-01-10T00:00:00.000Z"), importe: 15000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a@x.com" },
+        ],
+      },
+    ]);
+    render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
+    expect(screen.getByRole("link", { name: /Subir PI en carpeta 04/ })).toHaveAttribute(
+      "href",
+      "/admin/envios/e1#seccion-04_produccion"
+    );
+  });
+
+  it("línea de tiempo: unidad completamente entregada no muestra ningún paso actual", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      ...UNIDAD_BASE,
+      modelo: "Flex 18",
+      precioCliente: 50000,
+      estadoFabricacion: "entregado",
+      fechaEntrega: new Date("2026-06-01T00:00:00.000Z"),
+      envio: { id: "e1", numeroPI: "PI-001", fechaEmbarque: new Date("2026-03-01T00:00:00.000Z"), documentos: [] },
+    });
+    mockFindManyAcuerdo.mockResolvedValueOnce([
+      {
+        id: "a1",
+        unidadId: "u1",
+        unidad: { numeroUnidad: "MOV-UNIDAD-2026-001", modelo: "Flex 18", estadoFabricacion: "entregado", cliente: { id: "c1", nombre: "Juan García" } },
+        tipo: "cobro",
+        concepto: "venta",
+        descripcion: null,
+        contraparte: "Juan García",
+        moneda: "USD",
+        totalAcordado: 50000,
+        notas: null,
+        createdAt: new Date("2026-01-05T00:00:00.000Z"),
+        cuotas: [],
+        movimientos: [
+          { id: "m1", fecha: new Date("2026-01-10T00:00:00.000Z"), importe: 50000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a@x.com" },
+        ],
+      },
+    ]);
+    render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
+    expect(screen.queryByText("⚡ Próximo paso:")).not.toBeInTheDocument();
   });
 
   it("pasa la lista de envíos disponibles (serializados) al formulario de detalle", async () => {
