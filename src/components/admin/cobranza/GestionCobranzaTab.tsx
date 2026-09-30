@@ -185,7 +185,7 @@ export default function GestionCobranzaTab({
             onClick={() => onNuevoAcuerdo(sub === "cobros" ? "cobro" : "pago")}
             className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
           >
-            + Nuevo acuerdo
+            {sub === "cobros" ? "+ Nuevo cobro" : "+ Nuevo pago"}
           </button>
         </div>
       </div>
@@ -210,7 +210,7 @@ export default function GestionCobranzaTab({
             {filasFiltradas.length === 0 && (
               <tr>
                 <td colSpan={10} className="px-4 py-8 text-center text-stone-400">
-                  {sub === "cobros" ? "Ningún acuerdo de cobro coincide con los filtros." : "Ningún acuerdo de pago coincide con los filtros."}
+                  {sub === "cobros" ? "Ningún cobro coincide con los filtros." : "Ningún pago coincide con los filtros."}
                 </td>
               </tr>
             )}
@@ -275,7 +275,7 @@ function FilaAcuerdo({
             onClick={onRegistrarMovimiento}
             className="px-2.5 py-1.5 bg-sage-500 hover:bg-sage-600 text-[#2F2F2F] font-bold text-xs rounded-lg transition-colors whitespace-nowrap"
           >
-            Registrar movimiento
+            {acuerdo.tipo === "cobro" ? "Registrar pago recibido" : "Registrar pago realizado"}
           </button>
         </td>
       </tr>
@@ -309,9 +309,13 @@ function FilaAcuerdo({
                 )}
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-2">Movimientos</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-2">
+                  {acuerdo.tipo === "cobro" ? "Pagos recibidos" : "Pagos realizados"}
+                </p>
                 {acuerdo.movimientos.length === 0 ? (
-                  <p className="text-sm text-stone-400">Todavía no hay movimientos registrados.</p>
+                  <p className="text-sm text-stone-400">
+                    Todavía no hay {acuerdo.tipo === "cobro" ? "pagos recibidos" : "pagos realizados"}.
+                  </p>
                 ) : (
                   <ul className="space-y-1.5">
                     {acuerdo.movimientos.map((m) => (

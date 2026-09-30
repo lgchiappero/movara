@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CONCEPTO_LABELS, MODALIDAD_LABELS, ESTADO_ACUERDO_LABELS, ESTADO_ACUERDO_COLORS } from "@/lib/cobranza/constantes";
 import { sumaImportes, estadoAcuerdo } from "@/lib/cobranza/calc";
+import SearchableSelect from "@/components/admin/SearchableSelect";
 import type { AcuerdoConDetalle, ClienteOpcion } from "@/lib/cobranza/types";
 
 function formatMoneda(value: number, moneda: string): string {
@@ -67,18 +68,15 @@ export default function EstadoCuentaClienteTab({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <select
-          value={clienteId}
-          onChange={(e) => setClienteId(e.target.value)}
-          className="rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#2F2F2F] bg-white min-w-[240px]"
-        >
-          <option value="">Elegir cliente…</option>
-          {clientes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nombre}
-            </option>
-          ))}
-        </select>
+        <div className="min-w-[280px]">
+          <SearchableSelect
+            value={clienteId}
+            onChange={setClienteId}
+            placeholder="Buscar cliente..."
+            emptyText="Ningún cliente coincide"
+            options={clientes.map((c) => ({ value: c.id, label: c.nombre }))}
+          />
+        </div>
         {clienteId && (
           <a
             href={`/api/admin/cobranza/estado-cuenta/${clienteId}/pdf`}

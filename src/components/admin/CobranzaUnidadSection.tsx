@@ -46,14 +46,14 @@ export default function CobranzaUnidadSection({
             onClick={() => setNuevoTipo("cobro")}
             className="px-3 py-1.5 bg-sage-500 hover:bg-sage-600 text-[#2F2F2F] font-bold text-xs rounded-lg transition-colors"
           >
-            + Nuevo acuerdo de cobro
+            + Nuevo cobro
           </button>
           <button
             type="button"
             onClick={() => setNuevoTipo("pago")}
             className="px-3 py-1.5 bg-white border border-[#E5E5E5] hover:border-stone-300 text-[#2F2F2F] font-bold text-xs rounded-lg transition-colors"
           >
-            + Nuevo acuerdo de pago
+            + Nuevo pago
           </button>
         </div>
       </div>
@@ -77,7 +77,7 @@ export default function CobranzaUnidadSection({
 
       {acuerdos.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 text-sm text-stone-400">
-          Todavía no hay acuerdos de cobro ni de pago para esta unidad.
+          Todavía no hay cobros ni pagos para esta unidad.
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-[#E5E5E5] overflow-hidden overflow-x-auto">
@@ -85,7 +85,7 @@ export default function CobranzaUnidadSection({
             <thead>
               <tr className="border-b border-[#E5E5E5] text-left text-stone-500 text-xs uppercase tracking-wide">
                 <th className="px-4 py-3 font-medium">Tipo</th>
-                <th className="px-4 py-3 font-medium">Contraparte</th>
+                <th className="px-4 py-3 font-medium">Cliente/Proveedor</th>
                 <th className="px-4 py-3 font-medium">Concepto</th>
                 <th className="px-4 py-3 font-medium">Total</th>
                 <th className="px-4 py-3 font-medium">Estado</th>

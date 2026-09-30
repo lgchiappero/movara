@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  TIPO_ACUERDO_LABELS,
   CONCEPTO_COBRO_OPTIONS,
   CONCEPTO_PAGO_OPTIONS,
   CONCEPTO_LABELS,
@@ -10,12 +9,16 @@ import {
   type TipoAcuerdo,
 } from "@/lib/cobranza/constantes";
 import { useToast } from "@/components/admin/Toast";
+import SearchableSelect from "@/components/admin/SearchableSelect";
 import type { UnidadOpcion } from "@/components/admin/CobranzaPanel";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
 
 type CuotaForm = { descripcion: string; importe: string; vencimiento: string };
+
+const NOMBRE_TIPO: Record<TipoAcuerdo, string> = { cobro: "cobro", pago: "pago" };
+const NOMBRE_TIPO_CAP: Record<TipoAcuerdo, string> = { cobro: "Cobro", pago: "Pago" };
 
 export default function NuevoAcuerdoModal({
   tipo: tipoInicial,
@@ -51,6 +54,16 @@ export default function NuevoAcuerdoModal({
     const opciones = nuevo === "cobro" ? CONCEPTO_COBRO_OPTIONS : CONCEPTO_PAGO_OPTIONS;
     if (!(opciones as readonly string[]).includes(concepto)) {
       setConcepto(opciones[0]);
+    }
+  }
+
+  function elegirUnidad(id: string) {
+    setUnidadId(id);
+    // Cobro: el cliente de la unidad ya se sabe — autocompletar. Pago: el
+    // proveedor no tiene relación con la unidad, se completa a mano.
+    if (tipo === "cobro" && !contraparte.trim()) {
+      const u = unidades.find((x) => x.id === id);
+      if (u) setContraparte(u.clienteNombre);
     }
   }
 
@@ -113,15 +126,15 @@ export default function NuevoAcuerdoModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "No pudimos crear el acuerdo.");
-        showError(json.error ?? "No pudimos crear el acuerdo.");
+        setError(json.error ?? `No pudimos crear el ${NOMBRE_TIPO[tipo]}.`);
+        showError(json.error ?? `No pudimos crear el ${NOMBRE_TIPO[tipo]}.`);
         return;
       }
-      showSuccess("Acuerdo creado");
+      showSuccess(`${NOMBRE_TIPO_CAP[tipo]} creado`);
       onCreated();
     } catch {
-      setError("No pudimos crear el acuerdo. Probá de nuevo.");
-      showError("No pudimos crear el acuerdo. Probá de nuevo.");
+      setError(`No pudimos crear el ${NOMBRE_TIPO[tipo]}. Probá de nuevo.`);
+      showError(`No pudimos crear el ${NOMBRE_TIPO[tipo]}. Probá de nuevo.`);
     } finally {
       setBusy(false);
     }
@@ -135,10 +148,10 @@ export default function NuevoAcuerdoModal({
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">
-                Nuevo acuerdo — Paso {step} de 2
+                Nuevo {NOMBRE_TIPO[tipo]} — Paso {step} de 2
               </p>
               <h2 className="text-xl font-bold text-[#2F2F2F]">
-                {step === 1 ? "Datos del acuerdo" : "Cuotas"}
+                {step === 1 ? `Datos del ${NOMBRE_TIPO[tipo]}` : "Cuotas"}
               </h2>
             </div>
             <button
@@ -167,7 +180,7 @@ export default function NuevoAcuerdoModal({
                         tipo === t ? "bg-[#2F2F2F] text-white" : "bg-white border border-[#E5E5E5] text-stone-600"
                       }`}
                     >
-                      {TIPO_ACUERDO_LABELS[t]}
+                      {NOMBRE_TIPO_CAP[t]}
                     </button>
                   ))}
                 </div>
@@ -175,14 +188,16 @@ export default function NuevoAcuerdoModal({
 
               <label className="block space-y-1">
                 <span className="text-xs font-medium text-stone-500">Unidad</span>
-                <select value={unidadId} onChange={(e) => setUnidadId(e.target.value)} className={inputClass}>
-                  <option value="">Elegir unidad…</option>
-                  {unidades.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.numeroUnidad ?? "Sin número"} — {u.clienteNombre}
-                    </option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={unidadId}
+                  onChange={elegirUnidad}
+                  placeholder="Buscar por N° de unidad o cliente..."
+                  emptyText="Ninguna unidad coincide"
+                  options={unidades.map((u) => ({
+                    value: u.id,
+                    label: `${u.numeroUnidad ?? "Sin número"} — ${u.clienteNombre}`,
+                  }))}
+                />
               </label>
 
               <label className="block space-y-1">
@@ -348,7 +363,7 @@ export default function NuevoAcuerdoModal({
                   onClick={crear}
                   className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] disabled:opacity-50 text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
                 >
-                  {busy ? "Creando…" : "Crear acuerdo"}
+                  {busy ? "Creando…" : `Crear ${NOMBRE_TIPO[tipo]}`}
                 </button>
               </div>
             </div>
