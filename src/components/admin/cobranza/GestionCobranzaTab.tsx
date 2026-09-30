@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import {
   CONCEPTO_LABELS,
-  MODALIDAD_LABELS,
-  ESTADO_CUOTA_LABELS,
-  ESTADO_CUOTA_COLORS,
   ESTADO_ACUERDO_LABELS,
   ESTADO_ACUERDO_COLORS,
   ESTADO_ACUERDO_OPTIONS,
@@ -17,6 +14,7 @@ import { sumaImportes, estadoAcuerdo } from "@/lib/cobranza/calc";
 import { inicioSemana, finSemana } from "@/lib/cobranza/periodo";
 import { useToast } from "@/components/admin/Toast";
 import EditarMovimientoModal from "@/components/admin/EditarMovimientoModal";
+import DetalleAcuerdo from "@/components/admin/cobranza/DetalleAcuerdo";
 import type { AcuerdoConDetalle, MovimientoDetalle } from "@/lib/cobranza/types";
 
 type FiltroEstado = EstadoAcuerdo | "semana" | "todos";
@@ -327,89 +325,14 @@ function FilaAcuerdo({
       {expanded && (
         <tr className="bg-[#f5f5f5]">
           <td colSpan={10} className="px-4 py-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-2">Cuotas</p>
-                {acuerdo.cuotas.length === 0 ? (
-                  <p className="text-sm text-stone-400">Sin cuotas.</p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {acuerdo.cuotas.map((c) => (
-                      <li
-                        key={c.id}
-                        className="text-sm flex items-center justify-between gap-2 bg-white rounded-lg px-3 py-2"
-                      >
-                        <span className="truncate">
-                          {c.descripcion} · {formatMoneda(c.importe, acuerdo.moneda)}
-                          {c.vencimiento ? ` · vence ${formatFecha(c.vencimiento)}` : ""}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${ESTADO_CUOTA_COLORS[c.estado as keyof typeof ESTADO_CUOTA_COLORS] ?? "bg-stone-100 text-stone-500"}`}
-                        >
-                          {ESTADO_CUOTA_LABELS[c.estado as keyof typeof ESTADO_CUOTA_LABELS] ?? c.estado}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-2">
-                  {acuerdo.tipo === "cobro" ? "Pagos recibidos" : "Pagos realizados"}
-                </p>
-                {acuerdo.movimientos.length === 0 ? (
-                  <p className="text-sm text-stone-400">
-                    Todavía no hay {acuerdo.tipo === "cobro" ? "pagos recibidos" : "pagos realizados"}.
-                  </p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {acuerdo.movimientos.map((m) => (
-                      <li key={m.id} className="text-sm bg-white rounded-lg px-3 py-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-[#2F2F2F]">
-                            {formatFecha(m.fecha)} · {formatMoneda(m.importe, acuerdo.moneda)}
-                          </span>
-                          <span className="text-stone-500 text-xs">
-                            {MODALIDAD_LABELS[m.modalidad as keyof typeof MODALIDAD_LABELS] ?? m.modalidad}
-                          </span>
-                        </div>
-                        {m.notas && <p className="text-xs text-stone-400 mt-0.5">{m.notas}</p>}
-                        <div className="flex items-center justify-between gap-2 mt-1">
-                          {m.comprobanteSignedUrl ? (
-                            <a
-                              href={m.comprobanteSignedUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-sage-600 hover:text-sage-700 font-medium"
-                            >
-                              Ver comprobante
-                            </a>
-                          ) : (
-                            <span />
-                          )}
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => onEditarMovimiento(m)}
-                              className="text-xs text-stone-500 hover:text-stone-700 font-medium"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onEliminarMovimiento(m)}
-                              className="text-xs text-red-500 hover:text-red-700 font-medium"
-                            >
-                              Eliminar
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
+            <DetalleAcuerdo
+              acuerdo={acuerdo}
+              movido={movido}
+              pendiente={pendiente}
+              onRegistrarMovimiento={onRegistrarMovimiento}
+              onEditarMovimiento={onEditarMovimiento}
+              onEliminarMovimiento={onEliminarMovimiento}
+            />
           </td>
         </tr>
       )}
