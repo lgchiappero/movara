@@ -14,6 +14,8 @@ const {
   mockEnvioFindMany,
   mockCitaFindMany,
   mockCuotaCount,
+  mockFindUniqueCierre,
+  mockCountMovimiento,
 } = vi.hoisted(() => ({
   mockLeadCount: vi.fn(),
   mockLeadFindMany: vi.fn(),
@@ -27,6 +29,8 @@ const {
   mockEnvioFindMany: vi.fn(),
   mockCitaFindMany: vi.fn(),
   mockCuotaCount: vi.fn(),
+  mockFindUniqueCierre: vi.fn(),
+  mockCountMovimiento: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -37,6 +41,8 @@ vi.mock("@/lib/db", () => ({
     envio: { findMany: mockEnvioFindMany },
     cita: { findMany: mockCitaFindMany },
     cuota: { count: mockCuotaCount },
+    cierrePeriodo: { findUnique: mockFindUniqueCierre },
+    movimiento: { count: mockCountMovimiento },
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -90,8 +96,11 @@ function setupDefaults() {
   mockLeadFindMany.mockResolvedValue([]); // leadsPipelineResumen
 
   mockCuotaCount.mockReset();
-  mockCuotaCount.mockResolvedValueOnce(0); // cuotasCobroVencidas
-  mockCuotaCount.mockResolvedValueOnce(0); // cuotasPagoVencidas
+  mockCuotaCount.mockResolvedValueOnce(0); // cuotasVencidas
+  mockCuotaCount.mockResolvedValueOnce(0); // cuotasVencenSemana
+
+  mockFindUniqueCierre.mockResolvedValue({ id: "cierre1" }); // mes anterior YA cerrado por default
+  mockCountMovimiento.mockResolvedValue(0); // mesAnteriorTuvoMovimientos
 }
 
 describe("AdminDashboardPage", () => {
@@ -389,47 +398,96 @@ describe("AdminDashboardPage", () => {
     expect(screen.queryByText(/alertas y acciones urgentes/i)).not.toBeInTheDocument();
   });
 
-  it("alerta: cuotas de cobro vencidas, con botón Ver hacia /admin/cobranza?tipo=cobro&estado=vencido", async () => {
+  it("alerta: cuotas vencidas (combinadas, sin separar cobro/pago), con botón Ver hacia /admin/cobranza?tab=gestion&estado=vencido", async () => {
     mockCuotaCount.mockReset();
     mockCuotaCount.mockResolvedValueOnce(3).mockResolvedValueOnce(0);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
-    expect(alertBox.textContent).toContain("3 cuotas de cobro vencidas sin pagar");
+    expect(alertBox.textContent).toContain("3 cuotas vencidas");
     expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute(
       "href",
-      "/admin/cobranza?tipo=cobro&estado=vencido"
+      "/admin/cobranza?tab=gestion&estado=vencido"
     );
   });
 
-  it("singular correcto para 1 cuota de cobro vencida", async () => {
+  it("singular correcto para 1 cuota vencida", async () => {
     mockCuotaCount.mockReset();
     mockCuotaCount.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
-    expect(alertBox.textContent).toContain("1 cuota de cobro vencida sin pagar");
+    expect(alertBox.textContent).toContain("1 cuota vencida");
     expect(alertBox.textContent).not.toContain("1 cuotas");
   });
 
-  it("alerta: cuotas de pago vencidas, con botón Ver hacia /admin/cobranza?tipo=pago&estado=vencido", async () => {
+  it("cuenta cuotas vencidas por fecha y estado != pagado, sin filtrar por tipo de acuerdo", async () => {
+    render(await AdminDashboardPage());
+    const call = mockCuotaCount.mock.calls[0][0];
+    expect(call.where.estado).toEqual({ not: "pagado" });
+    expect(call.where.vencimiento.lt).toBeInstanceOf(Date);
+    expect(call.where.acuerdo).toBeUndefined();
+  });
+
+  it("alerta: cuotas que vencen esta semana, con botón Ver hacia /admin/cobranza?tab=gestion&estado=semana", async () => {
     mockCuotaCount.mockReset();
-    mockCuotaCount.mockResolvedValueOnce(0).mockResolvedValueOnce(2);
+    mockCuotaCount.mockResolvedValueOnce(0).mockResolvedValueOnce(4);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
-    expect(alertBox.textContent).toContain("2 cuotas de pago vencidas sin pagar");
+    expect(alertBox.textContent).toContain("4 cuotas vencen esta semana");
     expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute(
       "href",
-      "/admin/cobranza?tipo=pago&estado=vencido"
+      "/admin/cobranza?tab=gestion&estado=semana"
     );
   });
 
-  it("cuenta cuotas vencidas por fecha y estado != pagado, filtradas por tipo de acuerdo (cobro/pago)", async () => {
+  it("singular correcto para 1 cuota que vence esta semana", async () => {
+    mockCuotaCount.mockReset();
+    mockCuotaCount.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
     render(await AdminDashboardPage());
-    const callCobro = mockCuotaCount.mock.calls[0][0];
-    expect(callCobro.where.estado).toEqual({ not: "pagado" });
-    expect(callCobro.where.vencimiento.lt).toBeInstanceOf(Date);
-    expect(callCobro.where.acuerdo).toEqual({ tipo: "cobro" });
-    const callPago = mockCuotaCount.mock.calls[1][0];
-    expect(callPago.where.acuerdo).toEqual({ tipo: "pago" });
+    const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
+    expect(alertBox.textContent).toContain("1 cuota vence esta semana");
+    expect(alertBox.textContent).not.toContain("vencen");
+  });
+
+  it("cuotasVencenSemana consulta estado pendiente con vencimiento en la semana en curso", async () => {
+    render(await AdminDashboardPage());
+    const call = mockCuotaCount.mock.calls[1][0];
+    expect(call.where.estado).toBe("pendiente");
+    expect(call.where.vencimiento.gte).toBeInstanceOf(Date);
+    expect(call.where.vencimiento.lt).toBeInstanceOf(Date);
+  });
+
+  it("alerta: mes anterior sin cerrar (con movimientos), con botón Ver hacia /admin/cobranza?tab=cierres", async () => {
+    mockFindUniqueCierre.mockResolvedValueOnce(null);
+    mockCountMovimiento.mockResolvedValueOnce(5);
+    render(await AdminDashboardPage());
+    const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
+    expect(alertBox.textContent).toContain("sin cerrar");
+    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/cobranza?tab=cierres");
+  });
+
+  it("no alerta 'sin cerrar' si el mes anterior no tuvo ningún movimiento (nada que cerrar)", async () => {
+    mockFindUniqueCierre.mockResolvedValueOnce(null);
+    mockCountMovimiento.mockResolvedValueOnce(0);
+    render(await AdminDashboardPage());
+    expect(screen.queryByText(/sin cerrar/)).not.toBeInTheDocument();
+  });
+
+  it("no alerta 'sin cerrar' si el mes anterior ya está cerrado", async () => {
+    mockFindUniqueCierre.mockResolvedValueOnce({ id: "cierre1" });
+    mockCountMovimiento.mockResolvedValueOnce(5);
+    render(await AdminDashboardPage());
+    expect(screen.queryByText(/sin cerrar/)).not.toBeInTheDocument();
+  });
+
+  it("consulta el cierre y los movimientos del mes calendario anterior al actual", async () => {
+    const now = new Date();
+    const mesAnteriorFecha = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    render(await AdminDashboardPage());
+    expect(mockFindUniqueCierre).toHaveBeenCalledWith({
+      where: { mes_anio: { mes: mesAnteriorFecha.getMonth() + 1, anio: mesAnteriorFecha.getFullYear() } },
+    });
+    const call = mockCountMovimiento.mock.calls[0][0];
+    expect(call.where.fecha.gte).toEqual(mesAnteriorFecha);
   });
 
   // ── Agenda del día ────────────────────────────────────────────────────

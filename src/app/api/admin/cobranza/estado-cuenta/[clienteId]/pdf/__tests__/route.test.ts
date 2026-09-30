@@ -12,7 +12,7 @@ const { mockGetAdminUser, mockFindUniqueCliente, mockFindManyAcuerdo, mockRender
     mockFindUniqueCliente: vi.fn(),
     mockFindManyAcuerdo: vi.fn(),
     mockRenderToBuffer: vi.fn().mockResolvedValue(Buffer.from("pdf-bytes")),
-    mockEstadoCuentaDocument: vi.fn(() => "document-element"),
+    mockEstadoCuentaDocument: vi.fn((_props: unknown) => "document-element"),
   }));
 
 vi.mock("@/lib/db", () => ({
