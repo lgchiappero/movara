@@ -4,19 +4,13 @@ export const structure: StructureResolver = (S) =>
   S.list()
     .title('MOVARA CMS')
     .items([
+      // MOVARA Flex ya no es un singleton aparte — es un documento más
+      // dentro de "Modelos" (slug "movara-flex"), así puede ordenarse
+      // junto al resto vía el campo "order".
       S.listItem()
         .id('modelos')
         .title('Modelos')
         .child(S.documentTypeList('modelo').title('Modelos')),
-
-      S.listItem()
-        .title('Página MOVARA Flex')
-        .child(
-          S.document()
-            .schemaType('flexPage')
-            .documentId('flexPage')
-            .title('Página MOVARA Flex'),
-        ),
 
       S.listItem()
         .title('Testimonios')

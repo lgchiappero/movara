@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { MODELS, getModel, type ProductModel } from "@/data/models";
 import { client } from "@/sanity/lib/client";
-import { MODELO_BY_SLUG_QUERY, MODELO_SLUGS_QUERY } from "@/sanity/lib/queries";
+import { MODELO_BY_SLUG_QUERY, MODELO_SLUGS_QUERY, FLEX_MODELO_SLUG } from "@/sanity/lib/queries";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import ImageGallery from "@/components/detail/ImageGallery";
 import FloorPlan from "@/components/detail/FloorPlan";
@@ -39,6 +39,10 @@ export async function generateStaticParams() {
   try {
     const slugs = await client.fetch<{ slug: string }[]>(MODELO_SLUGS_QUERY);
     const all = new Set([...MODELS.map((m) => m.slug), ...slugs.map((s) => s.slug)]);
+    // MOVARA Flex tiene su propia página dedicada en /modelos/flex (ver
+    // redirect más abajo) — no generar también /modelos/movara-flex como
+    // una segunda URL en paralelo para el mismo modelo.
+    all.delete(FLEX_MODELO_SLUG);
     return [...all].map((slug) => ({ slug }));
   } catch {
     return MODELS.map((m) => ({ slug: m.slug }));
@@ -57,6 +61,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ModelDetailPage({ params }: Props) {
   const { slug } = await params;
+  // MOVARA Flex vive en /modelos/flex (página dedicada, no la genérica) —
+  // cualquier link viejo o directo a /modelos/movara-flex redirige ahí.
+  if (slug === FLEX_MODELO_SLUG) redirect("/modelos/flex");
   const model = await getModeloBySlug(slug);
   if (!model) notFound();
 

@@ -18,6 +18,7 @@ export const modeloType = defineType({
     { name: 'dimensiones', title: 'Dimensiones e incluidos' },
     { name: 'media', title: 'Fotos y multimedia' },
     { name: 'especificaciones', title: 'Especificaciones' },
+    { name: 'precio', title: 'Precio' },
     { name: 'marketing', title: 'Marketing y visibilidad' },
   ],
   fields: [
@@ -42,6 +43,13 @@ export const modeloType = defineType({
       title: 'Tagline',
       type: 'string',
       description: 'Una línea corta que resume el modelo',
+      group: 'identificacion',
+    }),
+    defineField({
+      name: 'ctaPrimario',
+      title: 'Texto del botón principal',
+      type: 'string',
+      description: 'Ej: "Quiero este modelo". Si se deja vacío, la página usa un texto por defecto.',
       group: 'identificacion',
     }),
     defineField({
@@ -227,6 +235,22 @@ export const modeloType = defineType({
       ],
     }),
     defineField({
+      name: 'specsClave',
+      title: 'Specs técnicas clave (siempre visibles)',
+      type: 'array',
+      group: 'especificaciones',
+      description: 'Lista corta de specs destacadas para la ficha del modelo (ej: 6-8 puntos).',
+      of: [defineArrayMember({ type: 'string' })],
+    }),
+    defineField({
+      name: 'extrasDisponibles',
+      title: 'Extras disponibles (lista simple, sin precio)',
+      type: 'array',
+      group: 'especificaciones',
+      description: 'Ej: Color exterior, Tipo de piso, Kit solar.',
+      of: [defineArrayMember({ type: 'string' })],
+    }),
+    defineField({
       name: 'specs',
       title: 'Especificaciones fijas (legado)',
       type: 'object',
@@ -242,6 +266,21 @@ export const modeloType = defineType({
         defineField({ name: 'tiempo', title: 'Tiempo de obra', type: 'string' }),
         defineField({ name: 'garantia', title: 'Garantía', type: 'string' }),
       ],
+    }),
+
+    // ── Precio ────────────────────────────────────────────────
+    defineField({
+      name: 'precioPorM2',
+      title: 'Precio por m² (USD)',
+      type: 'number',
+      group: 'precio',
+    }),
+    defineField({
+      name: 'precioNota',
+      title: 'Nota aclaratoria bajo el precio',
+      type: 'string',
+      group: 'precio',
+      description: 'Ej: "El precio final depende de la configuración, los extras y la zona de instalación."',
     }),
 
     // ── Marketing y visibilidad ──────────────────────────────

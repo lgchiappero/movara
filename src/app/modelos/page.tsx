@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { client } from "@/sanity/lib/client";
-import { MODELOS_QUERY, FLEX_CARD_QUERY } from "@/sanity/lib/queries";
+import { MODELOS_QUERY, FLEX_CARD_QUERY, FLEX_MODELO_SLUG } from "@/sanity/lib/queries";
 import { type ProductModel } from "@/data/models";
 import CatalogGrid from "@/components/catalog/CatalogGrid";
 import FlexFeatureCard, { type FlexCardData } from "@/components/modelos/FlexFeatureCard";
@@ -13,19 +13,18 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-// "MOVARA Flex" existe como documento "modelo" (para poder ordenarse junto
-// al resto vía el campo "order") pero en esta página ya se muestra aparte,
-// como tarjeta destacada fija (ver FlexFeatureCard/FLEX_CARD_QUERY más
-// abajo) — se filtra acá para no duplicarlo en la grilla.
-const FLEX_SLUG = "movara-flex";
-
 // Sin fallback a datos hardcodeados: el catálogo muestra exactamente lo que
 // hay en Sanity. Si la consulta falla o no hay modelos cargados, se muestra
 // vacío en vez de sustituir con contenido de ejemplo.
+//
+// "MOVARA Flex" es un documento "modelo" más (para poder ordenarse junto
+// al resto vía el campo "order") pero en esta página ya se muestra aparte,
+// como tarjeta destacada fija (ver FlexFeatureCard/FLEX_CARD_QUERY más
+// abajo) — se filtra acá para no duplicarlo en la grilla.
 async function getModelos(): Promise<ProductModel[]> {
   try {
     const data = await client.fetch<ProductModel[]>(MODELOS_QUERY);
-    return Array.isArray(data) ? data.filter((m) => m.slug !== FLEX_SLUG) : [];
+    return Array.isArray(data) ? data.filter((m) => m.slug !== FLEX_MODELO_SLUG) : [];
   } catch {
     return [];
   }

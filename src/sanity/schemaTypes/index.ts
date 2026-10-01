@@ -9,7 +9,6 @@ import { configuradorModelosType } from './configuradorModelosType'
 import { modelosPageType } from './modelosPageType'
 import { quienesSomosType } from './quienesSomosType'
 import { faqPageType } from './faqPageType'
-import { flexPageType } from './flexPageType'
 import { blockContentType } from './blockContentType'
 import { categoryType } from './categoryType'
 import { postType } from './postType'
@@ -27,7 +26,6 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     modelosPageType,
     quienesSomosType,
     faqPageType,
-    flexPageType,
     // Blog (reservado para futuro)
     postType,
     categoryType,
