@@ -4,11 +4,12 @@ import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import * as XLSX from "xlsx";
 import {
-  ESTADO_PLAN_UNIDAD_LABELS,
+  ESTADO_PLAN_UNIDAD_LABELS as ESTADO_LABELS_COBRO,
   ESTADO_PLAN_UNIDAD_COLORS,
   FILTRO_ESTADO_OPTIONS,
-  FILTRO_ESTADO_LABELS,
+  FILTRO_ESTADO_LABELS as FILTRO_LABELS_COBRO,
   cumpleFiltroEstado,
+  type EstadoPlanUnidad,
   type FilaPlanUnidad,
   type FiltroEstadoPlan,
 } from "@/lib/cobranza/planes-unidad";
@@ -18,6 +19,23 @@ import DetallePlanesUnidad, { TEXTOS_TIPO } from "@/components/admin/planes/Deta
 import type { AccionesPlanes } from "@/components/admin/planes/useAccionesPlanes";
 
 type FiltroMoneda = "USD" | "ARS" | "todos";
+
+// En Pagos no hay planes con cuotas sino pagos directos — mismos estados,
+// con el vocabulario de pagos.
+const ESTADO_LABELS_PAGO: Record<EstadoPlanUnidad, string> = {
+  sin_plan: "Sin pagos",
+  pendiente: "Pendiente",
+  en_curso: "Parcial",
+  saldado: "Pagado",
+};
+const FILTRO_LABELS_PAGO: Record<FiltroEstadoPlan, string> = {
+  ...FILTRO_LABELS_COBRO,
+  sin_plan: "Sin pagos",
+  en_curso: "Parcial",
+  saldado: "Pagado",
+  vencidas: "Con pagos vencidos",
+  semana: "Vencen esta semana",
+};
 
 const PAGE_SIZE = 50;
 
@@ -49,6 +67,8 @@ export default function PlanesUnidadGrid({
 }) {
   const esCobro = tipo === "cobro";
   const t = TEXTOS_TIPO[tipo];
+  const ESTADO_PLAN_UNIDAD_LABELS = esCobro ? ESTADO_LABELS_COBRO : ESTADO_LABELS_PAGO;
+  const FILTRO_ESTADO_LABELS = esCobro ? FILTRO_LABELS_COBRO : FILTRO_LABELS_PAGO;
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstadoPlan>(estadoInicial);
   const [filtroMoneda, setFiltroMoneda] = useState<FiltroMoneda>(monedaInicial ?? "todos");
   const [busqueda, setBusqueda] = useState("");
@@ -279,10 +299,10 @@ export default function PlanesUnidadGrid({
                           onClick={() => acciones.abrirNuevoPlan(f.unidad.id)}
                           className="text-sage-600 hover:text-sage-700 font-bold text-xs mr-3"
                         >
-                          {esCobro ? "Crear plan" : "+ Plan"}
+                          {esCobro ? "Crear plan" : "+ Pago"}
                         </button>
                       ) : null}
-                      {conSaldo.length > 0 && (
+                      {esCobro && conSaldo.length > 0 && (
                         <button
                           type="button"
                           onClick={() =>

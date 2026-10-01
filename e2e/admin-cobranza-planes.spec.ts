@@ -98,9 +98,24 @@ test.describe("Cobranza — plan de pago por unidad", () => {
     await fila.getByText(nombre).click();
     const detalle = page.getByTestId(`detalle-${unidadId}|USD`);
     await expect(detalle).toContainText("Venta Flex 38 en 3 cuotas");
-    await expect(detalle).toContainText("Valor total unidad");
+    await expect(detalle).toContainText("Valor de la unidad: USD 24.700");
     await expect(detalle).toContainText("Pagos recibidos");
     await expect(detalle.locator("tr", { hasText: "Anticipo 30%" }).first()).toContainText("Pagado");
+
+    // ── Editar el plan: cambiar el total y agregar una cuota ───────────
+    await detalle.getByRole("button", { name: "Editar plan" }).click();
+    await expect(page.getByRole("heading", { name: "Editar plan de pago" })).toBeVisible();
+    // El anticipo ya tiene pagos → no se puede eliminar (las demás sí).
+    const cuotaPagada = page.getByText("Pagado USD 7.410").locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]");
+    await expect(cuotaPagada.getByRole("button", { name: /Eliminar cuota/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Eliminar cuota/ })).toHaveCount(3);
+    await page.getByLabel(/Total acordado/).fill("26000");
+    await page.getByRole("button", { name: "+ Agregar cuota" }).click();
+    await page.getByLabel("Descripción de la cuota 5").fill("Ajuste");
+    await page.getByLabel("Importe de la cuota 5").fill("1300");
+    await page.getByRole("button", { name: "Guardar cambios" }).click();
+    await expect(page.getByText("Plan de pago actualizado")).toBeVisible();
+    await expect(fila).toContainText("USD 18.590"); // nuevo saldo: 26000 - 7410
 
     // ── Un solo plan por unidad: el modal no la ofrece ──────────────────
     await page.getByRole("button", { name: "+ Nuevo plan de pago" }).first().click();
@@ -108,5 +123,15 @@ test.describe("Cobranza — plan de pago por unidad", () => {
     await buscador.click();
     await buscador.fill(nombre);
     await expect(page.getByText("Ninguna unidad sin plan coincide")).toBeVisible();
+
+    await page.getByRole("button", { name: "Cancelar" }).click();
+
+    // ── Eliminar el plan completo, con sus pagos ────────────────────────
+    await detalle.getByRole("button", { name: "Eliminar plan" }).click();
+    const dialogo = page.getByText("¿Eliminar el plan de pago completo?").locator("..");
+    await expect(dialogo).toContainText("los 1 pago recibido registrado");
+    await dialogo.getByRole("button", { name: "Eliminar", exact: true }).click();
+    await expect(page.getByText("Plan eliminado")).toBeVisible();
+    await expect(fila).toContainText("Sin plan");
   });
 });

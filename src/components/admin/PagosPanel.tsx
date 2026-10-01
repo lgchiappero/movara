@@ -10,8 +10,8 @@ function formatMoneda(value: number, moneda: string): string {
   return `${moneda} ${value.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
 }
 
-/** Pagos a proveedores — misma lógica que Cobranza, dirección opuesta:
- * planes de pago por unidad + proveedor, y pagos realizados sobre ellos. */
+/** Pagos a proveedores — dinero que sale. Vista por unidad (total, pagado,
+ * pendiente) con los pagos directos a cada proveedor. */
 export default function PagosPanel({
   filas,
   unidades,
@@ -50,7 +50,7 @@ export default function PagosPanel({
         <Tarjeta label="Unidades con pagos completos este mes" href="/admin/pagos?estado=saldado">
           <p className="text-2xl font-bold text-emerald-700">{metricas.unidadesCompletasMes}</p>
         </Tarjeta>
-        <Tarjeta label="Unidades con cuotas vencidas" href="/admin/pagos?estado=vencidas">
+        <Tarjeta label="Unidades con pagos vencidos" href="/admin/pagos?estado=vencidas">
           <p className={`text-2xl font-bold ${metricas.unidadesConVencidas > 0 ? "text-red-700" : "text-[#2F2F2F]"}`}>
             {metricas.unidadesConVencidas}
           </p>

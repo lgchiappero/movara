@@ -40,7 +40,7 @@ function renderModal(props: Partial<Parameters<typeof NuevoPlanPagoModal>[0]> = 
   const onCreated = vi.fn();
   render(
     <ToastProvider>
-      <NuevoPlanPagoModal tipo="cobro" unidades={UNIDADES} onClose={() => {}} onCreated={onCreated} {...props} />
+      <NuevoPlanPagoModal unidades={UNIDADES} onClose={() => {}} onCreated={onCreated} {...props} />
     </ToastProvider>
   );
   return { user, onCreated };
@@ -52,7 +52,7 @@ async function elegirUnidad(user: ReturnType<typeof userEvent.setup>, numero: st
   await user.click(screen.getByRole("button", { name: new RegExp(numero) }));
 }
 
-const contraparte = () => screen.getByLabelText(/^(Cliente|Proveedor)$/) as HTMLInputElement;
+const contraparte = () => screen.getByLabelText("Cliente") as HTMLInputElement;
 const total = () => screen.getByLabelText(/Total acordado/) as HTMLInputElement;
 const descripcionPlan = () => screen.getByLabelText("Descripción") as HTMLInputElement;
 const descCuota = (n: number) => screen.getByLabelText(`Descripción de la cuota ${n}`) as HTMLInputElement;
@@ -145,12 +145,6 @@ describe("NuevoPlanPagoModal — un solo plan de pago por unidad", () => {
     renderModal({ unidadIdInicial: "u3" });
     expect(screen.getByText(/ya tiene un plan de pago/)).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("en pagos a proveedores sí se ofrecen (puede haber varios planes por unidad)", async () => {
-    const { user } = renderModal({ tipo: "pago" });
-    await user.click(screen.getByPlaceholderText("Buscar por N° de unidad o cliente..."));
-    expect(screen.getByRole("button", { name: /MOV-UNIDAD-2026-003/ })).toBeInTheDocument();
   });
 });
 
@@ -290,54 +284,5 @@ describe("NuevoPlanPagoModal — validación y alta", () => {
     fetchMock.mockRejectedValueOnce(new TypeError("network"));
     await user.click(screen.getByRole("button", { name: "Crear plan de pago" }));
     expect(await screen.findAllByText("No pudimos crear el plan de pago. Probá de nuevo.")).not.toHaveLength(0);
-  });
-});
-
-describe("NuevoPlanPagoModal — pagos a proveedores", () => {
-  it("pide proveedor y concepto, sin autocompletar desde la unidad", async () => {
-    const { user } = renderModal({ tipo: "pago" });
-    expect(screen.getByRole("heading", { name: "Nuevo plan de pago a proveedor" })).toBeInTheDocument();
-    await elegirUnidad(user, "MOV-UNIDAD-2026-001");
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(contraparte().value).toBe("");
-    expect(total().value).toBe("");
-  });
-
-  it("ofrece los 9 conceptos de pago y precompleta su descripción sin pisar texto propio", async () => {
-    const { user } = renderModal({ tipo: "pago" });
-    const concepto = screen.getByLabelText("Concepto") as HTMLSelectElement;
-    expect(Array.from(concepto.options).map((o) => o.text)).toEqual([
-      "Fábrica",
-      "Flete",
-      "Aduana",
-      "Despachante",
-      "Transporte local",
-      "Grúa",
-      "Impuestos",
-      "Seguro",
-      "Otro",
-    ]);
-    expect(descripcionPlan().value).toBe("Primera cuota fábrica");
-    await user.selectOptions(concepto, "seguro");
-    expect(descripcionPlan().value).toBe("Seguro de carga");
-    await user.clear(descripcionPlan());
-    await user.type(descripcionPlan(), "Póliza La Caja");
-    await user.selectOptions(concepto, "flete");
-    expect(descripcionPlan().value).toBe("Póliza La Caja");
-  });
-
-  it("crea el plan con el proveedor y el concepto elegidos", async () => {
-    const { user, onCreated } = renderModal({ tipo: "pago" });
-    await elegirUnidad(user, "MOV-UNIDAD-2026-001");
-    await user.type(contraparte(), "Naviera Sur");
-    await user.selectOptions(screen.getByLabelText("Concepto"), "flete");
-    await user.type(total(), "3200");
-    await user.type(importeCuota(1), "3200");
-    expect(within(screen.getByLabelText("Resumen del plan")).getByText(/Naviera Sur · Flete · Anticipo/)).toBeInTheDocument();
-    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, id: "p1" }), { status: 201 }));
-    await user.click(screen.getByRole("button", { name: "Crear plan de pago" }));
-    await waitFor(() => expect(onCreated).toHaveBeenCalled());
-    const body = JSON.parse(fetchMock.mock.calls.find((c) => c[0] === "/api/admin/cobranza/acuerdos")![1].body);
-    expect(body).toMatchObject({ tipo: "pago", contraparte: "Naviera Sur", concepto: "flete", descripcion: "Flete internacional" });
   });
 });

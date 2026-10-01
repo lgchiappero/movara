@@ -40,18 +40,30 @@ const PLAN: AcuerdoConDetalle = {
   movimientos: [PAGO],
 };
 
-function Harness({ onAcciones }: { onAcciones: (a: AccionesPlanes) => void }) {
-  const r = useAccionesPlanes({ tipo: "cobro", unidades: [{ id: "u1", numeroUnidad: "MOV-1", clienteNombre: "Ana" }] });
+function Harness({ onAcciones, tipo = "cobro" }: { onAcciones: (a: AccionesPlanes) => void; tipo?: "cobro" | "pago" }) {
+  const r = useAccionesPlanes({ tipo, unidades: [{ id: "u1", numeroUnidad: "MOV-1", clienteNombre: "Ana" }] });
   onAcciones(r.acciones);
   return (
     <>
       <button onClick={() => r.acciones.abrirNuevoPlan("u1")}>nuevo</button>
       <button onClick={() => r.acciones.abrirRegistrarPago(PLAN)}>registrar</button>
       <button onClick={() => r.acciones.abrirEditarPago(PLAN, PAGO)}>editar</button>
+      <button onClick={() => r.acciones.abrirEditarPlan(tipo === "pago" ? PAGO_PROVEEDOR : PLAN)}>editar plan</button>
       {r.modales}
     </>
   );
 }
+
+const PAGO_PROVEEDOR: AcuerdoConDetalle = {
+  ...PLAN,
+  id: "p1",
+  tipo: "pago",
+  concepto: "flete",
+  contraparte: "Naviera Sur",
+  totalAcordado: 3200,
+  cuotas: [{ id: "c1", descripcion: "Flete", importe: 3200, vencimiento: "2026-10-01T00:00:00.000Z", estado: "pendiente" }],
+  movimientos: [],
+};
 
 const fetchMock = vi.fn();
 beforeEach(() => {
@@ -61,12 +73,12 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-function renderHarness() {
+function renderHarness(tipo: "cobro" | "pago" = "cobro") {
   const user = userEvent.setup();
   const capturadas: AccionesPlanes[] = [];
   render(
     <ToastProvider>
-      <Harness onAcciones={(a) => capturadas.push(a)} />
+      <Harness tipo={tipo} onAcciones={(a) => capturadas.push(a)} />
     </ToastProvider>
   );
   return { user, acciones: () => capturadas[capturadas.length - 1] };
@@ -114,5 +126,57 @@ describe("useAccionesPlanes", () => {
 
     fetchMock.mockRejectedValueOnce(new TypeError("network"));
     expect(await acciones.eliminarPlan(PLAN)).toEqual({ ok: false, error: "No pudimos eliminar. Probá de nuevo." });
+  });
+
+  it("cobro: 'editar plan' abre el modal de edición del plan", async () => {
+    const { user } = renderHarness();
+    await user.click(screen.getByText("editar plan"));
+    expect(screen.getByRole("heading", { name: "Editar plan de pago" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+    expect(screen.queryByRole("heading", { name: "Editar plan de pago" })).not.toBeInTheDocument();
+  });
+
+  it("pago: 'nuevo' abre 'Nuevo pago a proveedor' (sin cuotas) y 'editar plan' lo abre en modo edición", async () => {
+    const { user } = renderHarness("pago");
+    await user.click(screen.getByText("nuevo"));
+    expect(screen.getByRole("heading", { name: "Nuevo pago a proveedor" })).toBeInTheDocument();
+    expect(screen.queryByText("+ Agregar cuota")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+
+    await user.click(screen.getByText("editar plan"));
+    expect(screen.getByRole("heading", { name: "Editar pago a proveedor" })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Naviera Sur")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+    expect(screen.queryByRole("heading", { name: "Editar pago a proveedor" })).not.toBeInTheDocument();
+  });
+
+  it("pago: guardar el pago refresca y cierra el modal", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const { user } = renderHarness("pago");
+    await user.click(screen.getByText("editar plan"));
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+    expect(screen.queryByRole("heading", { name: "Editar pago a proveedor" })).not.toBeInTheDocument();
+  });
+
+  it("cobro: guardar el plan editado refresca y cierra el modal", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const { user } = renderHarness();
+    await user.click(screen.getByText("editar plan"));
+    await user.click(screen.getByRole("button", { name: "+ Agregar cuota" }));
+    await user.type(screen.getByLabelText("Importe de la cuota 1"), "1000");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+  });
+
+  it("pago: guardar un pago nuevo refresca y cierra el modal", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ ok: true, id: "p9" }), { status: 201 }));
+    const { user } = renderHarness("pago");
+    await user.click(screen.getByText("nuevo"));
+    await user.type(screen.getByLabelText("Proveedor"), "Heshi");
+    await user.type(screen.getByLabelText("Importe"), "9000");
+    await user.click(screen.getByRole("button", { name: "Registrar pago" }));
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+    expect(screen.queryByRole("heading", { name: "Nuevo pago a proveedor" })).not.toBeInTheDocument();
   });
 });

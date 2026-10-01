@@ -5,11 +5,16 @@ import { useRouter } from "next/navigation";
 import NuevoPlanPagoModal from "@/components/admin/NuevoPlanPagoModal";
 import RegistrarMovimientoModal from "@/components/admin/RegistrarMovimientoModal";
 import EditarMovimientoModal from "@/components/admin/EditarMovimientoModal";
+import EditarPlanModal from "@/components/admin/EditarPlanModal";
+import PagoProveedorModal from "@/components/admin/PagoProveedorModal";
 import type { AcuerdoConDetalle, MovimientoDetalle, UnidadOpcion } from "@/lib/cobranza/types";
 import type { TipoAcuerdo } from "@/lib/cobranza/constantes";
 
 export type AccionesPlanes = {
+  /** Cobranza: nuevo plan de pago. Pagos: nuevo pago a proveedor. */
   abrirNuevoPlan: (unidadId?: string) => void;
+  /** Cobranza: editar el plan. Pagos: editar el pago a proveedor. */
+  abrirEditarPlan: (plan: AcuerdoConDetalle) => void;
   abrirRegistrarPago: (plan: AcuerdoConDetalle) => void;
   abrirEditarPago: (plan: AcuerdoConDetalle, pago: MovimientoDetalle) => void;
   eliminarPago: (plan: AcuerdoConDetalle, pago: MovimientoDetalle) => Promise<{ ok: boolean; error?: string }>;
@@ -39,11 +44,13 @@ export function useAccionesPlanes({
 }): { acciones: AccionesPlanes; modales: React.ReactNode } {
   const router = useRouter();
   const [nuevoPlan, setNuevoPlan] = useState<{ unidadId?: string } | null>(null);
+  const [editarPlan, setEditarPlan] = useState<AcuerdoConDetalle | null>(null);
   const [registrar, setRegistrar] = useState<AcuerdoConDetalle | null>(null);
   const [editar, setEditar] = useState<{ plan: AcuerdoConDetalle; pago: MovimientoDetalle } | null>(null);
 
   const acciones: AccionesPlanes = {
     abrirNuevoPlan: (unidadId) => setNuevoPlan({ unidadId }),
+    abrirEditarPlan: (plan) => setEditarPlan(plan),
     abrirRegistrarPago: (plan) => setRegistrar(plan),
     abrirEditarPago: (plan, pago) => setEditar({ plan, pago }),
     eliminarPago: (plan, pago) => borrar(`/api/admin/cobranza/acuerdos/${plan.id}/movimientos/${pago.id}`),
@@ -57,13 +64,35 @@ export function useAccionesPlanes({
 
   const modales = (
     <>
-      {nuevoPlan && (
+      {nuevoPlan && tipo === "cobro" && (
         <NuevoPlanPagoModal
-          tipo={tipo}
           unidades={unidades}
           unidadIdInicial={nuevoPlan.unidadId}
           onClose={() => setNuevoPlan(null)}
           onCreated={() => cerrarYRefrescar(() => setNuevoPlan(null))}
+        />
+      )}
+      {nuevoPlan && tipo === "pago" && (
+        <PagoProveedorModal
+          unidades={unidades}
+          unidadIdInicial={nuevoPlan.unidadId}
+          onClose={() => setNuevoPlan(null)}
+          onSaved={() => cerrarYRefrescar(() => setNuevoPlan(null))}
+        />
+      )}
+      {editarPlan && tipo === "cobro" && (
+        <EditarPlanModal
+          plan={editarPlan}
+          onClose={() => setEditarPlan(null)}
+          onSaved={() => cerrarYRefrescar(() => setEditarPlan(null))}
+        />
+      )}
+      {editarPlan && tipo === "pago" && (
+        <PagoProveedorModal
+          unidades={unidades}
+          pago={editarPlan}
+          onClose={() => setEditarPlan(null)}
+          onSaved={() => cerrarYRefrescar(() => setEditarPlan(null))}
         />
       )}
       {registrar && (

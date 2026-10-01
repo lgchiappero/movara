@@ -1,24 +1,20 @@
 import { test, expect } from "@playwright/test";
 import { loginAsAdmin } from "./helpers/login";
 
-// Pagos a proveedores: misma lógica que Cobranza, dirección opuesta. Setup
-// de cliente + unidad vía API; plan a proveedor y pago realizado por la UI.
-test.describe("Pagos — plan de pago a proveedor por unidad", () => {
+// Pagos a proveedores: registros directos (sin plan de cuotas). Setup de
+// cliente + unidad vía API; alta, edición y baja de pagos por la UI.
+test.describe("Pagos — pago directo a proveedor", () => {
   let clienteId: string;
   let unidadId: string;
   let nombre: string;
-  let planes: string[];
-  let pagos: { plan: string; id: string }[];
+  let pagos: string[];
 
   test.beforeEach(async ({ page }) => {
-    planes = [];
     pagos = [];
     page.on("response", async (r) => {
-      if (r.request().method() !== "POST" || !r.ok()) return;
-      const planCreado = r.url().match(/\/api\/admin\/cobranza\/acuerdos$/);
-      const pagoCreado = r.url().match(/\/api\/admin\/cobranza\/acuerdos\/([^/]+)\/movimientos$/);
-      if (planCreado) planes.push((await r.json()).id);
-      if (pagoCreado) pagos.push({ plan: pagoCreado[1], id: (await r.json()).id });
+      if (r.request().method() === "POST" && r.ok() && /\/api\/admin\/pagos$/.test(r.url())) {
+        pagos.push((await r.json()).id);
+      }
     });
     await loginAsAdmin(page);
     nombre = `Cliente E2E Pagos ${Date.now()}`;
@@ -35,60 +31,71 @@ test.describe("Pagos — plan de pago a proveedor por unidad", () => {
   });
 
   test.afterEach(async ({ page }) => {
-    for (const p of pagos) await page.request.delete(`/api/admin/cobranza/acuerdos/${p.plan}/movimientos/${p.id}`);
-    for (const id of planes) await page.request.delete(`/api/admin/cobranza/acuerdos/${id}`);
+    for (const id of pagos) await page.request.delete(`/api/admin/cobranza/acuerdos/${id}`);
     await page.request.delete(`/api/admin/unidades/${unidadId}`);
     await page.request.delete(`/api/admin/clientes/${clienteId}`);
   });
 
-  test("dos proveedores para la misma unidad, pago realizado y saldo por unidad", async ({ page }) => {
+  test("registrar pagos (pagado y pendiente), editarlos, y eliminarlos", async ({ page }) => {
     await page.goto("/admin/pagos");
     const fila = page.locator("tr", { hasText: nombre }).first();
-    await expect(fila).toContainText("Sin plan");
+    await expect(fila).toContainText("Sin pagos");
 
-    // Plan a fábrica
-    await fila.getByRole("button", { name: "+ Plan" }).click();
-    await expect(page.getByRole("heading", { name: "Nuevo plan de pago a proveedor" })).toBeVisible();
-    await page.getByLabel("Proveedor", { exact: true }).fill("Heshi");
-    await expect(page.getByLabel("Descripción", { exact: true })).toHaveValue("Primera cuota fábrica");
-    await page.getByLabel(/Total acordado/).fill("30000");
-    await page.getByLabel("Importe de la cuota 1").fill("9000");
-    await page.getByRole("button", { name: "+ Agregar cuota" }).click();
-    await page.getByLabel("Tipo de la cuota 2").selectOption("saldo");
-    await page.getByLabel("Importe de la cuota 2").fill("21000");
-    await page.getByRole("button", { name: "Crear plan de pago" }).click();
-    await expect(page.getByText("Plan de pago creado")).toBeVisible();
+    // ── Pago pagado a fábrica ───────────────────────────────────────────
+    await fila.getByRole("button", { name: "+ Pago" }).click();
+    await expect(page.getByRole("heading", { name: "Nuevo pago a proveedor" })).toBeVisible();
+    await expect(page.getByText("+ Agregar cuota")).toHaveCount(0);
+    await page.getByLabel("Proveedor").fill("Heshi");
+    await expect(page.getByLabel("Descripción")).toHaveValue("Primera cuota fábrica");
+    await page.getByLabel("Importe").fill("9000");
+    await page.getByLabel("Fecha de pago").fill("2026-09-10");
+    await page.getByRole("button", { name: "Registrar pago" }).click();
+    await expect(page.getByText("Pago a proveedor registrado")).toBeVisible();
 
-    // Segundo proveedor (seguro) en la misma unidad — permitido en pagos
-    await fila.getByRole("button", { name: "+ Plan" }).click();
-    await page.getByLabel("Proveedor", { exact: true }).fill("La Caja");
+    // ── Pago pendiente de seguro, más reciente ─────────────────────────
+    await fila.getByRole("button", { name: "+ Pago" }).click();
+    await page.getByLabel("Proveedor").fill("La Caja");
     await page.getByLabel("Concepto").selectOption("seguro");
-    await page.getByLabel(/Total acordado/).fill("500");
-    await page.getByLabel("Tipo de la cuota 1").selectOption("saldo");
-    await page.getByLabel("Importe de la cuota 1").fill("500");
-    await page.getByRole("button", { name: "Crear plan de pago" }).click();
-    await expect(page.getByText("Plan de pago creado")).toBeVisible();
+    await page.getByLabel("Importe").fill("500");
+    await page.getByLabel("Fecha de pago").fill("2026-12-01");
+    await page.getByRole("group", { name: "Estado" }).getByText("Pendiente").click();
+    await page.getByRole("button", { name: "Registrar pago" }).click();
+    await expect(page.getByText("Pago a proveedor registrado")).toBeVisible();
 
     await expect(fila).toContainText("Heshi");
     await expect(fila).toContainText("La Caja");
-    await expect(fila).toContainText("USD 30.500");
+    await expect(fila).toContainText("USD 9.500"); // total
+    await expect(fila).toContainText("USD 9.000"); // pagado
+    await expect(fila).toContainText("Parcial");
 
-    // Pago realizado a fábrica desde el detalle
+    // ── Detalle: del más reciente al más viejo ──────────────────────────
     await fila.getByText(nombre).click();
     const detalle = page.getByTestId(`detalle-${unidadId}|USD`);
-    await expect(detalle).toContainText("Heshi · Fábrica");
-    await expect(detalle).toContainText("Primera cuota fábrica");
-    await expect(detalle).toContainText("La Caja · Seguro");
-    await detalle
-      .locator("div.bg-white", { hasText: "Heshi · Fábrica" })
-      .getByRole("button", { name: "Registrar pago realizado" })
-      .click();
-    await page.getByLabel(/Cuota que salda/).selectOption({ label: "Anticipo — USD 9.000 — Pendiente" });
-    await page.getByRole("button", { name: "Registrar pago realizado" }).last().click();
-    await expect(page.getByText("Pago realizado registrado")).toBeVisible();
+    const filasPagos = detalle.locator("tbody tr");
+    await expect(filasPagos.nth(0)).toContainText("La Caja");
+    await expect(filasPagos.nth(0)).toContainText("Pendiente");
+    await expect(filasPagos.nth(1)).toContainText("Heshi");
+    await expect(filasPagos.nth(1)).toContainText("Pagado");
 
-    await expect(fila).toContainText("En curso");
-    await expect(fila).toContainText("USD 9.000"); // pagado
-    await expect(fila).toContainText("USD 21.500"); // pendiente de la unidad
+    // ── Editar: el seguro pasa a pagado ─────────────────────────────────
+    await filasPagos.nth(0).getByRole("button", { name: "Editar" }).click();
+    await expect(page.getByRole("heading", { name: "Editar pago a proveedor" })).toBeVisible();
+    await page.getByRole("group", { name: "Estado" }).getByText("Pagado").click();
+    await page.getByLabel("Fecha de pago").fill("2026-10-01");
+    await page.getByRole("button", { name: "Guardar cambios" }).click();
+    await expect(page.getByText("Pago actualizado")).toBeVisible();
+    await expect(fila).toContainText("Pagado");
+    await expect(fila.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+
+    // ── Eliminar el pago de fábrica ─────────────────────────────────────
+    await detalle.locator("tbody tr", { hasText: "Heshi" }).getByRole("button", { name: "Eliminar" }).click();
+    await page
+      .getByText("¿Eliminar este pago a proveedor?")
+      .locator("..")
+      .getByRole("button", { name: "Eliminar", exact: true })
+      .click();
+    await expect(page.getByText("Pago eliminado")).toBeVisible();
+    await expect(fila).not.toContainText("Heshi");
+    await expect(fila).toContainText("USD 500");
   });
 });

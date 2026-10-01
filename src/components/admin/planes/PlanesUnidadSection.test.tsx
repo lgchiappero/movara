@@ -50,7 +50,7 @@ describe("PlanesUnidadSection", () => {
     expect(container.querySelector("#cobranza")).not.toBeNull();
     expect(screen.getByRole("heading", { name: "Cobranza" })).toBeInTheDocument();
     expect(screen.getByText("Venta financiada")).toBeInTheDocument();
-    expect(screen.getByText("Valor total unidad").nextElementSibling).toHaveTextContent("USD 24.700");
+    expect(screen.getByRole("region", { name: "Plan de pago" })).toHaveTextContent("Valor de la unidad: USD 24.700");
     // Ya tiene plan → no se ofrece crear otro.
     expect(screen.queryByRole("button", { name: "+ Nuevo plan de pago" })).not.toBeInTheDocument();
   });

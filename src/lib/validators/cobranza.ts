@@ -52,6 +52,50 @@ export const crearAcuerdoSchema = z
   });
 export type CrearAcuerdoInput = z.infer<typeof crearAcuerdoSchema>;
 
+/** Edición de un plan de pago existente: total, descripción y la lista
+ * completa de cuotas como debe quedar. Las cuotas con `id` son existentes
+ * (se actualizan); sin `id`, nuevas; las existentes que no vienen se
+ * eliminan (la API rechaza eliminar las que tienen pagos aplicados). */
+export const editarPlanSchema = z
+  .object({
+    totalAcordado: z.number().positive("El total acordado debe ser mayor a 0"),
+    descripcion: stringOrNull.optional(),
+    cuotas: z
+      .array(
+        cuotaInputSchema.extend({
+          id: z.string().min(1).optional(),
+        })
+      )
+      .min(1, "El plan necesita al menos una cuota"),
+  })
+  .superRefine((data, ctx) => {
+    const sumaCuotas = data.cuotas.reduce((acc, c) => acc + c.importe, 0);
+    if (Math.abs(sumaCuotas - data.totalAcordado) > EPSILON) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["cuotas"],
+        message: `La suma de las cuotas (${sumaCuotas}) debe coincidir con el total acordado (${data.totalAcordado})`,
+      });
+    }
+  });
+export type EditarPlanInput = z.infer<typeof editarPlanSchema>;
+
+/** Pago directo a proveedor (sin plan de cuotas) — alta y edición. Llega
+ * como multipart (por el comprobante), así que los números vienen como
+ * string y se coercionan acá. */
+export const pagoProveedorSchema = z.object({
+  proveedor: z.string().trim().min(1, "Falta el proveedor"),
+  concepto: z.enum(CONCEPTO_PAGO_OPTIONS, { message: "Concepto inválido" }),
+  descripcion: stringOrNull.optional(),
+  moneda: z.enum(MONEDA_OPTIONS),
+  importe: z.coerce.number().positive("El importe debe ser mayor a 0"),
+  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}/, "Falta la fecha del pago"),
+  estado: z.enum(["pagado", "pendiente"]),
+  modalidad: z.enum(MODALIDAD_OPTIONS).default("transferencia"),
+  notas: stringOrNull.optional(),
+});
+export type PagoProveedorInput = z.infer<typeof pagoProveedorSchema>;
+
 export const registrarMovimientoSchema = z.object({
   fecha: z.string().min(1, "Falta la fecha"),
   importe: z.number().positive("El importe debe ser mayor a 0"),

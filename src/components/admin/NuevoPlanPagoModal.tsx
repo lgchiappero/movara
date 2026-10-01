@@ -1,14 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  CONCEPTO_PAGO_OPTIONS,
-  CONCEPTO_LABELS,
-  DESCRIPCION_SUGERIDA,
-  MONEDA_OPTIONS,
-  type ConceptoPago,
-  type TipoAcuerdo,
-} from "@/lib/cobranza/constantes";
+import { MONEDA_OPTIONS } from "@/lib/cobranza/constantes";
 import {
   TIPO_CUOTA_OPTIONS,
   TIPO_CUOTA_LABELS,
@@ -53,32 +46,27 @@ function formatMonto(moneda: string, valor: number): string {
   return `${moneda} ${valor.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
 }
 
-/** Alta de un plan de pago:
- * - cobro (Cobranza): cómo va a pagar el cliente la unidad completa — uno
- *   solo por unidad; cliente y total se autocompletan desde la unidad.
- * - pago (Pagos): cuánto y cómo se le paga a un proveedor por esa unidad —
- *   puede haber varios por unidad (uno por proveedor/concepto). */
+/** Alta del plan de pago de una unidad (Cobranza): cómo va a pagar el
+ * cliente la unidad completa — uno solo por unidad; cliente y total se
+ * autocompletan desde la unidad. (Los pagos a proveedores no son planes:
+ * ver PagoProveedorModal.) */
 export default function NuevoPlanPagoModal({
-  tipo,
   unidades,
   unidadIdInicial,
   onClose,
   onCreated,
 }: {
-  tipo: TipoAcuerdo;
   unidades: UnidadOpcion[];
   unidadIdInicial?: string;
   onClose: () => void;
   onCreated: () => void;
 }) {
-  const esCobro = tipo === "cobro";
   const { showSuccess, showError } = useToast();
 
-  const unidadInicialConPlan = esCobro && unidades.find((u) => u.id === unidadIdInicial)?.tienePlanCobro === true;
+  const unidadInicialConPlan = unidades.find((u) => u.id === unidadIdInicial)?.tienePlanCobro === true;
   const [unidadId, setUnidadId] = useState(unidadInicialConPlan ? "" : (unidadIdInicial ?? ""));
   const [contraparte, setContraparte] = useState("");
-  const [concepto, setConcepto] = useState<ConceptoPago>("fabrica");
-  const [descripcion, setDescripcion] = useState(esCobro ? "" : DESCRIPCION_SUGERIDA.fabrica);
+  const [descripcion, setDescripcion] = useState("");
   const [moneda, setMoneda] = useState<"USD" | "ARS">("USD");
   const [totalAcordado, setTotalAcordado] = useState("");
   const [notas, setNotas] = useState("");
@@ -88,17 +76,17 @@ export default function NuevoPlanPagoModal({
   );
   const [busy, setBusy] = useState(false);
 
-  // Solo una unidad sin plan puede recibir un plan de cobranza nuevo.
-  const unidadesElegibles = esCobro ? unidades.filter((u) => !u.tienePlanCobro) : unidades;
+  // Solo una unidad sin plan puede recibir un plan nuevo.
+  const unidadesElegibles = unidades.filter((u) => !u.tienePlanCobro);
 
-  // ── Autocompletado desde la unidad (solo cobranza) ───────────────────
+  // ── Autocompletado desde la unidad ────────────────────────────────────
   // Id de la última unidad pedida — si el usuario cambia de unidad antes de
   // que llegue la respuesta anterior, esa respuesta se descarta.
   const ultimaUnidadPedida = useRef<string | null>(null);
 
   function autocompletarDesdeUnidad(id: string) {
     ultimaUnidadPedida.current = id;
-    if (!esCobro || !id) return;
+    if (!id) return;
     void fetchDatosUnidad(id).then((datos) => {
       if (!datos || ultimaUnidadPedida.current !== id) return;
       if (datos.clienteNombre) setContraparte(datos.clienteNombre);
@@ -116,16 +104,6 @@ export default function NuevoPlanPagoModal({
     if (unidadIdInicial && !unidadInicialConPlan) autocompletarDesdeUnidad(unidadIdInicial);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // ── Concepto (solo pagos) ─────────────────────────────────────────────
-  // La descripción se precompleta con el texto sugerido del concepto, pero
-  // solo si el admin no la editó.
-  function elegirConcepto(nuevo: ConceptoPago) {
-    if (!descripcion.trim() || descripcion === DESCRIPCION_SUGERIDA[concepto]) {
-      setDescripcion(DESCRIPCION_SUGERIDA[nuevo]);
-    }
-    setConcepto(nuevo);
-  }
 
   // ── Cuotas ─────────────────────────────────────────────────────────────
   function actualizarCuotas(fn: (prev: CuotaPlanForm[]) => CuotaPlanForm[]) {
@@ -148,7 +126,7 @@ export default function NuevoPlanPagoModal({
 
   function validar(): string | null {
     if (!unidadId) return "Elegí una unidad";
-    if (!contraparte.trim()) return esCobro ? "Falta el cliente" : "Falta el proveedor";
+    if (!contraparte.trim()) return "Falta el cliente";
     if (totalNum <= 0) return "El total acordado debe ser mayor a 0";
     if (cuotas.length === 0) return "Agregá al menos una cuota";
     if (cuotas.some((c) => !c.descripcion.trim())) return "Cada cuota necesita una descripción";
@@ -169,10 +147,10 @@ export default function NuevoPlanPagoModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tipo,
+          tipo: "cobro",
           unidadId,
           contraparte: contraparte.trim(),
-          concepto: esCobro ? "venta" : concepto,
+          concepto: "venta",
           descripcion: descripcion.trim() || null,
           moneda,
           totalAcordado: totalNum,
@@ -208,12 +186,8 @@ export default function NuevoPlanPagoModal({
         <div className="p-6 space-y-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">
-                {esCobro ? "Cobranza" : "Pagos"}
-              </p>
-              <h2 className="text-xl font-bold text-[#2F2F2F]">
-                {esCobro ? "Nuevo plan de pago" : "Nuevo plan de pago a proveedor"}
-              </h2>
+              <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">Cobranza</p>
+              <h2 className="text-xl font-bold text-[#2F2F2F]">Nuevo plan de pago</h2>
             </div>
             <button
               type="button"
@@ -231,7 +205,7 @@ export default function NuevoPlanPagoModal({
               value={unidadId}
               onChange={elegirUnidad}
               placeholder="Buscar por N° de unidad o cliente..."
-              emptyText={esCobro ? "Ninguna unidad sin plan coincide" : "Ninguna unidad coincide"}
+              emptyText="Ninguna unidad sin plan coincide"
               options={unidadesElegibles.map((u) => ({
                 value: u.id,
                 label: `${u.numeroUnidad ?? "Sin número"} — ${u.clienteNombre}`,
@@ -240,31 +214,14 @@ export default function NuevoPlanPagoModal({
           </label>
 
           <label className="block space-y-1">
-            <span className={labelClass}>{esCobro ? "Cliente" : "Proveedor"}</span>
+            <span className={labelClass}>Cliente</span>
             <input
               value={contraparte}
               onChange={(e) => setContraparte(e.target.value)}
               className={inputClass}
-              placeholder={esCobro ? "Nombre del cliente" : "Nombre del proveedor"}
+              placeholder="Nombre del cliente"
             />
           </label>
-
-          {!esCobro && (
-            <label className="block space-y-1">
-              <span className={labelClass}>Concepto</span>
-              <select
-                value={concepto}
-                onChange={(e) => elegirConcepto(e.target.value as ConceptoPago)}
-                className={inputClass}
-              >
-                {CONCEPTO_PAGO_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {CONCEPTO_LABELS[c]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
 
           <label className="block space-y-1">
             <span className={labelClass}>Descripción</span>
@@ -272,7 +229,7 @@ export default function NuevoPlanPagoModal({
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               className={inputClass}
-              placeholder={esCobro ? "Opcional — ej: Venta Flex 38, financiado en 3 cuotas" : "Ej: Primera cuota fábrica"}
+              placeholder="Opcional — ej: Venta Flex 38, financiado en 3 cuotas"
             />
           </label>
 
@@ -383,7 +340,6 @@ export default function NuevoPlanPagoModal({
             <p className="text-xs font-bold uppercase tracking-wide text-stone-500">Resumen</p>
             {descripcion.trim() && <p className="font-medium text-[#2F2F2F]">{descripcion.trim()}</p>}
             <p className="text-stone-600">
-              {!esCobro && contraparte.trim() ? `${contraparte.trim()} · ${CONCEPTO_LABELS[concepto]} · ` : ""}
               {resumen || "Sin cuotas"} · Total {formatMonto(moneda, totalNum)}
             </p>
           </div>

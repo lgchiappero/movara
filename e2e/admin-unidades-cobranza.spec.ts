@@ -116,8 +116,9 @@ test.describe("Unidades — próximo paso y columnas de cobranza desde movimient
     movimientos.push({ acuerdoId: pago, id: await registrarMovimiento(page, pago, 9000) });
 
     await page.goto(`/admin/unidades/${unidadId}`);
-    await expect(page.locator("#pagos")).toContainText("Fábrica E2E · Fábrica");
-    await expect(page.locator("#pagos")).toContainText("USD 9.000");
+    await expect(page.locator("#pagos")).toContainText("Fábrica E2E");
+    await expect(page.locator("#pagos")).toContainText("Parcial");
+    await expect(page.locator("#pagos")).toContainText("USD 9.000"); // pagado
 
     await page.goto("/admin/unidades");
     await expect(filaUnidad(page, numeroUnidad)).toContainText("Iniciar producción");

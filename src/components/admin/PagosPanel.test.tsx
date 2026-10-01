@@ -59,7 +59,7 @@ describe("PagosPanel", () => {
     expect(screen.getByText("Pendiente de pagar").closest("a")).toHaveAttribute("href", "/admin/pagos?estado=con_saldo");
     expect(screen.getByText("Pendiente de pagar").parentElement).toHaveTextContent("USD 21.000");
     expect(screen.getByText("Unidades con pagos completos este mes").parentElement).toHaveTextContent("2");
-    expect(screen.getByText("Unidades con cuotas vencidas").closest("a")).toHaveAttribute("href", "/admin/pagos?estado=vencidas");
+    expect(screen.getByText("Unidades con pagos vencidos").closest("a")).toHaveAttribute("href", "/admin/pagos?estado=vencidas");
   });
 
   it("grilla por unidad en modo pagos (proveedores, total a pagar)", () => {
@@ -70,19 +70,21 @@ describe("PagosPanel", () => {
     expect(fila).toHaveTextContent("USD 30.000");
   });
 
-  it("'+ Nuevo plan de pago a proveedor' abre el modal en modo pago", async () => {
+  it("'+ Nuevo pago a proveedor' abre el modal de pago directo (sin cuotas)", async () => {
     const { user } = renderPanel();
-    await user.click(screen.getByRole("button", { name: "+ Nuevo plan de pago a proveedor" }));
-    expect(screen.getByRole("heading", { name: "Nuevo plan de pago a proveedor" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "+ Nuevo pago a proveedor" }));
+    expect(screen.getByRole("heading", { name: "Nuevo pago a proveedor" })).toBeInTheDocument();
+    expect(screen.queryByText("+ Agregar cuota")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
-    expect(screen.queryByRole("heading", { name: "Nuevo plan de pago a proveedor" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Nuevo pago a proveedor" })).not.toBeInTheDocument();
   });
 
-  it("'Registrar pago' en la fila abre el registro de pago realizado del plan", async () => {
+  it("'+ Pago' en la fila abre el alta con la unidad preseleccionada; no hay 'Registrar pago'", async () => {
     const { user } = renderPanel();
     const fila = screen.getByRole("link", { name: "MOV-UNIDAD-2026-001" }).closest("tr")!;
-    await user.click(within(fila).getByRole("button", { name: "Registrar pago" }));
-    expect(screen.getByRole("heading", { name: "Heshi" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Registrar pago realizado" })).toBeInTheDocument();
+    expect(within(fila).queryByRole("button", { name: "Registrar pago" })).not.toBeInTheDocument();
+    await user.click(within(fila).getByRole("button", { name: "+ Pago" }));
+    expect(screen.getByRole("heading", { name: "Nuevo pago a proveedor" })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("MOV-UNIDAD-2026-001 — Ana")).toBeInTheDocument();
   });
 });
