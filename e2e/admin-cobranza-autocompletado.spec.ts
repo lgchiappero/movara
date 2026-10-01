@@ -19,7 +19,7 @@ async function crearUnidadConCliente(page: Page, precioCliente: number) {
   return { nombre, clienteId: cliente.id as string, unidadId: unidad.id as string };
 }
 
-async function abrirModalYElegirUnidad(page: Page, boton: "+ Nuevo cobro" | "+ Nuevo pago", nombre: string) {
+async function abrirModalYElegirUnidad(page: Page, boton: "+ Nuevo plan de pago" | "+ Nuevo pago", nombre: string) {
   await page.getByRole("button", { name: boton }).click();
   const buscador = page.getByPlaceholder("Buscar por N° de unidad o cliente...");
   await buscador.click();
@@ -42,7 +42,7 @@ test.describe("Cobranza — autocompletado del modal Nuevo cobro/pago", () => {
   });
 
   test("cobro: elegir una unidad completa cliente y total, y el total se puede editar", async ({ page }) => {
-    await abrirModalYElegirUnidad(page, "+ Nuevo cobro", datos.nombre);
+    await abrirModalYElegirUnidad(page, "+ Nuevo plan de pago", datos.nombre);
 
     const cliente = page.getByLabel("Cliente", { exact: true });
     const total = page.getByLabel(/Total acordado/);

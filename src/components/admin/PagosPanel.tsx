@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import NuevoAcuerdoModal from "@/components/admin/NuevoAcuerdoModal";
+import NuevoPlanPagoModal from "@/components/admin/NuevoPlanPagoModal";
 import RegistrarMovimientoModal from "@/components/admin/RegistrarMovimientoModal";
 import GestionCobranzaTab from "@/components/admin/cobranza/GestionCobranzaTab";
 import type { AcuerdoConDetalle, UnidadOpcion } from "@/lib/cobranza/types";
@@ -37,7 +37,7 @@ export default function PagosPanel({
       />
 
       {nuevoAbierto && (
-        <NuevoAcuerdoModal
+        <NuevoPlanPagoModal
           tipo="pago"
           unidades={unidades}
           onClose={() => setNuevoAbierto(false)}

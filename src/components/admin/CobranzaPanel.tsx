@@ -16,9 +16,9 @@ import type {
   CierreRow,
 } from "@/lib/cobranza/types";
 import { useToast } from "@/components/admin/Toast";
-import NuevoAcuerdoModal from "@/components/admin/NuevoAcuerdoModal";
-import RegistrarMovimientoModal from "@/components/admin/RegistrarMovimientoModal";
-import GestionCobranzaTab from "@/components/admin/cobranza/GestionCobranzaTab";
+import PlanesUnidadGrid from "@/components/admin/planes/PlanesUnidadGrid";
+import { useAccionesPlanes } from "@/components/admin/planes/useAccionesPlanes";
+import type { FilaPlanUnidad, FiltroEstadoPlan } from "@/lib/cobranza/planes-unidad";
 import RentabilidadPorUnidadTab from "@/components/admin/cobranza/RentabilidadPorUnidadTab";
 import EstadoCuentaClienteTab from "@/components/admin/cobranza/EstadoCuentaClienteTab";
 import TipoCambioTab from "@/components/admin/cobranza/TipoCambioTab";
@@ -29,7 +29,7 @@ export type { AcuerdoConDetalle, UnidadOpcion, ClienteOpcion, TipoCambioRow, Cie
 export type TabPrincipal = "gestion" | "rentabilidad" | "cuenta-cliente" | "tipo-cambio" | "cierres";
 
 const TABS: { key: TabPrincipal; label: string }[] = [
-  { key: "gestion", label: "Gestión de cobranza" },
+  { key: "gestion", label: "Planes de pago" },
   { key: "rentabilidad", label: "Rentabilidad por unidad" },
   { key: "cuenta-cliente", label: "Estado de cuenta por cliente" },
   { key: "tipo-cambio", label: "Tipo de cambio" },
@@ -41,6 +41,7 @@ function formatMoneda(value: number, moneda: string): string {
 }
 
 export default function CobranzaPanel({
+  filas,
   acuerdosCobro,
   acuerdosPago,
   unidades,
@@ -57,6 +58,8 @@ export default function CobranzaPanel({
   monedaInicial,
   clienteIdInicial,
 }: {
+  /** Una fila por unidad con el saldo de su plan de pago (ver planes-unidad.ts). */
+  filas: FilaPlanUnidad[];
   acuerdosCobro: AcuerdoConDetalle[];
   acuerdosPago: AcuerdoConDetalle[];
   unidades: UnidadOpcion[];
@@ -68,22 +71,23 @@ export default function CobranzaPanel({
   mesUnico: { mes: number; anio: number } | null;
   cierreActual: CierreRow | null;
   metricas: {
-    usd: { cobrado: number; pagado: number; margen: number };
-    ars: { cobrado: number; pagado: number; margen: number };
-    cuotasVencidas: number;
-    cuotasVencenSemana: number;
+    /** Cobrado en el período elegido, por moneda. */
+    cobrado: { USD: number; ARS: number };
+    /** Saldo pendiente de cobrar de todos los planes, por moneda. */
+    pendiente: { USD: number; ARS: number };
+    unidadesSaldadasMes: number;
+    unidadesConVencidas: number;
     periodosSinCerrar: number;
   };
   tabInicial?: TabPrincipal;
-  estadoInicial?: string;
+  estadoInicial?: FiltroEstadoPlan;
   monedaInicial?: "USD" | "ARS";
   clienteIdInicial?: string;
 }) {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
   const [tab, setTab] = useState<TabPrincipal>(tabInicial ?? "gestion");
-  const [nuevoAcuerdoTipo, setNuevoAcuerdoTipo] = useState<"cobro" | null>(null);
-  const [movimientoAcuerdo, setMovimientoAcuerdo] = useState<AcuerdoConDetalle | null>(null);
+  const { acciones, modales } = useAccionesPlanes({ tipo: "cobro", unidades });
   const [desdePersonalizado, setDesdePersonalizado] = useState(
     periodo.tipo === "personalizado" ? periodo.desde.slice(0, 10) : ""
   );
@@ -111,7 +115,7 @@ export default function CobranzaPanel({
     if (!mesUnico) return;
     if (
       !window.confirm(
-        `¿Cerrar el período ${mesUnico.mes}/${mesUnico.anio}? No se van a poder cargar más movimientos con fecha en ese mes.`
+        `¿Cerrar el período ${mesUnico.mes}/${mesUnico.anio}? No se van a poder cargar más pagos con fecha en ese mes.`
       )
     ) {
       return;
@@ -212,79 +216,39 @@ export default function CobranzaPanel({
         </div>
       </div>
 
-      {/* Métricas por moneda */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-3">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">USD</h3>
-          <div className="grid grid-cols-3 gap-3">
-            <MetricaMini label="Cobrado" value={formatMoneda(metricas.usd.cobrado, "USD")} />
-            <MetricaMini label="Pagado" value={formatMoneda(metricas.usd.pagado, "USD")} />
-            <MetricaMini
-              label="Margen"
-              value={formatMoneda(metricas.usd.margen, "USD")}
-              tono={metricas.usd.margen >= 0 ? "positivo" : "negativo"}
-            />
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-3">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">ARS</h3>
-          <div className="grid grid-cols-3 gap-3">
-            <MetricaMini label="Cobrado" value={formatMoneda(metricas.ars.cobrado, "ARS")} />
-            <MetricaMini label="Pagado" value={formatMoneda(metricas.ars.pagado, "ARS")} />
-            <MetricaMini
-              label="Margen"
-              value={formatMoneda(metricas.ars.margen, "ARS")}
-              tono={metricas.ars.margen >= 0 ? "positivo" : "negativo"}
-            />
-          </div>
-        </div>
+      {/* Métricas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <TarjetaMetrica label="Cobrado en el período">
+          <p className="text-lg font-bold text-[#2F2F2F]">{formatMoneda(metricas.cobrado.USD, "USD")}</p>
+          <p className="text-sm font-bold text-stone-500">{formatMoneda(metricas.cobrado.ARS, "ARS")}</p>
+        </TarjetaMetrica>
+        <TarjetaMetrica label="Pendiente de cobrar" href="/admin/cobranza?estado=con_saldo">
+          <p className="text-lg font-bold text-[#2F2F2F]">{formatMoneda(metricas.pendiente.USD, "USD")}</p>
+          <p className="text-sm font-bold text-stone-500">{formatMoneda(metricas.pendiente.ARS, "ARS")}</p>
+        </TarjetaMetrica>
+        <TarjetaMetrica label="Unidades saldadas este mes" href="/admin/cobranza?estado=saldado">
+          <p className="text-2xl font-bold text-emerald-700">{metricas.unidadesSaldadasMes}</p>
+        </TarjetaMetrica>
+        <TarjetaMetrica label="Unidades con cuotas vencidas" href="/admin/cobranza?estado=vencidas">
+          <p className={`text-2xl font-bold ${metricas.unidadesConVencidas > 0 ? "text-red-700" : "text-[#2F2F2F]"}`}>
+            {metricas.unidadesConVencidas}
+          </p>
+        </TarjetaMetrica>
       </div>
 
-      {/* Alertas */}
-      {(metricas.cuotasVencidas > 0 || metricas.cuotasVencenSemana > 0 || metricas.periodosSinCerrar > 0) && (
-        <div className="rounded-2xl border border-[#F3C6C6] p-4 space-y-2" style={{ backgroundColor: "#fff0f0" }}>
-          {metricas.cuotasVencidas > 0 && (
-            <div className="flex items-center justify-between gap-3 text-sm text-red-800">
-              <span>
-                <strong>{metricas.cuotasVencidas}</strong> cuota{metricas.cuotasVencidas === 1 ? "" : "s"} vencida
-                {metricas.cuotasVencidas === 1 ? "" : "s"}
-              </span>
-              <Link
-                href="/admin/cobranza?tab=gestion&estado=vencido"
-                className="px-3 py-1 bg-white border border-red-200 hover:bg-red-50 text-red-700 font-bold text-xs rounded-lg"
-              >
-                Ver →
-              </Link>
-            </div>
-          )}
-          {metricas.cuotasVencenSemana > 0 && (
-            <div className="flex items-center justify-between gap-3 text-sm text-red-800">
-              <span>
-                <strong>{metricas.cuotasVencenSemana}</strong> cuota{metricas.cuotasVencenSemana === 1 ? "" : "s"}{" "}
-                vence{metricas.cuotasVencenSemana === 1 ? "" : "n"} esta semana
-              </span>
-              <Link
-                href="/admin/cobranza?tab=gestion&estado=semana"
-                className="px-3 py-1 bg-white border border-red-200 hover:bg-red-50 text-red-700 font-bold text-xs rounded-lg"
-              >
-                Ver →
-              </Link>
-            </div>
-          )}
-          {metricas.periodosSinCerrar > 0 && (
-            <div className="flex items-center justify-between gap-3 text-sm text-red-800">
-              <span>
-                <strong>{metricas.periodosSinCerrar}</strong> período{metricas.periodosSinCerrar === 1 ? "" : "s"}{" "}
-                sin cerrar
-              </span>
-              <Link
-                href="/admin/cobranza?tab=cierres"
-                className="px-3 py-1 bg-white border border-red-200 hover:bg-red-50 text-red-700 font-bold text-xs rounded-lg"
-              >
-                Ver →
-              </Link>
-            </div>
-          )}
+      {metricas.periodosSinCerrar > 0 && (
+        <div className="rounded-2xl border border-[#F3C6C6] p-4" style={{ backgroundColor: "#fff0f0" }}>
+          <div className="flex items-center justify-between gap-3 text-sm text-red-800">
+            <span>
+              <strong>{metricas.periodosSinCerrar}</strong> período{metricas.periodosSinCerrar === 1 ? "" : "s"} sin cerrar
+            </span>
+            <Link
+              href="/admin/cobranza?tab=cierres"
+              className="px-3 py-1 bg-white border border-red-200 hover:bg-red-50 text-red-700 font-bold text-xs rounded-lg"
+            >
+              Ver →
+            </Link>
+          </div>
         </div>
       )}
 
@@ -305,14 +269,16 @@ export default function CobranzaPanel({
       </div>
 
       {tab === "gestion" && (
-        <GestionCobranzaTab
+        <PlanesUnidadGrid
+          // Remonta la grilla cuando cambian los filtros por URL (ej: click en
+          // una métrica) para que tome el nuevo estado inicial.
+          key={`${estadoInicial ?? "todos"}|${monedaInicial ?? ""}`}
           tipo="cobro"
-          acuerdos={acuerdosCobro}
+          filas={filas}
+          rol={rol}
+          acciones={acciones}
           estadoInicial={estadoInicial}
           monedaInicial={monedaInicial}
-          rol={rol}
-          onNuevoAcuerdo={() => setNuevoAcuerdoTipo("cobro")}
-          onRegistrarMovimiento={(acuerdo) => setMovimientoAcuerdo(acuerdo)}
         />
       )}
       {tab === "rentabilidad" && (
@@ -328,46 +294,24 @@ export default function CobranzaPanel({
       {tab === "tipo-cambio" && <TipoCambioTab tiposCambio={tiposCambio} onSaved={() => router.refresh()} />}
       {tab === "cierres" && <CierresTab cierres={cierres} rol={rol} onSaved={() => router.refresh()} />}
 
-      {nuevoAcuerdoTipo && (
-        <NuevoAcuerdoModal
-          tipo={nuevoAcuerdoTipo}
-          unidades={unidades}
-          onClose={() => setNuevoAcuerdoTipo(null)}
-          onCreated={() => {
-            setNuevoAcuerdoTipo(null);
-            router.refresh();
-          }}
-        />
-      )}
-
-      {movimientoAcuerdo && (
-        <RegistrarMovimientoModal
-          acuerdo={movimientoAcuerdo}
-          onClose={() => setMovimientoAcuerdo(null)}
-          onSaved={() => {
-            setMovimientoAcuerdo(null);
-            router.refresh();
-          }}
-        />
-      )}
+      {modales}
     </div>
   );
 }
 
-function MetricaMini({
-  label,
-  value,
-  tono,
-}: {
-  label: string;
-  value: string;
-  tono?: "positivo" | "negativo";
-}) {
-  const color = tono === "positivo" ? "text-emerald-700" : tono === "negativo" ? "text-red-700" : "text-[#2F2F2F]";
-  return (
-    <div className="text-center">
-      <p className={`text-lg font-bold ${color}`}>{value}</p>
-      <p className="text-xs text-stone-500 mt-0.5">{label}</p>
-    </div>
+function TarjetaMetrica({ label, href, children }: { label: string; href?: string; children: React.ReactNode }) {
+  const contenido = (
+    <>
+      <p className="text-xs font-bold uppercase tracking-widest text-stone-500 mb-2">{label}</p>
+      {children}
+    </>
+  );
+  const clase = "block bg-white rounded-2xl border border-[#E5E5E5] p-5";
+  return href ? (
+    <Link href={href} className={`${clase} hover:border-[#D4B06A] transition-colors`}>
+      {contenido}
+    </Link>
+  ) : (
+    <div className={clase}>{contenido}</div>
   );
 }

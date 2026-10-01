@@ -8,7 +8,7 @@ import {
   ESTADO_ACUERDO_COLORS,
 } from "@/lib/cobranza/constantes";
 import { sumaImportes, estadoAcuerdo } from "@/lib/cobranza/calc";
-import NuevoAcuerdoModal from "@/components/admin/NuevoAcuerdoModal";
+import NuevoPlanPagoModal from "@/components/admin/NuevoPlanPagoModal";
 import type { AcuerdoConDetalle, UnidadOpcion } from "@/components/admin/CobranzaPanel";
 
 function formatMoneda(value: number, moneda: string): string {
@@ -122,7 +122,7 @@ export default function CobranzaUnidadSection({
       )}
 
       {nuevoTipo && (
-        <NuevoAcuerdoModal
+        <NuevoPlanPagoModal
           tipo={nuevoTipo}
           unidades={[unidad]}
           unidadIdInicial={unidad.id}

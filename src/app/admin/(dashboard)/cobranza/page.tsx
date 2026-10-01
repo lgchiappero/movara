@@ -4,11 +4,10 @@ import { getAdminUser } from "@/lib/admin/current-user";
 import CobranzaPanel from "@/components/admin/CobranzaPanel";
 import { serializeAcuerdo } from "@/lib/cobranza/serialize";
 import { conComprobantesFirmados } from "@/lib/cobranza/attach-signed-urls";
+import { filasPorUnidad, metricasPlanes, filtroEstadoDesdeQuery } from "@/lib/cobranza/planes-unidad";
 import {
   calcularRangoPeriodo,
   mesAnioUnico,
-  inicioSemana,
-  finSemana,
   contarPeriodosSinCerrar,
   PERIODO_TIPO_OPTIONS,
   type PeriodoTipo,
@@ -100,10 +99,6 @@ export default async function AdminCobranzaPage({
     cierresRaw,
     cobradoUSDAgg,
     cobradoARSAgg,
-    pagadoUSDAgg,
-    pagadoARSAgg,
-    cuotasVencidas,
-    cuotasVencenSemana,
     primerMovimientoAgg,
     cierreActualRaw,
   ] = await Promise.all([
@@ -111,7 +106,13 @@ export default async function AdminCobranzaPage({
     db.acuerdoPago.findMany({ where: { tipo: "cobro" }, include, orderBy: { createdAt: "desc" } }),
     db.acuerdoPago.findMany({ where: { tipo: "pago" }, include, orderBy: { createdAt: "desc" } }),
     db.unidad.findMany({
-      select: { id: true, numeroUnidad: true, cliente: { select: { nombre: true } } },
+      select: {
+        id: true,
+        numeroUnidad: true,
+        modelo: true,
+        precioCliente: true,
+        cliente: { select: { nombre: true } },
+      },
       orderBy: { createdAt: "desc" },
     }),
     db.cliente.findMany({ select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
@@ -125,18 +126,6 @@ export default async function AdminCobranzaPage({
       _sum: { importe: true },
       where: { fecha: { gte: rango.desde, lt: rango.hasta }, acuerdo: { tipo: "cobro", moneda: "ARS" } },
     }),
-    db.movimiento.aggregate({
-      _sum: { importe: true },
-      where: { fecha: { gte: rango.desde, lt: rango.hasta }, acuerdo: { tipo: "pago", moneda: "USD" } },
-    }),
-    db.movimiento.aggregate({
-      _sum: { importe: true },
-      where: { fecha: { gte: rango.desde, lt: rango.hasta }, acuerdo: { tipo: "pago", moneda: "ARS" } },
-    }),
-    db.cuota.count({ where: { estado: "vencido" } }),
-    db.cuota.count({
-      where: { estado: "pendiente", vencimiento: { gte: inicioSemana(now), lt: finSemana(now) } },
-    }),
     db.movimiento.aggregate({ _min: { fecha: true } }),
     mesUnico
       ? db.cierrePeriodo.findUnique({ where: { mes_anio: { mes: mesUnico.mes, anio: mesUnico.anio } } })
@@ -148,10 +137,26 @@ export default async function AdminCobranzaPage({
     conComprobantesFirmados(acuerdosPagoRaw.map(serializeAcuerdo)),
   ]);
 
+  // Vista principal por unidad: todas las unidades, con o sin plan.
+  const filas = filasPorUnidad(
+    unidadesRaw.map((u) => ({
+      id: u.id,
+      numeroUnidad: u.numeroUnidad,
+      clienteNombre: u.cliente.nombre,
+      modelo: u.modelo,
+      precioCliente: u.precioCliente,
+    })),
+    acuerdosCobro,
+    now
+  );
+  const metricasUnidades = metricasPlanes(filas, now);
+
+  const unidadesConPlan = new Set(acuerdosCobro.map((a) => a.unidadId));
   const unidades: UnidadOpcion[] = unidadesRaw.map((u) => ({
     id: u.id,
     numeroUnidad: u.numeroUnidad,
     clienteNombre: u.cliente.nombre,
+    tienePlanCobro: unidadesConPlan.has(u.id),
   }));
   const clientes: ClienteOpcion[] = clientesRaw;
   const tiposCambio: TipoCambioRow[] = tiposCambioRaw.map((t) => ({
@@ -177,8 +182,6 @@ export default async function AdminCobranzaPage({
 
   const cobradoUSD = cobradoUSDAgg._sum.importe ?? 0;
   const cobradoARS = cobradoARSAgg._sum.importe ?? 0;
-  const pagadoUSD = pagadoUSDAgg._sum.importe ?? 0;
-  const pagadoARS = pagadoARSAgg._sum.importe ?? 0;
 
   const periodosSinCerrar = contarPeriodosSinCerrar(
     primerMovimientoAgg._min.fecha,
@@ -189,12 +192,7 @@ export default async function AdminCobranzaPage({
   const rol = session?.rol ?? "vendedor";
 
   const tabInicial = sp.tab === "rentabilidad" || sp.tab === "cuenta-cliente" || sp.tab === "tipo-cambio" || sp.tab === "cierres" || sp.tab === "gestion" ? sp.tab : undefined;
-  // "estado=pagado" (el término que usan los KPIs del dashboard) no es un
-  // EstadoAcuerdo real acá — el equivalente interno es "saldado". Y
-  // "vence=semana" es el alias de la combinación estado=pendiente +
-  // vencimiento esta semana, que ya existe como el valor "semana".
-  const ESTADO_ALIAS: Record<string, string> = { pagado: "saldado" };
-  const estadoInicial = sp.vence === "semana" ? "semana" : sp.estado ? (ESTADO_ALIAS[sp.estado] ?? sp.estado) : undefined;
+  const estadoInicial = filtroEstadoDesdeQuery(sp.estado, sp.vence);
   const monedaInicial = sp.moneda === "USD" || sp.moneda === "ARS" ? sp.moneda : undefined;
   const clienteIdInicial = sp.clienteId ?? undefined;
 
@@ -206,6 +204,7 @@ export default async function AdminCobranzaPage({
       </div>
 
       <CobranzaPanel
+        filas={filas}
         acuerdosCobro={acuerdosCobro}
         acuerdosPago={acuerdosPago}
         unidades={unidades}
@@ -233,10 +232,10 @@ export default async function AdminCobranzaPage({
             : null
         }
         metricas={{
-          usd: { cobrado: cobradoUSD, pagado: pagadoUSD, margen: cobradoUSD - pagadoUSD },
-          ars: { cobrado: cobradoARS, pagado: pagadoARS, margen: cobradoARS - pagadoARS },
-          cuotasVencidas,
-          cuotasVencenSemana,
+          cobrado: { USD: cobradoUSD, ARS: cobradoARS },
+          pendiente: metricasUnidades.pendiente,
+          unidadesSaldadasMes: metricasUnidades.unidadesSaldadasMes,
+          unidadesConVencidas: metricasUnidades.unidadesConVencidas,
           periodosSinCerrar,
         }}
         tabInicial={tabInicial}

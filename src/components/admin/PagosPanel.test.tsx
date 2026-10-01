@@ -46,12 +46,12 @@ describe("PagosPanel", () => {
     expect(screen.queryByRole("button", { name: "Cobros" })).not.toBeInTheDocument();
   });
 
-  it("'+ Nuevo pago' abre el modal en modo pago", async () => {
+  it("'+ Nuevo pago' abre el modal de plan a proveedor", async () => {
     const { user } = renderPanel();
     await user.click(screen.getByRole("button", { name: "+ Nuevo pago" }));
-    expect(screen.getByText(/Nuevo pago — Paso 1 de 2/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Nuevo plan de pago a proveedor" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
-    expect(screen.queryByText(/Nuevo pago — Paso 1 de 2/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Nuevo plan de pago a proveedor" })).not.toBeInTheDocument();
   });
 
   it("'Registrar pago realizado' abre el modal del acuerdo", async () => {

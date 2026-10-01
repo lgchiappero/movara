@@ -28,7 +28,7 @@ export async function DELETE(
   if (acuerdo._count.movimientos > 0) {
     return NextResponse.json(
       {
-        error: `No se puede eliminar: tiene ${acuerdo._count.movimientos} movimiento${acuerdo._count.movimientos === 1 ? "" : "s"} registrado${acuerdo._count.movimientos === 1 ? "" : "s"}`,
+        error: `No se puede eliminar: tiene ${acuerdo._count.movimientos} pago${acuerdo._count.movimientos === 1 ? "" : "s"} registrado${acuerdo._count.movimientos === 1 ? "" : "s"}`,
       },
       { status: 400 }
     );

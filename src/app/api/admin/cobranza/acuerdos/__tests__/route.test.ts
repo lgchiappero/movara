@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockGetAdminUser, mockFindUniqueUnidad, mockCreateAcuerdo } = vi.hoisted(() => ({
+const { mockGetAdminUser, mockFindUniqueUnidad, mockCreateAcuerdo, mockFindFirstAcuerdo } = vi.hoisted(() => ({
+  mockFindFirstAcuerdo: vi.fn(),
   mockGetAdminUser: vi.fn(),
   mockFindUniqueUnidad: vi.fn(),
   mockCreateAcuerdo: vi.fn(),
@@ -9,7 +10,7 @@ const { mockGetAdminUser, mockFindUniqueUnidad, mockCreateAcuerdo } = vi.hoisted
 vi.mock("@/lib/db", () => ({
   db: {
     unidad: { findUnique: mockFindUniqueUnidad },
-    acuerdoPago: { create: mockCreateAcuerdo },
+    acuerdoPago: { create: mockCreateAcuerdo, findFirst: mockFindFirstAcuerdo },
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -43,6 +44,32 @@ describe("POST /api/admin/cobranza/acuerdos", () => {
     mockGetAdminUser.mockResolvedValue(SESSION);
     mockFindUniqueUnidad.mockResolvedValue({ id: "u1" });
     mockCreateAcuerdo.mockResolvedValue({ id: "a1" });
+    mockFindFirstAcuerdo.mockResolvedValue(null);
+  });
+
+  it("409 si la unidad ya tiene un plan de pago (cobro) — un solo plan por unidad", async () => {
+    mockFindFirstAcuerdo.mockResolvedValueOnce({ id: "a-existente" });
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error).toMatch(/ya tiene un plan de pago/);
+    expect(json.acuerdoId).toBe("a-existente");
+    expect(mockFindFirstAcuerdo).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { unidadId: "u1", tipo: "cobro" } })
+    );
+    expect(mockCreateAcuerdo).not.toHaveBeenCalled();
+  });
+
+  it("los pagos a proveedores pueden ser varios por unidad (no chequea plan existente)", async () => {
+    mockFindFirstAcuerdo.mockResolvedValue({ id: "a-existente" });
+    const res = await POST(makeRequest({ ...VALID_BODY, tipo: "pago", concepto: "flete", contraparte: "Naviera" }));
+    expect(res.status).toBe(201);
+    expect(mockFindFirstAcuerdo).not.toHaveBeenCalled();
+  });
+
+  it("acepta 'venta' como concepto del plan de pago de cobranza", async () => {
+    const res = await POST(makeRequest({ ...VALID_BODY, concepto: "venta" }));
+    expect(res.status).toBe(201);
   });
 
   it("401 sin sesión", async () => {
@@ -74,11 +101,6 @@ describe("POST /api/admin/cobranza/acuerdos", () => {
 
   it("400 cuando el concepto no corresponde al tipo (cobro con concepto 'fabrica')", async () => {
     const res = await POST(makeRequest({ ...VALID_BODY, concepto: "fabrica" }));
-    expect(res.status).toBe(400);
-  });
-
-  it("400 para cobros nuevos con el concepto legado 'venta' (reemplazado por anticipo/cuota/saldo)", async () => {
-    const res = await POST(makeRequest({ ...VALID_BODY, concepto: "venta" }));
     expect(res.status).toBe(400);
   });
 

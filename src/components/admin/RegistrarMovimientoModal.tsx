@@ -110,7 +110,7 @@ export default function RegistrarMovimientoModal({
           {error && <p className="text-xs text-red-600">{error}</p>}
 
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-stone-500">Fecha</span>
+            <span className="text-xs font-medium text-stone-500">Fecha real del pago</span>
             <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={inputClass} />
           </label>
 

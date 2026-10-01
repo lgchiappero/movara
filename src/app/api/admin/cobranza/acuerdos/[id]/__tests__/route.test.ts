@@ -41,13 +41,13 @@ describe("DELETE /api/admin/cobranza/acuerdos/[id]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("400 si tiene movimientos registrados", async () => {
+  it("400 si tiene pagos registrados", async () => {
     mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
     mockFindUnique.mockResolvedValueOnce({ id: "a1", _count: { movimientos: 3 } });
     const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "a1" }) });
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.error).toContain("3 movimientos registrados");
+    expect(json.error).toContain("3 pagos registrados");
     expect(mockDelete).not.toHaveBeenCalled();
   });
 
@@ -56,7 +56,7 @@ describe("DELETE /api/admin/cobranza/acuerdos/[id]", () => {
     mockFindUnique.mockResolvedValueOnce({ id: "a1", _count: { movimientos: 1 } });
     const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "a1" }) });
     const json = await res.json();
-    expect(json.error).toContain("1 movimiento registrado");
+    expect(json.error).toContain("1 pago registrado");
     expect(json.error).not.toContain("movimientos");
   });
 

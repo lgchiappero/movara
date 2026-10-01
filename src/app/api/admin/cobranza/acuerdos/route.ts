@@ -25,6 +25,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unidad no encontrada" }, { status: 404 });
   }
 
+  // Una unidad tiene UN solo plan de pago con el cliente — define cómo va
+  // a pagar la unidad completa. (Pagos a proveedores sí pueden ser varios
+  // por unidad: uno por proveedor/concepto.) Se valida acá y no con un
+  // índice único porque Prisma no soporta índices parciales (tipo='cobro')
+  // y la base podría tener acuerdos de cobro múltiples previos.
+  if (data.tipo === "cobro") {
+    const existente = await db.acuerdoPago.findFirst({
+      where: { unidadId: data.unidadId, tipo: "cobro" },
+      select: { id: true },
+    });
+    if (existente) {
+      return NextResponse.json(
+        { error: "Esta unidad ya tiene un plan de pago. Registrá los pagos sobre ese plan.", acuerdoId: existente.id },
+        { status: 409 }
+      );
+    }
+  }
+
   const acuerdo = await db.acuerdoPago.create({
     data: {
       unidadId: data.unidadId,

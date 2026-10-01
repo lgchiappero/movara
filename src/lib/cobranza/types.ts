@@ -41,7 +41,14 @@ export type AcuerdoConDetalle = {
   movimientos: MovimientoDetalle[];
 };
 
-export type UnidadOpcion = { id: string; numeroUnidad: string | null; clienteNombre: string };
+export type UnidadOpcion = {
+  id: string;
+  numeroUnidad: string | null;
+  clienteNombre: string;
+  /** true si la unidad ya tiene su plan de pago de cobranza (solo puede
+   * tener uno) — el modal de nuevo plan de cobranza no la ofrece. */
+  tienePlanCobro?: boolean;
+};
 
 export type ClienteOpcion = { id: string; nombre: string };
 
