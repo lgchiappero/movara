@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { renumerarCuotas, nuevaCuota, cambiarTipoCuota, type CuotaPlanForm } from "./cuotas-plan";
+import {
+  renumerarCuotas,
+  nuevaCuota,
+  cambiarTipoCuota,
+  importesPorPorcentaje,
+  cuotasDesdePreset,
+  PRESET_FABRICA,
+  PRESET_PAGO_UNICO,
+  type CuotaPlanForm,
+} from "./cuotas-plan";
 
 const desc = (cs: CuotaPlanForm[]) => renumerarCuotas(cs).map((c) => c.descripcion);
 
@@ -43,5 +52,27 @@ describe("cambiarTipoCuota", () => {
     const c: CuotaPlanForm = { ...nuevaCuota("cuota"), descripcion: "Cuota 1/1" };
     const cambiada = cambiarTipoCuota(c, "otro");
     expect(cambiada).toMatchObject({ tipo: "otro", descripcion: "Cuota 1/1", editada: true });
+  });
+});
+
+describe("presets de cuotas (pagos a proveedores)", () => {
+  it("importesPorPorcentaje reparte el total y la diferencia de redondeo va a la última", () => {
+    expect(importesPorPorcentaje(30000, [50, 50])).toEqual(["15000", "15000"]);
+    expect(importesPorPorcentaje(100.01, [50, 50])).toEqual(["50", "50.01"]);
+    expect(importesPorPorcentaje(100, [100])).toEqual(["100"]);
+    expect(importesPorPorcentaje(0, [50, 50])).toEqual(["", ""]);
+  });
+
+  it("fábrica: 50% al confirmar + 50% antes del embarque", () => {
+    expect(cuotasDesdePreset(PRESET_FABRICA, 30000)).toEqual([
+      { tipo: "anticipo", descripcion: "Anticipo 50% (al confirmar)", editada: true, importe: "15000", vencimiento: "" },
+      { tipo: "saldo", descripcion: "Saldo 50% (antes del embarque)", editada: true, importe: "15000", vencimiento: "" },
+    ]);
+  });
+
+  it("logística: pago único por el total", () => {
+    expect(cuotasDesdePreset(PRESET_PAGO_UNICO, 1200)).toEqual([
+      { tipo: "otro", descripcion: "Pago único", editada: true, importe: "1200", vencimiento: "" },
+    ]);
   });
 });

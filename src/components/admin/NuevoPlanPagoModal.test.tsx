@@ -286,3 +286,82 @@ describe("NuevoPlanPagoModal — validación y alta", () => {
     expect(await screen.findAllByText("No pudimos crear el plan de pago. Probá de nuevo.")).not.toHaveLength(0);
   });
 });
+
+describe("NuevoPlanPagoModal — pago a proveedor por unidad (plan de cuotas)", () => {
+  const proveedor = () => screen.getByLabelText("Proveedor") as HTMLInputElement;
+
+  it("pide proveedor y concepto (Fábrica | Transporte local | Grúa | Instalación | Otro); no autocompleta desde la unidad", async () => {
+    const { user } = renderModal({ tipo: "pago" });
+    expect(screen.getByRole("heading", { name: "Nuevo pago a proveedor" })).toBeInTheDocument();
+    expect(Array.from((screen.getByLabelText("Concepto") as HTMLSelectElement).options).map((o) => o.text)).toEqual([
+      "Fábrica",
+      "Transporte local",
+      "Grúa",
+      "Instalación",
+      "Otro",
+    ]);
+    await elegirUnidad(user, "MOV-UNIDAD-2026-003"); // las unidades con plan de cobro igual se ofrecen
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(proveedor().value).toBe("");
+  });
+
+  it("fábrica: 50% al confirmar + 50% antes del embarque, y los importes siguen al total", async () => {
+    const { user } = renderModal({ tipo: "pago" });
+    expect(descCuota(1).value).toBe("Anticipo 50% (al confirmar)");
+    expect(descCuota(2).value).toBe("Saldo 50% (antes del embarque)");
+    await user.type(total(), "30000");
+    expect(importeCuota(1).value).toBe("15000");
+    expect(importeCuota(2).value).toBe("15000");
+    expect(screen.getByText(/Suma de cuotas: USD 30.000 ✓/)).toBeInTheDocument();
+  });
+
+  it("logística (transporte, grúa, instalación): pago único por el total", async () => {
+    const { user } = renderModal({ tipo: "pago" });
+    await user.type(total(), "1200");
+    await user.selectOptions(screen.getByLabelText("Concepto"), "instalacion");
+    expect(screen.getAllByLabelText(/Descripción de la cuota/)).toHaveLength(1);
+    expect(descCuota(1).value).toBe("Pago único");
+    expect(importeCuota(1).value).toBe("1200");
+    expect(descripcionPlan().value).toBe("Instalación en destino");
+  });
+
+  it("el plan es editable: al tocar un importe deja de seguir al total", async () => {
+    const { user } = renderModal({ tipo: "pago" });
+    await user.type(total(), "30000");
+    await user.clear(importeCuota(1));
+    await user.type(importeCuota(1), "9000");
+    await user.clear(total());
+    await user.type(total(), "40000");
+    expect(importeCuota(1).value).toBe("9000");
+    expect(importeCuota(2).value).toBe("15000");
+  });
+
+  it("crea el pago con tipo pago, proveedor y concepto", async () => {
+    const { user, onCreated } = renderModal({ tipo: "pago" });
+    await elegirUnidad(user, "MOV-UNIDAD-2026-001");
+    await user.type(proveedor(), "Heshi");
+    await user.type(total(), "30000");
+    expect(within(screen.getByLabelText("Resumen del plan")).getByText(/Heshi · Fábrica · Anticipo \+ Saldo/)).toBeInTheDocument();
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, id: "p1" }), { status: 201 }));
+    await user.click(screen.getByRole("button", { name: "Crear pago a proveedor" }));
+    await waitFor(() => expect(onCreated).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls.find((c) => c[0] === "/api/admin/cobranza/acuerdos")![1].body);
+    expect(body).toMatchObject({
+      tipo: "pago",
+      unidadId: "u1",
+      contraparte: "Heshi",
+      concepto: "fabrica",
+      totalAcordado: 30000,
+      cuotas: [
+        { descripcion: "Anticipo 50% (al confirmar)", importe: 15000 },
+        { descripcion: "Saldo 50% (antes del embarque)", importe: 15000 },
+      ],
+    });
+  });
+
+  it("valida el proveedor", async () => {
+    const { user } = renderModal({ tipo: "pago", unidadIdInicial: "u1" });
+    await user.click(screen.getByRole("button", { name: "Crear pago a proveedor" }));
+    expect(screen.getByText("Falta el proveedor")).toBeInTheDocument();
+  });
+});

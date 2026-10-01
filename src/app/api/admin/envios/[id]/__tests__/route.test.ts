@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockFindUnique, mockUpdate, mockDelete, mockCountUnidad, mockGetAdminUser } = vi.hoisted(() => ({
+const { mockFindUnique, mockUpdate, mockDelete, mockCountUnidad, mockGetAdminUser, mockCountCosto } = vi.hoisted(() => ({
+  mockCountCosto: vi.fn().mockResolvedValue(0),
   mockFindUnique: vi.fn(),
   mockUpdate: vi.fn(),
   mockDelete: vi.fn(),
@@ -8,7 +9,11 @@ const { mockFindUnique, mockUpdate, mockDelete, mockCountUnidad, mockGetAdminUse
   mockGetAdminUser: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({
-  db: { envio: { findUnique: mockFindUnique, update: mockUpdate, delete: mockDelete }, unidad: { count: mockCountUnidad } },
+  db: {
+    envio: { findUnique: mockFindUnique, update: mockUpdate, delete: mockDelete },
+    unidad: { count: mockCountUnidad },
+    costoLogistica: { count: mockCountCosto },
+  },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 
@@ -152,6 +157,24 @@ describe("DELETE /api/admin/envios/[id]", () => {
     const json = await res.json();
     expect(json.error).toContain("1 unidad asociada");
     expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it("400 si tiene costos de logística cargados (no se borran en cascada)", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockCountUnidad.mockResolvedValueOnce(0);
+    mockCountCosto.mockResolvedValueOnce(2);
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("No se puede eliminar: tiene 2 costos de logística cargados");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it("singular para 1 costo de logística", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockCountUnidad.mockResolvedValueOnce(0);
+    mockCountCosto.mockResolvedValueOnce(1);
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "e1" }) });
+    expect((await res.json()).error).toBe("No se puede eliminar: tiene 1 costo de logística cargado");
   });
 
   it("elimina y devuelve 200 cuando no tiene unidades", async () => {

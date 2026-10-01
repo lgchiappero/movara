@@ -1,98 +1,138 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { mockGetAdminUser, mockUpdateManyCuota, mockFindManyAcuerdo, mockFindManyUnidad, mockAggregate, mockGetSignedUrl } =
-  vi.hoisted(() => ({
-    mockGetAdminUser: vi.fn(),
-    mockUpdateManyCuota: vi.fn(),
-    mockFindManyAcuerdo: vi.fn(),
-    mockFindManyUnidad: vi.fn(),
-    mockAggregate: vi.fn(),
-    mockGetSignedUrl: vi.fn(),
-  }));
+const {
+  mockGetAdminUser,
+  mockUpdateManyCuota,
+  mockFindManyAcuerdo,
+  mockFindManyCosto,
+  mockFindManyUnidad,
+  mockFindManyEnvio,
+  mockGetSignedUrl,
+} = vi.hoisted(() => ({
+  mockGetAdminUser: vi.fn(),
+  mockUpdateManyCuota: vi.fn(),
+  mockFindManyAcuerdo: vi.fn(),
+  mockFindManyCosto: vi.fn(),
+  mockFindManyUnidad: vi.fn(),
+  mockFindManyEnvio: vi.fn(),
+  mockGetSignedUrl: vi.fn(),
+}));
 
 vi.mock("@/lib/db", () => ({
   db: {
     cuota: { updateMany: mockUpdateManyCuota },
     acuerdoPago: { findMany: mockFindManyAcuerdo },
+    costoLogistica: { findMany: mockFindManyCosto },
     unidad: { findMany: mockFindManyUnidad },
-    movimiento: { aggregate: mockAggregate },
+    envio: { findMany: mockFindManyEnvio },
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 vi.mock("@/lib/admin/storage", () => ({ getSignedUrl: mockGetSignedUrl, BUCKET_MOVARA: "documentos-movara" }));
 vi.mock("@/components/admin/PagosPanel", () => ({
   default: (p: {
-    filas: { key: string; estado: string; saldo: number }[];
+    planes: { id: string }[];
+    costos: { id: string; comprobanteSignedUrl: string | null }[];
     unidades: unknown[];
+    envios: { id: string; cantidadUnidades: number }[];
     rol: string;
-    metricas: { pagadoMes: { USD: number; ARS: number }; pendiente: { USD: number; ARS: number }; unidadesCompletasMes: number; unidadesConVencidas: number };
+    metricas: { pagadoMes: { USD: number; ARS: number }; pendiente: { USD: number; ARS: number }; vencidos: number };
+    tabInicial?: string;
     estadoInicial?: string;
-    monedaInicial?: string;
   }) => (
     <div>
-      PagosPanel filas={p.filas.map((f) => `${f.key}:${f.estado}:${f.saldo}`).join(",")} unidades={p.unidades.length} rol={p.rol}{" "}
-      pagadoUSD={p.metricas.pagadoMes.USD} pagadoARS={p.metricas.pagadoMes.ARS} pendienteUSD={p.metricas.pendiente.USD}{" "}
-      completas={p.metricas.unidadesCompletasMes} vencidas={p.metricas.unidadesConVencidas} estado={p.estadoInicial ?? "none"}{" "}
-      moneda={p.monedaInicial ?? "none"}
+      PagosPanel planes={p.planes.map((x) => x.id).join(",")} costos=
+      {p.costos.map((c) => `${c.id}:${c.comprobanteSignedUrl ?? "sin"}`).join(",")} unidades={p.unidades.length} envios=
+      {p.envios.map((e) => `${e.id}:${e.cantidadUnidades}`).join(",")} rol={p.rol} pagadoUSD={p.metricas.pagadoMes.USD}{" "}
+      pagadoARS={p.metricas.pagadoMes.ARS} pendienteUSD={p.metricas.pendiente.USD} pendienteARS={p.metricas.pendiente.ARS}{" "}
+      vencidos={p.metricas.vencidos} tab={p.tabInicial ?? "none"} estado={p.estadoInicial ?? "none"}
     </div>
   ),
 }));
 
 import AdminPagosPage from "../page";
 
-const ACUERDO_PAGO = {
-  id: "a1",
-  unidadId: "u1",
-  unidad: { numeroUnidad: "MOV-1", modelo: "Flex 38", estadoFabricacion: "pendiente", cliente: { id: "c1", nombre: "Juan" } },
-  tipo: "pago",
-  concepto: "fabrica",
-  descripcion: null,
-  contraparte: "Heshi",
-  moneda: "USD",
-  totalAcordado: 30000,
-  notas: null,
-  createdAt: new Date("2026-01-01T00:00:00.000Z"),
-  cuotas: [{ id: "q1", descripcion: "Anticipo", importe: 30000, vencimiento: new Date("2020-01-01"), estado: "vencido" }],
-  movimientos: [
-    { id: "m1", fecha: new Date("2026-01-15"), importe: 9000, modalidad: "transferencia", cuotaId: "q1", comprobanteUrl: "pagos/x.pdf", notas: null, registradoPor: "a@x.com" },
-  ],
-};
+const ahora = new Date();
+const esteMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 12);
+
+function plan(over: Record<string, unknown>) {
+  return {
+    id: "p1",
+    unidadId: "u1",
+    unidad: { numeroUnidad: "MOV-1", modelo: "Flex 38", estadoFabricacion: "pendiente", cliente: { id: "c1", nombre: "Juan" } },
+    tipo: "pago",
+    concepto: "fabrica",
+    descripcion: null,
+    contraparte: "Heshi",
+    moneda: "USD",
+    totalAcordado: 30000,
+    notas: null,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    cuotas: [],
+    movimientos: [],
+    ...over,
+  };
+}
+
+function costo(over: Record<string, unknown>) {
+  return {
+    id: "c1",
+    envioId: "e1",
+    envio: { numeroPI: "PI-1", numeroContenedor: "MSCU1" },
+    concepto: "flete",
+    descripcion: null,
+    moneda: "USD",
+    importe: 4000,
+    fecha: esteMes,
+    estado: "pagado",
+    comprobanteUrl: null,
+    notas: null,
+    prorrateado: false,
+    createdAt: esteMes,
+    prorrateos: [],
+    ...over,
+  };
+}
 
 describe("AdminPagosPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetAdminUser.mockResolvedValue({ rol: "admin" });
     mockUpdateManyCuota.mockResolvedValue({ count: 0 });
-    mockFindManyAcuerdo.mockResolvedValue([ACUERDO_PAGO]);
-    mockFindManyUnidad.mockResolvedValue([
-      { id: "u1", numeroUnidad: "MOV-1", modelo: "Flex 38", precioCliente: 24700, cliente: { nombre: "Juan" } },
-      { id: "u2", numeroUnidad: "MOV-2", modelo: null, precioCliente: null, cliente: { nombre: "Ana" } },
+    mockFindManyAcuerdo.mockResolvedValue([
+      // Fábrica: 30000, pagó 15000 este mes; cuota vencida → vencido.
+      plan({
+        cuotas: [{ id: "q1", descripcion: "Saldo 50%", importe: 15000, vencimiento: new Date("2020-01-01"), estado: "vencido" }],
+        movimientos: [
+          { id: "m1", fecha: esteMes, importe: 15000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a" },
+        ],
+      }),
+      // Grúa en ARS, pendiente.
+      plan({ id: "p2", concepto: "grua", contraparte: "Grúas Sur", moneda: "ARS", totalAcordado: 200000 }),
     ]);
-    mockAggregate.mockResolvedValueOnce({ _sum: { importe: 9000 } }).mockResolvedValueOnce({ _sum: { importe: null } });
-    mockGetSignedUrl.mockResolvedValue("https://signed/x.pdf");
+    mockFindManyCosto.mockResolvedValue([
+      costo({ comprobanteUrl: "logistica/e1/flete.pdf" }),
+      // Pendiente y ya vencido.
+      costo({ id: "c2", concepto: "vep", moneda: "ARS", importe: 50000, estado: "pendiente", fecha: new Date("2020-01-01") }),
+    ]);
+    mockFindManyUnidad.mockResolvedValue([{ id: "u1", numeroUnidad: "MOV-1", cliente: { nombre: "Juan" } }]);
+    mockFindManyEnvio.mockResolvedValue([{ id: "e1", numeroPI: "PI-1", numeroContenedor: "MSCU1", _count: { unidades: 3 } }]);
+    mockGetSignedUrl.mockResolvedValue("https://signed/flete.pdf");
   });
 
-  it("muestra el título Pagos y consulta solo acuerdos de tipo pago", async () => {
+  it("muestra el título y pasa planes por unidad, costos de logística (con comprobante firmado), unidades y envíos", async () => {
     render(await AdminPagosPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByRole("heading", { name: "Pagos" })).toBeInTheDocument();
     expect(mockFindManyAcuerdo).toHaveBeenCalledWith(expect.objectContaining({ where: { tipo: "pago" } }));
+    expect(screen.getByText(/planes=p1,p2 costos=c1:https:\/\/signed\/flete.pdf,c2:sin unidades=1 envios=e1:3 rol=admin/)).toBeInTheDocument();
   });
 
-  it("una fila por unidad con el saldo de sus pagos a proveedores", async () => {
+  it("métricas: pagado este mes y pendiente suman pagos por unidad + logística; vencidos cuenta ambos", async () => {
     render(await AdminPagosPage({ searchParams: Promise.resolve({}) }));
-    expect(screen.getByText(/filas=u1\|USD:en_curso:21000,u2\|USD:sin_plan:0 unidades=2 rol=admin/)).toBeInTheDocument();
-    expect(mockGetSignedUrl).toHaveBeenCalledWith("documentos-movara", "pagos/x.pdf");
-  });
-
-  it("métricas: pagado este mes por moneda (pagos del mes en curso), pendiente y unidades con vencidas", async () => {
-    render(await AdminPagosPage({ searchParams: Promise.resolve({}) }));
-    expect(screen.getByText(/pagadoUSD=9000 pagadoARS=0 pendienteUSD=21000/)).toBeInTheDocument();
-    expect(screen.getByText(/completas=0 vencidas=1/)).toBeInTheDocument();
-    const where = mockAggregate.mock.calls[0][0].where;
-    expect(where.acuerdo).toEqual({ tipo: "pago", moneda: "USD" });
-    expect(where.fecha.gte.getDate()).toBe(1);
-    expect(mockAggregate.mock.calls[1][0].where.acuerdo).toEqual({ tipo: "pago", moneda: "ARS" });
+    // Pagado este mes: 15000 (fábrica) + 4000 (flete). Pendiente: 15000 fábrica + 200000 grúa ARS + 50000 VEP ARS.
+    expect(screen.getByText(/pagadoUSD=19000 pagadoARS=0 pendienteUSD=15000 pendienteARS=250000/)).toBeInTheDocument();
+    expect(screen.getByText(/vencidos=2/)).toBeInTheDocument();
   });
 
   it("corre el barrido de auto-vencimiento de cuotas", async () => {
@@ -102,15 +142,28 @@ describe("AdminPagosPage", () => {
     );
   });
 
-  it("filtros desde la URL: alias de estado y moneda; sin sesión el rol es vendedor", async () => {
+  it("tab y estado desde la URL, con los alias del dashboard; sin sesión el rol es vendedor", async () => {
     mockGetAdminUser.mockResolvedValueOnce(null);
-    render(await AdminPagosPage({ searchParams: Promise.resolve({ estado: "pagado", moneda: "ARS" }) }));
+    render(await AdminPagosPage({ searchParams: Promise.resolve({ tab: "logistica", estado: "vencidas" }) }));
     expect(screen.getByText(/rol=vendedor/)).toBeInTheDocument();
-    expect(screen.getByText(/estado=saldado moneda=ARS/)).toBeInTheDocument();
+    expect(screen.getByText(/tab=logistica estado=vencido/)).toBeInTheDocument();
   });
 
-  it("vence=semana gana sobre estado; moneda inválida cae a none", async () => {
-    render(await AdminPagosPage({ searchParams: Promise.resolve({ estado: "con_saldo", vence: "semana", moneda: "EUR" }) }));
-    expect(screen.getByText(/estado=semana moneda=none/)).toBeInTheDocument();
+  it("estado=saldado → pagado; con_saldo se respeta; un estado o tab desconocido cae al default", async () => {
+    const { unmount } = render(await AdminPagosPage({ searchParams: Promise.resolve({ estado: "saldado" }) }));
+    expect(screen.getByText(/tab=unidad estado=pagado/)).toBeInTheDocument();
+    unmount();
+    const r2 = render(await AdminPagosPage({ searchParams: Promise.resolve({ estado: "con_saldo" }) }));
+    expect(screen.getByText(/estado=con_saldo/)).toBeInTheDocument();
+    r2.unmount();
+    render(await AdminPagosPage({ searchParams: Promise.resolve({ tab: "otro", estado: "inventado" }) }));
+    expect(screen.getByText(/tab=unidad estado=none/)).toBeInTheDocument();
+  });
+
+  it("ignora monedas fuera de USD/ARS en las métricas", async () => {
+    mockFindManyAcuerdo.mockResolvedValueOnce([plan({ moneda: "EUR" })]);
+    mockFindManyCosto.mockResolvedValueOnce([]);
+    render(await AdminPagosPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByText(/pagadoUSD=0 pagadoARS=0 pendienteUSD=0 pendienteARS=0/)).toBeInTheDocument();
   });
 });

@@ -1,19 +1,24 @@
 import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/admin/current-user";
-import PagosPanel from "@/components/admin/PagosPanel";
+import { getSignedUrl, BUCKET_MOVARA } from "@/lib/admin/storage";
+import PagosPanel, { type TabPagos } from "@/components/admin/PagosPanel";
 import { serializeAcuerdo } from "@/lib/cobranza/serialize";
 import { conComprobantesFirmados } from "@/lib/cobranza/attach-signed-urls";
-import { filasPorUnidad, metricasPlanes, filtroEstadoDesdeQuery } from "@/lib/cobranza/planes-unidad";
+import { sumaImportes } from "@/lib/cobranza/calc";
+import { estadoPagoUnidad } from "@/lib/cobranza/pagos-unidad";
+import { COSTO_INCLUDE, serializeCosto, totalesLogistica } from "@/lib/cobranza/logistica";
 import type { UnidadOpcion } from "@/lib/cobranza/types";
 
 export const dynamic = "force-dynamic";
 
-/** Pagos a proveedores — dinero que sale. Misma lógica que Cobranza
- * (/admin/cobranza, dinero que entra del cliente), dirección opuesta. */
+const ESTADOS_FILTRO = ["pendiente", "parcial", "pagado", "vencido", "con_saldo"] as const;
+
+/** Pagos a proveedores — dinero que sale. Por unidad (fábrica + logística
+ * nacional, planes de cuotas) y logística internacional (por envío). */
 export default async function AdminPagosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string; vence?: string; moneda?: string }>;
+  searchParams: Promise<{ tab?: string; estado?: string }>;
 }) {
   const sp = await searchParams;
   const now = new Date();
@@ -28,58 +33,73 @@ export default async function AdminPagosPage({
     data: { estado: "vencido" },
   });
 
-  const [session, acuerdosRaw, unidadesRaw, pagadoUSDAgg, pagadoARSAgg] = await Promise.all([
+  const [session, planesRaw, costosRaw, unidadesRaw, enviosRaw] = await Promise.all([
     getAdminUser(),
     db.acuerdoPago.findMany({
       where: { tipo: "pago" },
       include: {
         unidad: {
-          select: {
-            numeroUnidad: true,
-            modelo: true,
-            estadoFabricacion: true,
-            cliente: { select: { id: true, nombre: true } },
-          },
+          select: { numeroUnidad: true, modelo: true, estadoFabricacion: true, cliente: { select: { id: true, nombre: true } } },
         },
         cuotas: { orderBy: { vencimiento: "asc" } },
         movimientos: { orderBy: { fecha: "desc" } },
       },
       orderBy: { createdAt: "desc" },
     }),
+    db.costoLogistica.findMany({ include: COSTO_INCLUDE, orderBy: { fecha: "desc" } }),
     db.unidad.findMany({
-      select: { id: true, numeroUnidad: true, modelo: true, precioCliente: true, cliente: { select: { nombre: true } } },
+      select: { id: true, numeroUnidad: true, cliente: { select: { nombre: true } } },
       orderBy: { createdAt: "desc" },
     }),
-    db.movimiento.aggregate({
-      _sum: { importe: true },
-      where: { fecha: { gte: inicioMes, lt: inicioMesSiguiente }, acuerdo: { tipo: "pago", moneda: "USD" } },
-    }),
-    db.movimiento.aggregate({
-      _sum: { importe: true },
-      where: { fecha: { gte: inicioMes, lt: inicioMesSiguiente }, acuerdo: { tipo: "pago", moneda: "ARS" } },
+    db.envio.findMany({
+      select: { id: true, numeroPI: true, numeroContenedor: true, _count: { select: { unidades: true } } },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
-  const acuerdos = await conComprobantesFirmados(acuerdosRaw.map(serializeAcuerdo));
-  const filas = filasPorUnidad(
-    unidadesRaw.map((u) => ({
-      id: u.id,
-      numeroUnidad: u.numeroUnidad,
-      clienteNombre: u.cliente.nombre,
-      modelo: u.modelo,
-      precioCliente: u.precioCliente,
-    })),
-    acuerdos,
-    now
+  const planes = await conComprobantesFirmados(planesRaw.map(serializeAcuerdo));
+  const costos = await Promise.all(
+    costosRaw.map(async (c) => {
+      const row = serializeCosto(c);
+      return c.comprobanteUrl ? { ...row, comprobanteSignedUrl: await getSignedUrl(BUCKET_MOVARA, c.comprobanteUrl) } : row;
+    })
   );
-  const metricas = metricasPlanes(filas, now);
-  const unidades: UnidadOpcion[] = unidadesRaw.map((u) => ({
-    id: u.id,
-    numeroUnidad: u.numeroUnidad,
-    clienteNombre: u.cliente.nombre,
+
+  // Métricas: pagos por unidad (movimientos) + costos de logística.
+  const enMes = (iso: string) => {
+    const t = new Date(iso).getTime();
+    return t >= inicioMes.getTime() && t < inicioMesSiguiente.getTime();
+  };
+  const pagadoMes = { USD: 0, ARS: 0 };
+  const pendiente = { USD: 0, ARS: 0 };
+  let vencidos = 0;
+  for (const p of planes) {
+    if (p.moneda !== "USD" && p.moneda !== "ARS") continue;
+    pagadoMes[p.moneda] += sumaImportes(p.movimientos.filter((m) => enMes(m.fecha)));
+    pendiente[p.moneda] += Math.max(0, p.totalAcordado - sumaImportes(p.movimientos));
+    if (estadoPagoUnidad(p, hoy) === "vencido") vencidos++;
+  }
+  const logistica = totalesLogistica(costos);
+  const logisticaPagadaMes = totalesLogistica(costos.filter((c) => enMes(c.fecha))).pagado;
+  pagadoMes.USD += logisticaPagadaMes.USD;
+  pagadoMes.ARS += logisticaPagadaMes.ARS;
+  pendiente.USD += logistica.pendiente.USD;
+  pendiente.ARS += logistica.pendiente.ARS;
+  vencidos += costos.filter((c) => c.estado === "pendiente" && new Date(c.fecha).getTime() < hoy.getTime()).length;
+
+  const unidades: UnidadOpcion[] = unidadesRaw.map((u) => ({ id: u.id, numeroUnidad: u.numeroUnidad, clienteNombre: u.cliente.nombre }));
+  const envios = enviosRaw.map((e) => ({
+    id: e.id,
+    numeroPI: e.numeroPI,
+    numeroContenedor: e.numeroContenedor,
+    cantidadUnidades: e._count.unidades,
   }));
 
-  const monedaInicial = sp.moneda === "USD" || sp.moneda === "ARS" ? sp.moneda : undefined;
+  const tabInicial: TabPagos = sp.tab === "logistica" ? "logistica" : "unidad";
+  const estadoAlias = sp.estado === "vencidas" ? "vencido" : sp.estado === "saldado" ? "pagado" : sp.estado;
+  const estadoInicial = (ESTADOS_FILTRO as readonly string[]).includes(estadoAlias ?? "")
+    ? (estadoAlias as (typeof ESTADOS_FILTRO)[number])
+    : undefined;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 space-y-6">
@@ -88,17 +108,14 @@ export default async function AdminPagosPage({
         <h1 className="text-2xl font-bold text-[#2F2F2F]">Pagos</h1>
       </div>
       <PagosPanel
-        filas={filas}
+        planes={planes}
+        costos={costos}
         unidades={unidades}
+        envios={envios}
         rol={session?.rol ?? "vendedor"}
-        metricas={{
-          pagadoMes: { USD: pagadoUSDAgg._sum.importe ?? 0, ARS: pagadoARSAgg._sum.importe ?? 0 },
-          pendiente: metricas.pendiente,
-          unidadesCompletasMes: metricas.unidadesSaldadasMes,
-          unidadesConVencidas: metricas.unidadesConVencidas,
-        }}
-        estadoInicial={filtroEstadoDesdeQuery(sp.estado, sp.vence)}
-        monedaInicial={monedaInicial}
+        metricas={{ pagadoMes, pendiente, vencidos }}
+        tabInicial={tabInicial}
+        estadoInicial={estadoInicial}
       />
     </div>
   );

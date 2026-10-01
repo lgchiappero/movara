@@ -5,6 +5,8 @@ import {
   CONCEPTO_PAGO_OPTIONS,
   MONEDA_OPTIONS,
   MODALIDAD_OPTIONS,
+  CONCEPTO_LOGISTICA_OPTIONS,
+  ESTADO_COSTO_OPTIONS,
 } from "@/lib/cobranza/constantes";
 
 const stringOrNull = z.union([z.string(), z.null()]).transform((v) => (v === "" || v === null ? null : v));
@@ -80,21 +82,20 @@ export const editarPlanSchema = z
   });
 export type EditarPlanInput = z.infer<typeof editarPlanSchema>;
 
-/** Pago directo a proveedor (sin plan de cuotas) — alta y edición. Llega
- * como multipart (por el comprobante), así que los números vienen como
- * string y se coercionan acá. */
-export const pagoProveedorSchema = z.object({
-  proveedor: z.string().trim().min(1, "Falta el proveedor"),
-  concepto: z.enum(CONCEPTO_PAGO_OPTIONS, { message: "Concepto inválido" }),
+/** Costo de logística internacional (por envío) — alta y edición. Llega
+ * como multipart (por el comprobante), así que los números y booleanos
+ * vienen como string y se coercionan acá. */
+export const costoLogisticaSchema = z.object({
+  concepto: z.enum(CONCEPTO_LOGISTICA_OPTIONS, { message: "Concepto inválido" }),
   descripcion: stringOrNull.optional(),
   moneda: z.enum(MONEDA_OPTIONS),
   importe: z.coerce.number().positive("El importe debe ser mayor a 0"),
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}/, "Falta la fecha del pago"),
-  estado: z.enum(["pagado", "pendiente"]),
-  modalidad: z.enum(MODALIDAD_OPTIONS).default("transferencia"),
+  estado: z.enum(ESTADO_COSTO_OPTIONS),
   notas: stringOrNull.optional(),
+  prorratear: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
 });
-export type PagoProveedorInput = z.infer<typeof pagoProveedorSchema>;
+export type CostoLogisticaInput = z.infer<typeof costoLogisticaSchema>;
 
 export const registrarMovimientoSchema = z.object({
   fecha: z.string().min(1, "Falta la fecha"),

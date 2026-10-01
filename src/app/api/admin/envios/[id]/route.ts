@@ -76,6 +76,16 @@ export async function DELETE(
     );
   }
 
+  // FK restrict: los costos de logística internacional del envío se
+  // eliminan primero, a propósito (son pagos registrados).
+  const cantidadCostos = await db.costoLogistica.count({ where: { envioId: id } });
+  if (cantidadCostos > 0) {
+    return NextResponse.json(
+      { error: `No se puede eliminar: tiene ${cantidadCostos} costo${cantidadCostos === 1 ? "" : "s"} de logística cargado${cantidadCostos === 1 ? "" : "s"}` },
+      { status: 400 }
+    );
+  }
+
   try {
     await db.envio.delete({ where: { id } });
     return NextResponse.json({ ok: true });

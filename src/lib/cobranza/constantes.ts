@@ -22,9 +22,34 @@ export const CONCEPTO_PAGO_OPTIONS = [
   "grua",
   "impuestos",
   "seguro",
+  "instalacion",
   "otro",
 ] as const;
 export type ConceptoPago = (typeof CONCEPTO_PAGO_OPTIONS)[number];
+
+/** Conceptos que se ofrecen al cargar un pago POR UNIDAD (fábrica y
+ * logística nacional). Flete/seguro/aduana/despachante/impuestos siguen
+ * siendo válidos (pagos viejos por unidad) pero la logística internacional
+ * ahora se carga por envío — ver CONCEPTO_LOGISTICA_OPTIONS. */
+export const CONCEPTO_PAGO_UNIDAD_OPTIONS = ["fabrica", "transporte", "grua", "instalacion", "otro"] as const satisfies readonly ConceptoPago[];
+export type ConceptoPagoUnidad = (typeof CONCEPTO_PAGO_UNIDAD_OPTIONS)[number];
+
+/** Logística internacional — costos del envío completo (contenedor). */
+export const CONCEPTO_LOGISTICA_OPTIONS = ["flete", "seguro", "aduana", "despachante", "portuarios", "vep", "otro"] as const;
+export type ConceptoLogistica = (typeof CONCEPTO_LOGISTICA_OPTIONS)[number];
+
+export const CONCEPTO_LOGISTICA_LABELS: Record<ConceptoLogistica, string> = {
+  flete: "Flete marítimo",
+  seguro: "Seguro de carga",
+  aduana: "Aduana",
+  despachante: "Despachante",
+  portuarios: "Gastos portuarios",
+  vep: "VEP",
+  otro: "Otro",
+};
+
+export const ESTADO_COSTO_OPTIONS = ["pagado", "pendiente"] as const;
+export type EstadoCosto = (typeof ESTADO_COSTO_OPTIONS)[number];
 
 export const CONCEPTO_LABELS: Record<ConceptoCobro | ConceptoPago, string> = {
   venta: "Plan de pago",
@@ -39,6 +64,7 @@ export const CONCEPTO_LABELS: Record<ConceptoCobro | ConceptoPago, string> = {
   grua: "Grúa",
   impuestos: "Impuestos",
   seguro: "Seguro",
+  instalacion: "Instalación",
   otro: "Otro",
 };
 
@@ -57,6 +83,7 @@ export const DESCRIPCION_SUGERIDA: Record<ConceptoCobro | ConceptoPago, string> 
   grua: "Servicio de grúa",
   impuestos: "Impuestos",
   seguro: "Seguro de carga",
+  instalacion: "Instalación en destino",
   otro: "",
 };
 

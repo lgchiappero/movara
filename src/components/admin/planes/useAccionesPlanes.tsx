@@ -6,14 +6,12 @@ import NuevoPlanPagoModal from "@/components/admin/NuevoPlanPagoModal";
 import RegistrarMovimientoModal from "@/components/admin/RegistrarMovimientoModal";
 import EditarMovimientoModal from "@/components/admin/EditarMovimientoModal";
 import EditarPlanModal from "@/components/admin/EditarPlanModal";
-import PagoProveedorModal from "@/components/admin/PagoProveedorModal";
 import type { AcuerdoConDetalle, MovimientoDetalle, UnidadOpcion } from "@/lib/cobranza/types";
 import type { TipoAcuerdo } from "@/lib/cobranza/constantes";
 
 export type AccionesPlanes = {
-  /** Cobranza: nuevo plan de pago. Pagos: nuevo pago a proveedor. */
+  /** Cobranza: nuevo plan de pago. Pagos: nuevo pago a proveedor (plan). */
   abrirNuevoPlan: (unidadId?: string) => void;
-  /** Cobranza: editar el plan. Pagos: editar el pago a proveedor. */
   abrirEditarPlan: (plan: AcuerdoConDetalle) => void;
   abrirRegistrarPago: (plan: AcuerdoConDetalle) => void;
   abrirEditarPago: (plan: AcuerdoConDetalle, pago: MovimientoDetalle) => void;
@@ -64,33 +62,18 @@ export function useAccionesPlanes({
 
   const modales = (
     <>
-      {nuevoPlan && tipo === "cobro" && (
+      {nuevoPlan && (
         <NuevoPlanPagoModal
+          tipo={tipo}
           unidades={unidades}
           unidadIdInicial={nuevoPlan.unidadId}
           onClose={() => setNuevoPlan(null)}
           onCreated={() => cerrarYRefrescar(() => setNuevoPlan(null))}
         />
       )}
-      {nuevoPlan && tipo === "pago" && (
-        <PagoProveedorModal
-          unidades={unidades}
-          unidadIdInicial={nuevoPlan.unidadId}
-          onClose={() => setNuevoPlan(null)}
-          onSaved={() => cerrarYRefrescar(() => setNuevoPlan(null))}
-        />
-      )}
-      {editarPlan && tipo === "cobro" && (
+      {editarPlan && (
         <EditarPlanModal
           plan={editarPlan}
-          onClose={() => setEditarPlan(null)}
-          onSaved={() => cerrarYRefrescar(() => setEditarPlan(null))}
-        />
-      )}
-      {editarPlan && tipo === "pago" && (
-        <PagoProveedorModal
-          unidades={unidades}
-          pago={editarPlan}
           onClose={() => setEditarPlan(null)}
           onSaved={() => cerrarYRefrescar(() => setEditarPlan(null))}
         />

@@ -19,6 +19,7 @@ import { useToast } from "@/components/admin/Toast";
 import PlanesUnidadGrid from "@/components/admin/planes/PlanesUnidadGrid";
 import { useAccionesPlanes } from "@/components/admin/planes/useAccionesPlanes";
 import type { FilaPlanUnidad, FiltroEstadoPlan } from "@/lib/cobranza/planes-unidad";
+import type { ProrrateoUSD } from "@/lib/cobranza/rentabilidad";
 import RentabilidadPorUnidadTab from "@/components/admin/cobranza/RentabilidadPorUnidadTab";
 import EstadoCuentaClienteTab from "@/components/admin/cobranza/EstadoCuentaClienteTab";
 import TipoCambioTab from "@/components/admin/cobranza/TipoCambioTab";
@@ -42,6 +43,7 @@ function formatMoneda(value: number, moneda: string): string {
 
 export default function CobranzaPanel({
   filas,
+  prorrateosLogistica = [],
   acuerdosCobro,
   acuerdosPago,
   unidades,
@@ -60,6 +62,8 @@ export default function CobranzaPanel({
 }: {
   /** Una fila por unidad con el saldo de su plan de pago (ver planes-unidad.ts). */
   filas: FilaPlanUnidad[];
+  /** Partes de logística internacional (USD, pagadas) por unidad — Rentabilidad. */
+  prorrateosLogistica?: ProrrateoUSD[];
   acuerdosCobro: AcuerdoConDetalle[];
   acuerdosPago: AcuerdoConDetalle[];
   unidades: UnidadOpcion[];
@@ -282,7 +286,12 @@ export default function CobranzaPanel({
         />
       )}
       {tab === "rentabilidad" && (
-        <RentabilidadPorUnidadTab acuerdosCobro={acuerdosCobro} acuerdosPago={acuerdosPago} periodo={periodo} />
+        <RentabilidadPorUnidadTab
+          acuerdosCobro={acuerdosCobro}
+          acuerdosPago={acuerdosPago}
+          prorrateos={prorrateosLogistica}
+          periodo={periodo}
+        />
       )}
       {tab === "cuenta-cliente" && (
         <EstadoCuentaClienteTab

@@ -51,15 +51,34 @@ vi.mock("@/components/admin/planes/PlanesUnidadSection", () => ({
     planes,
     unidad,
     rol,
+    children,
   }: {
     tipo: string;
     planes: { movimientos: { comprobanteSignedUrl: string | null }[] }[];
     unidad: { precioCliente: number | null };
     rol: string;
+    children?: React.ReactNode;
   }) => (
     <div>
       PlanesUnidadSection {tipo}: {planes.length} precio={unidad.precioCliente ?? "none"} rol={rol} comprobante=
       {planes[0]?.movimientos[0]?.comprobanteSignedUrl ?? "none"}
+      {children}
+    </div>
+  ),
+}));
+vi.mock("@/components/admin/logistica/LogisticaUnidadReferencia", () => ({
+  default: ({
+    unidadId,
+    envio,
+    costos,
+  }: {
+    unidadId: string;
+    envio: { id: string; numeroPI: string | null } | null;
+    costos: { concepto: string; importe: number; envioNumeroPI: string | null; prorrateos: { unidadId: string; importe: number }[] }[];
+  }) => (
+    <div>
+      LogisticaUnidadReferencia unidad={unidadId} envio={envio ? `${envio.id}:${envio.numeroPI}` : "none"} costos=
+      {costos.map((c) => `${c.concepto}:${c.importe}:${c.envioNumeroPI}:${c.prorrateos.map((p) => `${p.unidadId}=${p.importe}`).join("|")}`).join(",") || "none"}
     </div>
   ),
 }));
@@ -459,5 +478,48 @@ describe("UnidadDetailPage", () => {
     mockFindUnique.mockResolvedValueOnce(UNIDAD_BASE);
     render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
     expect(screen.queryByText(/EliminarUnidadButton/)).not.toBeInTheDocument();
+  });
+
+  it("Pagos a proveedores: referencia de solo lectura a la logística internacional del envío vinculado", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      ...UNIDAD_BASE,
+      envioId: "e1",
+      envio: {
+        id: "e1",
+        numeroPI: "PI-001",
+        numeroContenedor: "MSCU1",
+        fechaEmbarque: null,
+        documentos: [],
+        costosLogistica: [
+          {
+            id: "c1",
+            envioId: "e1",
+            concepto: "flete",
+            descripcion: null,
+            moneda: "USD",
+            importe: 4200,
+            fecha: new Date("2026-09-01T00:00:00.000Z"),
+            estado: "pagado",
+            comprobanteUrl: null,
+            notas: null,
+            prorrateado: true,
+            createdAt: new Date("2026-09-01T00:00:00.000Z"),
+            prorrateos: [{ unidadId: "u1", importe: 2100, unidad: { numeroUnidad: "MOV-UNIDAD-2026-001" } }],
+          },
+        ],
+      },
+    });
+    render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
+    // Solo dentro de la sección de Pagos (no en Cobranza).
+    expect(screen.getAllByText(/LogisticaUnidadReferencia/)).toHaveLength(1);
+    expect(screen.getByText(/PlanesUnidadSection pago/)).toHaveTextContent(
+      "LogisticaUnidadReferencia unidad=u1 envio=e1:PI-001 costos=flete:4200:PI-001:u1=2100"
+    );
+  });
+
+  it("sin envío: la referencia lo indica (envío null, sin costos)", async () => {
+    mockFindUnique.mockResolvedValueOnce(UNIDAD_BASE);
+    render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
+    expect(screen.getByText(/LogisticaUnidadReferencia unidad=u1 envio=none costos=none/)).toBeInTheDocument();
   });
 });

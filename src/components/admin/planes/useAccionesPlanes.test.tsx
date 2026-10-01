@@ -136,27 +136,17 @@ describe("useAccionesPlanes", () => {
     expect(screen.queryByRole("heading", { name: "Editar plan de pago" })).not.toBeInTheDocument();
   });
 
-  it("pago: 'nuevo' abre 'Nuevo pago a proveedor' (sin cuotas) y 'editar plan' lo abre en modo edición", async () => {
+  it("pago: 'nuevo' abre 'Nuevo pago a proveedor' (plan con cuotas, fábrica 50%+50%) y 'editar plan' el editor de plan", async () => {
     const { user } = renderHarness("pago");
     await user.click(screen.getByText("nuevo"));
     expect(screen.getByRole("heading", { name: "Nuevo pago a proveedor" })).toBeInTheDocument();
-    expect(screen.queryByText("+ Agregar cuota")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Descripción de la cuota 1")).toHaveValue("Anticipo 50% (al confirmar)");
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
     await user.click(screen.getByText("editar plan"));
-    expect(screen.getByRole("heading", { name: "Editar pago a proveedor" })).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Naviera Sur")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Editar plan de pago" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
-    expect(screen.queryByRole("heading", { name: "Editar pago a proveedor" })).not.toBeInTheDocument();
-  });
-
-  it("pago: guardar el pago refresca y cierra el modal", async () => {
-    fetchMock.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    const { user } = renderHarness("pago");
-    await user.click(screen.getByText("editar plan"));
-    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
-    expect(screen.queryByRole("heading", { name: "Editar pago a proveedor" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Editar plan de pago" })).not.toBeInTheDocument();
   });
 
   it("cobro: guardar el plan editado refresca y cierra el modal", async () => {
@@ -169,13 +159,15 @@ describe("useAccionesPlanes", () => {
     await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
   });
 
-  it("pago: guardar un pago nuevo refresca y cierra el modal", async () => {
+  it("pago: crear un pago a proveedor refresca y cierra el modal", async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ ok: true, id: "p9" }), { status: 201 }));
     const { user } = renderHarness("pago");
     await user.click(screen.getByText("nuevo"));
+    await user.click(screen.getByPlaceholderText("Buscar por N° de unidad o cliente..."));
+    await user.click(screen.getByRole("button", { name: /MOV-1/ }));
     await user.type(screen.getByLabelText("Proveedor"), "Heshi");
-    await user.type(screen.getByLabelText("Importe"), "9000");
-    await user.click(screen.getByRole("button", { name: "Registrar pago" }));
+    await user.type(screen.getByLabelText(/Total acordado/), "30000");
+    await user.click(screen.getByRole("button", { name: "Crear pago a proveedor" }));
     await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
     expect(screen.queryByRole("heading", { name: "Nuevo pago a proveedor" })).not.toBeInTheDocument();
   });

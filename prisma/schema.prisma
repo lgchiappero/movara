@@ -334,8 +334,9 @@ model Envio {
 
   notas String?
 
-  unidades   Unidad[]
-  documentos DocumentoEnvio[]
+  unidades        Unidad[]
+  documentos      DocumentoEnvio[]
+  costosLogistica CostoLogistica[]
 
   @@map("envios")
 }
@@ -378,8 +379,9 @@ model Unidad {
 
   notas String?
 
-  documentos   DocumentoUnidad[]
-  acuerdosPago AcuerdoPago[]
+  documentos          DocumentoUnidad[]
+  acuerdosPago        AcuerdoPago[]
+  prorrateosLogistica ProrrateoLogistica[]
 
   @@map("unidades")
 }
@@ -510,4 +512,49 @@ model TipoCambio {
   cargadoPor String
 
   @@map("tipos_cambio")
+}
+
+// ─── Logística internacional (por envío, no por unidad) ───────────────
+// Costos del contenedor completo: flete marítimo, seguro, aduana, etc. Se
+// pagan una vez por envío; opcionalmente se prorratean entre las unidades
+// del envío (un ProrrateoLogistica por unidad) para la rentabilidad.
+model CostoLogistica {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  envioId String
+  envio   Envio  @relation(fields: [envioId], references: [id], onDelete: Restrict)
+
+  concepto       String // "flete" | "seguro" | "aduana" | "despachante" | "portuarios" | "vep" | "otro"
+  descripcion    String?
+  moneda         String // "USD" | "ARS"
+  importe        Float
+  fecha          DateTime // fecha de pago (o prevista, si está pendiente)
+  estado         String // "pagado" | "pendiente"
+  comprobanteUrl String?
+  notas          String?
+  prorrateado    Boolean  @default(false)
+  registradoPor  String
+
+  prorrateos ProrrateoLogistica[]
+
+  @@index([envioId])
+  @@map("costos_logistica")
+}
+
+model ProrrateoLogistica {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  costoId  String
+  costo    CostoLogistica @relation(fields: [costoId], references: [id], onDelete: Cascade)
+  unidadId String
+  unidad   Unidad         @relation(fields: [unidadId], references: [id], onDelete: Cascade)
+
+  importe Float // parte de la unidad, en la moneda del costo
+
+  @@unique([costoId, unidadId])
+  @@index([unidadId])
+  @@map("prorrateos_logistica")
 }

@@ -101,6 +101,7 @@ export default async function AdminCobranzaPage({
     cobradoARSAgg,
     primerMovimientoAgg,
     cierreActualRaw,
+    prorrateosRaw,
   ] = await Promise.all([
     getAdminUser(),
     db.acuerdoPago.findMany({ where: { tipo: "cobro" }, include, orderBy: { createdAt: "desc" } }),
@@ -130,6 +131,19 @@ export default async function AdminCobranzaPage({
     mesUnico
       ? db.cierrePeriodo.findUnique({ where: { mes_anio: { mes: mesUnico.mes, anio: mesUnico.anio } } })
       : Promise.resolve(null),
+    // Rentabilidad: la parte de logística internacional de cada unidad
+    // (costos del envío prorrateados, ya pagados, en USD).
+    db.prorrateoLogistica.findMany({
+      where: { costo: { estado: "pagado", moneda: "USD" } },
+      select: {
+        unidadId: true,
+        importe: true,
+        costo: { select: { fecha: true } },
+        unidad: {
+          select: { numeroUnidad: true, modelo: true, estadoFabricacion: true, cliente: { select: { nombre: true } } },
+        },
+      },
+    }),
   ]);
 
   const [acuerdosCobro, acuerdosPago] = await Promise.all([
@@ -205,6 +219,15 @@ export default async function AdminCobranzaPage({
 
       <CobranzaPanel
         filas={filas}
+        prorrateosLogistica={prorrateosRaw.map((p) => ({
+          unidadId: p.unidadId,
+          unidadNumero: p.unidad.numeroUnidad,
+          unidadModelo: p.unidad.modelo,
+          unidadEstado: p.unidad.estadoFabricacion,
+          clienteNombre: p.unidad.cliente.nombre,
+          importe: p.importe,
+          fecha: p.costo.fecha.toISOString(),
+        }))}
         acuerdosCobro={acuerdosCobro}
         acuerdosPago={acuerdosPago}
         unidades={unidades}

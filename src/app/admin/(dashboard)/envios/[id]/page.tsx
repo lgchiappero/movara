@@ -8,6 +8,8 @@ import DocumentosPorSeccion, { type DocumentoSeccionConUrl } from "@/components/
 import AgregarUnidadSelector from "@/components/admin/AgregarUnidadSelector";
 import UnidadEnvioRow from "@/components/admin/UnidadEnvioRow";
 import EliminarEnvioButton from "@/components/admin/EliminarEnvioButton";
+import CostosLogisticaSection from "@/components/admin/logistica/CostosLogisticaSection";
+import { COSTO_INCLUDE, serializeCosto } from "@/lib/cobranza/logistica";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { isAdmin } from "@/lib/admin/roles";
 
@@ -25,6 +27,7 @@ export default async function EnvioDetailPage({
       include: {
         unidades: { orderBy: { createdAt: "desc" }, include: { cliente: { select: { nombre: true } } } },
         documentos: { orderBy: { createdAt: "desc" } },
+        costosLogistica: { include: COSTO_INCLUDE, orderBy: { fecha: "desc" } },
       },
     }),
     db.unidad.findMany({
@@ -48,6 +51,13 @@ export default async function EnvioDetailPage({
       createdAt: d.createdAt.toISOString(),
       signedUrl: await getSignedUrl(BUCKET_MOVARA, d.url),
     }))
+  );
+
+  const costosLogistica = await Promise.all(
+    envio.costosLogistica.map(async (c) => {
+      const row = serializeCosto({ ...c, envio: { numeroPI: envio.numeroPI, numeroContenedor: envio.numeroContenedor } });
+      return c.comprobanteUrl ? { ...row, comprobanteSignedUrl: await getSignedUrl(BUCKET_MOVARA, c.comprobanteUrl) } : row;
+    })
   );
 
   return (
@@ -121,6 +131,17 @@ export default async function EnvioDetailPage({
           </div>
         )}
       </div>
+
+      <CostosLogisticaSection
+        envio={{
+          id: envio.id,
+          numeroPI: envio.numeroPI,
+          numeroContenedor: envio.numeroContenedor,
+          cantidadUnidades: envio.unidades.length,
+        }}
+        costos={costosLogistica}
+        rol={session?.rol ?? "vendedor"}
+      />
 
       <div>
         <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600 mb-4">

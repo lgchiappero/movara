@@ -6,6 +6,8 @@ import { SECCIONES_UNIDAD, SECCIONES_ENVIO } from "@/lib/envios/constantes";
 import UnidadDetailForm from "@/components/admin/UnidadDetailForm";
 import DocumentosPorSeccion, { type DocumentoSeccionConUrl } from "@/components/admin/DocumentosPorSeccion";
 import PlanesUnidadSection from "@/components/admin/planes/PlanesUnidadSection";
+import LogisticaUnidadReferencia from "@/components/admin/logistica/LogisticaUnidadReferencia";
+import { COSTO_INCLUDE, serializeCosto } from "@/lib/cobranza/logistica";
 import { conComprobantesFirmados } from "@/lib/cobranza/attach-signed-urls";
 import UnidadTimeline from "@/components/admin/UnidadTimeline";
 import EliminarUnidadButton from "@/components/admin/EliminarUnidadButton";
@@ -28,7 +30,14 @@ export default async function UnidadDetailPage({
     include: {
       cliente: { select: { id: true, nombre: true } },
       envio: {
-        select: { id: true, numeroPI: true, fechaEmbarque: true, documentos: { orderBy: { createdAt: "desc" } } },
+        select: {
+          id: true,
+          numeroPI: true,
+          numeroContenedor: true,
+          fechaEmbarque: true,
+          documentos: { orderBy: { createdAt: "desc" } },
+          costosLogistica: { include: { prorrateos: COSTO_INCLUDE.prorrateos }, orderBy: { fecha: "desc" } },
+        },
       },
       documentos: { orderBy: { createdAt: "desc" } },
     },
@@ -256,7 +265,20 @@ export default async function UnidadDetailPage({
           planes={acuerdos.filter((a) => a.tipo === tipo)}
           rol={session?.rol ?? "vendedor"}
           ahora={new Date().toISOString()}
-        />
+        >
+          {tipo === "pago" && (
+            <LogisticaUnidadReferencia
+              unidadId={id}
+              envio={unidad.envio ? { id: unidad.envio.id, numeroPI: unidad.envio.numeroPI } : null}
+              costos={(unidad.envio?.costosLogistica ?? []).map((c) =>
+                serializeCosto({
+                  ...c,
+                  envio: { numeroPI: unidad.envio!.numeroPI, numeroContenedor: unidad.envio!.numeroContenedor },
+                })
+              )}
+            />
+          )}
+        </PlanesUnidadSection>
       ))}
     </div>
   );

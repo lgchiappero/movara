@@ -6,11 +6,11 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: 
 
 import { ToastProvider } from "./Toast";
 import PagosPanel from "./PagosPanel";
-import { filasPorUnidad } from "@/lib/cobranza/planes-unidad";
 import type { AcuerdoConDetalle } from "@/lib/cobranza/types";
+import type { CostoLogisticaRow } from "@/lib/cobranza/logistica";
 
-const PAGO: AcuerdoConDetalle = {
-  id: "a1",
+const FABRICA: AcuerdoConDetalle = {
+  id: "p1",
   unidadId: "u1",
   unidadNumero: "MOV-UNIDAD-2026-001",
   unidadModelo: "Flex 38",
@@ -19,7 +19,7 @@ const PAGO: AcuerdoConDetalle = {
   clienteNombre: "Ana",
   tipo: "pago",
   concepto: "fabrica",
-  descripcion: "Primera cuota fábrica",
+  descripcion: null,
   contraparte: "Heshi",
   moneda: "USD",
   totalAcordado: 30000,
@@ -29,21 +29,40 @@ const PAGO: AcuerdoConDetalle = {
   movimientos: [],
 };
 
-const FILAS = filasPorUnidad(
-  [{ id: "u1", numeroUnidad: "MOV-UNIDAD-2026-001", clienteNombre: "Ana", modelo: "Flex 38", precioCliente: 24700 }],
-  [PAGO],
-  new Date("2026-10-07T12:00:00")
-);
+const FLETE: CostoLogisticaRow = {
+  id: "c1",
+  envioId: "e1",
+  envioNumeroPI: "PI-001",
+  envioContenedor: "MSCU1234567",
+  concepto: "flete",
+  descripcion: "Shanghai → Buenos Aires",
+  moneda: "USD",
+  importe: 4200,
+  fecha: "2026-09-01T00:00:00.000Z",
+  estado: "pagado",
+  comprobanteUrl: null,
+  comprobanteSignedUrl: null,
+  notas: null,
+  prorrateado: true,
+  prorrateos: [
+    { unidadId: "u1", unidadNumero: "MOV-UNIDAD-2026-001", importe: 2100 },
+    { unidadId: "u2", unidadNumero: "MOV-UNIDAD-2026-002", importe: 2100 },
+  ],
+  createdAt: "2026-09-01T00:00:00.000Z",
+};
 
-function renderPanel() {
+function renderPanel(props: Partial<Parameters<typeof PagosPanel>[0]> = {}) {
   const user = userEvent.setup();
   render(
     <ToastProvider>
       <PagosPanel
-        filas={FILAS}
+        planes={[FABRICA]}
+        costos={[FLETE]}
         unidades={[{ id: "u1", numeroUnidad: "MOV-UNIDAD-2026-001", clienteNombre: "Ana" }]}
+        envios={[{ id: "e1", numeroPI: "PI-001", numeroContenedor: "MSCU1234567", cantidadUnidades: 2 }]}
         rol="admin"
-        metricas={{ pagadoMes: { USD: 9000, ARS: 150000 }, pendiente: { USD: 21000, ARS: 0 }, unidadesCompletasMes: 2, unidadesConVencidas: 1 }}
+        metricas={{ pagadoMes: { USD: 9000, ARS: 150000 }, pendiente: { USD: 21000, ARS: 0 }, vencidos: 1 }}
+        {...props}
       />
     </ToastProvider>
   );
@@ -51,40 +70,50 @@ function renderPanel() {
 }
 
 describe("PagosPanel", () => {
-  it("métricas de pagos a proveedores, con links a la grilla filtrada", () => {
+  it("métricas con links a la grilla filtrada", () => {
     renderPanel();
     const pagado = screen.getByText("Pagado este mes").parentElement!;
     expect(pagado).toHaveTextContent("USD 9.000");
     expect(pagado).toHaveTextContent("ARS 150.000");
     expect(screen.getByText("Pendiente de pagar").closest("a")).toHaveAttribute("href", "/admin/pagos?estado=con_saldo");
-    expect(screen.getByText("Pendiente de pagar").parentElement).toHaveTextContent("USD 21.000");
-    expect(screen.getByText("Unidades con pagos completos este mes").parentElement).toHaveTextContent("2");
-    expect(screen.getByText("Unidades con pagos vencidos").closest("a")).toHaveAttribute("href", "/admin/pagos?estado=vencidas");
+    expect(screen.getByText("Pagos vencidos").closest("a")).toHaveAttribute("href", "/admin/pagos?estado=vencido");
+    expect(screen.getByText("Pagos vencidos").parentElement).toHaveTextContent("1");
   });
 
-  it("grilla por unidad en modo pagos (total, pagado, pendiente)", () => {
-    renderPanel();
-    expect(screen.getByText("Pagos a proveedores por unidad")).toBeInTheDocument();
-    const fila = screen.getByRole("link", { name: "MOV-UNIDAD-2026-001" }).closest("tr")!;
-    expect(fila).toHaveTextContent("USD 30.000");
-    expect(screen.getByRole("columnheader", { name: "Pendiente" })).toBeInTheDocument();
+  it("dos tabs: 'Por unidad' (por defecto) y 'Logística internacional'", async () => {
+    const { user } = renderPanel();
+    expect(screen.getByRole("tab", { name: "Por unidad (1)" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Fábrica y logística nacional")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "MOV-UNIDAD-2026-001" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Logística internacional (1)" }));
+    expect(screen.getByText("Costos del envío / contenedor")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "PI-001" })).toHaveAttribute("href", "/admin/envios/e1");
+    expect(screen.getByText("Prorrateado ÷2")).toBeInTheDocument();
   });
 
-  it("'+ Nuevo pago a proveedor' abre el modal de pago directo (sin cuotas)", async () => {
+  it("tab inicial desde la URL", () => {
+    renderPanel({ tabInicial: "logistica" });
+    expect(screen.getByRole("tab", { name: "Logística internacional (1)" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("'+ Nuevo pago a proveedor' abre el plan de pago a proveedor", async () => {
     const { user } = renderPanel();
     await user.click(screen.getByRole("button", { name: "+ Nuevo pago a proveedor" }));
     expect(screen.getByRole("heading", { name: "Nuevo pago a proveedor" })).toBeInTheDocument();
-    expect(screen.queryByText("+ Agregar cuota")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
-    expect(screen.queryByRole("heading", { name: "Nuevo pago a proveedor" })).not.toBeInTheDocument();
   });
 
-  it("'+ Pago' en la fila abre el alta con la unidad preseleccionada; no hay 'Registrar pago'", async () => {
-    const { user } = renderPanel();
-    const fila = screen.getByRole("link", { name: "MOV-UNIDAD-2026-001" }).closest("tr")!;
-    expect(within(fila).queryByRole("button", { name: "Registrar pago" })).not.toBeInTheDocument();
-    await user.click(within(fila).getByRole("button", { name: "+ Pago" }));
-    expect(screen.getByRole("heading", { name: "Nuevo pago a proveedor" })).toBeInTheDocument();
-    expect(screen.getByDisplayValue("MOV-UNIDAD-2026-001 — Ana")).toBeInTheDocument();
+  it("'+ Nuevo costo de logística' abre el modal de logística internacional", async () => {
+    const { user } = renderPanel({ tabInicial: "logistica" });
+    await user.click(screen.getByRole("button", { name: "+ Nuevo costo de logística" }));
+    expect(screen.getByRole("heading", { name: "Nuevo costo de logística" })).toBeInTheDocument();
+  });
+
+  it("editar un costo abre el modal en modo edición", async () => {
+    const { user } = renderPanel({ tabInicial: "logistica" });
+    const fila = screen.getByRole("link", { name: "PI-001" }).closest("tr")!;
+    await user.click(within(fila).getByRole("button", { name: "Editar" }));
+    expect(screen.getByRole("heading", { name: "Editar costo de logística" })).toBeInTheDocument();
   });
 });

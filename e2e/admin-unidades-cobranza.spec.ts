@@ -107,7 +107,8 @@ test.describe("Unidades — próximo paso y columnas de cobranza desde movimient
     await expect(cobranza).toContainText("USD 35.000"); // saldo pendiente de la unidad
     const pagosSeccion = page.locator("#pagos");
     await expect(pagosSeccion.getByRole("heading", { name: "Pagos a proveedores" })).toBeVisible();
-    await expect(pagosSeccion).toContainText("Todavía no hay pagos a proveedores cargados para esta unidad.");
+    await expect(pagosSeccion).toContainText("Todavía no hay pagos a proveedores (fábrica o logística nacional)");
+    await expect(pagosSeccion.getByTestId("logistica-unidad")).toContainText("La unidad todavía no está asignada a un envío.");
 
     // 3) Segundo cobro y pago a fábrica registrados
     movimientos.push({ acuerdoId: cobro, id: await registrarMovimiento(page, cobro, 5000) });
@@ -116,9 +117,9 @@ test.describe("Unidades — próximo paso y columnas de cobranza desde movimient
     movimientos.push({ acuerdoId: pago, id: await registrarMovimiento(page, pago, 9000) });
 
     await page.goto(`/admin/unidades/${unidadId}`);
-    await expect(page.locator("#pagos")).toContainText("Fábrica E2E");
-    await expect(page.locator("#pagos")).toContainText("Parcial");
-    await expect(page.locator("#pagos")).toContainText("USD 9.000"); // pagado
+    const planFabrica = page.locator("#pagos").getByRole("region", { name: "Fábrica E2E · Fábrica" });
+    await expect(planFabrica).toContainText("Total pagado");
+    await expect(planFabrica).toContainText("USD 9.000");
 
     await page.goto("/admin/unidades");
     await expect(filaUnidad(page, numeroUnidad)).toContainText("Iniciar producción");

@@ -16,6 +16,7 @@ export default function PlanesUnidadSection({
   planes,
   rol,
   ahora,
+  children,
 }: {
   tipo: TipoAcuerdo;
   unidad: UnidadParaPlanes;
@@ -24,6 +25,9 @@ export default function PlanesUnidadSection({
   rol: string;
   /** ISO — se calcula en el servidor para que el render sea determinista. */
   ahora: string;
+  /** Contenido extra al final de la sección (ej: referencia a la logística
+   * internacional del envío, en Pagos). */
+  children?: React.ReactNode;
 }) {
   const { acciones, modales } = useAccionesPlanes({
     tipo,
@@ -47,6 +51,7 @@ export default function PlanesUnidadSection({
         {filas.map((fila) => (
           <DetallePlanesUnidad key={fila.key} tipo={tipo} fila={fila} rol={rol} acciones={acciones} />
         ))}
+        {children}
       </div>
       {modales}
     </div>

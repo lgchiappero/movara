@@ -63,7 +63,8 @@ describe("PlanesUnidadSection", () => {
     );
     expect(container.querySelector("#pagos")).not.toBeNull();
     expect(screen.getByRole("heading", { name: "Pagos a proveedores" })).toBeInTheDocument();
-    expect(screen.getByText("Todavía no hay pagos a proveedores cargados para esta unidad.")).toBeInTheDocument();
+    expect(screen.getByText(/Todavía no hay pagos a proveedores \(fábrica o logística nacional\)/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "+ Nuevo pago a proveedor" })).toBeInTheDocument();
   });
 
   it("sin plan: '+ Nuevo plan de pago' abre el modal con la unidad preseleccionada", async () => {
@@ -78,5 +79,28 @@ describe("PlanesUnidadSection", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it("pago: cada pago a proveedor como un plan (proveedor · concepto, cuotas y pagos realizados) + contenido extra", () => {
+    render(
+      <ToastProvider>
+        <PlanesUnidadSection
+          tipo="pago"
+          unidad={UNIDAD}
+          planes={[{ ...PLAN, id: "p1", tipo: "pago", concepto: "fabrica", contraparte: "Heshi", descripcion: null }]}
+          rol="admin"
+          ahora="2026-10-07T12:00:00.000Z"
+        >
+          <p>Referencia logística</p>
+        </PlanesUnidadSection>
+      </ToastProvider>
+    );
+    const plan = screen.getByRole("region", { name: "Heshi · Fábrica" });
+    expect(plan).toHaveTextContent("Unidad MOV-1 · Ana");
+    expect(plan).toHaveTextContent("Total pagado");
+    expect(plan).toHaveTextContent("Pagos realizados");
+    expect(screen.getByRole("button", { name: "Registrar pago realizado" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "+ Nuevo pago a proveedor" })).toBeInTheDocument();
+    expect(screen.getByText("Referencia logística")).toBeInTheDocument();
   });
 });

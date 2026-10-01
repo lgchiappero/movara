@@ -40,13 +40,32 @@ vi.mock("@/components/admin/EliminarEnvioButton", () => ({
   ),
 }));
 
+vi.mock("@/components/admin/logistica/CostosLogisticaSection", () => ({
+  default: ({
+    envio,
+    costos,
+    rol,
+  }: {
+    envio: { id: string; numeroPI: string | null; cantidadUnidades: number };
+    costos: { concepto: string; importe: number; comprobanteSignedUrl: string | null; envioNumeroPI: string | null }[];
+    rol: string;
+  }) => (
+    <div>
+      CostosLogisticaSection envio={envio.id} unidades={envio.cantidadUnidades} rol={rol} costos=
+      {costos.map((c) => `${c.concepto}:${c.importe}:${c.envioNumeroPI}:${c.comprobanteSignedUrl ?? "sin"}`).join(",") || "none"}
+    </div>
+  ),
+}));
+
 import EnvioDetailPage from "../page";
 
 const ENVIO_BASE = {
   id: "e1",
   numeroPI: "PI-001",
+  numeroContenedor: "MSCU1234567",
   unidades: [],
   documentos: [],
+  costosLogistica: [],
 };
 
 describe("EnvioDetailPage", () => {
@@ -127,5 +146,52 @@ describe("EnvioDetailPage", () => {
     mockFindUnique.mockResolvedValueOnce(ENVIO_BASE);
     render(await EnvioDetailPage({ params: Promise.resolve({ id: "e1" }) }));
     expect(screen.queryByText(/EliminarEnvioButton/)).not.toBeInTheDocument();
+  });
+
+  it("sección de costos de logística internacional: costos del envío serializados, con comprobante firmado", async () => {
+    mockGetAdminUser.mockResolvedValue({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockGetSignedUrl.mockResolvedValue("https://signed/flete.pdf");
+    mockFindUnique.mockResolvedValueOnce({
+      ...ENVIO_BASE,
+      unidades: [
+        { id: "u1", numeroUnidad: "MOV-1", modelo: null, estadoFabricacion: "embarcado", createdAt: new Date(), cliente: { nombre: "Ana" } },
+      ],
+      costosLogistica: [
+        {
+          id: "c1",
+          envioId: "e1",
+          concepto: "flete",
+          descripcion: null,
+          moneda: "USD",
+          importe: 4200,
+          fecha: new Date("2026-09-01T00:00:00.000Z"),
+          estado: "pagado",
+          comprobanteUrl: "logistica/e1/flete.pdf",
+          notas: null,
+          prorrateado: false,
+          createdAt: new Date("2026-09-01T00:00:00.000Z"),
+          prorrateos: [],
+        },
+        {
+          id: "c2",
+          envioId: "e1",
+          concepto: "vep",
+          descripcion: null,
+          moneda: "ARS",
+          importe: 150000,
+          fecha: new Date("2026-09-20T00:00:00.000Z"),
+          estado: "pendiente",
+          comprobanteUrl: null,
+          notas: null,
+          prorrateado: false,
+          createdAt: new Date("2026-09-20T00:00:00.000Z"),
+          prorrateos: [],
+        },
+      ],
+    });
+    render(await EnvioDetailPage({ params: Promise.resolve({ id: "e1" }) }));
+    expect(screen.getByText(/CostosLogisticaSection envio=e1 unidades=1 rol=admin/)).toBeInTheDocument();
+    expect(screen.getByText(/costos=flete:4200:PI-001:https:\/\/signed\/flete.pdf,vep:150000:PI-001:sin/)).toBeInTheDocument();
+    expect(mockGetSignedUrl).toHaveBeenCalledWith("documentos-movara", "logistica/e1/flete.pdf");
   });
 });

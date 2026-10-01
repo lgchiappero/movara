@@ -1,13 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MONEDA_OPTIONS } from "@/lib/cobranza/constantes";
+import {
+  MONEDA_OPTIONS,
+  CONCEPTO_PAGO_UNIDAD_OPTIONS,
+  CONCEPTO_LABELS,
+  DESCRIPCION_SUGERIDA,
+  type ConceptoPagoUnidad,
+  type TipoAcuerdo,
+} from "@/lib/cobranza/constantes";
 import {
   TIPO_CUOTA_OPTIONS,
   TIPO_CUOTA_LABELS,
   renumerarCuotas,
   nuevaCuota,
   cambiarTipoCuota,
+  cuotasDesdePreset,
+  importesPorPorcentaje,
+  PRESET_FABRICA,
+  PRESET_PAGO_UNICO,
   type CuotaPlanForm,
   type TipoCuotaPlan,
 } from "@/lib/cobranza/cuotas-plan";
@@ -46,38 +57,51 @@ function formatMonto(moneda: string, valor: number): string {
   return `${moneda} ${valor.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
 }
 
-/** Alta del plan de pago de una unidad (Cobranza): cómo va a pagar el
- * cliente la unidad completa — uno solo por unidad; cliente y total se
- * autocompletan desde la unidad. (Los pagos a proveedores no son planes:
- * ver PagoProveedorModal.) */
+/** Alta de un plan de pago de una unidad:
+ * - cobro (Cobranza): cómo va a pagar el cliente la unidad completa — uno
+ *   solo por unidad; cliente y total se autocompletan desde la unidad.
+ * - pago (Pagos → Por unidad): lo que se le paga a un proveedor por esa
+ *   unidad (fábrica o logística nacional) — puede haber varios. La fábrica
+ *   arranca con 50% + 50%, la logística con un pago único. */
 export default function NuevoPlanPagoModal({
+  tipo = "cobro",
   unidades,
   unidadIdInicial,
   onClose,
   onCreated,
 }: {
+  tipo?: TipoAcuerdo;
   unidades: UnidadOpcion[];
   unidadIdInicial?: string;
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const esCobro = tipo === "cobro";
   const { showSuccess, showError } = useToast();
 
-  const unidadInicialConPlan = unidades.find((u) => u.id === unidadIdInicial)?.tienePlanCobro === true;
+  const unidadInicialConPlan = esCobro && unidades.find((u) => u.id === unidadIdInicial)?.tienePlanCobro === true;
   const [unidadId, setUnidadId] = useState(unidadInicialConPlan ? "" : (unidadIdInicial ?? ""));
   const [contraparte, setContraparte] = useState("");
-  const [descripcion, setDescripcion] = useState("");
+  const [concepto, setConcepto] = useState<ConceptoPagoUnidad>("fabrica");
+  const [descripcion, setDescripcion] = useState(esCobro ? "" : DESCRIPCION_SUGERIDA.fabrica);
   const [moneda, setMoneda] = useState<"USD" | "ARS">("USD");
   const [totalAcordado, setTotalAcordado] = useState("");
   const [notas, setNotas] = useState("");
-  const [cuotas, setCuotas] = useState<CuotaPlanForm[]>(() => renumerarCuotas([nuevaCuota("anticipo")]));
+  const [cuotas, setCuotas] = useState<CuotaPlanForm[]>(() =>
+    esCobro ? renumerarCuotas([nuevaCuota("anticipo")]) : cuotasDesdePreset(PRESET_FABRICA, 0)
+  );
+  // Mientras no se editen a mano, los importes de una plantilla (50%+50%,
+  // pago único) siguen al total acordado.
+  const [porcentajes, setPorcentajes] = useState<number[] | null>(() =>
+    esCobro ? null : PRESET_FABRICA.map((p) => p.porcentaje)
+  );
   const [error, setError] = useState<string | null>(
     unidadInicialConPlan ? "Esta unidad ya tiene un plan de pago. Registrá los pagos sobre ese plan." : null
   );
   const [busy, setBusy] = useState(false);
 
-  // Solo una unidad sin plan puede recibir un plan nuevo.
-  const unidadesElegibles = unidades.filter((u) => !u.tienePlanCobro);
+  // Cobranza: solo una unidad sin plan puede recibir un plan nuevo.
+  const unidadesElegibles = esCobro ? unidades.filter((u) => !u.tienePlanCobro) : unidades;
 
   // ── Autocompletado desde la unidad ────────────────────────────────────
   // Id de la última unidad pedida — si el usuario cambia de unidad antes de
@@ -86,7 +110,7 @@ export default function NuevoPlanPagoModal({
 
   function autocompletarDesdeUnidad(id: string) {
     ultimaUnidadPedida.current = id;
-    if (!id) return;
+    if (!esCobro || !id) return;
     void fetchDatosUnidad(id).then((datos) => {
       if (!datos || ultimaUnidadPedida.current !== id) return;
       if (datos.clienteNombre) setContraparte(datos.clienteNombre);
@@ -105,8 +129,31 @@ export default function NuevoPlanPagoModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Concepto (solo pagos) ─────────────────────────────────────────────
+  // Cambia la descripción sugerida (si no se editó) y la plantilla de
+  // cuotas: fábrica 50%+50%, el resto pago único.
+  function elegirConcepto(nuevo: ConceptoPagoUnidad) {
+    if (!descripcion.trim() || descripcion === DESCRIPCION_SUGERIDA[concepto]) {
+      setDescripcion(DESCRIPCION_SUGERIDA[nuevo]);
+    }
+    setConcepto(nuevo);
+    const preset = nuevo === "fabrica" ? PRESET_FABRICA : PRESET_PAGO_UNICO;
+    setCuotas(cuotasDesdePreset(preset, Number(totalAcordado) || 0));
+    setPorcentajes(preset.map((p) => p.porcentaje));
+  }
+
+  function cambiarTotal(valor: string) {
+    setTotalAcordado(valor);
+    if (porcentajes) {
+      const importes = importesPorPorcentaje(Number(valor) || 0, porcentajes);
+      setCuotas((prev) => prev.map((c, i) => ({ ...c, importe: importes[i] ?? c.importe })));
+    }
+  }
+
   // ── Cuotas ─────────────────────────────────────────────────────────────
+  // Cualquier cambio manual a las cuotas suelta la plantilla de porcentajes.
   function actualizarCuotas(fn: (prev: CuotaPlanForm[]) => CuotaPlanForm[]) {
+    setPorcentajes(null);
     setCuotas((prev) => renumerarCuotas(fn(prev)));
   }
 
@@ -126,7 +173,7 @@ export default function NuevoPlanPagoModal({
 
   function validar(): string | null {
     if (!unidadId) return "Elegí una unidad";
-    if (!contraparte.trim()) return "Falta el cliente";
+    if (!contraparte.trim()) return esCobro ? "Falta el cliente" : "Falta el proveedor";
     if (totalNum <= 0) return "El total acordado debe ser mayor a 0";
     if (cuotas.length === 0) return "Agregá al menos una cuota";
     if (cuotas.some((c) => !c.descripcion.trim())) return "Cada cuota necesita una descripción";
@@ -147,10 +194,10 @@ export default function NuevoPlanPagoModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tipo: "cobro",
+          tipo,
           unidadId,
           contraparte: contraparte.trim(),
-          concepto: "venta",
+          concepto: esCobro ? "venta" : concepto,
           descripcion: descripcion.trim() || null,
           moneda,
           totalAcordado: totalNum,
@@ -169,7 +216,7 @@ export default function NuevoPlanPagoModal({
         showError(mensaje);
         return;
       }
-      showSuccess("Plan de pago creado");
+      showSuccess(esCobro ? "Plan de pago creado" : "Pago a proveedor creado");
       onCreated();
     } catch {
       setError("No pudimos crear el plan de pago. Probá de nuevo.");
@@ -186,8 +233,10 @@ export default function NuevoPlanPagoModal({
         <div className="p-6 space-y-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">Cobranza</p>
-              <h2 className="text-xl font-bold text-[#2F2F2F]">Nuevo plan de pago</h2>
+              <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">
+                {esCobro ? "Cobranza" : "Pagos"}
+              </p>
+              <h2 className="text-xl font-bold text-[#2F2F2F]">{esCobro ? "Nuevo plan de pago" : "Nuevo pago a proveedor"}</h2>
             </div>
             <button
               type="button"
@@ -205,7 +254,7 @@ export default function NuevoPlanPagoModal({
               value={unidadId}
               onChange={elegirUnidad}
               placeholder="Buscar por N° de unidad o cliente..."
-              emptyText="Ninguna unidad sin plan coincide"
+              emptyText={esCobro ? "Ninguna unidad sin plan coincide" : "Ninguna unidad coincide"}
               options={unidadesElegibles.map((u) => ({
                 value: u.id,
                 label: `${u.numeroUnidad ?? "Sin número"} — ${u.clienteNombre}`,
@@ -214,14 +263,31 @@ export default function NuevoPlanPagoModal({
           </label>
 
           <label className="block space-y-1">
-            <span className={labelClass}>Cliente</span>
+            <span className={labelClass}>{esCobro ? "Cliente" : "Proveedor"}</span>
             <input
               value={contraparte}
               onChange={(e) => setContraparte(e.target.value)}
               className={inputClass}
-              placeholder="Nombre del cliente"
+              placeholder={esCobro ? "Nombre del cliente" : "Ej: Heshi, transportista"}
             />
           </label>
+
+          {!esCobro && (
+            <label className="block space-y-1">
+              <span className={labelClass}>Concepto</span>
+              <select
+                value={concepto}
+                onChange={(e) => elegirConcepto(e.target.value as ConceptoPagoUnidad)}
+                className={inputClass}
+              >
+                {CONCEPTO_PAGO_UNIDAD_OPTIONS.map((c) => (
+                  <option key={c} value={c}>
+                    {CONCEPTO_LABELS[c]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <label className="block space-y-1">
             <span className={labelClass}>Descripción</span>
@@ -229,7 +295,7 @@ export default function NuevoPlanPagoModal({
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               className={inputClass}
-              placeholder="Opcional — ej: Venta Flex 38, financiado en 3 cuotas"
+              placeholder={esCobro ? "Opcional — ej: Venta Flex 38, financiado en 3 cuotas" : "Opcional"}
             />
           </label>
 
@@ -255,7 +321,7 @@ export default function NuevoPlanPagoModal({
                 min="0"
                 step="0.01"
                 value={totalAcordado}
-                onChange={(e) => setTotalAcordado(e.target.value)}
+                onChange={(e) => cambiarTotal(e.target.value)}
                 className={inputClass}
               />
             </label>
@@ -340,6 +406,7 @@ export default function NuevoPlanPagoModal({
             <p className="text-xs font-bold uppercase tracking-wide text-stone-500">Resumen</p>
             {descripcion.trim() && <p className="font-medium text-[#2F2F2F]">{descripcion.trim()}</p>}
             <p className="text-stone-600">
+              {!esCobro && contraparte.trim() ? `${contraparte.trim()} · ${CONCEPTO_LABELS[concepto]} · ` : ""}
               {resumen || "Sin cuotas"} · Total {formatMonto(moneda, totalNum)}
             </p>
           </div>
@@ -356,7 +423,7 @@ export default function NuevoPlanPagoModal({
               onClick={crear}
               className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] disabled:opacity-50 text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
             >
-              {busy ? "Creando…" : "Crear plan de pago"}
+              {busy ? "Creando…" : esCobro ? "Crear plan de pago" : "Crear pago a proveedor"}
             </button>
           </div>
         </div>

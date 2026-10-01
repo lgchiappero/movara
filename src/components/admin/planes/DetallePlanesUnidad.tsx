@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CONCEPTO_LABELS,
   MODALIDAD_LABELS,
   ESTADO_CUOTA_LABELS,
   ESTADO_CUOTA_COLORS,
@@ -9,7 +10,6 @@ import {
 import { sumaImportes } from "@/lib/cobranza/calc";
 import type { FilaPlanUnidad } from "@/lib/cobranza/planes-unidad";
 import EliminarButton from "@/components/admin/EliminarButton";
-import PagosProveedorDetalle from "@/components/admin/planes/PagosProveedorDetalle";
 import { isAdmin } from "@/lib/admin/roles";
 import type { AcuerdoConDetalle, Cuota } from "@/lib/cobranza/types";
 import type { AccionesPlanes } from "@/components/admin/planes/useAccionesPlanes";
@@ -25,9 +25,26 @@ function formatFecha(value: string | null): string {
   return value ? new Date(value).toLocaleDateString("es-AR", { timeZone: "UTC" }) : "—";
 }
 
-export const TEXTOS_TIPO: Record<TipoAcuerdo, { pagado: string; nuevoPlan: string }> = {
-  cobro: { pagado: "Total cobrado", nuevoPlan: "+ Nuevo plan de pago" },
-  pago: { pagado: "Pagado", nuevoPlan: "+ Nuevo pago a proveedor" },
+export const TEXTOS_TIPO: Record<
+  TipoAcuerdo,
+  { pagado: string; nuevoPlan: string; registrar: string; pagos: string; saldado: string; porcentaje: string }
+> = {
+  cobro: {
+    pagado: "Total cobrado",
+    nuevoPlan: "+ Nuevo plan de pago",
+    registrar: "Registrar pago recibido",
+    pagos: "Pagos recibidos",
+    saldado: "✅ Unidad 100% saldada",
+    porcentaje: "cobrado",
+  },
+  pago: {
+    pagado: "Total pagado",
+    nuevoPlan: "+ Nuevo pago a proveedor",
+    registrar: "Registrar pago realizado",
+    pagos: "Pagos realizados",
+    saldado: "✅ Pagado completo",
+    porcentaje: "pagado",
+  },
 };
 
 function estadoCuota(c: Cuota, aplicado: number): { label: string; color: string } {
@@ -40,9 +57,10 @@ function estadoCuota(c: Cuota, aplicado: number): { label: string; color: string
   };
 }
 
-/** Detalle de UNA unidad. Cobranza: su plan de pago como una sola sección
- * (encabezado con total y saldo, cuotas, y pagos recibidos del más reciente
- * al más viejo). Pagos: la lista de pagos directos a proveedores. */
+/** Detalle de UNA unidad: cada plan como una sola sección (encabezado con
+ * total y saldo, cuotas, y pagos del más reciente al más viejo). Cobranza:
+ * el plan del cliente. Pagos: un plan por proveedor (fábrica, logística
+ * nacional). */
 export default function DetallePlanesUnidad({
   tipo,
   fila,
@@ -56,26 +74,31 @@ export default function DetallePlanesUnidad({
   acciones: AccionesPlanes;
   ahora?: Date;
 }) {
-  if (tipo === "pago") {
-    return <PagosProveedorDetalle fila={fila} rol={rol} acciones={acciones} ahora={ahora} />;
-  }
+  void ahora;
+  const esCobro = tipo === "cobro";
 
   if (fila.planes.length === 0) {
     return (
       <div className="bg-white rounded-xl p-4 space-y-3" data-testid={`detalle-${fila.key}`}>
+        {esCobro && (
+          <p className="text-sm text-stone-500">
+            Valor total de la unidad:{" "}
+            <strong className="text-[#2F2F2F]">
+              {fila.unidad.precioCliente != null ? formatMoneda(fila.unidad.precioCliente, "USD") : "—"}
+            </strong>
+          </p>
+        )}
         <p className="text-sm text-stone-500">
-          Valor total de la unidad:{" "}
-          <strong className="text-[#2F2F2F]">
-            {fila.unidad.precioCliente != null ? formatMoneda(fila.unidad.precioCliente, "USD") : "—"}
-          </strong>
+          {esCobro
+            ? "Esta unidad todavía no tiene plan de pago."
+            : "Todavía no hay pagos a proveedores (fábrica o logística nacional) cargados para esta unidad."}
         </p>
-        <p className="text-sm text-stone-500">Esta unidad todavía no tiene plan de pago.</p>
         <button
           type="button"
           onClick={() => acciones.abrirNuevoPlan(fila.unidad.id)}
           className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
         >
-          + Nuevo plan de pago
+          {TEXTOS_TIPO[tipo].nuevoPlan}
         </button>
       </div>
     );
@@ -83,24 +106,44 @@ export default function DetallePlanesUnidad({
 
   return (
     <div className="space-y-4" data-testid={`detalle-${fila.key}`}>
+      {!esCobro && (
+        <button
+          type="button"
+          onClick={() => acciones.abrirNuevoPlan(fila.unidad.id)}
+          className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
+        >
+          {TEXTOS_TIPO.pago.nuevoPlan}
+        </button>
+      )}
       {fila.planes.map((plan) => (
-        <PlanDePago key={plan.id} plan={plan} fila={fila} rol={rol} acciones={acciones} />
+        <PlanDePago key={plan.id} plan={plan} precioUnidad={fila.unidad.precioCliente} rol={rol} acciones={acciones} />
       ))}
     </div>
   );
 }
 
-function PlanDePago({
+/** Título del plan: en cobranza "Plan de pago"; en pagos, proveedor · concepto. */
+function tituloPlan(plan: AcuerdoConDetalle): string {
+  if (plan.tipo === "cobro") return "Plan de pago";
+  const concepto = CONCEPTO_LABELS[plan.concepto as keyof typeof CONCEPTO_LABELS] ?? plan.concepto;
+  return `${plan.contraparte} · ${concepto}`;
+}
+
+/** Un plan de pago como una sola sección: encabezado con total y saldo,
+ * cuotas con estado y vencimiento, y pagos del más reciente al más viejo. */
+export function PlanDePago({
   plan,
-  fila,
+  precioUnidad,
   rol,
   acciones,
 }: {
   plan: AcuerdoConDetalle;
-  fila: FilaPlanUnidad;
+  precioUnidad?: number | null;
   rol: string;
   acciones: AccionesPlanes;
 }) {
+  const esCobro = plan.tipo === "cobro";
+  const t = TEXTOS_TIPO[esCobro ? "cobro" : "pago"];
   const cobrado = sumaImportes(plan.movimientos);
   const saldo = Math.max(0, plan.totalAcordado - cobrado);
   const porcentaje = plan.totalAcordado > 0 ? Math.min(100, (cobrado / plan.totalAcordado) * 100) : 0;
@@ -110,16 +153,22 @@ function PlanDePago({
   const n = plan.movimientos.length;
 
   return (
-    <section className="bg-white rounded-xl p-4 space-y-4" aria-label="Plan de pago">
+    <section className="bg-white rounded-xl p-4 space-y-4" aria-label={tituloPlan(plan)}>
       {/* Encabezado: total acordado y saldo pendiente */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-bold text-[#2F2F2F]">Plan de pago</h3>
+          <h3 className="font-bold text-[#2F2F2F]">{tituloPlan(plan)}</h3>
           {plan.descripcion && <p className="text-sm text-stone-600">{plan.descripcion}</p>}
-          <p className="text-xs text-stone-400 mt-0.5">
-            Cliente: {plan.contraparte} · Valor de la unidad:{" "}
-            {fila.unidad.precioCliente != null ? formatMoneda(fila.unidad.precioCliente, "USD") : "—"}
-          </p>
+          {esCobro ? (
+            <p className="text-xs text-stone-400 mt-0.5">
+              Cliente: {plan.contraparte} · Valor de la unidad:{" "}
+              {precioUnidad != null ? formatMoneda(precioUnidad, "USD") : "—"}
+            </p>
+          ) : (
+            <p className="text-xs text-stone-400 mt-0.5">
+              Unidad {plan.unidadNumero ?? "sin número"} · {plan.clienteNombre}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -127,7 +176,7 @@ function PlanDePago({
             onClick={() => acciones.abrirRegistrarPago(plan)}
             className="px-3 py-2 bg-sage-500 hover:bg-sage-600 text-[#2F2F2F] font-bold text-xs rounded-lg transition-colors"
           >
-            Registrar pago recibido
+            {t.registrar}
           </button>
           <button
             type="button"
@@ -142,7 +191,7 @@ function PlanDePago({
               confirmTitle="¿Eliminar el plan de pago completo?"
               confirmText={
                 n > 0
-                  ? `Se van a borrar el plan, sus ${plan.cuotas.length} cuota${plan.cuotas.length === 1 ? "" : "s"} y los ${n} pago${n === 1 ? "" : "s"} recibido${n === 1 ? "" : "s"} registrado${n === 1 ? "" : "s"} (${formatMoneda(cobrado, plan.moneda)}). Esta acción no se puede deshacer.`
+                  ? `Se van a borrar el plan, sus ${plan.cuotas.length} cuota${plan.cuotas.length === 1 ? "" : "s"} y los ${n} pago${n === 1 ? "" : "s"} ${esCobro ? "recibido" : "realizado"}${n === 1 ? "" : "s"} registrado${n === 1 ? "" : "s"} (${formatMoneda(cobrado, plan.moneda)}). Esta acción no se puede deshacer.`
                   : `Se van a borrar el plan y sus ${plan.cuotas.length} cuota${plan.cuotas.length === 1 ? "" : "s"}. Esta acción no se puede deshacer.`
               }
               successMessage="Plan eliminado"
@@ -154,7 +203,7 @@ function PlanDePago({
 
       <div className="grid grid-cols-3 gap-3 text-sm">
         <Dato label="Total acordado" valor={formatMoneda(plan.totalAcordado, plan.moneda)} />
-        <Dato label="Total cobrado" valor={formatMoneda(cobrado, plan.moneda)} />
+        <Dato label={t.pagado} valor={formatMoneda(cobrado, plan.moneda)} />
         <Dato
           label="Saldo pendiente"
           valor={formatMoneda(saldo, plan.moneda)}
@@ -166,11 +215,11 @@ function PlanDePago({
           <div className={`h-full ${saldado ? "bg-emerald-500" : "bg-[#D4B06A]"}`} style={{ width: `${porcentaje}%` }} />
         </div>
         <div className="flex items-center justify-between mt-1">
-          <p className="text-xs text-stone-500">{Math.round(porcentaje)}% cobrado</p>
+          <p className="text-xs text-stone-500">
+            {Math.round(porcentaje)}% {t.porcentaje}
+          </p>
           {saldado && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
-              ✅ Unidad 100% saldada
-            </span>
+            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">{t.saldado}</span>
           )}
         </div>
       </div>
@@ -216,11 +265,11 @@ function PlanDePago({
         )}
       </div>
 
-      {/* Pagos recibidos — del más reciente al más viejo */}
+      {/* Pagos — del más reciente al más viejo */}
       <div data-pagos>
-        <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-1">Pagos recibidos</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-1">{t.pagos}</p>
         {pagos.length === 0 ? (
-          <p className="text-sm text-stone-400">Todavía no hay pagos recibidos.</p>
+          <p className="text-sm text-stone-400">Todavía no hay {t.pagos.toLowerCase()}.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">

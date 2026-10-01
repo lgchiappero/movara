@@ -57,3 +57,30 @@ export function nuevaCuota(tipo: TipoCuotaPlan): CuotaPlanForm {
 export function cambiarTipoCuota(c: CuotaPlanForm, tipo: TipoCuotaPlan): CuotaPlanForm {
   return tipo === "otro" ? { ...c, tipo, editada: true } : { ...c, tipo, editada: false };
 }
+
+/** Plantillas de cuotas para pagos a proveedores: la fábrica cobra
+ * típicamente 50% al confirmar + 50% antes del embarque; la logística
+ * nacional, en un pago único. Editables después de aplicarlas. */
+export type PresetCuota = { tipo: TipoCuotaPlan; descripcion: string; porcentaje: number };
+
+export const PRESET_FABRICA: PresetCuota[] = [
+  { tipo: "anticipo", descripcion: "Anticipo 50% (al confirmar)", porcentaje: 50 },
+  { tipo: "saldo", descripcion: "Saldo 50% (antes del embarque)", porcentaje: 50 },
+];
+
+export const PRESET_PAGO_UNICO: PresetCuota[] = [{ tipo: "otro", descripcion: "Pago único", porcentaje: 100 }];
+
+/** Importes de cada cuota según su porcentaje del total, redondeados a
+ * centavos; la diferencia de redondeo va a la última. Sin total → vacíos. */
+export function importesPorPorcentaje(total: number, porcentajes: number[]): string[] {
+  if (!(total > 0)) return porcentajes.map(() => "");
+  const centavos = Math.round(total * 100);
+  const partes = porcentajes.map((p) => Math.floor((centavos * p) / 100));
+  partes[partes.length - 1] += centavos - partes.reduce((a, b) => a + b, 0);
+  return partes.map((c) => String(c / 100));
+}
+
+export function cuotasDesdePreset(preset: PresetCuota[], total: number): CuotaPlanForm[] {
+  const importes = importesPorPorcentaje(total, preset.map((p) => p.porcentaje));
+  return preset.map((p, i) => ({ tipo: p.tipo, descripcion: p.descripcion, editada: true, importe: importes[i], vencimiento: "" }));
+}

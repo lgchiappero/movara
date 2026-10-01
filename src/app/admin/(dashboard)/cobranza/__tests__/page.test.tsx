@@ -14,7 +14,9 @@ const {
   mockAggregateMovimiento,
   mockGetSignedUrl,
   mockRedirect,
+  mockFindManyProrrateo,
 } = vi.hoisted(() => ({
+  mockFindManyProrrateo: vi.fn(),
   mockRedirect: vi.fn((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
   }),
@@ -40,6 +42,7 @@ vi.mock("@/lib/db", () => ({
     tipoCambio: { findMany: mockFindManyTipoCambio },
     cierrePeriodo: { findMany: mockFindManyCierre, findUnique: mockFindUniqueCierre },
     movimiento: { aggregate: mockAggregateMovimiento },
+    prorrateoLogistica: { findMany: mockFindManyProrrateo },
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -48,6 +51,7 @@ vi.mock("@/lib/admin/storage", () => ({ getSignedUrl: mockGetSignedUrl, BUCKET_M
 vi.mock("@/components/admin/CobranzaPanel", () => ({
   default: ({
     filas,
+    prorrateosLogistica,
     acuerdosCobro,
     acuerdosPago,
     unidades,
@@ -65,6 +69,7 @@ vi.mock("@/components/admin/CobranzaPanel", () => ({
     clienteIdInicial,
   }: {
     filas: { key: string; estado: string; saldo: number }[];
+    prorrateosLogistica: { unidadId: string; importe: number; fecha: string; unidadNumero: string | null }[];
     acuerdosCobro: { movimientos: { comprobanteSignedUrl: string | null }[] }[];
     acuerdosPago: unknown[];
     unidades: { id: string; tienePlanCobro?: boolean }[];
@@ -88,7 +93,8 @@ vi.mock("@/components/admin/CobranzaPanel", () => ({
     clienteIdInicial?: string;
   }) => (
     <div>
-      CobranzaPanel filas={filas.map((f) => `${f.key}:${f.estado}:${f.saldo}`).join(",")} conPlan=
+      CobranzaPanel filas={filas.map((f) => `${f.key}:${f.estado}:${f.saldo}`).join(",")} prorrateos=
+      {prorrateosLogistica.map((p) => `${p.unidadNumero}:${p.importe}:${p.fecha.slice(0, 10)}`).join(",") || "none"} conPlan=
       {unidades.filter((u) => u.tienePlanCobro).map((u) => u.id).join(",")} cobro={acuerdosCobro.length} pago=
       {acuerdosPago.length} unidades={unidades.length} clientes={clientes.length} tiposCambio={tiposCambio.length} cierres=
       {cierres.length} rol={rol} periodoTipo={periodo.tipo} mesUnico={mesUnico ? `${mesUnico.mes}/${mesUnico.anio}` : "none"}{" "}
@@ -129,6 +135,7 @@ function setupDefaults() {
   mockFindManyTipoCambio.mockResolvedValue([]);
   mockFindManyCierre.mockResolvedValue([]);
   mockFindUniqueCierre.mockResolvedValue(null);
+  mockFindManyProrrateo.mockResolvedValue([]);
   mockAggregateMovimiento.mockReset();
   mockAggregateMovimiento.mockResolvedValueOnce({ _sum: { importe: null } }); // cobradoUSD
   mockAggregateMovimiento.mockResolvedValueOnce({ _sum: { importe: null } }); // cobradoARS
@@ -396,5 +403,21 @@ describe("AdminCobranzaPage", () => {
   it("muestra el título Cobranza", async () => {
     render(await AdminCobranzaPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText("Cobranza")).toBeInTheDocument();
+  });
+
+  it("Rentabilidad: pasa la parte de logística internacional prorrateada (pagada, USD) de cada unidad", async () => {
+    mockFindManyProrrateo.mockResolvedValueOnce([
+      {
+        unidadId: "u1",
+        importe: 1250,
+        costo: { fecha: new Date("2026-09-15T00:00:00.000Z") },
+        unidad: { numeroUnidad: "MOV-1", modelo: "Flex 38", estadoFabricacion: "en_transito", cliente: { nombre: "Ana" } },
+      },
+    ]);
+    render(await AdminCobranzaPage({ searchParams: Promise.resolve({}) }));
+    expect(mockFindManyProrrateo).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { costo: { estado: "pagado", moneda: "USD" } } })
+    );
+    expect(screen.getByText(/prorrateos=MOV-1:1250:2026-09-15/)).toBeInTheDocument();
   });
 });
