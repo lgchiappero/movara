@@ -6,7 +6,7 @@ export const TIPO_ACUERDO_LABELS: Record<TipoAcuerdo, string> = {
   pago: "Pago",
 };
 
-export const CONCEPTO_COBRO_OPTIONS = ["venta"] as const;
+export const CONCEPTO_COBRO_OPTIONS = ["anticipo", "cuota", "saldo", "otro"] as const;
 export type ConceptoCobro = (typeof CONCEPTO_COBRO_OPTIONS)[number];
 
 export const CONCEPTO_PAGO_OPTIONS = [
@@ -17,20 +17,47 @@ export const CONCEPTO_PAGO_OPTIONS = [
   "transporte",
   "grua",
   "impuestos",
+  "seguro",
   "otro",
 ] as const;
 export type ConceptoPago = (typeof CONCEPTO_PAGO_OPTIONS)[number];
 
-export const CONCEPTO_LABELS: Record<ConceptoCobro | ConceptoPago, string> = {
+/** "venta" era el único concepto de cobro antes de desglosarlo en
+ * anticipo/cuota/saldo — ya no se ofrece al crear, pero los acuerdos
+ * viejos lo siguen teniendo y necesitan su label. */
+type ConceptoLegacy = "venta";
+
+export const CONCEPTO_LABELS: Record<ConceptoCobro | ConceptoPago | ConceptoLegacy, string> = {
   venta: "Venta",
+  anticipo: "Anticipo",
+  cuota: "Cuota",
+  saldo: "Saldo",
   fabrica: "Fábrica",
   flete: "Flete",
   aduana: "Aduana",
   despachante: "Despachante",
-  transporte: "Transporte",
+  transporte: "Transporte local",
   grua: "Grúa",
   impuestos: "Impuestos",
+  seguro: "Seguro",
   otro: "Otro",
+};
+
+/** Texto sugerido para la descripción al elegir un tipo de concepto en el
+ * modal de nuevo cobro/pago — el admin lo puede editar libremente. */
+export const DESCRIPCION_SUGERIDA: Record<ConceptoCobro | ConceptoPago, string> = {
+  anticipo: "Anticipo 30%",
+  cuota: "Cuota 1/3",
+  saldo: "Saldo final",
+  fabrica: "Primera cuota fábrica",
+  flete: "Flete internacional",
+  aduana: "Gastos de aduana",
+  despachante: "Honorarios despachante",
+  transporte: "Transporte local",
+  grua: "Servicio de grúa",
+  impuestos: "Impuestos",
+  seguro: "Seguro de carga",
+  otro: "",
 };
 
 export const MONEDA_OPTIONS = ["USD", "ARS"] as const;

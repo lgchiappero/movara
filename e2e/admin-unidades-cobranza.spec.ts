@@ -79,7 +79,7 @@ test.describe("Unidades — próximo paso y columnas de cobranza desde movimient
     await expect(filaUnidad(page, numeroUnidad)).toContainText("USD 0");
 
     // 2) Cobro de anticipo registrado, sin pago a fábrica
-    const cobro = await crearAcuerdo(page, unidadId, "cobro", "venta", 50000);
+    const cobro = await crearAcuerdo(page, unidadId, "cobro", "anticipo", 50000);
     acuerdos.push(cobro);
     movimientos.push({ acuerdoId: cobro, id: await registrarMovimiento(page, cobro, 15000) });
 

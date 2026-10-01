@@ -150,3 +150,101 @@ describe("NuevoAcuerdoModal — autocompletado al elegir unidad", () => {
     expect(total().value).toBe("");
   });
 });
+
+describe("NuevoAcuerdoModal — tipo de concepto y descripción", () => {
+  const tipoConcepto = () => screen.getByLabelText("Tipo de concepto") as HTMLSelectElement;
+  const descripcion = () => screen.getByLabelText("Descripción") as HTMLInputElement;
+  const opciones = () => Array.from(tipoConcepto().options).map((o) => o.text);
+
+  it("cobro: ofrece Anticipo, Cuota, Saldo y Otro, y arranca con la descripción sugerida del anticipo", () => {
+    renderModal();
+    expect(opciones()).toEqual(["Anticipo", "Cuota", "Saldo", "Otro"]);
+    expect(tipoConcepto().value).toBe("anticipo");
+    expect(descripcion().value).toBe("Anticipo 30%");
+  });
+
+  it("pago: ofrece los 9 conceptos de pago, incluido Seguro y Transporte local", () => {
+    renderModal({ tipo: "pago" });
+    expect(opciones()).toEqual([
+      "Fábrica",
+      "Flete",
+      "Aduana",
+      "Despachante",
+      "Transporte local",
+      "Grúa",
+      "Impuestos",
+      "Seguro",
+      "Otro",
+    ]);
+    expect(descripcion().value).toBe("Primera cuota fábrica");
+  });
+
+  it("al elegir otro concepto precompleta su descripción sugerida", async () => {
+    const { user } = renderModal();
+    await user.selectOptions(tipoConcepto(), "cuota");
+    expect(descripcion().value).toBe("Cuota 1/3");
+    await user.selectOptions(tipoConcepto(), "saldo");
+    expect(descripcion().value).toBe("Saldo final");
+    await user.selectOptions(tipoConcepto(), "otro");
+    expect(descripcion().value).toBe("");
+  });
+
+  it("la descripción sugerida es editable", async () => {
+    const { user } = renderModal();
+    await user.selectOptions(tipoConcepto(), "cuota");
+    await user.clear(descripcion());
+    await user.type(descripcion(), "Cuota 2/3");
+    expect(descripcion().value).toBe("Cuota 2/3");
+  });
+
+  it("no pisa una descripción que el admin escribió a mano al cambiar de concepto", async () => {
+    const { user } = renderModal();
+    await user.clear(descripcion());
+    await user.type(descripcion(), "Seña acordada por WhatsApp");
+    await user.selectOptions(tipoConcepto(), "saldo");
+    expect(descripcion().value).toBe("Seña acordada por WhatsApp");
+  });
+
+  it("si la descripción quedó vacía, la vuelve a precompletar al cambiar de concepto", async () => {
+    const { user } = renderModal();
+    await user.clear(descripcion());
+    await user.selectOptions(tipoConcepto(), "saldo");
+    expect(descripcion().value).toBe("Saldo final");
+  });
+
+  it("al pasar de cobro a pago cambia el concepto a Fábrica y su sugerencia", async () => {
+    const { user } = renderModal();
+    await user.click(screen.getByRole("button", { name: "Pago" }));
+    expect(tipoConcepto().value).toBe("fabrica");
+    expect(descripcion().value).toBe("Primera cuota fábrica");
+  });
+
+  it("'Otro' existe en cobro y pago: al cambiar de tipo se mantiene", async () => {
+    const { user } = renderModal();
+    await user.selectOptions(tipoConcepto(), "otro");
+    await user.type(descripcion(), "Ajuste");
+    await user.click(screen.getByRole("button", { name: "Pago" }));
+    expect(tipoConcepto().value).toBe("otro");
+    expect(descripcion().value).toBe("Ajuste");
+  });
+
+  it("envía concepto y descripción al crear el acuerdo", async () => {
+    const { user } = renderModal();
+    await elegirUnidad(user, "MOV-UNIDAD-2026-001");
+    await waitFor(() => expect(total().value).toBe("42000"));
+    await user.selectOptions(tipoConcepto(), "cuota");
+    await user.clear(descripcion());
+    await user.type(descripcion(), "Cuota 2/3");
+
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, id: "a1" }), { status: 201 }));
+    await user.click(screen.getByRole("button", { name: /Siguiente|Continuar/ }));
+    await user.click(screen.getByRole("button", { name: /Crear/ }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/admin/cobranza/acuerdos", expect.objectContaining({ method: "POST" }))
+    );
+    const llamada = fetchMock.mock.calls.find((c) => c[0] === "/api/admin/cobranza/acuerdos")!;
+    const body = JSON.parse(llamada[1].body);
+    expect(body).toMatchObject({ concepto: "cuota", descripcion: "Cuota 2/3" });
+  });
+});

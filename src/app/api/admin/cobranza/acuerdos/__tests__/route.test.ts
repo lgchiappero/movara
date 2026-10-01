@@ -31,7 +31,7 @@ const VALID_BODY = {
   tipo: "cobro",
   unidadId: "u1",
   contraparte: "Juan García",
-  concepto: "venta",
+  concepto: "anticipo",
   moneda: "USD",
   totalAcordado: 50000,
   cuotas: [{ descripcion: "Pago único", importe: 50000, vencimiento: null }],
@@ -70,6 +70,26 @@ describe("POST /api/admin/cobranza/acuerdos", () => {
       makeRequest({ ...VALID_BODY, tipo: "pago", concepto: "venta", cuotas: VALID_BODY.cuotas })
     );
     expect(res.status).toBe(400);
+  });
+
+  it("400 cuando el concepto no corresponde al tipo (cobro con concepto 'fabrica')", async () => {
+    const res = await POST(makeRequest({ ...VALID_BODY, concepto: "fabrica" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("400 para cobros nuevos con el concepto legado 'venta' (reemplazado por anticipo/cuota/saldo)", async () => {
+    const res = await POST(makeRequest({ ...VALID_BODY, concepto: "venta" }));
+    expect(res.status).toBe(400);
+  });
+
+  it.each(["anticipo", "cuota", "saldo", "otro"])("acepta el concepto de cobro '%s'", async (concepto) => {
+    const res = await POST(makeRequest({ ...VALID_BODY, concepto }));
+    expect(res.status).toBe(201);
+  });
+
+  it("acepta el nuevo concepto de pago 'seguro'", async () => {
+    const res = await POST(makeRequest({ ...VALID_BODY, tipo: "pago", concepto: "seguro", contraparte: "Aseguradora" }));
+    expect(res.status).toBe(201);
   });
 
   it("400 cuando la suma de cuotas no coincide con el total acordado", async () => {

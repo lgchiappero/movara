@@ -5,8 +5,11 @@ import {
   CONCEPTO_COBRO_OPTIONS,
   CONCEPTO_PAGO_OPTIONS,
   CONCEPTO_LABELS,
+  DESCRIPCION_SUGERIDA,
   MONEDA_OPTIONS,
   type TipoAcuerdo,
+  type ConceptoCobro,
+  type ConceptoPago,
 } from "@/lib/cobranza/constantes";
 import { useToast } from "@/components/admin/Toast";
 import SearchableSelect from "@/components/admin/SearchableSelect";
@@ -16,6 +19,8 @@ const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
 
 type CuotaForm = { descripcion: string; importe: string; vencimiento: string };
+
+type Concepto = ConceptoCobro | ConceptoPago;
 
 const NOMBRE_TIPO: Record<TipoAcuerdo, string> = { cobro: "cobro", pago: "pago" };
 const NOMBRE_TIPO_CAP: Record<TipoAcuerdo, string> = { cobro: "Cobro", pago: "Pago" };
@@ -56,8 +61,9 @@ export default function NuevoAcuerdoModal({
   const [tipo, setTipo] = useState<TipoAcuerdo>(tipoInicial);
   const [unidadId, setUnidadId] = useState(unidadIdInicial ?? "");
   const [contraparte, setContraparte] = useState("");
-  const [concepto, setConcepto] = useState<string>(tipoInicial === "cobro" ? "venta" : "fabrica");
-  const [descripcion, setDescripcion] = useState("");
+  const conceptoInicial: Concepto = tipoInicial === "cobro" ? "anticipo" : "fabrica";
+  const [concepto, setConcepto] = useState<Concepto>(conceptoInicial);
+  const [descripcion, setDescripcion] = useState(DESCRIPCION_SUGERIDA[conceptoInicial]);
   const [moneda, setMoneda] = useState<"USD" | "ARS">("USD");
   const [totalAcordado, setTotalAcordado] = useState("");
   const [notas, setNotas] = useState("");
@@ -67,11 +73,22 @@ export default function NuevoAcuerdoModal({
 
   const conceptoOptions = tipo === "cobro" ? CONCEPTO_COBRO_OPTIONS : CONCEPTO_PAGO_OPTIONS;
 
+  // La descripción se precompleta con el texto sugerido del concepto, pero
+  // solo si el admin no la editó: si está vacía o sigue siendo la sugerencia
+  // del concepto anterior, se reemplaza; si escribió otra cosa, se respeta.
+  function elegirConcepto(nuevo: Concepto) {
+    const sugerenciaAnterior = DESCRIPCION_SUGERIDA[concepto];
+    if (!descripcion.trim() || descripcion === sugerenciaAnterior) {
+      setDescripcion(DESCRIPCION_SUGERIDA[nuevo]);
+    }
+    setConcepto(nuevo);
+  }
+
   function cambiarTipo(nuevo: TipoAcuerdo) {
     setTipo(nuevo);
-    const opciones = nuevo === "cobro" ? CONCEPTO_COBRO_OPTIONS : CONCEPTO_PAGO_OPTIONS;
-    if (!(opciones as readonly string[]).includes(concepto)) {
-      setConcepto(opciones[0]);
+    const opciones: readonly Concepto[] = nuevo === "cobro" ? CONCEPTO_COBRO_OPTIONS : CONCEPTO_PAGO_OPTIONS;
+    if (!opciones.includes(concepto)) {
+      elegirConcepto(opciones[0]);
     }
   }
 
@@ -250,8 +267,8 @@ export default function NuevoAcuerdoModal({
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="block space-y-1">
-                  <span className="text-xs font-medium text-stone-500">Concepto</span>
-                  <select value={concepto} onChange={(e) => setConcepto(e.target.value)} className={inputClass}>
+                  <span className="text-xs font-medium text-stone-500">Tipo de concepto</span>
+                  <select value={concepto} onChange={(e) => elegirConcepto(e.target.value as Concepto)} className={inputClass}>
                     {conceptoOptions.map((c) => (
                       <option key={c} value={c}>
                         {CONCEPTO_LABELS[c]}
@@ -281,7 +298,7 @@ export default function NuevoAcuerdoModal({
                   value={descripcion}
                   onChange={(e) => setDescripcion(e.target.value)}
                   className={inputClass}
-                  placeholder="Opcional"
+                  placeholder={tipo === "cobro" ? "Ej: Anticipo 30%, Cuota 2/3, Saldo final" : "Ej: Primera cuota fábrica"}
                 />
               </label>
 

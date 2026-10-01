@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MODALIDAD_OPTIONS, MODALIDAD_LABELS } from "@/lib/cobranza/constantes";
 import { useToast } from "@/components/admin/Toast";
+import { cuotasSaldables, etiquetaCuota } from "@/lib/cobranza/cuotas-saldables";
 import type { AcuerdoConDetalle } from "@/components/admin/CobranzaPanel";
 
 const inputClass =
@@ -33,12 +34,14 @@ export default function RegistrarMovimientoModal({
 
   const nombreAccion = acuerdo.tipo === "cobro" ? "pago recibido" : "pago realizado";
 
-  const cuotasPendientes = acuerdo.cuotas.filter((c) => c.estado !== "pagado");
+  const cuotasPendientes = cuotasSaldables(acuerdo.cuotas, acuerdo.movimientos);
 
+  // Precompleta el importe con lo que resta de la cuota (no su importe
+  // total, por si ya tenía pagos parciales) — solo si el campo está vacío.
   function elegirCuota(id: string) {
     setCuotaId(id);
     const cuota = cuotasPendientes.find((c) => c.id === id);
-    if (cuota && !importe.trim()) setImporte(String(cuota.importe));
+    if (cuota && !importe.trim()) setImporte(String(cuota.restante));
   }
 
   async function registrar() {
@@ -126,10 +129,10 @@ export default function RegistrarMovimientoModal({
           <label className="block space-y-1">
             <span className="text-xs font-medium text-stone-500">Cuota que salda (opcional)</span>
             <select value={cuotaId} onChange={(e) => elegirCuota(e.target.value)} className={inputClass}>
-              <option value="">Pago parcial / sin cuota asociada</option>
+              <option value="">Sin cuota específica</option>
               {cuotasPendientes.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.descripcion} — {acuerdo.moneda} {c.importe.toLocaleString("es-AR")}
+                  {etiquetaCuota(c, acuerdo.moneda)}
                 </option>
               ))}
             </select>
