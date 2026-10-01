@@ -9,6 +9,7 @@ import CobranzaUnidadSection from "@/components/admin/CobranzaUnidadSection";
 import UnidadTimeline from "@/components/admin/UnidadTimeline";
 import EliminarUnidadButton from "@/components/admin/EliminarUnidadButton";
 import { serializeAcuerdo } from "@/lib/cobranza/serialize";
+import { resumirMovimientos, RESUMEN_COBRANZA_VACIO } from "@/lib/cobranza/resumen-unidad";
 import { calcularPasos, accionesPasoActual, type DatosTimelineUnidad } from "@/lib/envios/timeline";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { isAdmin } from "@/lib/admin/roles";
@@ -85,12 +86,18 @@ export default async function UnidadDetailPage({
   const acuerdos = acuerdosRaw.map(serializeAcuerdo);
   const session = await getAdminUser();
 
-  // Primer cobro registrado para esta unidad — cualquiera de sus acuerdos
-  // de tipo "cobro", el movimiento más antiguo entre todos ellos.
-  const fechasCobro = acuerdos
-    .filter((a) => a.tipo === "cobro")
-    .flatMap((a) => a.movimientos.map((m) => new Date(m.fecha)))
-    .sort((a, b) => a.getTime() - b.getTime());
+  // Primer cobro y primer pago a fábrica, desde los movimientos reales de
+  // los acuerdos de esta unidad (misma lógica que las grillas).
+  const resumenCobranza =
+    resumirMovimientos(
+      acuerdosRaw.flatMap((a) =>
+        a.movimientos.map((m) => ({
+          fecha: m.fecha,
+          importe: m.importe,
+          acuerdo: { unidadId: id, tipo: a.tipo, moneda: a.moneda, concepto: a.concepto },
+        }))
+      )
+    ).get(id) ?? RESUMEN_COBRANZA_VACIO;
 
   const datosTimeline: DatosTimelineUnidad = {
     clienteId: unidad.clienteId,
@@ -100,7 +107,8 @@ export default async function UnidadDetailPage({
     createdAt: unidad.createdAt,
     fechaEntrega: unidad.fechaEntrega,
     fechaEmbarque: unidad.envio?.fechaEmbarque ?? null,
-    primerCobroFecha: fechasCobro[0] ?? null,
+    primerCobroFecha: resumenCobranza.primerCobroFecha,
+    primerPagoFabricaFecha: resumenCobranza.primerPagoFabricaFecha,
   };
   const pasosTimeline = calcularPasos(datosTimeline);
   const accionActual = accionesPasoActual(datosTimeline);

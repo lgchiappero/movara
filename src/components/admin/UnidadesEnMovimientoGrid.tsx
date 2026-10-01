@@ -18,10 +18,18 @@ export type UnidadMovimiento = {
   fechaArriboEstimado: string | null;
   fechaEntrega: string | null;
   provinciaDestino: string | null;
+  /** Suma de movimientos de cobro en USD (movimientos → acuerdos_pago → unidad). */
+  cobradoUSD: number;
+  /** Fecha del último movimiento de cobro, ISO — null si no hay cobros. */
+  ultimoCobroFecha: string | null;
   proximoPaso: string;
 };
 
 type Tab = "activas" | "entregadas";
+
+function formatUSD(value: number): string {
+  return `USD ${value.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
+}
 
 function formatFecha(value: string | null): string {
   return value ? new Date(value).toLocaleDateString("es-AR", { timeZone: "UTC" }) : "—";
@@ -108,6 +116,8 @@ export default function UnidadesEnMovimientoGrid({
                 <th className="px-4 py-3 font-medium">Estado</th>
                 <th className="px-4 py-3 font-medium">Próximo paso</th>
                 <th className="px-4 py-3 font-medium">Precio</th>
+                <th className="px-4 py-3 font-medium">Cobrado</th>
+                <th className="px-4 py-3 font-medium">Fecha último cobro</th>
                 <th className="px-4 py-3 font-medium">Embarque</th>
                 <th className="px-4 py-3 font-medium">Arribo estimado</th>
                 {tab === "entregadas" && <th className="px-4 py-3 font-medium">Entrega</th>}
@@ -147,6 +157,8 @@ export default function UnidadesEnMovimientoGrid({
                       </span>
                     )}
                   </td>
+                  <td className="px-4 py-3 text-stone-600 whitespace-nowrap">{formatUSD(u.cobradoUSD)}</td>
+                  <td className="px-4 py-3 text-stone-600 whitespace-nowrap">{formatFecha(u.ultimoCobroFecha)}</td>
                   <td className="px-4 py-3 text-stone-600 whitespace-nowrap">{formatFecha(u.fechaEmbarque)}</td>
                   <td className="px-4 py-3 text-stone-600 whitespace-nowrap">{formatFecha(u.fechaArriboEstimado)}</td>
                   {tab === "entregadas" && (

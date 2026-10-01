@@ -16,6 +16,7 @@ const BASE: DatosTimelineUnidad = {
   fechaEntrega: null,
   fechaEmbarque: null,
   primerCobroFecha: null,
+  primerPagoFabricaFecha: null,
 };
 
 function estadoDe(id: string, pasos: ReturnType<typeof calcularPasos>) {
@@ -43,7 +44,7 @@ describe("calcularPasos", () => {
     expect(estadoDe("cobro_anticipo", pasos)).toBe("actual");
   });
 
-  it("con el primer cobro registrado, en_produccion pasa a actual (estado pendiente todavía)", () => {
+  it("con el primer cobro registrado pero sin pago a fábrica, pago_fabrica pasa a actual", () => {
     const pasos = calcularPasos({
       ...BASE,
       modelo: "Flex 18",
@@ -51,7 +52,55 @@ describe("calcularPasos", () => {
       primerCobroFecha: new Date("2026-02-01"),
     });
     expect(estadoDe("cobro_anticipo", pasos)).toBe("completado");
+    expect(estadoDe("pago_fabrica", pasos)).toBe("actual");
+    expect(estadoDe("en_produccion", pasos)).toBe("pendiente");
+  });
+
+  it("aunque el estado de fabricación ya avanzó, sin pago a fábrica el paso actual sigue siendo pago_fabrica", () => {
+    const pasos = calcularPasos({
+      ...BASE,
+      modelo: "Flex 18",
+      precioCliente: 50000,
+      primerCobroFecha: new Date("2026-02-01"),
+      estadoFabricacion: "en_produccion",
+    });
+    expect(estadoDe("pago_fabrica", pasos)).toBe("actual");
+  });
+
+  it("un pago a fábrica sin cobro de anticipo no saltea el cobro: cobro_anticipo sigue actual", () => {
+    const pasos = calcularPasos({
+      ...BASE,
+      modelo: "Flex 18",
+      precioCliente: 50000,
+      primerPagoFabricaFecha: new Date("2026-02-10"),
+    });
+    expect(estadoDe("cobro_anticipo", pasos)).toBe("actual");
+    expect(estadoDe("pago_fabrica", pasos)).toBe("pendiente");
+  });
+
+  it("con cobro y pago a fábrica registrados, en_produccion pasa a actual (estado pendiente todavía)", () => {
+    const pasos = calcularPasos({
+      ...BASE,
+      modelo: "Flex 18",
+      precioCliente: 50000,
+      primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
+    });
+    expect(estadoDe("cobro_anticipo", pasos)).toBe("completado");
+    expect(estadoDe("pago_fabrica", pasos)).toBe("completado");
     expect(estadoDe("en_produccion", pasos)).toBe("actual");
+  });
+
+  it("fechas: cobro_anticipo usa primerCobroFecha y pago_fabrica usa primerPagoFabricaFecha", () => {
+    const pasos = calcularPasos({
+      ...BASE,
+      modelo: "Flex 18",
+      precioCliente: 50000,
+      primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
+    });
+    expect(pasos.find((p) => p.id === "cobro_anticipo")!.fecha).toEqual(new Date("2026-02-01"));
+    expect(pasos.find((p) => p.id === "pago_fabrica")!.fecha).toEqual(new Date("2026-02-10"));
   });
 
   it("estadoFabricacion=en_produccion: el paso en_produccion es actual (no completado)", () => {
@@ -60,6 +109,7 @@ describe("calcularPasos", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "en_produccion",
     });
     expect(estadoDe("en_produccion", pasos)).toBe("actual");
@@ -72,6 +122,7 @@ describe("calcularPasos", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "produccion_completa",
     });
     expect(estadoDe("en_produccion", pasos)).toBe("completado");
@@ -84,6 +135,7 @@ describe("calcularPasos", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "embarcado",
       fechaEmbarque: null,
     });
@@ -96,6 +148,7 @@ describe("calcularPasos", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "embarcado",
       fechaEmbarque: new Date("2026-03-01"),
     });
@@ -109,6 +162,7 @@ describe("calcularPasos", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "en_transito",
       fechaEmbarque: new Date("2026-03-01"),
     });
@@ -122,6 +176,7 @@ describe("calcularPasos", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "en_transito",
       fechaEmbarque: null,
     });
@@ -135,6 +190,7 @@ describe("calcularPasos", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "en_aduana",
       fechaEmbarque: new Date("2026-03-01"),
     });
@@ -148,6 +204,7 @@ describe("calcularPasos", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "en_destino",
       fechaEmbarque: new Date("2026-03-01"),
     });
@@ -161,6 +218,7 @@ describe("calcularPasos", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "entregado",
       fechaEmbarque: new Date("2026-03-01"),
       fechaEntrega: null,
@@ -175,6 +233,7 @@ describe("calcularPasos", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "entregado",
       fechaEmbarque: new Date("2026-03-01"),
       fechaEntrega: new Date("2026-06-01"),
@@ -194,6 +253,7 @@ describe("calcularPasos", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "entregado",
       fechaEmbarque: new Date("2026-03-01"),
       fechaEntrega: new Date("2026-06-01"),
@@ -208,6 +268,7 @@ describe("calcularPasos", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "entregado",
       fechaEmbarque: new Date("2026-03-01"),
       fechaEntrega: new Date("2026-06-01"),
@@ -239,6 +300,7 @@ describe("pasoActual", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "entregado",
       fechaEmbarque: new Date("2026-03-01"),
       fechaEntrega: new Date("2026-06-01"),
@@ -254,6 +316,7 @@ describe("accionesPasoActual", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "entregado",
       fechaEmbarque: new Date("2026-03-01"),
       fechaEntrega: new Date("2026-06-01"),
@@ -265,6 +328,18 @@ describe("accionesPasoActual", () => {
     const info = accionesPasoActual(BASE)!;
     expect(info.titulo).toBe("Unidad creada");
     expect(info.acciones).toEqual([{ texto: "Completar modelo y precio de la unidad", anchor: "datos-unidad" }]);
+  });
+
+  it("paso comercial 'pago_fabrica' actual: título y acción propios", () => {
+    const d: DatosTimelineUnidad = {
+      ...BASE,
+      modelo: "Flex 18",
+      precioCliente: 50000,
+      primerCobroFecha: new Date("2026-02-01"),
+    };
+    const info = accionesPasoActual(d)!;
+    expect(info.titulo).toBe("Pago a fábrica");
+    expect(info.acciones).toEqual([{ texto: "Registrar el pago a fábrica", anchor: "cobranza" }]);
   });
 
   it("paso comercial 'cobro_anticipo' actual: título y acción propios", () => {
@@ -280,12 +355,15 @@ describe("accionesPasoActual", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "en_produccion",
     };
     const info = accionesPasoActual(d)!;
     expect(info.titulo).toBe("En producción");
-    expect(info.acciones).toHaveLength(2);
-    expect(info.acciones[0]).toEqual({ texto: "Registrar pago primera cuota a fábrica", anchor: "cobranza" });
+    expect(info.acciones).toEqual([
+      { texto: "Subir PI en carpeta 04", anchor: "seccion-envio:04_produccion" },
+      { texto: "Cambiar estado a \"Producción completa\"", anchor: "estado" },
+    ]);
   });
 
   it("produccion_completa muestra su propio título preciso aunque el nodo visual resaltado sea 'Embarque'", () => {
@@ -294,6 +372,7 @@ describe("accionesPasoActual", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "produccion_completa",
     };
     const info = accionesPasoActual(d)!;
@@ -307,6 +386,7 @@ describe("accionesPasoActual", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "en_aduana",
       fechaEmbarque: new Date("2026-03-01"),
     };
@@ -324,6 +404,7 @@ describe("accionesPasoActual", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "estado-inventado",
     };
     const info = accionesPasoActual(d)!;
@@ -336,6 +417,7 @@ describe("accionesPasoActual", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "entregado",
       fechaEmbarque: new Date("2026-03-01"),
       fechaEntrega: null,
@@ -356,6 +438,7 @@ describe("proximoPasoCorto", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "entregado",
       fechaEmbarque: new Date("2026-03-01"),
       fechaEntrega: new Date("2026-06-01"),
@@ -371,15 +454,42 @@ describe("proximoPasoCorto", () => {
     expect(proximoPasoCorto({ ...BASE, modelo: "Flex 18", precioCliente: 50000 })).toBe("Cobrar anticipo");
   });
 
-  it("'Registrar pago fábrica' en en_produccion", () => {
+  it("'Registrar pago a fábrica' cuando hay cobro de anticipo pero no pago a fábrica", () => {
     const d: DatosTimelineUnidad = {
       ...BASE,
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+    };
+    expect(proximoPasoCorto(d)).toBe("Registrar pago a fábrica");
+  });
+
+  it("'Cobrar anticipo' no aparece si ya hay un cobro registrado", () => {
+    const d: DatosTimelineUnidad = { ...BASE, modelo: "Flex 18", precioCliente: 50000, primerCobroFecha: new Date("2026-02-01") };
+    expect(proximoPasoCorto(d)).not.toBe("Cobrar anticipo");
+  });
+
+  it("'Iniciar producción' con cobro y pago a fábrica registrados y estado pendiente", () => {
+    const d: DatosTimelineUnidad = {
+      ...BASE,
+      modelo: "Flex 18",
+      precioCliente: 50000,
+      primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
+    };
+    expect(proximoPasoCorto(d)).toBe("Iniciar producción");
+  });
+
+  it("'Completar producción' en en_produccion con el pago a fábrica ya registrado", () => {
+    const d: DatosTimelineUnidad = {
+      ...BASE,
+      modelo: "Flex 18",
+      precioCliente: 50000,
+      primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "en_produccion",
     };
-    expect(proximoPasoCorto(d)).toBe("Registrar pago fábrica");
+    expect(proximoPasoCorto(d)).toBe("Completar producción");
   });
 
   it("'Subir BL' cuando falta fechaEmbarque en embarcado", () => {
@@ -388,6 +498,7 @@ describe("proximoPasoCorto", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "embarcado",
     };
     expect(proximoPasoCorto(d)).toBe("Subir BL");
@@ -399,6 +510,7 @@ describe("proximoPasoCorto", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "en_aduana",
       fechaEmbarque: new Date("2026-03-01"),
     };
@@ -411,6 +523,7 @@ describe("proximoPasoCorto", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "estado-inventado",
     };
     expect(proximoPasoCorto(d)).toBe("Revisar estado");
@@ -422,6 +535,7 @@ describe("proximoPasoCorto", () => {
       modelo: "Flex 18",
       precioCliente: 50000,
       primerCobroFecha: new Date("2026-02-01"),
+      primerPagoFabricaFecha: new Date("2026-02-10"),
       estadoFabricacion: "entregado",
       fechaEmbarque: new Date("2026-03-01"),
       fechaEntrega: null,

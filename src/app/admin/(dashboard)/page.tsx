@@ -21,7 +21,7 @@ import UnidadesEnMovimientoGrid, {
 } from "@/components/admin/UnidadesEnMovimientoGrid";
 import { inicioSemana as inicioSemanaCobranza, finSemana as finSemanaCobranza } from "@/lib/cobranza/periodo";
 import { proximoPasoCorto } from "@/lib/envios/timeline";
-import { primerCobroPorUnidad } from "@/lib/cobranza/primer-cobro";
+import { resumenCobranzaPorUnidad, RESUMEN_COBRANZA_VACIO, type ResumenCobranzaUnidad } from "@/lib/cobranza/resumen-unidad";
 
 const MESES_LABEL = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -84,7 +84,8 @@ type UnidadParaGrilla = {
   envio: { numeroPI: string | null; fechaEmbarque: Date | null; fechaArriboEstimado: Date | null } | null;
 };
 
-function toUnidadMovimiento(u: UnidadParaGrilla, primerCobroMap: Map<string, Date>): UnidadMovimiento {
+function toUnidadMovimiento(u: UnidadParaGrilla, resumenMap: Map<string, ResumenCobranzaUnidad>): UnidadMovimiento {
+  const resumen = resumenMap.get(u.id) ?? RESUMEN_COBRANZA_VACIO;
   return {
     id: u.id,
     numeroUnidad: u.numeroUnidad,
@@ -97,6 +98,8 @@ function toUnidadMovimiento(u: UnidadParaGrilla, primerCobroMap: Map<string, Dat
     fechaArriboEstimado: u.envio?.fechaArriboEstimado?.toISOString() ?? null,
     fechaEntrega: u.fechaEntrega?.toISOString() ?? null,
     provinciaDestino: u.provinciaDestino,
+    cobradoUSD: resumen.cobradoUSD,
+    ultimoCobroFecha: resumen.ultimoCobroFecha?.toISOString() ?? null,
     proximoPaso: proximoPasoCorto({
       clienteId: u.clienteId,
       modelo: u.modelo,
@@ -105,7 +108,8 @@ function toUnidadMovimiento(u: UnidadParaGrilla, primerCobroMap: Map<string, Dat
       createdAt: u.createdAt,
       fechaEntrega: u.fechaEntrega,
       fechaEmbarque: u.envio?.fechaEmbarque ?? null,
-      primerCobroFecha: primerCobroMap.get(u.id) ?? null,
+      primerCobroFecha: resumen.primerCobroFecha,
+      primerPagoFabricaFecha: resumen.primerPagoFabricaFecha,
     }),
   };
 }
@@ -295,15 +299,15 @@ export default async function AdminDashboardPage() {
     }))
     .filter((u) => u.faltantes.length > 0);
 
-  const primerCobroMap = await primerCobroPorUnidad([
+  const resumenCobranzaMap = await resumenCobranzaPorUnidad([
     ...unidadesActivas.map((u) => u.id),
     ...unidadesEntregadas.map((u) => u.id),
   ]);
   const unidadesEnMovimiento: UnidadMovimiento[] = unidadesActivas.map((u) =>
-    toUnidadMovimiento(u, primerCobroMap)
+    toUnidadMovimiento(u, resumenCobranzaMap)
   );
   const unidadesEntregadasGrilla: UnidadMovimiento[] = unidadesEntregadas.map((u) =>
-    toUnidadMovimiento(u, primerCobroMap)
+    toUnidadMovimiento(u, resumenCobranzaMap)
   );
 
   const enviosConDerivados = envios.map((e) => ({

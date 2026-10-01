@@ -4,6 +4,7 @@ export type PasoId =
   | "venta_cerrada"
   | "unidad_creada"
   | "cobro_anticipo"
+  | "pago_fabrica"
   | "en_produccion"
   | "embarque"
   | "en_transito"
@@ -39,12 +40,16 @@ export type DatosTimelineUnidad = {
   /** Fecha del primer movimiento de tipo "cobro" registrado para esta
    * unidad — null si todavía no se registró ningún cobro. */
   primerCobroFecha: Date | null;
+  /** Fecha del primer movimiento de pago a fábrica (acuerdo de tipo "pago",
+   * concepto "fabrica") — null si todavía no se registró ninguno. */
+  primerPagoFabricaFecha: Date | null;
 };
 
 const TITULOS: Record<PasoId, string> = {
   venta_cerrada: "Venta cerrada",
   unidad_creada: "Unidad creada",
   cobro_anticipo: "Cobro anticipo",
+  pago_fabrica: "Pago a fábrica",
   en_produccion: "En producción",
   embarque: "Embarque",
   en_transito: "En tránsito",
@@ -57,6 +62,7 @@ const ORDEN: PasoId[] = [
   "venta_cerrada",
   "unidad_creada",
   "cobro_anticipo",
+  "pago_fabrica",
   "en_produccion",
   "embarque",
   "en_transito",
@@ -106,6 +112,8 @@ function fechaPorPaso(id: PasoId, d: DatosTimelineUnidad): Date | null {
       return d.createdAt;
     case "cobro_anticipo":
       return d.primerCobroFecha;
+    case "pago_fabrica":
+      return d.primerPagoFabricaFecha;
     case "embarque":
       return d.fechaEmbarque;
     case "entregado":
@@ -115,7 +123,7 @@ function fechaPorPaso(id: PasoId, d: DatosTimelineUnidad): Date | null {
   }
 }
 
-/** Calcula los 9 pasos de la línea de tiempo — el primero cuyo predicado de
+/** Calcula los 10 pasos de la línea de tiempo — el primero cuyo predicado de
  * "completado" da falso es el "actual" (el más avanzado no completado);
  * todo lo anterior es "completado", todo lo posterior queda "pendiente"
  * sin importar si su propio predicado daría verdadero (progreso
@@ -126,6 +134,7 @@ export function calcularPasos(d: DatosTimelineUnidad): PasoInfo[] {
     venta_cerrada: d.clienteId !== null && d.clienteId !== "",
     unidad_creada: !!d.modelo && d.precioCliente !== null,
     cobro_anticipo: d.primerCobroFecha !== null,
+    pago_fabrica: d.primerPagoFabricaFecha !== null,
     en_produccion: completadoEnProduccion(d.estadoFabricacion),
     embarque: completadoEmbarque(d.estadoFabricacion, d.fechaEmbarque),
     en_transito: completadoEnTransito(d.estadoFabricacion),
@@ -154,7 +163,7 @@ export function pasoActual(pasos: PasoInfo[]): PasoInfo | null {
 }
 
 /** Título + acciones recomendadas para el paso actual cuando ese paso cae
- * en una de las etapas de fabricación/logística (pasos 4 a 9) — se indexa
+ * en una de las etapas de fabricación/logística (pasos 5 a 10) — se indexa
  * por el estadoFabricacion real, no por el paso visual, así que una unidad
  * en "producción completa" muestra sus propias acciones ("Registrar saldo
  * a fábrica") aunque el nodo resaltado en la línea de tiempo sea
@@ -164,11 +173,13 @@ export const ACCIONES_POR_ESTADO: Record<EstadoFabricacion, { corto: string; acc
     corto: "Iniciar producción",
     acciones: [{ texto: "Cambiar estado a \"En producción\"", anchor: "estado" }],
   },
+  // El primer pago a fábrica ya es un paso propio (pago_fabrica) que va
+  // antes en la secuencia — si se llega acá, ya está registrado.
   en_produccion: {
-    corto: "Registrar pago fábrica",
+    corto: "Completar producción",
     acciones: [
-      { texto: "Registrar pago primera cuota a fábrica", anchor: "cobranza" },
       { texto: "Subir PI en carpeta 04", anchor: "seccion-envio:04_produccion" },
+      { texto: "Cambiar estado a \"Producción completa\"", anchor: "estado" },
     ],
   },
   produccion_completa: {
@@ -214,9 +225,17 @@ export const ACCIONES_POR_ESTADO: Record<EstadoFabricacion, { corto: string; acc
   },
 };
 
-/** Título + acciones para cuando el paso actual es uno de los 3 pasos
- * comerciales (venta/unidad/cobro) — no dependen de estadoFabricacion. */
-const ACCIONES_PASOS_COMERCIALES: Record<"venta_cerrada" | "unidad_creada" | "cobro_anticipo", { corto: string; titulo: string; acciones: AccionItem[] }> = {
+/** Título + acciones para cuando el paso actual es uno de los 4 pasos
+ * comerciales (venta/unidad/cobro/pago a fábrica) — no dependen de
+ * estadoFabricacion, sino de los datos de la unidad y de los movimientos
+ * reales de cobranza. */
+type PasoComercial = "venta_cerrada" | "unidad_creada" | "cobro_anticipo" | "pago_fabrica";
+const PASOS_COMERCIALES: readonly PasoId[] = ["venta_cerrada", "unidad_creada", "cobro_anticipo", "pago_fabrica"];
+function esPasoComercial(id: PasoId): id is PasoComercial {
+  return PASOS_COMERCIALES.includes(id);
+}
+
+const ACCIONES_PASOS_COMERCIALES: Record<PasoComercial, { corto: string; titulo: string; acciones: AccionItem[] }> = {
   venta_cerrada: {
     corto: "Vincular cliente",
     titulo: "Venta cerrada",
@@ -232,17 +251,22 @@ const ACCIONES_PASOS_COMERCIALES: Record<"venta_cerrada" | "unidad_creada" | "co
     titulo: "Cobro anticipo",
     acciones: [{ texto: "Registrar el cobro del anticipo", anchor: "cobranza" }],
   },
+  pago_fabrica: {
+    corto: "Registrar pago a fábrica",
+    titulo: "Pago a fábrica",
+    acciones: [{ texto: "Registrar el pago a fábrica", anchor: "cobranza" }],
+  },
 };
 
-/** Título y acciones del paso actual, sea comercial (1-3) o de fabricación
- * (4-9, indexado por el estadoFabricacion real) — null cuando ya no hay
+/** Título y acciones del paso actual, sea comercial (1-4) o de fabricación
+ * (5-10, indexado por el estadoFabricacion real) — null cuando ya no hay
  * ningún paso "actual" (todo completado). */
 export function accionesPasoActual(
   d: DatosTimelineUnidad
 ): { titulo: string; acciones: AccionItem[] } | null {
   const actual = pasoActual(calcularPasos(d));
   if (!actual) return null;
-  if (actual.id === "venta_cerrada" || actual.id === "unidad_creada" || actual.id === "cobro_anticipo") {
+  if (esPasoComercial(actual.id)) {
     const c = ACCIONES_PASOS_COMERCIALES[actual.id];
     return { titulo: c.titulo, acciones: c.acciones };
   }
@@ -257,7 +281,7 @@ export function accionesPasoActual(
 export function proximoPasoCorto(d: DatosTimelineUnidad): string {
   const actual = pasoActual(calcularPasos(d));
   if (!actual) return "✅ Completado";
-  if (actual.id === "venta_cerrada" || actual.id === "unidad_creada" || actual.id === "cobro_anticipo") {
+  if (esPasoComercial(actual.id)) {
     return ACCIONES_PASOS_COMERCIALES[actual.id].corto;
   }
   return ACCIONES_POR_ESTADO[d.estadoFabricacion as EstadoFabricacion]?.corto ?? "Revisar estado";

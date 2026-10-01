@@ -127,7 +127,7 @@ describe("UnidadDetailPage", () => {
     );
   });
 
-  it("línea de tiempo: con modelo, precio y un cobro registrado, 'En producción' pasa a ser el paso actual", async () => {
+  it("línea de tiempo: con un cobro registrado pero sin pago a fábrica, el paso actual es 'Pago a fábrica'", async () => {
     mockFindUnique.mockResolvedValueOnce({
       ...UNIDAD_BASE,
       modelo: "Flex 18",
@@ -157,10 +157,58 @@ describe("UnidadDetailPage", () => {
       },
     ]);
     render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
-    expect(screen.getByRole("link", { name: /Registrar pago primera cuota a fábrica/ })).toHaveAttribute(
-      "href",
-      "#cobranza"
-    );
+    expect(screen.getByRole("link", { name: /Registrar el pago a fábrica/ })).toHaveAttribute("href", "#cobranza");
+    expect(screen.queryByRole("link", { name: /Registrar el cobro del anticipo/ })).not.toBeInTheDocument();
+  });
+
+  it("línea de tiempo: con cobro y pago a fábrica registrados, 'En producción' pasa a ser el paso actual", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      ...UNIDAD_BASE,
+      modelo: "Flex 18",
+      precioCliente: 50000,
+      estadoFabricacion: "en_produccion",
+    });
+    mockFindManyAcuerdo.mockResolvedValueOnce([
+      {
+        id: "a1",
+        unidadId: "u1",
+        unidad: { numeroUnidad: "MOV-UNIDAD-2026-001", modelo: "Flex 18", estadoFabricacion: "pendiente", cliente: { id: "c1", nombre: "Juan García" } },
+        tipo: "cobro",
+        concepto: "venta",
+        descripcion: null,
+        contraparte: "Juan García",
+        moneda: "USD",
+        totalAcordado: 50000,
+        notas: null,
+        createdAt: new Date("2026-01-05T00:00:00.000Z"),
+        cuotas: [],
+        movimientos: [
+          // 2 pagos fuera de orden cronológico — ejercita el comparador del
+          // sort que busca el más antiguo (primerCobroFecha).
+          { id: "m2", fecha: new Date("2026-01-20T00:00:00.000Z"), importe: 10000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a@x.com" },
+          { id: "m1", fecha: new Date("2026-01-10T00:00:00.000Z"), importe: 15000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a@x.com" },
+        ],
+      },
+      {
+        id: "a2",
+        unidadId: "u1",
+        unidad: { numeroUnidad: "MOV-UNIDAD-2026-001", modelo: "Flex 18", estadoFabricacion: "pendiente", cliente: { id: "c1", nombre: "Juan García" } },
+        tipo: "pago",
+        concepto: "fabrica",
+        descripcion: null,
+        contraparte: "Heshi",
+        moneda: "USD",
+        totalAcordado: 30000,
+        notas: null,
+        createdAt: new Date("2026-01-12T00:00:00.000Z"),
+        cuotas: [],
+        movimientos: [
+          { id: "m9", fecha: new Date("2026-01-15T00:00:00.000Z"), importe: 9000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a@x.com" },
+        ],
+      },
+    ]);
+    render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
+    expect(screen.getByRole("link", { name: /Cambiar estado a "Producción completa"/ })).toHaveAttribute("href", "#estado-fabricacion");
     expect(screen.getByRole("link", { name: /Subir PI en carpeta 04/ })).toHaveAttribute("href", "#datos-unidad");
   });
 
@@ -188,6 +236,23 @@ describe("UnidadDetailPage", () => {
         cuotas: [],
         movimientos: [
           { id: "m1", fecha: new Date("2026-01-10T00:00:00.000Z"), importe: 15000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a@x.com" },
+        ],
+      },
+      {
+        id: "a2",
+        unidadId: "u1",
+        unidad: { numeroUnidad: "MOV-UNIDAD-2026-001", modelo: "Flex 18", estadoFabricacion: "pendiente", cliente: { id: "c1", nombre: "Juan García" } },
+        tipo: "pago",
+        concepto: "fabrica",
+        descripcion: null,
+        contraparte: "Heshi",
+        moneda: "USD",
+        totalAcordado: 30000,
+        notas: null,
+        createdAt: new Date("2026-01-12T00:00:00.000Z"),
+        cuotas: [],
+        movimientos: [
+          { id: "m9", fecha: new Date("2026-01-15T00:00:00.000Z"), importe: 9000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a@x.com" },
         ],
       },
     ]);
@@ -223,6 +288,23 @@ describe("UnidadDetailPage", () => {
         cuotas: [],
         movimientos: [
           { id: "m1", fecha: new Date("2026-01-10T00:00:00.000Z"), importe: 50000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a@x.com" },
+        ],
+      },
+      {
+        id: "a2",
+        unidadId: "u1",
+        unidad: { numeroUnidad: "MOV-UNIDAD-2026-001", modelo: "Flex 18", estadoFabricacion: "pendiente", cliente: { id: "c1", nombre: "Juan García" } },
+        tipo: "pago",
+        concepto: "fabrica",
+        descripcion: null,
+        contraparte: "Heshi",
+        moneda: "USD",
+        totalAcordado: 30000,
+        notas: null,
+        createdAt: new Date("2026-01-12T00:00:00.000Z"),
+        cuotas: [],
+        movimientos: [
+          { id: "m9", fecha: new Date("2026-01-15T00:00:00.000Z"), importe: 9000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a@x.com" },
         ],
       },
     ]);

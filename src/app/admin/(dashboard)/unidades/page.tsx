@@ -4,7 +4,7 @@ import { estadoFabricacionOptions, estadoFabricacionLabels, type EstadoFabricaci
 import NuevaUnidadForm from "@/components/admin/NuevaUnidadForm";
 import PaginacionLinks from "@/components/admin/PaginacionLinks";
 import { proximoPasoCorto } from "@/lib/envios/timeline";
-import { primerCobroPorUnidad } from "@/lib/cobranza/primer-cobro";
+import { resumenCobranzaPorUnidad, RESUMEN_COBRANZA_VACIO } from "@/lib/cobranza/resumen-unidad";
 
 export const dynamic = "force-dynamic";
 
@@ -90,7 +90,8 @@ export default async function AdminUnidadesPage({
     return `/admin/unidades${qs ? `?${qs}` : ""}`;
   }
 
-  const primerCobroMap = await primerCobroPorUnidad(unidades.map((u) => u.id));
+  const resumenCobranzaMap = await resumenCobranzaPorUnidad(unidades.map((u) => u.id));
+  const resumenDe = (id: string) => resumenCobranzaMap.get(id) ?? RESUMEN_COBRANZA_VACIO;
   const proximosPasos = new Map(
     unidades.map((u) => [
       u.id,
@@ -102,7 +103,8 @@ export default async function AdminUnidadesPage({
         createdAt: u.createdAt,
         fechaEntrega: u.fechaEntrega,
         fechaEmbarque: u.envio?.fechaEmbarque ?? null,
-        primerCobroFecha: primerCobroMap.get(u.id) ?? null,
+        primerCobroFecha: resumenDe(u.id).primerCobroFecha,
+        primerPagoFabricaFecha: resumenDe(u.id).primerPagoFabricaFecha,
       }),
     ])
   );
@@ -214,6 +216,8 @@ export default async function AdminUnidadesPage({
                 <th className="px-4 py-3 font-medium">Próximo paso</th>
                 <th className="px-4 py-3 font-medium">Destino</th>
                 <th className="px-4 py-3 font-medium">Precio cliente USD</th>
+                <th className="px-4 py-3 font-medium">Cobrado</th>
+                <th className="px-4 py-3 font-medium">Fecha último cobro</th>
                 <th className="px-4 py-3 font-medium">Acciones</th>
               </tr>
             </thead>
@@ -235,6 +239,12 @@ export default async function AdminUnidadesPage({
                   </td>
                   <td className="px-4 py-3 text-stone-600">
                     {u.precioCliente != null ? `USD ${u.precioCliente.toLocaleString("es-AR")}` : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-stone-600 whitespace-nowrap">
+                    USD {resumenDe(u.id).cobradoUSD.toLocaleString("es-AR")}
+                  </td>
+                  <td className="px-4 py-3 text-stone-600 whitespace-nowrap">
+                    {resumenDe(u.id).ultimoCobroFecha?.toLocaleDateString("es-AR", { timeZone: "UTC" }) ?? "—"}
                   </td>
                   <td className="px-4 py-3">
                     <Link

@@ -148,9 +148,12 @@ describe("AdminUnidadesPage", () => {
   });
 
   it("muestra la columna 'Próximo paso' derivada de la lógica de la línea de tiempo", async () => {
+    // u1: cobro de anticipo registrado pero sin pago a fábrica.
+    // u2: cobro y pago a fábrica registrados.
     mockFindManyMovimiento.mockResolvedValueOnce([
-      { fecha: new Date("2026-01-05T00:00:00.000Z"), acuerdo: { unidadId: "u1" } },
-      { fecha: new Date("2026-01-05T00:00:00.000Z"), acuerdo: { unidadId: "u2" } },
+      { fecha: new Date("2026-01-05T00:00:00.000Z"), importe: 15000, acuerdo: { unidadId: "u1", tipo: "cobro", moneda: "USD", concepto: "venta" } },
+      { fecha: new Date("2026-01-05T00:00:00.000Z"), importe: 20000, acuerdo: { unidadId: "u2", tipo: "cobro", moneda: "USD", concepto: "venta" } },
+      { fecha: new Date("2026-01-08T00:00:00.000Z"), importe: 9000, acuerdo: { unidadId: "u2", tipo: "pago", moneda: "USD", concepto: "fabrica" } },
     ]);
     mockFindManyUnidad.mockResolvedValueOnce([
       {
@@ -186,8 +189,56 @@ describe("AdminUnidadesPage", () => {
       },
     ]);
     render(await AdminUnidadesPage({ searchParams: Promise.resolve({}) }));
-    expect(screen.getByText("Registrar pago fábrica")).toBeInTheDocument();
+    expect(screen.getByText("Registrar pago a fábrica")).toBeInTheDocument();
     expect(screen.getByText("Activar garantía")).toBeInTheDocument();
+  });
+
+  it("muestra 'Cobrado' (suma de cobros en USD) y 'Fecha último cobro' por unidad", async () => {
+    mockFindManyMovimiento.mockResolvedValueOnce([
+      { fecha: new Date("2026-01-05T00:00:00.000Z"), importe: 15000, acuerdo: { unidadId: "u1", tipo: "cobro", moneda: "USD", concepto: "venta" } },
+      { fecha: new Date("2026-02-20T00:00:00.000Z"), importe: 7500, acuerdo: { unidadId: "u1", tipo: "cobro", moneda: "USD", concepto: "venta" } },
+      { fecha: new Date("2026-02-25T00:00:00.000Z"), importe: 9000, acuerdo: { unidadId: "u1", tipo: "pago", moneda: "USD", concepto: "fabrica" } },
+    ]);
+    mockFindManyUnidad.mockResolvedValueOnce([
+      {
+        id: "u1",
+        clienteId: "c1",
+        numeroUnidad: "MOV-UNIDAD-2026-001",
+        modelo: "Flex 18",
+        estadoFabricacion: "en_produccion",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        fechaEntrega: null,
+        localidadDestino: null,
+        provinciaDestino: null,
+        precioCliente: 50000,
+        cliente: { nombre: "Juan" },
+        envio: null,
+      },
+      {
+        id: "u2",
+        clienteId: "c2",
+        numeroUnidad: "MOV-UNIDAD-2026-002",
+        modelo: "Flex 38",
+        estadoFabricacion: "pendiente",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        fechaEntrega: null,
+        localidadDestino: null,
+        provinciaDestino: null,
+        precioCliente: 60000,
+        cliente: { nombre: "Ana" },
+        envio: null,
+      },
+    ]);
+    render(await AdminUnidadesPage({ searchParams: Promise.resolve({}) }));
+
+    expect(screen.getByRole("columnheader", { name: "Cobrado" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Fecha último cobro" })).toBeInTheDocument();
+    const filaU1 = screen.getByText("MOV-UNIDAD-2026-001").closest("tr")!;
+    expect(filaU1).toHaveTextContent("USD 22.500");
+    expect(filaU1).toHaveTextContent("20/2/2026");
+    const filaU2 = screen.getByText("MOV-UNIDAD-2026-002").closest("tr")!;
+    expect(filaU2).toHaveTextContent("USD 0");
+    expect(filaU2).toHaveTextContent("Cobrar anticipo");
   });
 
   it("pagina de a 50: pasa take/skip correctos y expone Anterior/Siguiente preservando todos los filtros", async () => {
