@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CONCEPTO_LABELS,
@@ -25,16 +25,17 @@ export default function CobranzaUnidadSection({
   const router = useRouter();
   const [nuevoTipo, setNuevoTipo] = useState<"cobro" | "pago" | null>(null);
 
-  const acuerdosCobro = acuerdos.filter((a) => a.tipo === "cobro");
-  const acuerdosPago = acuerdos.filter((a) => a.tipo === "pago");
-
   // Totales en USD — no hay tasa de cambio en el sistema, así que sumar
   // ARS y USD en un mismo número no sería correcto. Los acuerdos en ARS
   // igual se listan abajo, solo no entran en el total.
-  const cobradoUSD = sumaImportes(
-    acuerdosCobro.filter((a) => a.moneda === "USD").flatMap((a) => a.movimientos)
-  );
-  const pagadoUSD = sumaImportes(acuerdosPago.filter((a) => a.moneda === "USD").flatMap((a) => a.movimientos));
+  const { cobradoUSD, pagadoUSD } = useMemo(() => {
+    const acuerdosCobro = acuerdos.filter((a) => a.tipo === "cobro");
+    const acuerdosPago = acuerdos.filter((a) => a.tipo === "pago");
+    return {
+      cobradoUSD: sumaImportes(acuerdosCobro.filter((a) => a.moneda === "USD").flatMap((a) => a.movimientos)),
+      pagadoUSD: sumaImportes(acuerdosPago.filter((a) => a.moneda === "USD").flatMap((a) => a.movimientos)),
+    };
+  }, [acuerdos]);
 
   return (
     <div id="cobranza">

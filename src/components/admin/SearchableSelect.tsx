@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 
 export type SearchableOption = { value: string; label: string };
 
@@ -38,8 +39,11 @@ export default function SearchableSelect({
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  const q = query.trim().toLowerCase();
-  const filtered = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
+  const queryDebounced = useDebouncedValue(query, 300);
+  const filtered = useMemo(() => {
+    const q = queryDebounced.trim().toLowerCase();
+    return q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
+  }, [options, queryDebounced]);
 
   return (
     <div ref={containerRef} className="relative">

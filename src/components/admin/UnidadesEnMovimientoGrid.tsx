@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { estadoFabricacionLabels, estadoFabricacionColors, type EstadoFabricacion } from "@/lib/envios/constantes";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 
 export type UnidadMovimiento = {
   id: string;
@@ -36,11 +37,12 @@ export default function UnidadesEnMovimientoGrid({
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("activas");
   const [query, setQuery] = useState("");
+  const queryDebounced = useDebouncedValue(query, 300);
 
   const fuente = tab === "activas" ? activas : entregadas;
 
   const filtradas = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = queryDebounced.trim().toLowerCase();
     if (!q) return fuente;
     return fuente.filter(
       (u) =>
@@ -48,7 +50,7 @@ export default function UnidadesEnMovimientoGrid({
         (u.numeroUnidad ?? "").toLowerCase().includes(q) ||
         (u.envioNumeroPI ?? "").toLowerCase().includes(q)
     );
-  }, [fuente, query]);
+  }, [fuente, queryDebounced]);
 
   return (
     <div className="space-y-4">

@@ -214,4 +214,48 @@ describe("AdminPipelinePage", () => {
     render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText(/rol=vendedor/)).toBeInTheDocument();
   });
+
+  it("pagina de a 50: pasa take/skip correctos y expone Anterior/Siguiente preservando todos los filtros", async () => {
+    mockFindManyLead.mockResolvedValueOnce([]);
+    mockCountLead.mockResolvedValueOnce(120); // primer lead.count = total paginado → 3 páginas
+    render(
+      await AdminPipelinePage({
+        searchParams: Promise.resolve({
+          etapa: "en_contacto",
+          vendedorId: "v1",
+          origen: "web",
+          desde: "hoy",
+          periodo: "mes",
+          sinContactar: "1",
+          page: "2",
+        }),
+      })
+    );
+    const call = mockFindManyLead.mock.calls[0][0];
+    expect(call.take).toBe(50);
+    expect(call.skip).toBe(50);
+    expect(screen.getByText("Página 2 de 3")).toBeInTheDocument();
+    const siguiente = screen.getByRole("link", { name: /siguiente/i });
+    const href = siguiente.getAttribute("href")!;
+    expect(href).toContain("etapa=en_contacto");
+    expect(href).toContain("vendedorId=v1");
+    expect(href).toContain("origen=web");
+    expect(href).toContain("desde=hoy");
+    expect(href).toContain("periodo=mes");
+    expect(href).toContain("sinContactar=1");
+    expect(href).toContain("page=3");
+  });
+
+  it("page inválido (no numérico) cae a la página 1", async () => {
+    mockFindManyLead.mockResolvedValueOnce([]);
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({ page: "no-es-numero" }) }));
+    const call = mockFindManyLead.mock.calls[0][0];
+    expect(call.skip).toBe(0);
+  });
+
+  it("con 1 sola página no se muestra ningún control de paginación", async () => {
+    mockFindManyLead.mockResolvedValueOnce([LEAD]);
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
+    expect(screen.queryByText(/página 1 de/i)).not.toBeInTheDocument();
+  });
 });

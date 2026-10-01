@@ -2,10 +2,13 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { estadoFabricacionOptions, estadoFabricacionLabels, type EstadoFabricacion } from "@/lib/envios/constantes";
 import NuevaUnidadForm from "@/components/admin/NuevaUnidadForm";
+import PaginacionLinks from "@/components/admin/PaginacionLinks";
 import { proximoPasoCorto } from "@/lib/envios/timeline";
 import { primerCobroPorUnidad } from "@/lib/cobranza/primer-cobro";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 50;
 
 function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -14,9 +17,17 @@ function startOfMonth(d: Date): Date {
 export default async function AdminUnidadesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string; clienteId?: string; envioId?: string; provincia?: string; periodo?: string }>;
+  searchParams: Promise<{
+    estado?: string;
+    clienteId?: string;
+    envioId?: string;
+    provincia?: string;
+    periodo?: string;
+    page?: string;
+  }>;
 }) {
   const sp = await searchParams;
+  const page = Math.max(1, Number(sp.page) || 1);
 
   // "activo" es un valor sintético (no existe como estadoFabricacion real):
   // agrupa todo lo que no está entregado — mismo criterio que "Unidades
@@ -41,7 +52,7 @@ export default async function AdminUnidadesPage({
     ...periodoWhere,
   };
 
-  const [unidades, clientes, envios, provinciasRows] = await Promise.all([
+  const [unidades, totalUnidades, clientes, envios, provinciasRows] = await Promise.all([
     db.unidad.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -49,7 +60,10 @@ export default async function AdminUnidadesPage({
         cliente: { select: { nombre: true } },
         envio: { select: { numeroPI: true, fechaEmbarque: true } },
       },
+      take: PAGE_SIZE,
+      skip: (page - 1) * PAGE_SIZE,
     }),
+    db.unidad.count({ where }),
     db.cliente.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
     db.envio.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, numeroPI: true } }),
     db.unidad.findMany({
@@ -60,8 +74,21 @@ export default async function AdminUnidadesPage({
     }),
   ]);
 
+  const totalPages = Math.max(1, Math.ceil(totalUnidades / PAGE_SIZE));
   const provincias = provinciasRows.map((r) => r.provinciaDestino!).filter(Boolean);
   const hayFiltros = Boolean(sp.estado || sp.clienteId || sp.envioId || sp.provincia);
+
+  function buildHref(nuevaPagina: number): string {
+    const params = new URLSearchParams();
+    if (sp.estado) params.set("estado", sp.estado);
+    if (sp.clienteId) params.set("clienteId", sp.clienteId);
+    if (sp.envioId) params.set("envioId", sp.envioId);
+    if (sp.provincia) params.set("provincia", sp.provincia);
+    if (sp.periodo) params.set("periodo", sp.periodo);
+    if (nuevaPagina > 1) params.set("page", String(nuevaPagina));
+    const qs = params.toString();
+    return `/admin/unidades${qs ? `?${qs}` : ""}`;
+  }
 
   const primerCobroMap = await primerCobroPorUnidad(unidades.map((u) => u.id));
   const proximosPasos = new Map(
@@ -223,6 +250,8 @@ export default async function AdminUnidadesPage({
           </table>
         </div>
       )}
+
+      <PaginacionLinks page={page} totalPages={totalPages} buildHref={buildHref} />
     </div>
   );
 }

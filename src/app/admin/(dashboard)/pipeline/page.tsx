@@ -3,9 +3,12 @@ import { db } from "@/lib/db";
 import { ETAPA_OPTIONS, ETAPA_LABELS, ORIGEN_OPTIONS, ORIGEN_LABELS, type Etapa, type Origen } from "@/lib/leads/constantes";
 import { tasaConversion } from "@/lib/leads/calc";
 import PipelineBoard from "@/components/admin/PipelineBoard";
+import PaginacionLinks from "@/components/admin/PaginacionLinks";
 import { getAdminUser } from "@/lib/admin/current-user";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 50;
 
 function startOfDay(d: Date): Date {
   const x = new Date(d);
@@ -30,9 +33,11 @@ export default async function AdminPipelinePage({
     periodo?: string;
     sinContactar?: string;
     leadId?: string;
+    page?: string;
   }>;
 }) {
   const sp = await searchParams;
+  const page = Math.max(1, Number(sp.page) || 1);
 
   // "etapa" acepta una lista separada por comas (ej. desde los KPIs del
   // dashboard: etapa=en_contacto,propuesta_enviada) además del valor único
@@ -83,20 +88,24 @@ export default async function AdminPipelinePage({
   const hoy = hoyParaFiltro;
   const inicioMes = inicioMesParaFiltro;
 
-  const [session, leads, vendedores, totalActivos, nuevosHoy, enPropuesta, ganadosMes, totalMes] = await Promise.all([
-    getAdminUser(),
-    db.lead.findMany({ where, orderBy: { createdAt: "desc" } }),
-    db.adminUser.findMany({
-      where: { rol: { in: ["vendedor", "admin"] }, activo: true },
-      select: { id: true, nombre: true },
-      orderBy: { nombre: "asc" },
-    }),
-    db.lead.count({ where: { etapa: { notIn: ["ganado", "perdido"] } } }),
-    db.lead.count({ where: { createdAt: { gte: hoy } } }),
-    db.lead.count({ where: { etapa: "propuesta_enviada" } }),
-    db.lead.count({ where: { etapa: "ganado", createdAt: { gte: inicioMes } } }),
-    db.lead.count({ where: { createdAt: { gte: inicioMes } } }),
-  ]);
+  const [session, leads, totalFiltrados, vendedores, totalActivos, nuevosHoy, enPropuesta, ganadosMes, totalMes] =
+    await Promise.all([
+      getAdminUser(),
+      db.lead.findMany({ where, orderBy: { createdAt: "desc" }, take: PAGE_SIZE, skip: (page - 1) * PAGE_SIZE }),
+      db.lead.count({ where }),
+      db.adminUser.findMany({
+        where: { rol: { in: ["vendedor", "admin"] }, activo: true },
+        select: { id: true, nombre: true },
+        orderBy: { nombre: "asc" },
+      }),
+      db.lead.count({ where: { etapa: { notIn: ["ganado", "perdido"] } } }),
+      db.lead.count({ where: { createdAt: { gte: hoy } } }),
+      db.lead.count({ where: { etapa: "propuesta_enviada" } }),
+      db.lead.count({ where: { etapa: "ganado", createdAt: { gte: inicioMes } } }),
+      db.lead.count({ where: { createdAt: { gte: inicioMes } } }),
+    ]);
+
+  const totalPages = Math.max(1, Math.ceil(totalFiltrados / PAGE_SIZE));
 
   // "Del mes" acá siempre se refiere a la cohorte de leads CREADOS este mes
   // (no a cuándo cambiaron de etapa) — Lead no tiene un timestamp de "pasó a
@@ -112,6 +121,19 @@ export default async function AdminPipelinePage({
       sp.periodo === "mes" ||
       sp.sinContactar === "1"
   );
+
+  function buildHref(nuevaPagina: number): string {
+    const params = new URLSearchParams();
+    if (etapaValida) params.set("etapa", etapaValida);
+    if (sp.vendedorId) params.set("vendedorId", sp.vendedorId);
+    if (origenValido) params.set("origen", origenValido);
+    if (sp.desde) params.set("desde", sp.desde);
+    if (sp.periodo) params.set("periodo", sp.periodo);
+    if (sp.sinContactar) params.set("sinContactar", sp.sinContactar);
+    if (nuevaPagina > 1) params.set("page", String(nuevaPagina));
+    const qs = params.toString();
+    return `/admin/pipeline${qs ? `?${qs}` : ""}`;
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 space-y-6">
@@ -228,6 +250,8 @@ export default async function AdminPipelinePage({
           rol={session?.rol ?? "vendedor"}
         />
       )}
+
+      <PaginacionLinks page={page} totalPages={totalPages} buildHref={buildHref} />
     </div>
   );
 }

@@ -80,8 +80,10 @@ export default function RentabilidadPorUnidadTab({
     }));
   }, [acuerdosCobro, acuerdosPago, periodo]);
 
-  const filtradas =
-    filtroEstadoUnidad === "todos" ? resumen : resumen.filter((r) => r.unidadEstado === filtroEstadoUnidad);
+  const filtradas = useMemo(
+    () => (filtroEstadoUnidad === "todos" ? resumen : resumen.filter((r) => r.unidadEstado === filtroEstadoUnidad)),
+    [resumen, filtroEstadoUnidad]
+  );
 
   function exportarExcel() {
     const rows = filtradas.map((r) => ({

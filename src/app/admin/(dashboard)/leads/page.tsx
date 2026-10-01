@@ -1,8 +1,11 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import MarcarContactadoButton from "@/components/admin/MarcarContactadoButton";
+import PaginacionLinks from "@/components/admin/PaginacionLinks";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 50;
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
@@ -41,15 +44,33 @@ function buildWhere(
 export default async function AdminLeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ desde?: string; hasta?: string; provincia?: string; sinResponder?: string }>;
+  searchParams: Promise<{ desde?: string; hasta?: string; provincia?: string; sinResponder?: string; page?: string }>;
 }) {
-  const { desde, hasta, provincia, sinResponder } = await searchParams;
+  const { desde, hasta, provincia, sinResponder, page: pageParam } = await searchParams;
   const where = buildWhere(desde, hasta, provincia, sinResponder);
+  const page = Math.max(1, Number(pageParam) || 1);
 
-  const leads = await db.lead.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-  });
+  const [leads, totalLeads] = await Promise.all([
+    db.lead.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: PAGE_SIZE,
+      skip: (page - 1) * PAGE_SIZE,
+    }),
+    db.lead.count({ where }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(totalLeads / PAGE_SIZE));
+
+  function buildHref(nuevaPagina: number): string {
+    const params = new URLSearchParams();
+    if (desde) params.set("desde", desde);
+    if (hasta) params.set("hasta", hasta);
+    if (provincia) params.set("provincia", provincia);
+    if (sinResponder) params.set("sinResponder", sinResponder);
+    if (nuevaPagina > 1) params.set("page", String(nuevaPagina));
+    const qs = params.toString();
+    return `/admin/leads${qs ? `?${qs}` : ""}`;
+  }
 
   const exportParams = new URLSearchParams();
   if (desde) exportParams.set("desde", desde);
@@ -157,6 +178,8 @@ export default async function AdminLeadsPage({
           </table>
         </div>
       )}
+
+      <PaginacionLinks page={page} totalPages={totalPages} buildHref={buildHref} />
     </div>
   );
 }

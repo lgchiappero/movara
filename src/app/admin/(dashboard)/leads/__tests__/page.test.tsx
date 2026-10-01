@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { mockFindMany } = vi.hoisted(() => ({ mockFindMany: vi.fn() }));
-vi.mock("@/lib/db", () => ({ db: { lead: { findMany: mockFindMany } } }));
+const { mockFindMany, mockCount } = vi.hoisted(() => ({
+  mockFindMany: vi.fn(),
+  mockCount: vi.fn().mockResolvedValue(0),
+}));
+vi.mock("@/lib/db", () => ({ db: { lead: { findMany: mockFindMany, count: mockCount } } }));
 vi.mock("@/components/admin/MarcarContactadoButton", () => ({
   default: ({ contactado }: { contactado: boolean }) => <div>Contactado: {String(contactado)}</div>,
 }));
@@ -22,7 +25,10 @@ const LEAD = {
 };
 
 describe("AdminLeadsPage", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCount.mockResolvedValue(0);
+  });
 
   it("muestra el estado vacío sin leads", async () => {
     mockFindMany.mockResolvedValueOnce([]);
@@ -48,6 +54,8 @@ describe("AdminLeadsPage", () => {
     expect(mockFindMany).toHaveBeenCalledWith({
       where: { createdAt: { gte: new Date("2026-01-01T00:00:00"), lte: new Date("2026-01-31T23:59:59") } },
       orderBy: { createdAt: "desc" },
+      take: 50,
+      skip: 0,
     });
   });
 
@@ -57,6 +65,8 @@ describe("AdminLeadsPage", () => {
     expect(mockFindMany).toHaveBeenCalledWith({
       where: { provincia: { contains: "Cordoba", mode: "insensitive" } },
       orderBy: { createdAt: "desc" },
+      take: 50,
+      skip: 0,
     });
   });
 
@@ -97,5 +107,45 @@ describe("AdminLeadsPage", () => {
       "href",
       "/api/admin/leads/export?desde=2026-01-01&hasta=2026-01-31&provincia=C%C3%B3rdoba"
     );
+  });
+
+  it("pagina de a 50: pasa take/skip correctos y expone Anterior/Siguiente preservando todos los filtros", async () => {
+    mockFindMany.mockResolvedValueOnce([]);
+    mockCount.mockResolvedValueOnce(120);
+    render(
+      await AdminLeadsPage({
+        searchParams: Promise.resolve({
+          desde: "2026-01-01",
+          hasta: "2026-01-31",
+          provincia: "Córdoba",
+          sinResponder: "1",
+          page: "2",
+        }),
+      })
+    );
+    const call = mockFindMany.mock.calls[0][0];
+    expect(call.take).toBe(50);
+    expect(call.skip).toBe(50);
+    expect(screen.getByText("Página 2 de 3")).toBeInTheDocument();
+    const siguiente = screen.getByRole("link", { name: /siguiente/i });
+    const href = siguiente.getAttribute("href")!;
+    expect(href).toContain("desde=2026-01-01");
+    expect(href).toContain("hasta=2026-01-31");
+    expect(href).toContain("provincia=C%C3%B3rdoba");
+    expect(href).toContain("sinResponder=1");
+    expect(href).toContain("page=3");
+  });
+
+  it("page inválido (no numérico) cae a la página 1", async () => {
+    mockFindMany.mockResolvedValueOnce([]);
+    await AdminLeadsPage({ searchParams: Promise.resolve({ page: "no-es-numero" }) });
+    const call = mockFindMany.mock.calls[0][0];
+    expect(call.skip).toBe(0);
+  });
+
+  it("con 1 sola página no se muestra ningún control de paginación", async () => {
+    mockFindMany.mockResolvedValueOnce([LEAD]);
+    render(await AdminLeadsPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.queryByText(/página 1 de/i)).not.toBeInTheDocument();
   });
 });

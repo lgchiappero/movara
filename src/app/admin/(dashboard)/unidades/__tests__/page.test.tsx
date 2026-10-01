@@ -1,16 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { mockFindManyUnidad, mockFindManyCliente, mockFindManyEnvio, mockFindManyMovimiento } = vi.hoisted(() => ({
-  mockFindManyUnidad: vi.fn(),
-  mockFindManyCliente: vi.fn().mockResolvedValue([]),
-  mockFindManyEnvio: vi.fn().mockResolvedValue([]),
-  mockFindManyMovimiento: vi.fn().mockResolvedValue([]),
-}));
+const { mockFindManyUnidad, mockCountUnidad, mockFindManyCliente, mockFindManyEnvio, mockFindManyMovimiento } =
+  vi.hoisted(() => ({
+    mockFindManyUnidad: vi.fn(),
+    mockCountUnidad: vi.fn().mockResolvedValue(0),
+    mockFindManyCliente: vi.fn().mockResolvedValue([]),
+    mockFindManyEnvio: vi.fn().mockResolvedValue([]),
+    mockFindManyMovimiento: vi.fn().mockResolvedValue([]),
+  }));
 
 vi.mock("@/lib/db", () => ({
   db: {
-    unidad: { findMany: mockFindManyUnidad },
+    unidad: { findMany: mockFindManyUnidad, count: mockCountUnidad },
     cliente: { findMany: mockFindManyCliente },
     envio: { findMany: mockFindManyEnvio },
     movimiento: { findMany: mockFindManyMovimiento },
@@ -32,6 +34,7 @@ describe("AdminUnidadesPage", () => {
     // provincias) — este default cubre la 2da llamada cuando el test solo
     // le importa la 1ra (vía mockResolvedValueOnce).
     mockFindManyUnidad.mockResolvedValue([]);
+    mockCountUnidad.mockResolvedValue(0);
     mockFindManyCliente.mockResolvedValue([]);
     mockFindManyEnvio.mockResolvedValue([]);
     mockFindManyMovimiento.mockResolvedValue([]);
@@ -185,5 +188,49 @@ describe("AdminUnidadesPage", () => {
     render(await AdminUnidadesPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText("Registrar pago fábrica")).toBeInTheDocument();
     expect(screen.getByText("Activar garantía")).toBeInTheDocument();
+  });
+
+  it("pagina de a 50: pasa take/skip correctos y expone Anterior/Siguiente preservando todos los filtros", async () => {
+    mockFindManyUnidad.mockResolvedValueOnce([]); // lista principal (página 2)
+    mockCountUnidad.mockResolvedValueOnce(120); // total con el filtro aplicado → 3 páginas
+    mockFindManyUnidad.mockResolvedValueOnce([]); // distinct provincias
+    render(
+      await AdminUnidadesPage({
+        searchParams: Promise.resolve({
+          estado: "pendiente",
+          clienteId: "c1",
+          envioId: "e1",
+          provincia: "Córdoba",
+          periodo: "mes",
+          page: "2",
+        }),
+      })
+    );
+    const call = mockFindManyUnidad.mock.calls[0][0];
+    expect(call.take).toBe(50);
+    expect(call.skip).toBe(50); // (page 2 - 1) * 50
+    expect(screen.getByText("Página 2 de 3")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /anterior/i })).toHaveAttribute(
+      "href",
+      "/admin/unidades?estado=pendiente&clienteId=c1&envioId=e1&provincia=C%C3%B3rdoba&periodo=mes"
+    );
+    expect(screen.getByRole("link", { name: /siguiente/i })).toHaveAttribute(
+      "href",
+      "/admin/unidades?estado=pendiente&clienteId=c1&envioId=e1&provincia=C%C3%B3rdoba&periodo=mes&page=3"
+    );
+  });
+
+  it("page inválido (no numérico) cae a la página 1", async () => {
+    mockFindManyUnidad.mockResolvedValueOnce([]);
+    render(await AdminUnidadesPage({ searchParams: Promise.resolve({ page: "no-es-numero" }) }));
+    const call = mockFindManyUnidad.mock.calls[0][0];
+    expect(call.skip).toBe(0);
+  });
+
+  it("con 1 sola página no se muestra ningún control de paginación", async () => {
+    mockFindManyUnidad.mockResolvedValueOnce([{ id: "u1", numeroUnidad: null, modelo: null, estadoFabricacion: "pendiente", localidadDestino: null, provinciaDestino: null, precioCliente: null, cliente: { nombre: "Juan" }, envio: null }]);
+    mockCountUnidad.mockResolvedValueOnce(1);
+    render(await AdminUnidadesPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.queryByText(/página 1 de/i)).not.toBeInTheDocument();
   });
 });

@@ -13,12 +13,15 @@ import {
 import { sumaImportes, estadoAcuerdo } from "@/lib/cobranza/calc";
 import { inicioSemana, finSemana } from "@/lib/cobranza/periodo";
 import { useToast } from "@/components/admin/Toast";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import EditarMovimientoModal from "@/components/admin/EditarMovimientoModal";
 import DetalleAcuerdo from "@/components/admin/cobranza/DetalleAcuerdo";
 import type { AcuerdoConDetalle, MovimientoDetalle } from "@/lib/cobranza/types";
 
 type FiltroEstado = EstadoAcuerdo | "semana" | "todos";
 type FiltroMoneda = "USD" | "ARS" | "todos";
+
+const PAGE_SIZE = 50;
 
 function formatMoneda(value: number, moneda: string): string {
   return `${moneda} ${value.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
@@ -72,6 +75,8 @@ export default function GestionCobranzaTab({
       : "todos"
   );
   const [busqueda, setBusqueda] = useState("");
+  const busquedaDebounced = useDebouncedValue(busqueda, 300);
+  const [pagina, setPagina] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editando, setEditando] = useState<{ acuerdo: AcuerdoConDetalle; movimiento: MovimientoDetalle } | null>(
     null
@@ -123,7 +128,7 @@ export default function GestionCobranzaTab({
   }, [sub, acuerdosCobro, acuerdosPago]);
 
   const filasFiltradas = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
+    const q = busquedaDebounced.trim().toLowerCase();
     return filas.filter((f) => {
       if (filtroMoneda !== "todos" && f.acuerdo.moneda !== filtroMoneda) return false;
       if (filtroEstado === "semana") {
@@ -138,7 +143,25 @@ export default function GestionCobranzaTab({
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filas, filtroMoneda, filtroEstado, busqueda]);
+  }, [filas, filtroMoneda, filtroEstado, busquedaDebounced]);
+
+  // Volver a la página 1 cada vez que cambia algún filtro — evita quedar
+  // "varado" en una página que ya no tiene filas tras acotar la búsqueda.
+  // Patrón de React "ajustar estado durante el render" (no un efecto):
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const filtroKey = `${sub}|${filtroMoneda}|${filtroEstado}|${busquedaDebounced}`;
+  const [filtroKeyAnterior, setFiltroKeyAnterior] = useState(filtroKey);
+  if (filtroKeyAnterior !== filtroKey) {
+    setFiltroKeyAnterior(filtroKey);
+    setPagina(1);
+  }
+
+  const totalPaginas = Math.max(1, Math.ceil(filasFiltradas.length / PAGE_SIZE));
+  const paginaEfectiva = Math.min(pagina, totalPaginas);
+  const filasPagina = useMemo(
+    () => filasFiltradas.slice((paginaEfectiva - 1) * PAGE_SIZE, paginaEfectiva * PAGE_SIZE),
+    [filasFiltradas, paginaEfectiva]
+  );
 
   function exportarExcel() {
     const rows = filasFiltradas.map(({ acuerdo, movido, pendiente, estado, proximoVencimiento: prox }) => ({
@@ -249,7 +272,7 @@ export default function GestionCobranzaTab({
                 </td>
               </tr>
             )}
-            {filasFiltradas.map((f) => (
+            {filasPagina.map((f) => (
               <FilaAcuerdo
                 key={f.acuerdo.id}
                 {...f}
@@ -265,6 +288,30 @@ export default function GestionCobranzaTab({
           </tbody>
         </table>
       </div>
+
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-between pt-1">
+          <button
+            type="button"
+            disabled={paginaEfectiva <= 1}
+            onClick={() => setPagina(paginaEfectiva - 1)}
+            className="px-4 py-2 rounded-lg text-sm font-bold border border-[#E5E5E5] text-[#2F2F2F] hover:border-stone-300 disabled:opacity-40 disabled:hover:border-[#E5E5E5] transition-colors"
+          >
+            ← Anterior
+          </button>
+          <span className="text-xs text-stone-400">
+            Página {paginaEfectiva} de {totalPaginas} ({filasFiltradas.length} resultados)
+          </span>
+          <button
+            type="button"
+            disabled={paginaEfectiva >= totalPaginas}
+            onClick={() => setPagina(paginaEfectiva + 1)}
+            className="px-4 py-2 rounded-lg text-sm font-bold border border-[#E5E5E5] text-[#2F2F2F] hover:border-stone-300 disabled:opacity-40 disabled:hover:border-[#E5E5E5] transition-colors"
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
 
       {editando && (
         <EditarMovimientoModal
