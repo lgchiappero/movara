@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { leadContactadoSchema, leadPipelineSchema, leadNotasVentaSchema } from "@/lib/validators/lead";
+import { leadContactadoSchema, leadPipelineSchema, leadNotasVentaSchema, leadCreateSchema } from "@/lib/validators/lead";
 
 describe("leadContactadoSchema", () => {
   it("acepta true/false", () => {
@@ -83,5 +83,74 @@ describe("leadNotasVentaSchema", () => {
     const res = leadNotasVentaSchema.safeParse({ notasVenta: "" });
     expect(res.success).toBe(true);
     if (res.success) expect(res.data.notasVenta).toBeNull();
+  });
+});
+
+const VALID_CREATE: z.input<typeof leadCreateSchema> = {
+  nombre: "Juan García",
+  email: null,
+  telefono: null,
+  origen: null,
+  modeloInteres: null,
+  notasVenta: null,
+  vendedorId: null,
+  valorEstimado: null,
+};
+
+describe("leadCreateSchema", () => {
+  it("acepta el alta manual mínima (solo nombre, todo lo demás null)", () => {
+    const res = leadCreateSchema.safeParse(VALID_CREATE);
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.data.telefono).toBe("");
+  });
+
+  it("rechaza un nombre vacío o de un solo caracter", () => {
+    expect(leadCreateSchema.safeParse({ ...VALID_CREATE, nombre: "" }).success).toBe(false);
+    expect(leadCreateSchema.safeParse({ ...VALID_CREATE, nombre: "A" }).success).toBe(false);
+  });
+
+  it("recorta espacios del nombre", () => {
+    const res = leadCreateSchema.safeParse({ ...VALID_CREATE, nombre: "  Juan García  " });
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.data.nombre).toBe("Juan García");
+  });
+
+  it("telefono ausente (undefined) se normaliza a string vacío, no falla", () => {
+    const { telefono: _telefono, ...sinTelefono } = VALID_CREATE;
+    const res = leadCreateSchema.safeParse(sinTelefono);
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.data.telefono).toBe("");
+  });
+
+  it("acepta un teléfono real y lo recorta", () => {
+    const res = leadCreateSchema.safeParse({ ...VALID_CREATE, telefono: " 1122334455 " });
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.data.telefono).toBe("1122334455");
+  });
+
+  it("acepta los 6 orígenes del catálogo, incluido email_directo, y rechaza uno inválido", () => {
+    expect(leadCreateSchema.safeParse({ ...VALID_CREATE, origen: "email_directo" }).success).toBe(true);
+    expect(leadCreateSchema.safeParse({ ...VALID_CREATE, origen: "no-existe" }).success).toBe(false);
+  });
+
+  it("acepta los modelos de interés (MODELOS_UNIDAD + 'Varios') y rechaza uno inválido", () => {
+    expect(leadCreateSchema.safeParse({ ...VALID_CREATE, modeloInteres: "Flex 18" }).success).toBe(true);
+    expect(leadCreateSchema.safeParse({ ...VALID_CREATE, modeloInteres: "Varios" }).success).toBe(true);
+    expect(leadCreateSchema.safeParse({ ...VALID_CREATE, modeloInteres: "Flex 99" }).success).toBe(false);
+  });
+
+  it("email/notasVenta/vendedorId vacíos ('') se normalizan a null", () => {
+    const res = leadCreateSchema.safeParse({ ...VALID_CREATE, email: "", notasVenta: "", vendedorId: "" });
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.email).toBeNull();
+      expect(res.data.notasVenta).toBeNull();
+      expect(res.data.vendedorId).toBeNull();
+    }
+  });
+
+  it("acepta valorEstimado numérico o null", () => {
+    expect(leadCreateSchema.safeParse({ ...VALID_CREATE, valorEstimado: 25000 }).success).toBe(true);
+    expect(leadCreateSchema.safeParse({ ...VALID_CREATE, valorEstimado: null }).success).toBe(true);
   });
 });

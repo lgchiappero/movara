@@ -38,6 +38,9 @@ vi.mock("@/components/admin/PipelineBoard", () => ({
     </div>
   ),
 }));
+vi.mock("@/components/admin/NuevoLeadButton", () => ({
+  default: ({ vendedores }: { vendedores: unknown[] }) => <div>NuevoLeadButton vendedores={vendedores.length}</div>,
+}));
 
 import AdminPipelinePage from "../page";
 
@@ -257,5 +260,11 @@ describe("AdminPipelinePage", () => {
     mockFindManyLead.mockResolvedValueOnce([LEAD]);
     render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
     expect(screen.queryByText(/página 1 de/i)).not.toBeInTheDocument();
+  });
+
+  it("muestra el botón 'Nuevo lead' con la lista de vendedores, incluso con la grilla vacía", async () => {
+    mockFindManyVendedor.mockResolvedValueOnce([{ id: "v1", nombre: "Vend 1" }]);
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByText("NuevoLeadButton vendedores=1")).toBeInTheDocument();
   });
 });

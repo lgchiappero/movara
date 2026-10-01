@@ -4,6 +4,7 @@ import { ETAPA_OPTIONS, ETAPA_LABELS, ORIGEN_OPTIONS, ORIGEN_LABELS, type Etapa,
 import { tasaConversion } from "@/lib/leads/calc";
 import PipelineBoard from "@/components/admin/PipelineBoard";
 import PaginacionLinks from "@/components/admin/PaginacionLinks";
+import NuevoLeadButton from "@/components/admin/NuevoLeadButton";
 import { getAdminUser } from "@/lib/admin/current-user";
 
 export const dynamic = "force-dynamic";
@@ -137,9 +138,12 @@ export default async function AdminPipelinePage({
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 space-y-6">
-      <div>
-        <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">Panel MOVARA</p>
-        <h1 className="text-2xl font-bold text-[#2F2F2F]">Pipeline de ventas</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">Panel MOVARA</p>
+          <h1 className="text-2xl font-bold text-[#2F2F2F]">Pipeline de ventas</h1>
+        </div>
+        <NuevoLeadButton vendedores={vendedores} />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">

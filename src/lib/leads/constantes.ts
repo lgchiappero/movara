@@ -30,6 +30,7 @@ export const ORIGEN_OPTIONS = [
   "web",
   "instagram",
   "whatsapp",
+  "email_directo",
   "referido",
   "cliente_recurrente",
 ] as const;
@@ -39,6 +40,7 @@ export const ORIGEN_LABELS: Record<Origen, string> = {
   web: "Web",
   instagram: "Instagram",
   whatsapp: "WhatsApp",
+  email_directo: "Email directo",
   referido: "Referido",
   cliente_recurrente: "Cliente recurrente",
 };
@@ -47,6 +49,7 @@ export const ORIGEN_COLORS: Record<Origen, string> = {
   web: "bg-blue-100 text-blue-700",
   instagram: "bg-violet-100 text-violet-700",
   whatsapp: "bg-green-100 text-green-700",
+  email_directo: "bg-sky-100 text-sky-700",
   referido: "bg-amber-100 text-amber-700", // "dorado"
   cliente_recurrente: "bg-stone-200 text-stone-700",
 };

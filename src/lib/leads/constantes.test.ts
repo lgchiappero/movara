@@ -27,8 +27,8 @@ describe("etapas del pipeline", () => {
 });
 
 describe("orígenes de lead", () => {
-  it("tiene 5 orígenes", () => {
-    expect(ORIGEN_OPTIONS).toHaveLength(5);
+  it("tiene 6 orígenes", () => {
+    expect(ORIGEN_OPTIONS).toHaveLength(6);
   });
 
   it("tiene label y color para cada origen", () => {

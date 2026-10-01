@@ -102,7 +102,11 @@ model Lead {
 
   // ─── Pipeline de ventas simplificado (/admin/pipeline) ──────────────
   etapa         String  @default("nuevo") // nuevo | en_contacto | propuesta_enviada | ganado | perdido
-  origen        String? // web | instagram | whatsapp | referido | cliente_recurrente
+  origen        String? // web | instagram | whatsapp | email_directo | referido | cliente_recurrente
+  // Modelo de interés declarado al cargar el lead manualmente desde
+  // /admin/pipeline — mismos valores que Unidad.modelo (MODELOS_UNIDAD) más
+  // "Varios"; null = "Sin definir". No tiene relación formal con Unidad.
+  modeloInteres String?
   vendedorId    String? // referencia a AdminUser.id — sin relación formal en Prisma
   // (AdminUser no tiene FK entrante desde acá) para no acoplar el borrado
   // de un usuario a las filas de leads que tuvo asignadas.
