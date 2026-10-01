@@ -13,13 +13,19 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
+// "MOVARA Flex" existe como documento "modelo" (para poder ordenarse junto
+// al resto vía el campo "order") pero en esta página ya se muestra aparte,
+// como tarjeta destacada fija (ver FlexFeatureCard/FLEX_CARD_QUERY más
+// abajo) — se filtra acá para no duplicarlo en la grilla.
+const FLEX_SLUG = "movara-flex";
+
 // Sin fallback a datos hardcodeados: el catálogo muestra exactamente lo que
 // hay en Sanity. Si la consulta falla o no hay modelos cargados, se muestra
 // vacío en vez de sustituir con contenido de ejemplo.
 async function getModelos(): Promise<ProductModel[]> {
   try {
     const data = await client.fetch<ProductModel[]>(MODELOS_QUERY);
-    return Array.isArray(data) ? data : [];
+    return Array.isArray(data) ? data.filter((m) => m.slug !== FLEX_SLUG) : [];
   } catch {
     return [];
   }

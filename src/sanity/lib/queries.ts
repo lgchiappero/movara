@@ -1,7 +1,7 @@
 import { groq } from 'next-sanity'
 
 export const MODELOS_QUERY = groq`
-  *[_type == "modelo" && activo != false] | order(destacado desc, order asc, _createdAt asc) {
+  *[_type == "modelo" && activo != false] | order(order asc, _createdAt asc) {
     _id,
     "slug": slug.current,
     name,
