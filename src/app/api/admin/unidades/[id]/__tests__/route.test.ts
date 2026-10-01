@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockUpdate, mockDelete, mockCountAcuerdo, mockCountDocumento, mockGetAdminUser } = vi.hoisted(() => ({
+const { mockFindUnique, mockUpdate, mockDelete, mockCountAcuerdo, mockCountDocumento, mockGetAdminUser } = vi.hoisted(() => ({
+  mockFindUnique: vi.fn(),
   mockUpdate: vi.fn(),
   mockDelete: vi.fn(),
   mockCountAcuerdo: vi.fn(),
@@ -9,14 +10,14 @@ const { mockUpdate, mockDelete, mockCountAcuerdo, mockCountDocumento, mockGetAdm
 }));
 vi.mock("@/lib/db", () => ({
   db: {
-    unidad: { update: mockUpdate, delete: mockDelete },
+    unidad: { findUnique: mockFindUnique, update: mockUpdate, delete: mockDelete },
     acuerdoPago: { count: mockCountAcuerdo },
     documentoUnidad: { count: mockCountDocumento },
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 
-import { PATCH, DELETE } from "../route";
+import { GET, PATCH, DELETE } from "../route";
 import { NextRequest } from "next/server";
 
 function makeRequest(body: unknown): NextRequest {
@@ -45,6 +46,35 @@ const VALID = {
   garantiaInicio: null,
   notas: null,
 };
+
+const params = { params: Promise.resolve({ id: "u1" }) };
+
+describe("GET /api/admin/unidades/[id]", () => {
+  beforeEach(() => vi.clearAllMocks());
+  const req = new NextRequest("http://localhost/api/admin/unidades/u1");
+
+  it("devuelve cliente y precioCliente de la unidad", async () => {
+    const unidad = { id: "u1", numeroUnidad: "MOV-1", precioCliente: 42000, cliente: { id: "c1", nombre: "Ana Pérez" } };
+    mockFindUnique.mockResolvedValue(unidad);
+    const res = await GET(req, params);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, unidad });
+    expect(mockFindUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "u1" } }));
+  });
+
+  it("404 si la unidad no existe", async () => {
+    mockFindUnique.mockResolvedValue(null);
+    const res = await GET(req, params);
+    expect(res.status).toBe(404);
+  });
+
+  it("500 si la DB falla", async () => {
+    mockFindUnique.mockRejectedValue(new Error("db down"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await GET(req, params);
+    expect(res.status).toBe(500);
+  });
+});
 
 describe("PATCH /api/admin/unidades/[id]", () => {
   beforeEach(() => vi.clearAllMocks());

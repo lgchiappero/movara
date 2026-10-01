@@ -6,6 +6,33 @@ import { calcularGarantiaFechaFin } from "@/lib/pedido/garantia";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { isAdmin } from "@/lib/admin/roles";
 
+// Datos mínimos de una unidad para autocompletar formularios (ej: modal
+// "Nuevo cobro" → cliente y precio acordado).
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  try {
+    const unidad = await db.unidad.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        numeroUnidad: true,
+        precioCliente: true,
+        cliente: { select: { id: true, nombre: true } },
+      },
+    });
+    if (!unidad) {
+      return NextResponse.json({ error: "Unidad no encontrada" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true, unidad });
+  } catch (err) {
+    console.error("[admin/unidades/:id GET]", err);
+    return NextResponse.json({ error: "Error al obtener la unidad" }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

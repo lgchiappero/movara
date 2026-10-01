@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CONCEPTO_COBRO_OPTIONS,
   CONCEPTO_PAGO_OPTIONS,
@@ -19,6 +19,24 @@ type CuotaForm = { descripcion: string; importe: string; vencimiento: string };
 
 const NOMBRE_TIPO: Record<TipoAcuerdo, string> = { cobro: "cobro", pago: "pago" };
 const NOMBRE_TIPO_CAP: Record<TipoAcuerdo, string> = { cobro: "Cobro", pago: "Pago" };
+
+/** Cliente y precio acordado de una unidad, o null si no se pudieron obtener
+ * (en ese caso el usuario carga los campos a mano). */
+async function fetchDatosUnidad(
+  id: string
+): Promise<{ clienteNombre: string | null; precioCliente: number | null } | null> {
+  try {
+    const res = await fetch(`/api/admin/unidades/${id}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return {
+      clienteNombre: json.unidad?.cliente?.nombre ?? null,
+      precioCliente: json.unidad?.precioCliente ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export default function NuevoAcuerdoModal({
   tipo: tipoInicial,
@@ -57,15 +75,33 @@ export default function NuevoAcuerdoModal({
     }
   }
 
+  // Id de la última unidad pedida — si el usuario cambia de unidad antes de
+  // que llegue la respuesta anterior, esa respuesta se descarta.
+  const ultimaUnidadPedida = useRef<string | null>(null);
+
+  // Cobro: el cliente y el precio acordado de la unidad ya se saben —
+  // autocompletar (ambos quedan editables). Pago: el proveedor y el monto no
+  // tienen relación con la unidad, se completan a mano.
+  function autocompletarDesdeUnidad(id: string, tipoActual: TipoAcuerdo) {
+    ultimaUnidadPedida.current = id;
+    if (tipoActual !== "cobro" || !id) return;
+    void fetchDatosUnidad(id).then((datos) => {
+      if (!datos || ultimaUnidadPedida.current !== id) return;
+      if (datos.clienteNombre) setContraparte(datos.clienteNombre);
+      if (datos.precioCliente != null) setTotalAcordado(String(datos.precioCliente));
+    });
+  }
+
   function elegirUnidad(id: string) {
     setUnidadId(id);
-    // Cobro: el cliente de la unidad ya se sabe — autocompletar. Pago: el
-    // proveedor no tiene relación con la unidad, se completa a mano.
-    if (tipo === "cobro" && !contraparte.trim()) {
-      const u = unidades.find((x) => x.id === id);
-      if (u) setContraparte(u.clienteNombre);
-    }
+    autocompletarDesdeUnidad(id, tipo);
   }
+
+  // Unidad preseleccionada al abrir (ej: desde la ficha de la unidad).
+  useEffect(() => {
+    if (unidadIdInicial) autocompletarDesdeUnidad(unidadIdInicial, tipoInicial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function irAPaso2() {
     setError(null);
