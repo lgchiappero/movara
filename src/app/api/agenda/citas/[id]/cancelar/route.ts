@@ -17,7 +17,7 @@ async function enviarEmailsCancelacion(cita: CitaEmailData) {
 
   const cliente = buildCancelacionClienteEmail(cita);
   try {
-    await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "lucianogchiappero@gmail.com", subject: cliente.subject, html: cliente.html });
+    await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "contacto@movara.com.ar", subject: cliente.subject, html: cliente.html });
   } catch (err) {
     console.error("[agenda/citas/cancelar] Error enviando email al cliente:", err);
   }

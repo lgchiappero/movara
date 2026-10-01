@@ -186,7 +186,7 @@ async function enviarEmailEstado(
     await resend.emails.send({
       from: fromEmail,
       to: config.clienteEmail,
-      replyTo: "lucianogchiappero@gmail.com",
+      replyTo: "contacto@movara.com.ar",
       subject: email.subject,
       html: email.html,
     });

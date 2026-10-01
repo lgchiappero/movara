@@ -34,7 +34,7 @@ const FALLBACK_NAV_LINKS = [
 ];
 
 const FALLBACK: ResolvedConfig = {
-  email: "info@movara.com.ar",
+  email: "contacto@movara.com.ar",
   phone: "+54 9 11 0000-0000",
   address: "Buenos Aires, Argentina",
   instagram: "https://www.instagram.com/movara.homes/",

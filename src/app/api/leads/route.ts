@@ -131,7 +131,7 @@ async function sendEmails(lead: LeadData): Promise<boolean> {
       await resend.emails.send({
         from: fromEmail,
         to: lead.email,
-        replyTo: "lucianogchiappero@gmail.com",
+        replyTo: "contacto@movara.com.ar",
         subject: "Recibimos tu consulta — MOVARA",
         html: buildClientHtml(lead),
       });

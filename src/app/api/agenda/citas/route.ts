@@ -26,7 +26,7 @@ async function enviarEmails(cita: CitaEmailData) {
 
   const cliente = buildConfirmacionClienteEmail(cita);
   try {
-    await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "lucianogchiappero@gmail.com", subject: cliente.subject, html: cliente.html });
+    await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "contacto@movara.com.ar", subject: cliente.subject, html: cliente.html });
   } catch (err) {
     console.error("[agenda/citas] Error enviando confirmación al cliente:", err);
   }
@@ -52,7 +52,7 @@ async function enviarEmailsReagendacion(
 
   const cliente = buildConfirmacionClienteEmail(cita);
   try {
-    await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "lucianogchiappero@gmail.com", subject: cliente.subject, html: cliente.html });
+    await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "contacto@movara.com.ar", subject: cliente.subject, html: cliente.html });
   } catch (err) {
     console.error("[agenda/citas] Error enviando confirmación de reagendación al cliente:", err);
   }
