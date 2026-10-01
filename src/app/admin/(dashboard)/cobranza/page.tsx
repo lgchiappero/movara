@@ -34,12 +34,21 @@ export default async function AdminCobranzaPage({
     moneda?: string;
     estado?: string;
     clienteId?: string;
+    // Alias usados por los KPIs financieros del dashboard — no son el
+    // vocabulario interno de esta página (sub/estado), así que se
+    // traducen más abajo en vez de duplicar el modelo de filtros.
+    tipo?: string;
+    vence?: string;
   }>;
 }) {
   const sp = await searchParams;
   const now = new Date();
   const hoy = startOfDay(now);
 
+  // "periodo=mes" (alias usado por los KPIs financieros del dashboard) no
+  // es un PeriodoTipo real — como no coincide con ninguna opción válida,
+  // cae al default "mes_actual", que es exactamente lo que ese alias
+  // pretende decir. No hace falta un alias explícito para este caso.
   const periodoTipo: PeriodoTipo = (PERIODO_TIPO_OPTIONS as readonly string[]).includes(sp.periodo ?? "")
     ? (sp.periodo as PeriodoTipo)
     : "mes_actual";
@@ -166,8 +175,17 @@ export default async function AdminCobranzaPage({
   const rol = session?.rol ?? "vendedor";
 
   const tabInicial = sp.tab === "rentabilidad" || sp.tab === "cuenta-cliente" || sp.tab === "tipo-cambio" || sp.tab === "cierres" || sp.tab === "gestion" ? sp.tab : undefined;
-  const subInicial = sp.sub === "pagos" ? "pagos" : sp.sub === "cobros" ? "cobros" : undefined;
-  const estadoInicial = sp.estado ?? undefined;
+  // "tipo" (cobro|pago) es el alias que usan los KPIs financieros del
+  // dashboard para esta misma distinción — "sub" explícito gana si
+  // viniera por algún otro link.
+  const subDesdeTipo = sp.tipo === "cobro" ? "cobros" : sp.tipo === "pago" ? "pagos" : undefined;
+  const subInicial = sp.sub === "pagos" ? "pagos" : sp.sub === "cobros" ? "cobros" : subDesdeTipo;
+  // "estado=pagado" (el término que usan los KPIs del dashboard) no es un
+  // EstadoAcuerdo real acá — el equivalente interno es "saldado". Y
+  // "vence=semana" es el alias de la combinación estado=pendiente +
+  // vencimiento esta semana, que ya existe como el valor "semana".
+  const ESTADO_ALIAS: Record<string, string> = { pagado: "saldado" };
+  const estadoInicial = sp.vence === "semana" ? "semana" : sp.estado ? (ESTADO_ALIAS[sp.estado] ?? sp.estado) : undefined;
   const monedaInicial = sp.moneda === "USD" || sp.moneda === "ARS" ? sp.moneda : undefined;
   const clienteIdInicial = sp.clienteId ?? undefined;
 

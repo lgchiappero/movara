@@ -324,6 +324,39 @@ describe("AdminCobranzaPage", () => {
     expect(screen.getByText(/clienteId=c1/)).toBeInTheDocument();
   });
 
+  it("alias de los KPIs financieros del dashboard: tipo=cobro/pago equivale a sub=cobros/pagos (sub explícito gana)", async () => {
+    render(await AdminCobranzaPage({ searchParams: Promise.resolve({ tipo: "cobro" }) }));
+    expect(screen.getByText(/sub=cobros/)).toBeInTheDocument();
+  });
+
+  it("tipo=pago equivale a sub=pagos", async () => {
+    render(await AdminCobranzaPage({ searchParams: Promise.resolve({ tipo: "pago" }) }));
+    expect(screen.getByText(/sub=pagos/)).toBeInTheDocument();
+  });
+
+  it("sub explícito tiene prioridad sobre tipo", async () => {
+    render(await AdminCobranzaPage({ searchParams: Promise.resolve({ tipo: "pago", sub: "cobros" }) }));
+    expect(screen.getByText(/sub=cobros/)).toBeInTheDocument();
+  });
+
+  it("alias estado=pagado (usado por los KPIs del dashboard) resuelve al EstadoAcuerdo real 'saldado'", async () => {
+    render(await AdminCobranzaPage({ searchParams: Promise.resolve({ estado: "pagado" }) }));
+    expect(screen.getByText(/estado=saldado/)).toBeInTheDocument();
+  });
+
+  it("vence=semana resuelve estado a 'semana' sin importar qué venga en estado", async () => {
+    render(await AdminCobranzaPage({ searchParams: Promise.resolve({ estado: "pendiente", vence: "semana" }) }));
+    expect(screen.getByText(/estado=semana/)).toBeInTheDocument();
+  });
+
+  it("periodo=mes (alias del dashboard) cae al default 'mes_actual' igual que cualquier valor inválido", async () => {
+    mockFindUniqueCierre.mockResolvedValueOnce(null);
+    await AdminCobranzaPage({ searchParams: Promise.resolve({ periodo: "mes" }) });
+    const call = mockFindUniqueCierre.mock.calls[0][0];
+    const now = new Date();
+    expect(call.where.mes_anio).toEqual({ mes: now.getMonth() + 1, anio: now.getFullYear() });
+  });
+
   it("un tab fuera del catálogo cae a undefined ('none' en el mock)", async () => {
     render(await AdminCobranzaPage({ searchParams: Promise.resolve({ tab: "no-existe" }) }));
     expect(screen.getByText(/tab=none/)).toBeInTheDocument();

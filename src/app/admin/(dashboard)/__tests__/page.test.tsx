@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 const {
@@ -10,13 +10,14 @@ const {
   mockUnidadFindMany,
   mockUnidadGroupBy,
   mockUnidadCount,
-  mockUnidadAggregate,
   mockEnvioFindMany,
   mockCitaFindMany,
   mockCuotaCount,
   mockFindUniqueCierre,
   mockCountMovimiento,
   mockFindManyMovimiento,
+  mockMovimientoAggregate,
+  mockAcuerdoPagoAggregate,
 } = vi.hoisted(() => ({
   mockLeadCount: vi.fn(),
   mockLeadFindMany: vi.fn(),
@@ -26,25 +27,27 @@ const {
   mockUnidadFindMany: vi.fn(),
   mockUnidadGroupBy: vi.fn(),
   mockUnidadCount: vi.fn(),
-  mockUnidadAggregate: vi.fn(),
   mockEnvioFindMany: vi.fn(),
   mockCitaFindMany: vi.fn(),
   mockCuotaCount: vi.fn(),
   mockFindUniqueCierre: vi.fn(),
   mockCountMovimiento: vi.fn(),
   mockFindManyMovimiento: vi.fn().mockResolvedValue([]),
+  mockMovimientoAggregate: vi.fn(),
+  mockAcuerdoPagoAggregate: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
   db: {
     lead: { count: mockLeadCount, findMany: mockLeadFindMany },
     configuracionPedido: { groupBy: mockConfigGroupBy, count: mockConfigCount },
-    unidad: { findMany: mockUnidadFindMany, groupBy: mockUnidadGroupBy, count: mockUnidadCount, aggregate: mockUnidadAggregate },
+    unidad: { findMany: mockUnidadFindMany, groupBy: mockUnidadGroupBy, count: mockUnidadCount },
     envio: { findMany: mockEnvioFindMany },
     cita: { findMany: mockCitaFindMany },
     cuota: { count: mockCuotaCount },
     cierrePeriodo: { findUnique: mockFindUniqueCierre },
-    movimiento: { count: mockCountMovimiento, findMany: mockFindManyMovimiento },
+    movimiento: { count: mockCountMovimiento, findMany: mockFindManyMovimiento, aggregate: mockMovimientoAggregate },
+    acuerdoPago: { aggregate: mockAcuerdoPagoAggregate },
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -86,24 +89,28 @@ function setupDefaults() {
 
   mockUnidadCount.mockReset();
   mockUnidadCount.mockResolvedValueOnce(0); // unidadesEntregadasMes
-  mockUnidadCount.mockResolvedValueOnce(0); // unidadesCobroPendienteSemana
   mockUnidadCount.mockResolvedValueOnce(0); // unidadesEnAduanaLargas
-
-  mockUnidadAggregate.mockReset();
-  mockUnidadAggregate.mockResolvedValueOnce({ _sum: { precioCliente: null } }); // ganadas este mes
-  mockUnidadAggregate.mockResolvedValueOnce({ _sum: { precioCliente: null } }); // pendiente de cobro
 
   mockEnvioFindMany.mockResolvedValue([]);
   mockCitaFindMany.mockResolvedValue([]);
   mockLeadFindMany.mockResolvedValue([]); // leadsPipelineResumen
 
   mockCuotaCount.mockReset();
+  mockCuotaCount.mockResolvedValueOnce(0); // cuotasVencenSemanaCobro (bloque Financiero)
   mockCuotaCount.mockResolvedValueOnce(0); // cuotasVencidas
-  mockCuotaCount.mockResolvedValueOnce(0); // cuotasVencenSemana
+  mockCuotaCount.mockResolvedValueOnce(0); // cuotasVencenSemana (combinada, alerta)
 
   mockFindUniqueCierre.mockResolvedValue({ id: "cierre1" }); // mes anterior YA cerrado por default
   mockCountMovimiento.mockResolvedValue(0); // mesAnteriorTuvoMovimientos
   mockFindManyMovimiento.mockResolvedValue([]); // primerCobroPorUnidad
+
+  // Bloque Financiero: 4 movimiento.aggregate (cobrado/pagado este mes +
+  // movido total cobro/pago) y 2 acuerdoPago.aggregate (total acordado
+  // cobro/pago) — mismo orden que el Promise.all de la página.
+  mockMovimientoAggregate.mockReset();
+  mockMovimientoAggregate.mockResolvedValue({ _sum: { importe: null } });
+  mockAcuerdoPagoAggregate.mockReset();
+  mockAcuerdoPagoAggregate.mockResolvedValue({ _sum: { totalAcordado: null } });
 }
 
 describe("AdminDashboardPage", () => {
@@ -154,7 +161,7 @@ describe("AdminDashboardPage", () => {
     mockUnidadFindMany.mockResolvedValueOnce([]);
     mockUnidadGroupBy.mockResolvedValueOnce([{ estadoFabricacion: "en_aduana", _count: { _all: 4 } }]);
     mockUnidadCount.mockReset();
-    mockUnidadCount.mockResolvedValueOnce(9).mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+    mockUnidadCount.mockResolvedValueOnce(9).mockResolvedValueOnce(0);
     render(await AdminDashboardPage());
     expect(screen.getByText("📦 Operaciones")).toBeInTheDocument();
     expect(screen.getByText("Unidades activas").nextElementSibling?.textContent).toBe("2");
@@ -162,22 +169,34 @@ describe("AdminDashboardPage", () => {
     expect(screen.getByText("Entregadas este mes").nextElementSibling?.textContent).toBe("9");
   });
 
-  it("KPI Financiero formatea los montos en USD y muestra el conteo de cobro pendiente", async () => {
-    mockUnidadAggregate.mockReset();
-    mockUnidadAggregate.mockResolvedValueOnce({ _sum: { precioCliente: 45000 } });
-    mockUnidadAggregate.mockResolvedValueOnce({ _sum: { precioCliente: 120000 } });
-    mockUnidadCount.mockReset();
-    mockUnidadCount.mockResolvedValueOnce(0).mockResolvedValueOnce(3).mockResolvedValueOnce(0);
+  it("KPI Financiero: 5 métricas desde el libro de cobranza (AcuerdoPago/Movimiento/Cuota), formateadas en USD", async () => {
+    mockMovimientoAggregate.mockReset();
+    mockMovimientoAggregate.mockResolvedValueOnce({ _sum: { importe: 10000 } }); // cobradoEsteMes
+    mockMovimientoAggregate.mockResolvedValueOnce({ _sum: { importe: 15000 } }); // movido total cobro (para "Por cobrar")
+    mockMovimientoAggregate.mockResolvedValueOnce({ _sum: { importe: 4000 } }); // pagadoEsteMes
+    mockMovimientoAggregate.mockResolvedValueOnce({ _sum: { importe: 6000 } }); // movido total pago (para "Por pagar")
+    mockAcuerdoPagoAggregate.mockReset();
+    mockAcuerdoPagoAggregate.mockResolvedValueOnce({ _sum: { totalAcordado: 50000 } }); // total acordado cobro
+    mockAcuerdoPagoAggregate.mockResolvedValueOnce({ _sum: { totalAcordado: 20000 } }); // total acordado pago
+    mockCuotaCount.mockReset();
+    mockCuotaCount.mockResolvedValueOnce(7); // cuotasVencenSemanaCobro
+    mockCuotaCount.mockResolvedValueOnce(0); // cuotasVencidas
+    mockCuotaCount.mockResolvedValueOnce(0); // cuotasVencenSemana
     render(await AdminDashboardPage());
     expect(screen.getByText("💰 Financiero")).toBeInTheDocument();
-    expect(screen.getByText("Ganado este mes").nextElementSibling?.textContent).toBe("USD 45.000");
-    expect(screen.getByText("Pendiente de cobro").nextElementSibling?.textContent).toBe("USD 120.000");
-    expect(screen.getByText("Cobro pendiente esta semana").nextElementSibling?.textContent).toBe("3");
+    expect(screen.getByText("Cobrado este mes").nextElementSibling?.textContent).toBe("USD 10.000");
+    expect(screen.getByText("Por cobrar").nextElementSibling?.textContent).toBe("USD 35.000"); // 50000 - 15000
+    expect(screen.getByText("Vence esta semana").nextElementSibling?.textContent).toBe("7");
+    expect(screen.getByText("Pagado este mes").nextElementSibling?.textContent).toBe("USD 4.000");
+    expect(screen.getByText("Por pagar").nextElementSibling?.textContent).toBe("USD 14.000"); // 20000 - 6000
   });
 
-  it("montos financieros en null (sin unidades) se muestran como USD 0", async () => {
+  it("montos financieros en null (sin movimientos/acuerdos todavía) se muestran como USD 0", async () => {
     render(await AdminDashboardPage());
-    expect(screen.getByText("Ganado este mes").nextElementSibling?.textContent).toBe("USD 0");
+    expect(screen.getByText("Cobrado este mes").nextElementSibling?.textContent).toBe("USD 0");
+    expect(screen.getByText("Por cobrar").nextElementSibling?.textContent).toBe("USD 0");
+    expect(screen.getByText("Pagado este mes").nextElementSibling?.textContent).toBe("USD 0");
+    expect(screen.getByText("Por pagar").nextElementSibling?.textContent).toBe("USD 0");
   });
 
   // ── KPIs clickeables ──────────────────────────────────────────────────
@@ -210,10 +229,28 @@ describe("AdminDashboardPage", () => {
     );
   });
 
-  it("los KPIs Financieros no son clickeables (no forman parte del pedido)", async () => {
+  it("los 5 KPIs Financieros navegan a /admin/cobranza con el filtro correspondiente aplicado", async () => {
     render(await AdminDashboardPage());
-    expect(screen.getByText("Pendiente de cobro").closest("a")).toBeNull();
-    expect(screen.getByText("Cobro pendiente esta semana").closest("a")).toBeNull();
+    expect(screen.getByText("Cobrado este mes").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/cobranza?tipo=cobro&estado=pagado&periodo=mes"
+    );
+    expect(screen.getByText("Por cobrar").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/cobranza?tipo=cobro&estado=pendiente"
+    );
+    expect(screen.getByText("Vence esta semana").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/cobranza?tipo=cobro&estado=pendiente&vence=semana"
+    );
+    expect(screen.getByText("Pagado este mes").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/cobranza?tipo=pago&estado=pagado&periodo=mes"
+    );
+    expect(screen.getByText("Por pagar").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/cobranza?tipo=pago&estado=pendiente"
+    );
   });
 
   // ── Grilla de operaciones (activas + entregadas) ─────────────────────
@@ -313,7 +350,7 @@ describe("AdminDashboardPage", () => {
 
   it("alerta: unidades en aduana hace más de 15 días, con botón Ver hacia /admin/unidades filtrado", async () => {
     mockUnidadCount.mockReset();
-    mockUnidadCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(2);
+    mockUnidadCount.mockResolvedValueOnce(0).mockResolvedValueOnce(2);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("2 unidades en aduana hace más de 15 días");
@@ -325,7 +362,7 @@ describe("AdminDashboardPage", () => {
 
   it("consulta 'en aduana hace más de 15 días' contra updatedAt de Unidad", async () => {
     render(await AdminDashboardPage());
-    const call = mockUnidadCount.mock.calls[2][0];
+    const call = mockUnidadCount.mock.calls[1][0];
     expect(call.where.estadoFabricacion).toBe("en_aduana");
     expect(call.where.updatedAt.lte).toBeInstanceOf(Date);
   });
@@ -403,7 +440,7 @@ describe("AdminDashboardPage", () => {
 
   it("alerta: cuotas vencidas (combinadas, sin separar cobro/pago), con botón Ver hacia /admin/cobranza?tab=gestion&estado=vencido", async () => {
     mockCuotaCount.mockReset();
-    mockCuotaCount.mockResolvedValueOnce(3).mockResolvedValueOnce(0);
+    mockCuotaCount.mockResolvedValueOnce(0).mockResolvedValueOnce(3).mockResolvedValueOnce(0);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("3 cuotas vencidas");
@@ -415,7 +452,7 @@ describe("AdminDashboardPage", () => {
 
   it("singular correcto para 1 cuota vencida", async () => {
     mockCuotaCount.mockReset();
-    mockCuotaCount.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
+    mockCuotaCount.mockResolvedValueOnce(0).mockResolvedValueOnce(1).mockResolvedValueOnce(0);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("1 cuota vencida");
@@ -424,7 +461,7 @@ describe("AdminDashboardPage", () => {
 
   it("cuenta cuotas vencidas por fecha y estado != pagado, sin filtrar por tipo de acuerdo", async () => {
     render(await AdminDashboardPage());
-    const call = mockCuotaCount.mock.calls[0][0];
+    const call = mockCuotaCount.mock.calls[1][0];
     expect(call.where.estado).toEqual({ not: "pagado" });
     expect(call.where.vencimiento.lt).toBeInstanceOf(Date);
     expect(call.where.acuerdo).toBeUndefined();
@@ -432,7 +469,7 @@ describe("AdminDashboardPage", () => {
 
   it("alerta: cuotas que vencen esta semana, con botón Ver hacia /admin/cobranza?tab=gestion&estado=semana", async () => {
     mockCuotaCount.mockReset();
-    mockCuotaCount.mockResolvedValueOnce(0).mockResolvedValueOnce(4);
+    mockCuotaCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(4);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("4 cuotas vencen esta semana");
@@ -444,7 +481,7 @@ describe("AdminDashboardPage", () => {
 
   it("singular correcto para 1 cuota que vence esta semana", async () => {
     mockCuotaCount.mockReset();
-    mockCuotaCount.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+    mockCuotaCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(1);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("1 cuota vence esta semana");
@@ -453,7 +490,7 @@ describe("AdminDashboardPage", () => {
 
   it("cuotasVencenSemana consulta estado pendiente con vencimiento en la semana en curso", async () => {
     render(await AdminDashboardPage());
-    const call = mockCuotaCount.mock.calls[1][0];
+    const call = mockCuotaCount.mock.calls[2][0];
     expect(call.where.estado).toBe("pendiente");
     expect(call.where.vencimiento.gte).toBeInstanceOf(Date);
     expect(call.where.vencimiento.lt).toBeInstanceOf(Date);
@@ -602,30 +639,6 @@ describe("AdminDashboardPage", () => {
     expect(screen.getByText("💼 Ventas")).toBeInTheDocument();
   });
 
-  // ── startOfWeek: domingo vs. resto de la semana ─────────────────────
-
-  describe("startOfWeek — domingo cuenta como fin de la semana anterior", () => {
-    afterEach(() => vi.useRealTimers());
-
-    it("con 'hoy' en domingo, la semana calculada arranca el lunes previo", async () => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date(2026, 8, 27, 12, 0, 0)); // domingo 27 sep 2026
-      render(await AdminDashboardPage());
-      const call = mockUnidadCount.mock.calls[1][0]; // unidadesCobroPendienteSemana
-      expect(call.where.fechaEntregaEstimada.gte).toEqual(new Date(2026, 8, 21));
-      expect(call.where.fechaEntregaEstimada.lt).toEqual(new Date(2026, 8, 28));
-    });
-
-    it("con 'hoy' en miércoles, la semana calculada arranca el lunes de esa misma semana", async () => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date(2026, 8, 23, 12, 0, 0)); // miércoles 23 sep 2026
-      render(await AdminDashboardPage());
-      const call = mockUnidadCount.mock.calls[1][0];
-      expect(call.where.fechaEntregaEstimada.gte).toEqual(new Date(2026, 8, 21));
-      expect(call.where.fechaEntregaEstimada.lt).toEqual(new Date(2026, 8, 28));
-    });
-  });
-
   // ── diasRestantesLabel: los 4 casos ──────────────────────────────────
 
   it("Envíos activos: días restantes muestra —, Vencido, Hoy y 'N días' según corresponda", async () => {
@@ -666,7 +679,7 @@ describe("AdminDashboardPage", () => {
 
   it("singular correcto para 1 unidad en aduana hace más de 15 días", async () => {
     mockUnidadCount.mockReset();
-    mockUnidadCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+    mockUnidadCount.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("1 unidad en aduana hace más de 15 días");

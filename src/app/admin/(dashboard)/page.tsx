@@ -36,21 +36,6 @@ function startOfDay(d: Date): Date {
   return x;
 }
 
-function startOfWeek(d: Date): Date {
-  const x = startOfDay(d);
-  const day = x.getDay();
-  const diffToMonday = day === 0 ? 6 : day - 1;
-  x.setDate(x.getDate() - diffToMonday);
-  return x;
-}
-
-function endOfWeek(d: Date): Date {
-  const start = startOfWeek(d);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 7);
-  return end;
-}
-
 function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
@@ -133,8 +118,7 @@ export default async function AdminDashboardPage() {
   const hace7dias = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const fechaHoy = fechaKeyToDate(hoyFechaKey());
   const inicioMes = startOfMonth(now);
-  const inicioSemana = startOfWeek(now);
-  const finSemana = endOfWeek(now);
+  const inicioMesSiguiente = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const mesAnteriorFecha = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const mesAnteriorNum = mesAnteriorFecha.getMonth() + 1;
   const anioAnterior = mesAnteriorFecha.getFullYear();
@@ -153,9 +137,13 @@ export default async function AdminDashboardPage() {
     citasHoy,
     leadsSinRespuesta,
     unidadesEntregadasMes,
-    sumaPrecioGanadasMesAgg,
-    sumaPendienteCobroAgg,
-    unidadesCobroPendienteSemana,
+    cobradoEsteMesAgg,
+    porCobrarTotalAgg,
+    porCobrarMovidoAgg,
+    cuotasVencenSemanaCobro,
+    pagadoEsteMesAgg,
+    porPagarTotalAgg,
+    porPagarMovidoAgg,
     unidadesEnAduanaLargas,
     cobrosVencidos,
     leadsPipelineResumen,
@@ -217,20 +205,35 @@ export default async function AdminDashboardPage() {
     db.cita.findMany({ where: { fecha: fechaHoy }, orderBy: { horario: "asc" } }),
     db.lead.count({ where: { contactado: false, createdAt: { lte: hace48hs } } }),
     db.unidad.count({ where: { estadoFabricacion: "entregado", fechaEntrega: { gte: inicioMes } } }),
-    // "Ganadas este mes" a nivel Unidad: no existe un estado "ganado" para
-    // unidades (solo para leads) — una Unidad se crea recién cuando la venta
-    // ya se confirmó, así que su fecha de creación es el proxy más fiel a
-    // "cuándo se ganó" que hay disponible sin ampliar el schema.
-    db.unidad.aggregate({ _sum: { precioCliente: true }, where: { createdAt: { gte: inicioMes } } }),
-    db.unidad.aggregate({
-      _sum: { precioCliente: true },
-      where: { estadoFabricacion: { not: "entregado" } },
+    // Bloque Financiero del dashboard — a diferencia de las métricas de
+    // Unidad.precioCliente que usaba antes (un proxy), estas 5 salen del
+    // libro de cobranza real (AcuerdoPago/Movimiento/Cuota), igual que
+    // /admin/cobranza, y enlazan ahí con los mismos filtros aplicados.
+    // Todo en USD — el resto del dashboard también reporta solo en USD.
+    db.movimiento.aggregate({
+      _sum: { importe: true },
+      where: { fecha: { gte: inicioMes, lt: inicioMesSiguiente }, acuerdo: { tipo: "cobro", moneda: "USD" } },
     }),
-    db.unidad.count({
+    db.acuerdoPago.aggregate({ _sum: { totalAcordado: true }, where: { tipo: "cobro", moneda: "USD" } }),
+    db.movimiento.aggregate({
+      _sum: { importe: true },
+      where: { acuerdo: { tipo: "cobro", moneda: "USD" } },
+    }),
+    db.cuota.count({
       where: {
-        estadoFabricacion: { not: "entregado" },
-        fechaEntregaEstimada: { gte: inicioSemana, lt: finSemana },
+        estado: "pendiente",
+        vencimiento: { gte: inicioSemanaCobranza(now), lt: finSemanaCobranza(now) },
+        acuerdo: { tipo: "cobro" },
       },
+    }),
+    db.movimiento.aggregate({
+      _sum: { importe: true },
+      where: { fecha: { gte: inicioMes, lt: inicioMesSiguiente }, acuerdo: { tipo: "pago", moneda: "USD" } },
+    }),
+    db.acuerdoPago.aggregate({ _sum: { totalAcordado: true }, where: { tipo: "pago", moneda: "USD" } }),
+    db.movimiento.aggregate({
+      _sum: { importe: true },
+      where: { acuerdo: { tipo: "pago", moneda: "USD" } },
     }),
     // Proxy: "hace más de 15 días" se mide contra updatedAt (no hay un
     // timestamp de "entró a aduana") — mismo criterio que ya usa esta
@@ -269,6 +272,10 @@ export default async function AdminDashboardPage() {
   ]);
 
   const rol = session?.rol ?? "vendedor";
+  const cobradoEsteMes = cobradoEsteMesAgg._sum.importe ?? 0;
+  const porCobrar = (porCobrarTotalAgg._sum.totalAcordado ?? 0) - (porCobrarMovidoAgg._sum.importe ?? 0);
+  const pagadoEsteMes = pagadoEsteMesAgg._sum.importe ?? 0;
+  const porPagar = (porPagarTotalAgg._sum.totalAcordado ?? 0) - (porPagarMovidoAgg._sum.importe ?? 0);
   const countByEstado = Object.fromEntries(
     estadoCounts.map((e) => [e.estadoPedido, e._count._all])
   ) as Record<string, number>;
@@ -496,9 +503,23 @@ export default async function AdminDashboardPage() {
         <KpiColumn
           title="💰 Financiero"
           items={[
-            { label: "Ganado este mes", value: formatUSD(sumaPrecioGanadasMesAgg._sum.precioCliente) },
-            { label: "Pendiente de cobro", value: formatUSD(sumaPendienteCobroAgg._sum.precioCliente) },
-            { label: "Cobro pendiente esta semana", value: unidadesCobroPendienteSemana },
+            {
+              label: "Cobrado este mes",
+              value: formatUSD(cobradoEsteMes),
+              href: "/admin/cobranza?tipo=cobro&estado=pagado&periodo=mes",
+            },
+            { label: "Por cobrar", value: formatUSD(porCobrar), href: "/admin/cobranza?tipo=cobro&estado=pendiente" },
+            {
+              label: "Vence esta semana",
+              value: cuotasVencenSemanaCobro,
+              href: "/admin/cobranza?tipo=cobro&estado=pendiente&vence=semana",
+            },
+            {
+              label: "Pagado este mes",
+              value: formatUSD(pagadoEsteMes),
+              href: "/admin/cobranza?tipo=pago&estado=pagado&periodo=mes",
+            },
+            { label: "Por pagar", value: formatUSD(porPagar), href: "/admin/cobranza?tipo=pago&estado=pendiente" },
           ]}
         />
       </div>
