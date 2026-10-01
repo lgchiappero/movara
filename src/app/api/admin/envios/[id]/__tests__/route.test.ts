@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockUpdate, mockDelete, mockCountUnidad, mockGetAdminUser } = vi.hoisted(() => ({
+const { mockFindUnique, mockUpdate, mockDelete, mockCountUnidad, mockGetAdminUser } = vi.hoisted(() => ({
+  mockFindUnique: vi.fn(),
   mockUpdate: vi.fn(),
   mockDelete: vi.fn(),
   mockCountUnidad: vi.fn(),
   mockGetAdminUser: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({
-  db: { envio: { update: mockUpdate, delete: mockDelete }, unidad: { count: mockCountUnidad } },
+  db: { envio: { findUnique: mockFindUnique, update: mockUpdate, delete: mockDelete }, unidad: { count: mockCountUnidad } },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 
@@ -37,8 +38,57 @@ const VALID = {
   notas: null,
 };
 
+const ANTES = { numeroPI: null, numeroBL: null, numeroContenedor: null };
+
 describe("PATCH /api/admin/envios/[id]", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFindUnique.mockResolvedValue(ANTES);
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("guarda PI, BL y contenedor tal como llegan", async () => {
+    const body = { ...VALID, numeroPI: "PI-123", numeroBL: "BL-456", numeroContenedor: "CONT-789" };
+    mockUpdate.mockResolvedValueOnce({ id: "e1", ...body });
+    const res = await PATCH(makeRequest(body), { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(200);
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: "e1" },
+      data: expect.objectContaining({ numeroPI: "PI-123", numeroBL: "BL-456", numeroContenedor: "CONT-789" }),
+    });
+  });
+
+  it("loguea el body recibido y los valores antes/después del update", async () => {
+    const body = { ...VALID, numeroPI: "PI-123", numeroBL: "BL-456", numeroContenedor: "CONT-789" };
+    mockFindUnique.mockResolvedValueOnce({ numeroPI: "PI-viejo", numeroBL: null, numeroContenedor: null });
+    mockUpdate.mockResolvedValueOnce({ id: "e1", ...body });
+    await PATCH(makeRequest(body), { params: Promise.resolve({ id: "e1" }) });
+
+    expect(console.info).toHaveBeenCalledWith("[admin/envios/:id PATCH] body recibido", { id: "e1", body });
+    expect(console.info).toHaveBeenCalledWith("[admin/envios/:id PATCH] guardado", {
+      id: "e1",
+      antes: { numeroPI: "PI-viejo", numeroBL: null, numeroContenedor: null },
+      enviado: { numeroPI: "PI-123", numeroBL: "BL-456", numeroContenedor: "CONT-789" },
+      despues: { numeroPI: "PI-123", numeroBL: "BL-456", numeroContenedor: "CONT-789" },
+    });
+  });
+
+  it("loguea los errores de validación cuando el body es inválido", async () => {
+    await PATCH(makeRequest({ ...VALID, numeroBL: 123 }), { params: Promise.resolve({ id: "e1" }) });
+    expect(console.warn).toHaveBeenCalledWith(
+      "[admin/envios/:id PATCH] body inválido",
+      expect.objectContaining({ id: "e1", issues: expect.any(Array) })
+    );
+  });
+
+  it("404 si el envío no existe", async () => {
+    mockFindUnique.mockResolvedValueOnce(null);
+    const res = await PATCH(makeRequest(VALID), { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(404);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
 
   it("actualiza el envío y devuelve 200", async () => {
     mockUpdate.mockResolvedValueOnce({ id: "e1", ...VALID });
