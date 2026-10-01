@@ -1,63 +1,90 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import NuevoPlanPagoModal from "@/components/admin/NuevoPlanPagoModal";
-import RegistrarMovimientoModal from "@/components/admin/RegistrarMovimientoModal";
-import GestionCobranzaTab from "@/components/admin/cobranza/GestionCobranzaTab";
-import type { AcuerdoConDetalle, UnidadOpcion } from "@/lib/cobranza/types";
+import Link from "next/link";
+import PlanesUnidadGrid from "@/components/admin/planes/PlanesUnidadGrid";
+import { useAccionesPlanes } from "@/components/admin/planes/useAccionesPlanes";
+import type { FilaPlanUnidad, FiltroEstadoPlan } from "@/lib/cobranza/planes-unidad";
+import type { UnidadOpcion } from "@/lib/cobranza/types";
 
+function formatMoneda(value: number, moneda: string): string {
+  return `${moneda} ${value.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
+}
+
+/** Pagos a proveedores — misma lógica que Cobranza, dirección opuesta:
+ * planes de pago por unidad + proveedor, y pagos realizados sobre ellos. */
 export default function PagosPanel({
-  acuerdos,
+  filas,
   unidades,
   rol,
+  metricas,
   estadoInicial,
   monedaInicial,
 }: {
-  acuerdos: AcuerdoConDetalle[];
+  filas: FilaPlanUnidad[];
   unidades: UnidadOpcion[];
   rol: string;
-  estadoInicial?: string;
+  metricas: {
+    /** Pagado en el mes en curso, por moneda. */
+    pagadoMes: { USD: number; ARS: number };
+    /** Saldo pendiente de pagar de todos los planes, por moneda. */
+    pendiente: { USD: number; ARS: number };
+    unidadesCompletasMes: number;
+    unidadesConVencidas: number;
+  };
+  estadoInicial?: FiltroEstadoPlan;
   monedaInicial?: "USD" | "ARS";
 }) {
-  const router = useRouter();
-  const [nuevoAbierto, setNuevoAbierto] = useState(false);
-  const [movimientoAcuerdo, setMovimientoAcuerdo] = useState<AcuerdoConDetalle | null>(null);
+  const { acciones, modales } = useAccionesPlanes({ tipo: "pago", unidades });
 
   return (
     <div className="space-y-6">
-      <GestionCobranzaTab
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Tarjeta label="Pagado este mes">
+          <p className="text-lg font-bold text-[#2F2F2F]">{formatMoneda(metricas.pagadoMes.USD, "USD")}</p>
+          <p className="text-sm font-bold text-stone-500">{formatMoneda(metricas.pagadoMes.ARS, "ARS")}</p>
+        </Tarjeta>
+        <Tarjeta label="Pendiente de pagar" href="/admin/pagos?estado=con_saldo">
+          <p className="text-lg font-bold text-[#2F2F2F]">{formatMoneda(metricas.pendiente.USD, "USD")}</p>
+          <p className="text-sm font-bold text-stone-500">{formatMoneda(metricas.pendiente.ARS, "ARS")}</p>
+        </Tarjeta>
+        <Tarjeta label="Unidades con pagos completos este mes" href="/admin/pagos?estado=saldado">
+          <p className="text-2xl font-bold text-emerald-700">{metricas.unidadesCompletasMes}</p>
+        </Tarjeta>
+        <Tarjeta label="Unidades con cuotas vencidas" href="/admin/pagos?estado=vencidas">
+          <p className={`text-2xl font-bold ${metricas.unidadesConVencidas > 0 ? "text-red-700" : "text-[#2F2F2F]"}`}>
+            {metricas.unidadesConVencidas}
+          </p>
+        </Tarjeta>
+      </div>
+
+      <PlanesUnidadGrid
+        key={`${estadoInicial ?? "todos"}|${monedaInicial ?? ""}`}
         tipo="pago"
-        acuerdos={acuerdos}
+        filas={filas}
+        rol={rol}
+        acciones={acciones}
         estadoInicial={estadoInicial}
         monedaInicial={monedaInicial}
-        rol={rol}
-        onNuevoAcuerdo={() => setNuevoAbierto(true)}
-        onRegistrarMovimiento={(acuerdo) => setMovimientoAcuerdo(acuerdo)}
       />
 
-      {nuevoAbierto && (
-        <NuevoPlanPagoModal
-          tipo="pago"
-          unidades={unidades}
-          onClose={() => setNuevoAbierto(false)}
-          onCreated={() => {
-            setNuevoAbierto(false);
-            router.refresh();
-          }}
-        />
-      )}
-
-      {movimientoAcuerdo && (
-        <RegistrarMovimientoModal
-          acuerdo={movimientoAcuerdo}
-          onClose={() => setMovimientoAcuerdo(null)}
-          onSaved={() => {
-            setMovimientoAcuerdo(null);
-            router.refresh();
-          }}
-        />
-      )}
+      {modales}
     </div>
+  );
+}
+
+function Tarjeta({ label, href, children }: { label: string; href?: string; children: React.ReactNode }) {
+  const contenido = (
+    <>
+      <p className="text-xs font-bold uppercase tracking-widest text-stone-500 mb-2">{label}</p>
+      {children}
+    </>
+  );
+  const clase = "block bg-white rounded-2xl border border-[#E5E5E5] p-5";
+  return href ? (
+    <Link href={href} className={`${clase} hover:border-[#D4B06A] transition-colors`}>
+      {contenido}
+    </Link>
+  ) : (
+    <div className={clase}>{contenido}</div>
   );
 }
