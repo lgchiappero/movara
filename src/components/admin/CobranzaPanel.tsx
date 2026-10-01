@@ -53,7 +53,6 @@ export default function CobranzaPanel({
   cierreActual,
   metricas,
   tabInicial,
-  subInicial,
   estadoInicial,
   monedaInicial,
   clienteIdInicial,
@@ -76,7 +75,6 @@ export default function CobranzaPanel({
     periodosSinCerrar: number;
   };
   tabInicial?: TabPrincipal;
-  subInicial?: "cobros" | "pagos";
   estadoInicial?: string;
   monedaInicial?: "USD" | "ARS";
   clienteIdInicial?: string;
@@ -84,7 +82,7 @@ export default function CobranzaPanel({
   const router = useRouter();
   const { showSuccess, showError } = useToast();
   const [tab, setTab] = useState<TabPrincipal>(tabInicial ?? "gestion");
-  const [nuevoAcuerdoTipo, setNuevoAcuerdoTipo] = useState<"cobro" | "pago" | null>(null);
+  const [nuevoAcuerdoTipo, setNuevoAcuerdoTipo] = useState<"cobro" | null>(null);
   const [movimientoAcuerdo, setMovimientoAcuerdo] = useState<AcuerdoConDetalle | null>(null);
   const [desdePersonalizado, setDesdePersonalizado] = useState(
     periodo.tipo === "personalizado" ? periodo.desde.slice(0, 10) : ""
@@ -308,13 +306,12 @@ export default function CobranzaPanel({
 
       {tab === "gestion" && (
         <GestionCobranzaTab
-          acuerdosCobro={acuerdosCobro}
-          acuerdosPago={acuerdosPago}
-          subInicial={subInicial}
+          tipo="cobro"
+          acuerdos={acuerdosCobro}
           estadoInicial={estadoInicial}
           monedaInicial={monedaInicial}
           rol={rol}
-          onNuevoAcuerdo={(tipo) => setNuevoAcuerdoTipo(tipo)}
+          onNuevoAcuerdo={() => setNuevoAcuerdoTipo("cobro")}
           onRegistrarMovimiento={(acuerdo) => setMovimientoAcuerdo(acuerdo)}
         />
       )}

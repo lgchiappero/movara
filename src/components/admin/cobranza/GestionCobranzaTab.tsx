@@ -49,25 +49,25 @@ function venceEstaSemana(acuerdo: AcuerdoConDetalle, ahora: Date): boolean {
 }
 
 export default function GestionCobranzaTab({
-  acuerdosCobro,
-  acuerdosPago,
-  subInicial,
+  tipo,
+  acuerdos,
   estadoInicial,
   monedaInicial,
   rol,
   onNuevoAcuerdo,
   onRegistrarMovimiento,
 }: {
-  acuerdosCobro: AcuerdoConDetalle[];
-  acuerdosPago: AcuerdoConDetalle[];
-  subInicial?: "cobros" | "pagos";
+  /** Cobranza (/admin/cobranza) muestra solo cobros; Pagos (/admin/pagos)
+   * solo pagos — cada sección tiene su propia página. */
+  tipo: "cobro" | "pago";
+  acuerdos: AcuerdoConDetalle[];
   estadoInicial?: string;
   monedaInicial?: "USD" | "ARS";
   rol: string;
   onNuevoAcuerdo: (tipo: "cobro" | "pago") => void;
   onRegistrarMovimiento: (acuerdo: AcuerdoConDetalle) => void;
 }) {
-  const [sub, setSub] = useState<"cobros" | "pagos">(subInicial ?? "cobros");
+  const sub = tipo === "cobro" ? "cobros" : "pagos";
   const [filtroMoneda, setFiltroMoneda] = useState<FiltroMoneda>(monedaInicial ?? "todos");
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>(
     estadoInicial === "vencido" || estadoInicial === "semana" || (ESTADO_ACUERDO_OPTIONS as readonly string[]).includes(estadoInicial ?? "")
@@ -114,8 +114,7 @@ export default function GestionCobranzaTab({
   const ahora = new Date();
 
   const filas = useMemo(() => {
-    const lista = sub === "cobros" ? acuerdosCobro : acuerdosPago;
-    return lista.map((acuerdo) => {
+    return acuerdos.map((acuerdo) => {
       const movido = sumaImportes(acuerdo.movimientos);
       return {
         acuerdo,
@@ -125,7 +124,7 @@ export default function GestionCobranzaTab({
         proximoVencimiento: proximoVencimiento(acuerdo),
       };
     });
-  }, [sub, acuerdosCobro, acuerdosPago]);
+  }, [acuerdos]);
 
   const filasFiltradas = useMemo(() => {
     const q = busquedaDebounced.trim().toLowerCase();
@@ -184,23 +183,9 @@ export default function GestionCobranzaTab({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2">
-          {(["cobros", "pagos"] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => {
-                setSub(s);
-                setExpandedId(null);
-              }}
-              className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${
-                sub === s ? "bg-[#2F2F2F] text-white" : "bg-white border border-[#E5E5E5] text-stone-600"
-              }`}
-            >
-              {s === "cobros" ? "Cobros" : "Pagos"}
-            </button>
-          ))}
-        </div>
+        <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500">
+          {sub === "cobros" ? "Cobros a clientes" : "Pagos a proveedores"}
+        </h2>
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={filtroMoneda}
@@ -240,7 +225,7 @@ export default function GestionCobranzaTab({
           </button>
           <button
             type="button"
-            onClick={() => onNuevoAcuerdo(sub === "cobros" ? "cobro" : "pago")}
+            onClick={() => onNuevoAcuerdo(tipo)}
             className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
           >
             {sub === "cobros" ? "+ Nuevo cobro" : "+ Nuevo pago"}

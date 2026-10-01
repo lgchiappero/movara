@@ -55,7 +55,7 @@ test.describe("Cobranza — autocompletado del modal Nuevo cobro/pago", () => {
   });
 
   test("pago: elegir una unidad no completa proveedor ni monto", async ({ page }) => {
-    await page.getByRole("button", { name: "Pagos" }).click();
+    await page.goto("/admin/pagos");
     await abrirModalYElegirUnidad(page, "+ Nuevo pago", datos.nombre);
 
     await expect(page.getByLabel("Proveedor", { exact: true })).toHaveValue("");

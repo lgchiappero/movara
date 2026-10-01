@@ -13,7 +13,11 @@ const {
   mockFindUniqueCierre,
   mockAggregateMovimiento,
   mockGetSignedUrl,
+  mockRedirect,
 } = vi.hoisted(() => ({
+  mockRedirect: vi.fn((url: string) => {
+    throw new Error(`NEXT_REDIRECT:${url}`);
+  }),
   mockGetAdminUser: vi.fn(),
   mockUpdateManyCuota: vi.fn(),
   mockCountCuota: vi.fn(),
@@ -39,6 +43,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
+vi.mock("next/navigation", () => ({ redirect: mockRedirect }));
 vi.mock("@/lib/admin/storage", () => ({ getSignedUrl: mockGetSignedUrl, BUCKET_MOVARA: "documentos-movara" }));
 vi.mock("@/components/admin/CobranzaPanel", () => ({
   default: ({
@@ -54,7 +59,6 @@ vi.mock("@/components/admin/CobranzaPanel", () => ({
     cierreActual,
     metricas,
     tabInicial,
-    subInicial,
     estadoInicial,
     monedaInicial,
     clienteIdInicial,
@@ -77,7 +81,6 @@ vi.mock("@/components/admin/CobranzaPanel", () => ({
       periodosSinCerrar: number;
     };
     tabInicial?: string;
-    subInicial?: string;
     estadoInicial?: string;
     monedaInicial?: string;
     clienteIdInicial?: string;
@@ -89,7 +92,7 @@ vi.mock("@/components/admin/CobranzaPanel", () => ({
       {cierreActual ? "si" : "no"} usdCobrado={metricas.usd.cobrado} usdPagado={metricas.usd.pagado} usdMargen=
       {metricas.usd.margen} arsCobrado={metricas.ars.cobrado} arsPagado={metricas.ars.pagado} arsMargen=
       {metricas.ars.margen} vencidas={metricas.cuotasVencidas} vencenSemana={metricas.cuotasVencenSemana}
-      sinCerrar={metricas.periodosSinCerrar} tab={tabInicial ?? "none"} sub={subInicial ?? "none"} estado=
+      sinCerrar={metricas.periodosSinCerrar} tab={tabInicial ?? "none"} estado=
       {estadoInicial ?? "none"} moneda={monedaInicial ?? "none"} clienteId={clienteIdInicial ?? "none"}{" "}
       comprobante={acuerdosCobro[0]?.movimientos[0]?.comprobanteSignedUrl ?? "none"}
     </div>
@@ -314,29 +317,36 @@ describe("AdminCobranzaPage", () => {
   it("tab/sub/estado/moneda/clienteId del querystring se propagan como valores iniciales", async () => {
     render(
       await AdminCobranzaPage({
-        searchParams: Promise.resolve({ tab: "cierres", sub: "pagos", estado: "vencido", moneda: "ARS", clienteId: "c1" }),
+        searchParams: Promise.resolve({ tab: "cierres", estado: "vencido", moneda: "ARS", clienteId: "c1" }),
       })
     );
     expect(screen.getByText(/tab=cierres/)).toBeInTheDocument();
-    expect(screen.getByText(/sub=pagos/)).toBeInTheDocument();
     expect(screen.getByText(/estado=vencido/)).toBeInTheDocument();
     expect(screen.getByText(/moneda=ARS/)).toBeInTheDocument();
     expect(screen.getByText(/clienteId=c1/)).toBeInTheDocument();
   });
 
-  it("alias de los KPIs financieros del dashboard: tipo=cobro/pago equivale a sub=cobros/pagos (sub explícito gana)", async () => {
-    render(await AdminCobranzaPage({ searchParams: Promise.resolve({ tipo: "cobro" }) }));
-    expect(screen.getByText(/sub=cobros/)).toBeInTheDocument();
+  it("los pagos a proveedores viven en /admin/pagos: tipo=pago redirige ahí conservando estado/vence/moneda", async () => {
+    await expect(
+      AdminCobranzaPage({ searchParams: Promise.resolve({ tipo: "pago", estado: "pendiente", vence: "semana", moneda: "USD" }) })
+    ).rejects.toThrow("NEXT_REDIRECT:/admin/pagos?estado=pendiente&vence=semana&moneda=USD");
   });
 
-  it("tipo=pago equivale a sub=pagos", async () => {
-    render(await AdminCobranzaPage({ searchParams: Promise.resolve({ tipo: "pago" }) }));
-    expect(screen.getByText(/sub=pagos/)).toBeInTheDocument();
+  it("sub=pagos también redirige a /admin/pagos (sin filtros → sin querystring)", async () => {
+    await expect(AdminCobranzaPage({ searchParams: Promise.resolve({ sub: "pagos" }) })).rejects.toThrow(
+      "NEXT_REDIRECT:/admin/pagos"
+    );
   });
 
-  it("sub explícito tiene prioridad sobre tipo", async () => {
+  it("tipo=pago con sub=cobros explícito no redirige", async () => {
     render(await AdminCobranzaPage({ searchParams: Promise.resolve({ tipo: "pago", sub: "cobros" }) }));
-    expect(screen.getByText(/sub=cobros/)).toBeInTheDocument();
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it("tipo=cobro (alias del dashboard) se queda en Cobranza", async () => {
+    render(await AdminCobranzaPage({ searchParams: Promise.resolve({ tipo: "cobro" }) }));
+    expect(mockRedirect).not.toHaveBeenCalled();
+    expect(screen.getByText("Cobranza")).toBeInTheDocument();
   });
 
   it("alias estado=pagado (usado por los KPIs del dashboard) resuelve al EstadoAcuerdo real 'saldado'", async () => {

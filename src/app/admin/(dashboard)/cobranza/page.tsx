@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/admin/current-user";
 import CobranzaPanel from "@/components/admin/CobranzaPanel";
@@ -42,6 +43,19 @@ export default async function AdminCobranzaPage({
   }>;
 }) {
   const sp = await searchParams;
+
+  // Los pagos a proveedores viven ahora en su propia sección (/admin/pagos)
+  // — links viejos (sub=pagos, o tipo=pago de los KPIs del dashboard) se
+  // redirigen ahí conservando los filtros que esa página entiende.
+  if (sp.sub === "pagos" || (sp.tipo === "pago" && sp.sub !== "cobros")) {
+    const params = new URLSearchParams();
+    if (sp.estado) params.set("estado", sp.estado);
+    if (sp.vence) params.set("vence", sp.vence);
+    if (sp.moneda) params.set("moneda", sp.moneda);
+    const qs = params.toString();
+    redirect(`/admin/pagos${qs ? `?${qs}` : ""}`);
+  }
+
   const now = new Date();
   const hoy = startOfDay(now);
 
@@ -175,11 +189,6 @@ export default async function AdminCobranzaPage({
   const rol = session?.rol ?? "vendedor";
 
   const tabInicial = sp.tab === "rentabilidad" || sp.tab === "cuenta-cliente" || sp.tab === "tipo-cambio" || sp.tab === "cierres" || sp.tab === "gestion" ? sp.tab : undefined;
-  // "tipo" (cobro|pago) es el alias que usan los KPIs financieros del
-  // dashboard para esta misma distinción — "sub" explícito gana si
-  // viniera por algún otro link.
-  const subDesdeTipo = sp.tipo === "cobro" ? "cobros" : sp.tipo === "pago" ? "pagos" : undefined;
-  const subInicial = sp.sub === "pagos" ? "pagos" : sp.sub === "cobros" ? "cobros" : subDesdeTipo;
   // "estado=pagado" (el término que usan los KPIs del dashboard) no es un
   // EstadoAcuerdo real acá — el equivalente interno es "saldado". Y
   // "vence=semana" es el alias de la combinación estado=pendiente +
@@ -231,7 +240,6 @@ export default async function AdminCobranzaPage({
           periodosSinCerrar,
         }}
         tabInicial={tabInicial}
-        subInicial={subInicial}
         estadoInicial={estadoInicial}
         monedaInicial={monedaInicial}
         clienteIdInicial={clienteIdInicial}

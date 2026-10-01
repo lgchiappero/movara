@@ -521,9 +521,9 @@ export default async function AdminDashboardPage() {
             {
               label: "Pagado este mes",
               value: formatUSD(pagadoEsteMes),
-              href: "/admin/cobranza?tipo=pago&estado=pagado&periodo=mes",
+              href: "/admin/pagos?estado=pagado",
             },
-            { label: "Por pagar", value: formatUSD(porPagar), href: "/admin/cobranza?tipo=pago&estado=pendiente" },
+            { label: "Por pagar", value: formatUSD(porPagar), href: "/admin/pagos?estado=pendiente" },
           ]}
         />
       </div>

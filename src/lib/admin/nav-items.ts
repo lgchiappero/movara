@@ -6,6 +6,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin/leads", label: "Leads", icon: "👥" },
   { href: "/admin/pipeline", label: "Pipeline", icon: "💼" },
   { href: "/admin/cobranza", label: "Cobranza", icon: "💰" },
+  { href: "/admin/pagos", label: "Pagos", icon: "🏦" },
   { href: "/admin/configuraciones", label: "Pedidos", icon: "📦" },
   { href: "/admin/agenda", label: "Agenda", icon: "📅" },
   { href: "/admin/clientes", label: "Clientes", icon: "👤" },

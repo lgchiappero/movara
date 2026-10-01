@@ -229,7 +229,7 @@ describe("AdminDashboardPage", () => {
     );
   });
 
-  it("los 5 KPIs Financieros navegan a /admin/cobranza con el filtro correspondiente aplicado", async () => {
+  it("los 5 KPIs Financieros navegan a /admin/cobranza o /admin/pagos con el filtro correspondiente aplicado", async () => {
     render(await AdminDashboardPage());
     expect(screen.getByText("Cobrado este mes").closest("a")).toHaveAttribute(
       "href",
@@ -245,11 +245,11 @@ describe("AdminDashboardPage", () => {
     );
     expect(screen.getByText("Pagado este mes").closest("a")).toHaveAttribute(
       "href",
-      "/admin/cobranza?tipo=pago&estado=pagado&periodo=mes"
+      "/admin/pagos?estado=pagado"
     );
     expect(screen.getByText("Por pagar").closest("a")).toHaveAttribute(
       "href",
-      "/admin/cobranza?tipo=pago&estado=pendiente"
+      "/admin/pagos?estado=pendiente"
     );
   });
 
