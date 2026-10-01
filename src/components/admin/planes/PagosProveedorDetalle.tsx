@@ -59,7 +59,7 @@ export default function PagosProveedorDetalle({
       {pagos.length === 0 ? (
         <p className="text-sm text-stone-400">Todavía no hay pagos a proveedores cargados para esta unidad.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" data-pagos>
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[#F0F0F0] text-left text-stone-400 uppercase tracking-wide">

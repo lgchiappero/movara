@@ -77,7 +77,6 @@ test.describe("Cobranza — plan de pago por unidad", () => {
     await expect(page.getByText("Plan de pago creado")).toBeVisible();
 
     // ── Grilla: resumen del plan y saldo ────────────────────────────────
-    await expect(fila).toContainText("Anticipo + 3 cuotas");
     await expect(fila).toContainText("Pendiente");
     await expect(fila.getByRole("button", { name: "Crear plan" })).toHaveCount(0);
 
@@ -95,8 +94,10 @@ test.describe("Cobranza — plan de pago por unidad", () => {
     await expect(fila.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "30");
 
     // ── Detalle: descripción del plan, cuotas y pagos recibidos ─────────
-    await fila.getByText(nombre).click();
+    // Click en el monto cobrado → despliega el detalle con los pagos recibidos.
+    await fila.getByRole("button", { name: /USD 7.410/ }).click();
     const detalle = page.getByTestId(`detalle-${unidadId}|USD`);
+    await expect(detalle.locator("[data-pagos]")).toBeInViewport();
     await expect(detalle).toContainText("Venta Flex 38 en 3 cuotas");
     await expect(detalle).toContainText("Valor de la unidad: USD 24.700");
     await expect(detalle).toContainText("Pagos recibidos");
@@ -133,5 +134,43 @@ test.describe("Cobranza — plan de pago por unidad", () => {
     await dialogo.getByRole("button", { name: "Eliminar", exact: true }).click();
     await expect(page.getByText("Plan eliminado")).toBeVisible();
     await expect(fila).toContainText("Sin plan");
+  });
+
+  test("grilla compacta sin scroll horizontal, filtros de estado, período y búsqueda", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/admin/cobranza");
+
+    // Sin scroll horizontal: la tabla no es más ancha que su contenedor.
+    const tabla = page.locator("table").first();
+    const { tablaAncho, contenedorAncho } = await tabla.evaluate((t) => ({
+      tablaAncho: t.scrollWidth,
+      contenedorAncho: t.parentElement!.clientWidth,
+    }));
+    expect(tablaAncho).toBeLessThanOrEqual(contenedorAncho);
+    await expect(page.getByRole("columnheader")).toHaveText(["Unidad", "Cliente", "Total", "Cobrado", "Saldo", "%", "Estado", "Acciones"]);
+
+    // Buscador por cliente.
+    const buscador = page.getByLabel("Buscar");
+    await buscador.fill(nombre);
+    await expect(page.locator("tbody tr")).toHaveCount(1);
+    await expect(page.locator("tbody tr").first()).toContainText("Sin plan");
+
+    // Estado: la unidad no tiene plan → aparece en "Sin plan", no en "Saldado".
+    await page.getByLabel("Filtrar por estado").selectOption("sin_plan");
+    await expect(page.locator("tbody tr").first()).toContainText(nombre);
+    await page.getByLabel("Filtrar por estado").selectOption("saldado");
+    await expect(page.getByText("Ninguna unidad coincide con los filtros.")).toBeVisible();
+    await page.getByLabel("Filtrar por estado").selectOption("todos");
+
+    // Período: sin pagos este mes → no aparece; todo el historial → vuelve.
+    await page.getByLabel("Filtrar por período").selectOption("mes_actual");
+    await expect(page.getByText("Ninguna unidad coincide con los filtros.")).toBeVisible();
+    await page.getByLabel("Filtrar por período").selectOption("todo");
+    await expect(page.locator("tbody tr").first()).toContainText(nombre);
+
+    // Mobile: solo columnas esenciales.
+    await page.setViewportSize({ width: 390, height: 800 });
+    await expect(page.getByRole("columnheader", { name: "Cobrado" })).toBeHidden();
+    await expect(page.getByRole("columnheader", { name: "Saldo" })).toBeVisible();
   });
 });

@@ -196,6 +196,18 @@ export const FILTRO_ESTADO_OPTIONS = [
 ] as const;
 export type FiltroEstadoPlan = (typeof FILTRO_ESTADO_OPTIONS)[number];
 
+/** Opciones que se muestran en el selector — "con_saldo" y "semana" siguen
+ * siendo filtros válidos (llegan por URL desde el dashboard) pero no se
+ * listan salvo que estén activos. */
+export const FILTRO_ESTADO_VISIBLES: readonly FiltroEstadoPlan[] = [
+  "todos",
+  "sin_plan",
+  "pendiente",
+  "en_curso",
+  "saldado",
+  "vencidas",
+];
+
 export const FILTRO_ESTADO_LABELS: Record<FiltroEstadoPlan, string> = {
   todos: "Todos los estados",
   sin_plan: "Sin plan",
@@ -230,4 +242,54 @@ export function cumpleFiltroEstado(f: FilaPlanUnidad, filtro: FiltroEstadoPlan):
     default:
       return f.estado === filtro;
   }
+}
+
+// ── Filtro por período de la grilla ──────────────────────────────────────
+
+/** "todo" = sin filtro de período (vista por defecto: todas las unidades). */
+export const FILTRO_PERIODO_OPTIONS = ["todo", "mes_actual", "mes_anterior", "trimestre", "personalizado"] as const;
+export type FiltroPeriodo = (typeof FILTRO_PERIODO_OPTIONS)[number];
+
+export const FILTRO_PERIODO_LABELS: Record<FiltroPeriodo, string> = {
+  todo: "Todo el historial",
+  mes_actual: "Este mes",
+  mes_anterior: "Mes anterior",
+  trimestre: "Este trimestre",
+  personalizado: "Rango personalizado",
+};
+
+function claveDia(d: Date): string {
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+/** Lo cobrado/pagado en la unidad dentro de [desde, hasta). Las fechas de
+ * pago son días (se guardan a medianoche UTC), así que se comparan como
+ * "YYYY-MM-DD" — comparar instantes las corría al día anterior en Argentina. */
+export function pagadoEnRango(
+  fila: FilaPlanUnidad,
+  rango: { desde: Date; hasta: Date }
+): { monto: number; cantidad: number } {
+  const desde = claveDia(rango.desde);
+  const hasta = claveDia(rango.hasta);
+  let monto = 0;
+  let cantidad = 0;
+  for (const p of fila.planes) {
+    for (const m of p.movimientos) {
+      const dia = m.fecha.slice(0, 10);
+      if (dia >= desde && dia < hasta) {
+        monto += m.importe;
+        cantidad++;
+      }
+    }
+  }
+  return { monto, cantidad };
+}
+
+/** "20/09" — fecha corta para la grilla (día de pago, en UTC). */
+export function fechaCorta(iso: string | null): string {
+  if (!iso) return "—";
+  const [, mm, dd] = iso.slice(0, 10).split("-");
+  return `${dd}/${mm}`;
 }

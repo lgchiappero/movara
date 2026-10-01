@@ -62,8 +62,6 @@ test.describe("Pagos — pago directo a proveedor", () => {
     await page.getByRole("button", { name: "Registrar pago" }).click();
     await expect(page.getByText("Pago a proveedor registrado")).toBeVisible();
 
-    await expect(fila).toContainText("Heshi");
-    await expect(fila).toContainText("La Caja");
     await expect(fila).toContainText("USD 9.500"); // total
     await expect(fila).toContainText("USD 9.000"); // pagado
     await expect(fila).toContainText("Parcial");
@@ -95,7 +93,7 @@ test.describe("Pagos — pago directo a proveedor", () => {
       .getByRole("button", { name: "Eliminar", exact: true })
       .click();
     await expect(page.getByText("Pago eliminado")).toBeVisible();
-    await expect(fila).not.toContainText("Heshi");
+    await expect(detalle).not.toContainText("Heshi");
     await expect(fila).toContainText("USD 500");
   });
 });

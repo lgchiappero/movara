@@ -217,7 +217,7 @@ function PlanDePago({
       </div>
 
       {/* Pagos recibidos — del más reciente al más viejo */}
-      <div>
+      <div data-pagos>
         <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-1">Pagos recibidos</p>
         {pagos.length === 0 ? (
           <p className="text-sm text-stone-400">Todavía no hay pagos recibidos.</p>

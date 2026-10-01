@@ -62,12 +62,12 @@ describe("PagosPanel", () => {
     expect(screen.getByText("Unidades con pagos vencidos").closest("a")).toHaveAttribute("href", "/admin/pagos?estado=vencidas");
   });
 
-  it("grilla por unidad en modo pagos (proveedores, total a pagar)", () => {
+  it("grilla por unidad en modo pagos (total, pagado, pendiente)", () => {
     renderPanel();
     expect(screen.getByText("Pagos a proveedores por unidad")).toBeInTheDocument();
     const fila = screen.getByRole("link", { name: "MOV-UNIDAD-2026-001" }).closest("tr")!;
-    expect(fila).toHaveTextContent("Heshi");
     expect(fila).toHaveTextContent("USD 30.000");
+    expect(screen.getByRole("columnheader", { name: "Pendiente" })).toBeInTheDocument();
   });
 
   it("'+ Nuevo pago a proveedor' abre el modal de pago directo (sin cuotas)", async () => {

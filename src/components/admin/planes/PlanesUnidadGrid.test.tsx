@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const { mockWriteFile } = vi.hoisted(() => ({ mockWriteFile: vi.fn() }));
@@ -117,38 +117,61 @@ const fila = (numero: string) => screen.getByRole("link", { name: numero }).clos
 describe("PlanesUnidadGrid — cobranza", () => {
   beforeEach(() => mockWriteFile.mockReset());
 
-  it("una fila por unidad con las columnas pedidas", () => {
+  it("grilla compacta: solo Unidad, Cliente, Total, Cobrado, Saldo, %, Estado y Acciones", () => {
     renderGrid();
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
-    expect(headers).toEqual([
-      "Unidad",
-      "Cliente",
-      "Modelo",
-      "Valor total unidad",
-      "Plan de pago",
-      "Total cobrado",
-      "Saldo pendiente",
-      "% cobrado",
-      "Estado",
-      "Fecha último pago",
-      "Acciones",
-    ]);
+    expect(headers).toEqual(["Unidad", "Cliente", "Total", "Cobrado", "Saldo", "%", "Estado", "Acciones"]);
     expect(screen.getAllByRole("link", { name: /MOV-UNIDAD/ })).toHaveLength(3);
   });
 
-  it("muestra valor de la unidad, resumen del plan con su descripción, cobrado, saldo, %, estado y último pago", () => {
+  it("en mobile se ocultan Total, Cobrado y % (quedan las columnas esenciales)", () => {
+    renderGrid();
+    const ocultas = screen
+      .getAllByRole("columnheader")
+      .filter((h) => h.className.includes("hidden md:table-cell"))
+      .map((h) => h.textContent);
+    expect(ocultas).toEqual(["Total", "Cobrado", "%"]);
+  });
+
+  it("fila: modelo bajo la unidad, total del plan, cobrado con último pago dd/mm, saldo, %, estado chico", () => {
     renderGrid();
     const f = fila("MOV-UNIDAD-2026-001");
+    expect(f).toHaveTextContent("Flex 38");
     expect(f).toHaveTextContent("USD 24.700");
-    expect(f).toHaveTextContent("Anticipo + 3 cuotas");
-    expect(f).toHaveTextContent("Venta Flex 38 financiada en 3 cuotas");
-    expect(f).toHaveTextContent("USD 9.410");
+    expect(within(f).getByRole("button", { name: /USD 9.410/ })).toHaveTextContent("últ. 20/09");
     expect(f).toHaveTextContent("USD 15.290");
     expect(within(f).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "38");
-    expect(f).toHaveTextContent("En curso");
+    expect(within(f).getByText("En curso").className).toContain("text-[11px]");
     expect(f).toHaveTextContent("Vencida");
-    expect(f).toHaveTextContent("20/9/2026");
     expect(screen.getByRole("link", { name: "MOV-UNIDAD-2026-001" })).toHaveAttribute("href", "/admin/unidades/u1");
+  });
+
+  it("click en el monto cobrado despliega el detalle con los pagos recibidos (sin otra acción)", async () => {
+    // requestAnimationFrame corre en el próximo frame (con el detalle ya
+    // renderizado) — se encolan y se ejecutan después del click.
+    const frames: FrameRequestCallback[] = [];
+    const raf = vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+      frames.push(cb);
+      return frames.length;
+    });
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    try {
+      const { user, acciones: a } = renderGrid();
+      await user.click(within(fila("MOV-UNIDAD-2026-001")).getByRole("button", { name: /USD 9.410/ }));
+      const d = screen.getByTestId("detalle-u1|USD");
+      expect(within(d).getByText("Pagos recibidos")).toBeInTheDocument();
+      expect(a.abrirRegistrarPago).not.toHaveBeenCalled();
+      frames.splice(0).forEach((cb) => cb(0));
+      expect(scroll).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
+      // Un segundo click no la colapsa (sigue mostrando los pagos).
+      await user.click(within(fila("MOV-UNIDAD-2026-001")).getByRole("button", { name: /USD 9.410/ }));
+      expect(screen.getByTestId("detalle-u1|USD")).toBeInTheDocument();
+    } finally {
+      raf.mockRestore();
+      // @ts-expect-error -- limpiar el stub
+      delete Element.prototype.scrollIntoView;
+    }
   });
 
   it("unidad saldada y unidad sin plan", () => {
@@ -157,6 +180,9 @@ describe("PlanesUnidadGrid — cobranza", () => {
     const sinPlan = fila("MOV-UNIDAD-2026-003");
     expect(sinPlan).toHaveTextContent("Sin plan");
     expect(sinPlan).toHaveTextContent("—");
+    expect(within(sinPlan).queryByRole("button", { name: /USD/ })).not.toBeInTheDocument();
+    // Sin plan pero con precio: el total muestra el valor de la unidad, atenuado.
+    expect(fila("MOV-UNIDAD-2026-002")).toHaveTextContent("USD 15.000");
   });
 
   it("acciones: 'Crear plan' solo sin plan; 'Registrar pago' abre el modal del plan con saldo", async () => {
@@ -177,20 +203,96 @@ describe("PlanesUnidadGrid — cobranza", () => {
     expect(a.abrirNuevoPlan).toHaveBeenCalledWith();
   });
 
-  it("filtros: estado, moneda y búsqueda", async () => {
+  it("filtro por estado: Todos | Sin plan | Pendiente | En curso | Saldado | Con cuotas vencidas", async () => {
     const { user } = renderGrid();
-    await user.selectOptions(screen.getByLabelText("Filtrar por estado"), "sin_plan");
-    expect(screen.getAllByRole("link", { name: /MOV-UNIDAD/ }).map((l) => l.textContent)).toEqual(["MOV-UNIDAD-2026-003"]);
-    await user.selectOptions(screen.getByLabelText("Filtrar por estado"), "con_saldo");
-    expect(screen.getAllByRole("link", { name: /MOV-UNIDAD/ }).map((l) => l.textContent)).toEqual(["MOV-UNIDAD-2026-001"]);
-    await user.selectOptions(screen.getByLabelText("Filtrar por estado"), "todos");
+    const select = screen.getByLabelText("Filtrar por estado") as HTMLSelectElement;
+    expect(Array.from(select.options).map((o) => o.text)).toEqual([
+      "Todos los estados",
+      "Sin plan",
+      "Pendiente",
+      "En curso",
+      "Saldado",
+      "Con cuotas vencidas",
+    ]);
+    const visibles = () => screen.getAllByRole("link", { name: /MOV-UNIDAD/ }).map((l) => l.textContent);
+    await user.selectOptions(select, "sin_plan");
+    expect(visibles()).toEqual(["MOV-UNIDAD-2026-003"]);
+    await user.selectOptions(select, "en_curso");
+    expect(visibles()).toEqual(["MOV-UNIDAD-2026-001"]);
+    await user.selectOptions(select, "vencidas");
+    expect(visibles()).toEqual(["MOV-UNIDAD-2026-001"]);
+    await user.selectOptions(select, "saldado");
+    expect(visibles()).toEqual(["MOV-UNIDAD-2026-002"]);
+  });
+
+  it("un filtro que llega por URL y no está en la lista (con saldo) igual se muestra seleccionado", () => {
+    renderGrid({ estadoInicial: "con_saldo" });
+    const select = screen.getByLabelText("Filtrar por estado") as HTMLSelectElement;
+    expect(select.value).toBe("con_saldo");
+    expect(select.selectedOptions[0].text).toBe("Con saldo pendiente");
+  });
+
+  it("filtro por período: solo unidades con pagos en el rango, y Cobrado muestra lo del período", async () => {
+    // AHORA = 7/10/2026 → "Este mes" = octubre, "Mes anterior" = septiembre.
+    const { user } = renderGrid({ ahora: AHORA });
+    const periodo = screen.getByLabelText("Filtrar por período") as HTMLSelectElement;
+    expect(Array.from(periodo.options).map((o) => o.text)).toEqual([
+      "Todo el historial",
+      "Este mes",
+      "Mes anterior",
+      "Este trimestre",
+      "Rango personalizado",
+    ]);
+    const visibles = () => screen.getAllByRole("link", { name: /MOV-UNIDAD/ }).map((l) => l.textContent);
+
+    await user.selectOptions(periodo, "mes_actual");
+    expect(visibles()).toEqual(["MOV-UNIDAD-2026-002"]); // pagó el 2/10
+    expect(screen.getByRole("columnheader", { name: "Cobrado (período)" })).toBeInTheDocument();
+
+    await user.selectOptions(periodo, "mes_anterior");
+    expect(visibles()).toEqual(["MOV-UNIDAD-2026-001"]);
+    const cobrado = within(fila("MOV-UNIDAD-2026-001")).getByRole("button", { name: /USD 9.410/ });
+    expect(cobrado).toHaveTextContent("2 pagos");
+
+    await user.selectOptions(periodo, "trimestre"); // oct-dic
+    expect(visibles()).toEqual(["MOV-UNIDAD-2026-002"]);
+
+    await user.selectOptions(periodo, "personalizado");
+    // Rango incompleto → sin filtro.
+    expect(visibles()).toHaveLength(3);
+    await user.type(screen.getByLabelText("Desde"), "2026-09-10");
+    await user.type(screen.getByLabelText("Hasta"), "2026-09-30");
+    expect(visibles()).toEqual(["MOV-UNIDAD-2026-001"]);
+    expect(within(fila("MOV-UNIDAD-2026-001")).getByRole("button", { name: /USD 2.000/ })).toHaveTextContent("1 pago");
+
+    await user.selectOptions(periodo, "todo");
+    expect(visibles()).toHaveLength(3);
+    expect(screen.getByRole("columnheader", { name: "Cobrado" })).toBeInTheDocument();
+  });
+
+  it("buscador por cliente o número de unidad, y filtro de moneda", async () => {
+    const { user } = renderGrid();
     await user.selectOptions(screen.getByLabelText("Filtrar por moneda"), "ARS");
     expect(screen.getByText("Ninguna unidad coincide con los filtros.")).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Filtrar por moneda"), "todos");
-    await user.type(screen.getByPlaceholderText(/Buscar por unidad/), "bruno");
-    expect(await screen.findByText("Bruno Díaz")).toBeInTheDocument();
-    await new Promise((r) => setTimeout(r, 350));
-    expect(screen.getAllByRole("link", { name: /MOV-UNIDAD/ }).map((l) => l.textContent)).toEqual(["MOV-UNIDAD-2026-002"]);
+    await user.type(screen.getByLabelText("Buscar"), "bruno");
+    await waitFor(() =>
+      expect(screen.getAllByRole("link", { name: /MOV-UNIDAD/ }).map((l) => l.textContent)).toEqual(["MOV-UNIDAD-2026-002"])
+    );
+    await user.clear(screen.getByLabelText("Buscar"));
+    await user.type(screen.getByLabelText("Buscar"), "2026-003");
+    await waitFor(() =>
+      expect(screen.getAllByRole("link", { name: /MOV-UNIDAD/ }).map((l) => l.textContent)).toEqual(["MOV-UNIDAD-2026-003"])
+    );
+  });
+
+  it("exporta con el monto del período cuando hay un período elegido", async () => {
+    const { user } = renderGrid({ ahora: AHORA });
+    await user.selectOptions(screen.getByLabelText("Filtrar por período"), "mes_anterior");
+    await user.click(screen.getByRole("button", { name: "Exportar Excel" }));
+    const xlsx = await import("xlsx");
+    const rows = (xlsx.utils.json_to_sheet as unknown as { mock: { calls: unknown[][] } }).mock.calls.at(-1)![0] as Record<string, unknown>[];
+    expect(rows[0]).toMatchObject({ Unidad: "MOV-UNIDAD-2026-001", Cobrado: 9410, "Cobrado en el período": 9410, "Último pago": "20/09" });
   });
 
   it("estado inicial desde la URL", () => {
@@ -386,27 +488,23 @@ describe("PlanesUnidadGrid — pagos a proveedores (pagos directos)", () => {
     return screen.getByTestId("detalle-u1|USD");
   }
 
-  it("columnas de pagos y estado con el vocabulario de pagos", () => {
+  it("columnas de pagos (mismas, con el vocabulario de pagos) y estado", () => {
     renderPagos();
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
-    expect(headers).toEqual([
-      "Unidad",
-      "Cliente",
-      "Modelo",
-      "Proveedores",
-      "Total a pagar",
-      "Pagado",
-      "Pendiente",
-      "% pagado",
-      "Estado",
-      "Fecha último pago",
-      "Acciones",
-    ]);
+    expect(headers).toEqual(["Unidad", "Cliente", "Total", "Pagado", "Pendiente", "%", "Estado", "Acciones"]);
     const f = fila("MOV-UNIDAD-2026-001");
-    expect(f).toHaveTextContent("Heshi, La Caja, Naviera Sur, Despachante Gómez");
     expect(f).toHaveTextContent("USD 13.700");
+    expect(f).toHaveTextContent("USD 4.200");
     expect(f).toHaveTextContent("Parcial");
     expect(fila("MOV-UNIDAD-2026-003")).toHaveTextContent("Sin pagos");
+  });
+
+  it("el buscador también encuentra por proveedor", async () => {
+    const { user } = renderPagos();
+    await user.type(screen.getByLabelText("Buscar"), "naviera");
+    await waitFor(() =>
+      expect(screen.getAllByRole("link", { name: /MOV-UNIDAD/ }).map((l) => l.textContent)).toEqual(["MOV-UNIDAD-2026-001"])
+    );
   });
 
   it("acciones de la fila: '+ Pago' (sin 'Registrar pago') y botón '+ Nuevo pago a proveedor'", async () => {

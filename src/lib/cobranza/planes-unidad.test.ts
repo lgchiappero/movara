@@ -7,6 +7,8 @@ import {
   metricasPlanes,
   filtroEstadoDesdeQuery,
   cumpleFiltroEstado,
+  pagadoEnRango,
+  fechaCorta,
   type UnidadParaPlanes,
 } from "./planes-unidad";
 import type { AcuerdoConDetalle } from "./types";
@@ -273,5 +275,36 @@ describe("filtros de estado", () => {
     expect(cumpleFiltroEstado(enCurso, "saldado")).toBe(false);
     expect(cumpleFiltroEstado(enCurso, "vencidas")).toBe(true);
     expect(cumpleFiltroEstado(enCurso, "semana")).toBe(false);
+  });
+});
+
+describe("pagadoEnRango / fechaCorta", () => {
+  const filaCon = (fechas: [string, number][]) =>
+    filasPorUnidad(
+      [U1],
+      [plan({ movimientos: fechas.map(([fecha, importe], i) => pago(`m${i}`, importe, fecha)) })],
+      AHORA
+    )[0];
+
+  it("suma los pagos dentro de [desde, hasta) y cuenta cuántos fueron", () => {
+    const f = filaCon([
+      ["2026-09-01T00:00:00.000Z", 100],
+      ["2026-09-30T00:00:00.000Z", 200],
+      ["2026-10-01T00:00:00.000Z", 400],
+    ]);
+    expect(pagadoEnRango(f, { desde: new Date(2026, 8, 1), hasta: new Date(2026, 9, 1) })).toEqual({ monto: 300, cantidad: 2 });
+    expect(pagadoEnRango(f, { desde: new Date(2026, 9, 1), hasta: new Date(2026, 10, 1) })).toEqual({ monto: 400, cantidad: 1 });
+    expect(pagadoEnRango(f, { desde: new Date(2025, 0, 1), hasta: new Date(2025, 1, 1) })).toEqual({ monto: 0, cantidad: 0 });
+  });
+
+  it("compara por día: un pago del 1/10 (medianoche UTC) cuenta en octubre aunque en Argentina sea 30/9 21hs", () => {
+    const f = filaCon([["2026-10-01T00:00:00.000Z", 400]]);
+    expect(pagadoEnRango(f, { desde: new Date(2026, 9, 1), hasta: new Date(2026, 10, 1) }).cantidad).toBe(1);
+    expect(pagadoEnRango(f, { desde: new Date(2026, 8, 1), hasta: new Date(2026, 9, 1) }).cantidad).toBe(0);
+  });
+
+  it("fechaCorta → dd/mm (o — sin fecha)", () => {
+    expect(fechaCorta("2026-09-05T00:00:00.000Z")).toBe("05/09");
+    expect(fechaCorta(null)).toBe("—");
   });
 });
