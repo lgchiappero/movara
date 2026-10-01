@@ -5,7 +5,8 @@ import { getSignedUrl, BUCKET_MOVARA } from "@/lib/admin/storage";
 import { SECCIONES_UNIDAD, SECCIONES_ENVIO } from "@/lib/envios/constantes";
 import UnidadDetailForm from "@/components/admin/UnidadDetailForm";
 import DocumentosPorSeccion, { type DocumentoSeccionConUrl } from "@/components/admin/DocumentosPorSeccion";
-import CobranzaUnidadSection from "@/components/admin/CobranzaUnidadSection";
+import PlanesUnidadSection from "@/components/admin/planes/PlanesUnidadSection";
+import { conComprobantesFirmados } from "@/lib/cobranza/attach-signed-urls";
 import UnidadTimeline from "@/components/admin/UnidadTimeline";
 import EliminarUnidadButton from "@/components/admin/EliminarUnidadButton";
 import { serializeAcuerdo } from "@/lib/cobranza/serialize";
@@ -83,7 +84,7 @@ export default async function UnidadDetailPage({
     }),
   ]);
 
-  const acuerdos = acuerdosRaw.map(serializeAcuerdo);
+  const acuerdos = await conComprobantesFirmados(acuerdosRaw.map(serializeAcuerdo));
   const session = await getAdminUser();
 
   // Primer cobro y primer pago a fábrica, desde los movimientos reales de
@@ -241,10 +242,22 @@ export default async function UnidadDetailPage({
         )}
       </div>
 
-      <CobranzaUnidadSection
-        unidad={{ id, numeroUnidad: unidad.numeroUnidad, clienteNombre: unidad.cliente.nombre }}
-        acuerdos={acuerdos}
-      />
+      {(["cobro", "pago"] as const).map((tipo) => (
+        <PlanesUnidadSection
+          key={tipo}
+          tipo={tipo}
+          unidad={{
+            id,
+            numeroUnidad: unidad.numeroUnidad,
+            clienteNombre: unidad.cliente.nombre,
+            modelo: unidad.modelo,
+            precioCliente: unidad.precioCliente,
+          }}
+          planes={acuerdos.filter((a) => a.tipo === tipo)}
+          rol={session?.rol ?? "vendedor"}
+          ahora={new Date().toISOString()}
+        />
+      ))}
     </div>
   );
 }

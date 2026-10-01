@@ -45,8 +45,23 @@ vi.mock("@/components/admin/DocumentosPorSeccion", () => ({
     </div>
   ),
 }));
-vi.mock("@/components/admin/CobranzaUnidadSection", () => ({
-  default: ({ acuerdos }: { acuerdos: unknown[] }) => <div>CobranzaUnidadSection: {acuerdos.length}</div>,
+vi.mock("@/components/admin/planes/PlanesUnidadSection", () => ({
+  default: ({
+    tipo,
+    planes,
+    unidad,
+    rol,
+  }: {
+    tipo: string;
+    planes: { movimientos: { comprobanteSignedUrl: string | null }[] }[];
+    unidad: { precioCliente: number | null };
+    rol: string;
+  }) => (
+    <div>
+      PlanesUnidadSection {tipo}: {planes.length} precio={unidad.precioCliente ?? "none"} rol={rol} comprobante=
+      {planes[0]?.movimientos[0]?.comprobanteSignedUrl ?? "none"}
+    </div>
+  ),
 }));
 vi.mock("@/components/admin/EliminarUnidadButton", () => ({
   default: ({ cantidadPagos, cantidadDocumentos }: { cantidadPagos: number; cantidadDocumentos: number }) => (
@@ -157,7 +172,8 @@ describe("UnidadDetailPage", () => {
       },
     ]);
     render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
-    expect(screen.getByRole("link", { name: /Registrar el pago a fábrica/ })).toHaveAttribute("href", "#cobranza");
+    // El pago a fábrica es un pago a proveedor → lleva a la sección "Pagos".
+    expect(screen.getByRole("link", { name: /Registrar el pago a fábrica/ })).toHaveAttribute("href", "#pagos");
     expect(screen.queryByRole("link", { name: /Registrar el cobro del anticipo/ })).not.toBeInTheDocument();
   });
 
@@ -381,7 +397,7 @@ describe("UnidadDetailPage", () => {
     expect(screen.getByText("/api/admin/unidades/u1/documentos — 1 docs")).toBeInTheDocument();
   });
 
-  it("consulta los acuerdos de cobranza de la unidad y los pasa serializados a CobranzaUnidadSection", async () => {
+  it("consulta los acuerdos de la unidad y separa la sección Cobranza (cobro) de la sección Pagos (pago)", async () => {
     mockFindUnique.mockResolvedValueOnce(UNIDAD_BASE);
     mockFindManyAcuerdo.mockResolvedValueOnce([
       {
@@ -407,7 +423,8 @@ describe("UnidadDetailPage", () => {
     ]);
     render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
     expect(mockFindManyAcuerdo).toHaveBeenCalledWith(expect.objectContaining({ where: { unidadId: "u1" } }));
-    expect(screen.getByText("CobranzaUnidadSection: 1")).toBeInTheDocument();
+    expect(screen.getByText(/PlanesUnidadSection cobro: 1 precio=none rol=admin/)).toBeInTheDocument();
+    expect(screen.getByText(/PlanesUnidadSection pago: 0/)).toBeInTheDocument();
   });
 
   it("rol admin ve el botón de eliminar con las cantidades de pagos y documentos", async () => {

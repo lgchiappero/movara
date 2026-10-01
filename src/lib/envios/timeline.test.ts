@@ -4,6 +4,7 @@ import {
   pasoActual,
   accionesPasoActual,
   proximoPasoCorto,
+  ACCIONES_POR_ESTADO,
   type DatosTimelineUnidad,
 } from "@/lib/envios/timeline";
 
@@ -339,7 +340,7 @@ describe("accionesPasoActual", () => {
     };
     const info = accionesPasoActual(d)!;
     expect(info.titulo).toBe("Pago a fábrica");
-    expect(info.acciones).toEqual([{ texto: "Registrar el pago a fábrica", anchor: "cobranza" }]);
+    expect(info.acciones).toEqual([{ texto: "Registrar el pago a fábrica", anchor: "pagos" }]);
   });
 
   it("paso comercial 'cobro_anticipo' actual: título y acción propios", () => {
@@ -428,6 +429,17 @@ describe("accionesPasoActual", () => {
       "Activar garantía",
       "Cerrar cobros",
     ]);
+  });
+});
+
+describe("anclas de las acciones: cobros al cliente vs pagos a proveedores", () => {
+  it("todo lo que es pagar a un proveedor lleva a la sección Pagos; cobrar al cliente, a Cobranza", () => {
+    const todas = Object.values(ACCIONES_POR_ESTADO).flatMap((e) => e.acciones);
+    const pagos = todas.filter((a) => /^Registrar pago (saldo a fábrica|flete|despachante|transporte)/.test(a.texto));
+    expect(pagos).toHaveLength(4);
+    expect(pagos.every((a) => a.anchor === "pagos")).toBe(true);
+    expect(todas.find((a) => a.texto === "Cobrar saldo al cliente")!.anchor).toBe("cobranza");
+    expect(todas.find((a) => a.texto === "Cerrar cobros")!.anchor).toBe("cobranza");
   });
 });
 

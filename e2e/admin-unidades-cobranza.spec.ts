@@ -97,13 +97,27 @@ test.describe("Unidades — próximo paso y columnas de cobranza desde movimient
     await expect(filaDashboard).toContainText(fechaHoy);
 
     await page.goto(`/admin/unidades/${unidadId}`);
-    await expect(page.getByRole("link", { name: /Registrar el pago a fábrica/ })).toBeVisible();
+    // El pago a fábrica es un pago a proveedor → la acción lleva a la sección Pagos.
+    await expect(page.getByRole("link", { name: /Registrar el pago a fábrica/ })).toHaveAttribute("href", "#pagos");
+    // Ficha de la unidad: sección Cobranza (plan del cliente) y sección Pagos.
+    const cobranza = page.locator("#cobranza");
+    await expect(cobranza.getByRole("heading", { name: "Cobranza" })).toBeVisible();
+    await expect(cobranza).toContainText("Plan de pago");
+    await expect(cobranza).toContainText("USD 15.000"); // cobrado
+    await expect(cobranza).toContainText("USD 35.000"); // saldo pendiente de la unidad
+    const pagosSeccion = page.locator("#pagos");
+    await expect(pagosSeccion.getByRole("heading", { name: "Pagos a proveedores" })).toBeVisible();
+    await expect(pagosSeccion).toContainText("Todavía no hay pagos a proveedores cargados para esta unidad.");
 
     // 3) Segundo cobro y pago a fábrica registrados
     movimientos.push({ acuerdoId: cobro, id: await registrarMovimiento(page, cobro, 5000) });
     const pago = await crearAcuerdo(page, unidadId, "pago", "fabrica", 30000);
     acuerdos.push(pago);
     movimientos.push({ acuerdoId: pago, id: await registrarMovimiento(page, pago, 9000) });
+
+    await page.goto(`/admin/unidades/${unidadId}`);
+    await expect(page.locator("#pagos")).toContainText("Fábrica E2E · Fábrica");
+    await expect(page.locator("#pagos")).toContainText("USD 9.000");
 
     await page.goto("/admin/unidades");
     await expect(filaUnidad(page, numeroUnidad)).toContainText("Iniciar producción");

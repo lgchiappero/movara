@@ -151,8 +151,8 @@ export default async function AdminDashboardPage() {
     unidadesEnAduanaLargas,
     cobrosVencidos,
     leadsPipelineResumen,
-    cuotasVencidas,
-    cuotasVencenSemana,
+    unidadesCobroVencido,
+    unidadesPagoVencido,
     mesAnteriorCierre,
     mesAnteriorTuvoMovimientos,
   ] = await Promise.all([
@@ -255,17 +255,23 @@ export default async function AdminDashboardPage() {
       take: 5,
       select: { id: true, nombre: true, apellido: true, etapa: true, createdAt: true },
     }),
-    // Vencidas "en vivo" por fecha (no por el campo estado) — el barrido
-    // que marca Cuota.estado = "vencido" solo corre al cargar
-    // /admin/cobranza, así que esta alerta no puede depender de que
-    // alguien haya visitado esa página antes.
-    db.cuota.count({
-      where: { vencimiento: { lt: startOfDay(now) }, estado: { not: "pagado" } },
-    }),
-    db.cuota.count({
+    // Unidades con cuotas vencidas, separadas en cobranza (clientes) y
+    // pagos (proveedores) — misma vista por unidad que /admin/cobranza y
+    // /admin/pagos. Vencidas "en vivo" por fecha (no por el campo estado):
+    // el barrido que marca Cuota.estado = "vencido" solo corre al cargar
+    // esas páginas, así que esta alerta no puede depender de eso.
+    db.unidad.count({
       where: {
-        estado: "pendiente",
-        vencimiento: { gte: inicioSemanaCobranza(now), lt: finSemanaCobranza(now) },
+        acuerdosPago: {
+          some: { tipo: "cobro", cuotas: { some: { vencimiento: { lt: startOfDay(now) }, estado: { not: "pagado" } } } },
+        },
+      },
+    }),
+    db.unidad.count({
+      where: {
+        acuerdosPago: {
+          some: { tipo: "pago", cuotas: { some: { vencimiento: { lt: startOfDay(now) }, estado: { not: "pagado" } } } },
+        },
       },
     }),
     db.cierrePeriodo.findUnique({ where: { mes_anio: { mes: mesAnteriorNum, anio: anioAnterior } } }),
@@ -329,8 +335,9 @@ export default async function AdminDashboardPage() {
     unidadesConFaltantes.length > 0 ||
     cobrosVencidos > 0 ||
     unidadesEnAduanaLargas > 0 ||
-    cuotasVencidas > 0 ||
-    cuotasVencenSemana > 0 ||
+    unidadesCobroVencido > 0 ||
+    unidadesPagoVencido > 0 ||
+    cuotasVencenSemanaCobro > 0 ||
     (mesAnteriorCierre === null && mesAnteriorTuvoMovimientos > 0);
 
   const accesosRapidos = ADMIN_NAV_ITEMS.filter(
@@ -405,24 +412,35 @@ export default async function AdminDashboardPage() {
                 </Link>
               </li>
             )}
-            {cuotasVencidas > 0 && (
+            {unidadesCobroVencido > 0 && (
               <li className="flex items-center justify-between gap-3">
                 <span>
-                  <strong>{cuotasVencidas}</strong> cuota{cuotasVencidas === 1 ? "" : "s"} vencida
-                  {cuotasVencidas === 1 ? "" : "s"}
+                  <strong>{unidadesCobroVencido}</strong> unidad{unidadesCobroVencido === 1 ? "" : "es"} con cuotas de
+                  cobro vencidas
                 </span>
-                <Link href="/admin/cobranza?tab=gestion&estado=vencido" className={BOTON_VER_ALERTA}>
+                <Link href="/admin/cobranza?estado=vencidas" className={BOTON_VER_ALERTA}>
                   Ver →
                 </Link>
               </li>
             )}
-            {cuotasVencenSemana > 0 && (
+            {unidadesPagoVencido > 0 && (
               <li className="flex items-center justify-between gap-3">
                 <span>
-                  <strong>{cuotasVencenSemana}</strong> cuota{cuotasVencenSemana === 1 ? "" : "s"} vence
-                  {cuotasVencenSemana === 1 ? "" : "n"} esta semana
+                  <strong>{unidadesPagoVencido}</strong> unidad{unidadesPagoVencido === 1 ? "" : "es"} con pagos a
+                  proveedores vencidos
                 </span>
-                <Link href="/admin/cobranza?tab=gestion&estado=semana" className={BOTON_VER_ALERTA}>
+                <Link href="/admin/pagos?estado=vencidas" className={BOTON_VER_ALERTA}>
+                  Ver →
+                </Link>
+              </li>
+            )}
+            {cuotasVencenSemanaCobro > 0 && (
+              <li className="flex items-center justify-between gap-3">
+                <span>
+                  <strong>{cuotasVencenSemanaCobro}</strong> cuota{cuotasVencenSemanaCobro === 1 ? "" : "s"} de cobro vence
+                  {cuotasVencenSemanaCobro === 1 ? "" : "n"} esta semana
+                </span>
+                <Link href="/admin/cobranza?vence=semana" className={BOTON_VER_ALERTA}>
                   Ver →
                 </Link>
               </li>
@@ -510,20 +528,20 @@ export default async function AdminDashboardPage() {
             {
               label: "Cobrado este mes",
               value: formatUSD(cobradoEsteMes),
-              href: "/admin/cobranza?tipo=cobro&estado=pagado&periodo=mes",
+              href: "/admin/cobranza",
             },
-            { label: "Por cobrar", value: formatUSD(porCobrar), href: "/admin/cobranza?tipo=cobro&estado=pendiente" },
+            { label: "Por cobrar", value: formatUSD(porCobrar), href: "/admin/cobranza?estado=con_saldo" },
             {
               label: "Vence esta semana",
               value: cuotasVencenSemanaCobro,
-              href: "/admin/cobranza?tipo=cobro&estado=pendiente&vence=semana",
+              href: "/admin/cobranza?vence=semana",
             },
             {
               label: "Pagado este mes",
               value: formatUSD(pagadoEsteMes),
-              href: "/admin/pagos?estado=pagado",
+              href: "/admin/pagos",
             },
-            { label: "Por pagar", value: formatUSD(porPagar), href: "/admin/pagos?estado=pendiente" },
+            { label: "Por pagar", value: formatUSD(porPagar), href: "/admin/pagos?estado=con_saldo" },
           ]}
         />
       </div>

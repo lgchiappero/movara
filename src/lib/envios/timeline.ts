@@ -25,7 +25,8 @@ export type PasoInfo = {
  * lógica no conoce IDs de rutas (envioId, etc.), así que la resolución a
  * una URL real (same-page anchor o cross-page hacia /admin/envios/[id])
  * vive en la capa de presentación (ver UnidadTimeline.tsx). Valores:
- * "cobranza" | "estado" | "datos-unidad" | "garantia" |
+ * "cobranza" (cobros al cliente) | "pagos" (pagos a proveedores) |
+ * "estado" | "datos-unidad" | "garantia" |
  * "seccion-unidad:<key>" | "seccion-envio:<key>". */
 export type AccionItem = { texto: string; anchor: string };
 
@@ -185,7 +186,7 @@ export const ACCIONES_POR_ESTADO: Record<EstadoFabricacion, { corto: string; acc
   produccion_completa: {
     corto: "Registrar saldo fábrica",
     acciones: [
-      { texto: "Registrar pago saldo a fábrica", anchor: "cobranza" },
+      { texto: "Registrar pago saldo a fábrica", anchor: "pagos" },
       { texto: "Coordinar embarque", anchor: "estado" },
     ],
   },
@@ -193,7 +194,7 @@ export const ACCIONES_POR_ESTADO: Record<EstadoFabricacion, { corto: string; acc
     corto: "Subir BL",
     acciones: [
       { texto: "Subir BL y Packing List en carpeta 05", anchor: "seccion-envio:05_embarque" },
-      { texto: "Registrar pago flete", anchor: "cobranza" },
+      { texto: "Registrar pago flete", anchor: "pagos" },
     ],
   },
   en_transito: {
@@ -203,7 +204,7 @@ export const ACCIONES_POR_ESTADO: Record<EstadoFabricacion, { corto: string; acc
   en_aduana: {
     corto: "Cobrar saldo",
     acciones: [
-      { texto: "Registrar pago despachante", anchor: "cobranza" },
+      { texto: "Registrar pago despachante", anchor: "pagos" },
       { texto: "Subir documentos carpeta 06", anchor: "seccion-envio:06_despacho" },
       { texto: "Cobrar saldo al cliente", anchor: "cobranza" },
     ],
@@ -212,7 +213,7 @@ export const ACCIONES_POR_ESTADO: Record<EstadoFabricacion, { corto: string; acc
     corto: "Coordinar transporte",
     acciones: [
       { texto: "Coordinar transporte local", anchor: "estado" },
-      { texto: "Registrar pago transporte", anchor: "cobranza" },
+      { texto: "Registrar pago transporte", anchor: "pagos" },
     ],
   },
   entregado: {
@@ -254,7 +255,7 @@ const ACCIONES_PASOS_COMERCIALES: Record<PasoComercial, { corto: string; titulo:
   pago_fabrica: {
     corto: "Registrar pago a fábrica",
     titulo: "Pago a fábrica",
-    acciones: [{ texto: "Registrar el pago a fábrica", anchor: "cobranza" }],
+    acciones: [{ texto: "Registrar el pago a fábrica", anchor: "pagos" }],
   },
 };
 

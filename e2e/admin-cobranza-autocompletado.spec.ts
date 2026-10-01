@@ -19,8 +19,8 @@ async function crearUnidadConCliente(page: Page, precioCliente: number) {
   return { nombre, clienteId: cliente.id as string, unidadId: unidad.id as string };
 }
 
-async function abrirModalYElegirUnidad(page: Page, boton: "+ Nuevo plan de pago" | "+ Nuevo pago", nombre: string) {
-  await page.getByRole("button", { name: boton }).click();
+async function abrirModalYElegirUnidad(page: Page, boton: "+ Nuevo plan de pago" | "+ Nuevo plan de pago a proveedor", nombre: string) {
+  await page.getByRole("button", { name: boton, exact: true }).click();
   const buscador = page.getByPlaceholder("Buscar por N° de unidad o cliente...");
   await buscador.click();
   await buscador.fill(nombre);
@@ -56,7 +56,7 @@ test.describe("Cobranza — autocompletado del modal Nuevo cobro/pago", () => {
 
   test("pago: elegir una unidad no completa proveedor ni monto", async ({ page }) => {
     await page.goto("/admin/pagos");
-    await abrirModalYElegirUnidad(page, "+ Nuevo pago", datos.nombre);
+    await abrirModalYElegirUnidad(page, "+ Nuevo plan de pago a proveedor", datos.nombre);
 
     await expect(page.getByLabel("Proveedor", { exact: true })).toHaveValue("");
     await expect(page.getByLabel(/Total acordado/)).toHaveValue("");
