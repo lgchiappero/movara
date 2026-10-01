@@ -25,18 +25,26 @@ const USO_OPTIONS = [
 
 export default function WizardModal({ waNumber }: { waNumber?: string | null }) {
   const w = useWizardStore();
-  const [editableMsg, setEditableMsg] = useState("");
+  const [editableMsg, setEditableMsg] = useState(() => (w.step === 6 ? buildWhatsAppMessage(w) : ""));
   const [sent, setSent] = useState(false);
 
   // Generate editable message when entering step 6
-  useEffect(() => {
+  const [prevStep, setPrevStep] = useState(w.step);
+  if (prevStep !== w.step) {
+    setPrevStep(w.step);
     if (w.step === 6) setEditableMsg(buildWhatsAppMessage(w));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [w.step]);
+  }
+
+  // Reset "sent" when the wizard closes
+  const [prevOpen, setPrevOpen] = useState(w.open);
+  if (prevOpen !== w.open) {
+    setPrevOpen(w.open);
+    if (!w.open) setSent(false);
+  }
 
   // Body scroll lock + Escape key
   useEffect(() => {
-    if (!w.open) { setSent(false); return; }
+    if (!w.open) return;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") w.closeWizard(); };
     window.addEventListener("keydown", onKey);

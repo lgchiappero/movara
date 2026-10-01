@@ -128,6 +128,19 @@ describe("StepDatos — toggle Particular / Empresa", () => {
     expect(screen.getByPlaceholderText("Ej: +54 9 11 1234-5678")).toHaveValue(VALID.telefono);
     expect(screen.getByPlaceholderText("contacto@empresa.com")).toHaveValue(VALID.email);
   });
+
+  it("al cambiar de tipo se resetean los campos tocados (oculta errores previos)", async () => {
+    const { user } = renderHarness();
+    const emailInput = screen.getByPlaceholderText("tu@email.com");
+
+    await user.type(emailInput, "noemail");
+    fireEvent.blur(emailInput);
+    expect(screen.getByText(/email inválido/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Empresa" }));
+
+    expect(screen.queryByText(/email inválido/i)).not.toBeInTheDocument();
+  });
 });
 
 describe("StepDatos — validación de email en tiempo real", () => {

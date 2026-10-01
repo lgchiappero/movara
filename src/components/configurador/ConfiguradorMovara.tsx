@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
@@ -207,6 +207,8 @@ function buildWAMessage(params: {
 const STEP_LABELS = ["Modelo", "Finalidad", "Ubicación", "Configuración", "Mejoras", "Datos", "Resultado"] as const;
 const VALID_MODELO_KEYS = new Set(MOVARA_MODELS.map((m) => m.key));
 
+const subscribeNoop = () => () => {};
+
 export default function ConfiguradorMovara({
   data,
   precios,
@@ -248,15 +250,19 @@ export default function ConfiguradorMovara({
   const [slideDir, setSlideDir] = useState<1 | -1>(1);
   const [modelo, setModelo] = useState<ModeloKey | null>(null);
 
-  // Preselección vía `?modelo=` se aplica después del montaje, no en el
-  // estado inicial: así el primer render del cliente coincide con el HTML
-  // estático (sin esto, React tira un hydration mismatch).
-  useEffect(() => {
+  // Preselección vía `?modelo=` se aplica recién después de hidratar, no en
+  // el estado inicial: así el primer render del cliente coincide con el HTML
+  // estático (sin esto, React tira un hydration mismatch). `hydrated` es
+  // false durante la hidratación y true en el render siguiente; se aplica
+  // una sola vez, ajustando el estado durante el render.
+  const hydrated = useSyncExternalStore(subscribeNoop, () => true, () => false);
+  const [preselectApplied, setPreselectApplied] = useState(false);
+  if (hydrated && !preselectApplied) {
+    setPreselectApplied(true);
     if (preselectedModelo && VALID_MODELO_KEYS.has(preselectedModelo as ModeloKey)) {
       setModelo(preselectedModelo as ModeloKey);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }
   const [finalidad, setFinalidad] = useState<FinalidadKey | null>(null);
   const [localidad, setLocalidad] = useState("");
   const [provincia, setProvincia] = useState("");
@@ -1242,9 +1248,11 @@ export function StepDatos({
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   // Reset touched state when switching client type
-  useEffect(() => {
+  const [prevTipoCliente, setPrevTipoCliente] = useState(tipoCliente);
+  if (prevTipoCliente !== tipoCliente) {
+    setPrevTipoCliente(tipoCliente);
     setTouched({});
-  }, [tipoCliente]);
+  }
 
   function touch(field: string) {
     setTouched((prev) => ({ ...prev, [field]: true }));

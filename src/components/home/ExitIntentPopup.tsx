@@ -25,7 +25,7 @@ export default function ExitIntentPopup() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const readyRef = useRef(false);
   const shownRef = useRef(false);
-  const startTime = useRef(Date.now());
+  const startTime = useRef(0); // se setea al montar, en el effect
   const lastInternalClickMs = useRef(0);
 
   function tryShow() {

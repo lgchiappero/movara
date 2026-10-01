@@ -134,3 +134,17 @@ test.describe("Configurador — flujo completo", () => {
     expect(msg).toContain("🏢 Contacto: María López");
   });
 });
+
+test.describe("Configurador — preselección vía ?modelo=", () => {
+  test("con un modelo válido queda preseleccionado y se puede avanzar", async ({ page }) => {
+    await page.goto("/configurador?modelo=20ft");
+    await expect(page.getByText("Paso 1 de 7")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Siguiente" })).toBeEnabled();
+  });
+
+  test("con un modelo inválido no preselecciona nada", async ({ page }) => {
+    await page.goto("/configurador?modelo=no-existe");
+    await expect(page.getByText("Paso 1 de 7")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Siguiente" })).toBeDisabled();
+  });
+});
