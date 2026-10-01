@@ -7,6 +7,8 @@ import {
   ESTADO_CUOTA_COLORS,
 } from "@/lib/cobranza/constantes";
 import { sumaImportes } from "@/lib/cobranza/calc";
+import EliminarButton from "@/components/admin/EliminarButton";
+import { isAdmin } from "@/lib/admin/roles";
 import type { AcuerdoConDetalle, MovimientoDetalle } from "@/lib/cobranza/types";
 
 function formatMoneda(value: number, moneda: string): string {
@@ -21,16 +23,20 @@ export default function DetalleAcuerdo({
   acuerdo,
   movido,
   pendiente,
+  rol,
   onRegistrarMovimiento,
   onEditarMovimiento,
   onEliminarMovimiento,
+  onEliminarAcuerdo,
 }: {
   acuerdo: AcuerdoConDetalle;
   movido: number;
   pendiente: number;
+  rol: string;
   onRegistrarMovimiento: () => void;
   onEditarMovimiento: (movimiento: MovimientoDetalle) => void;
   onEliminarMovimiento: (movimiento: MovimientoDetalle) => void;
+  onEliminarAcuerdo: () => Promise<{ ok: boolean; error?: string }>;
 }) {
   const esCobro = acuerdo.tipo === "cobro";
   const nombreContraparteLabel = esCobro ? "Cliente" : "Proveedor";
@@ -97,13 +103,29 @@ export default function DetalleAcuerdo({
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onRegistrarMovimiento}
-        className="w-full sm:w-auto px-4 py-2.5 bg-sage-500 hover:bg-sage-600 text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
-      >
-        {nombreAccion}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onRegistrarMovimiento}
+          className="w-full sm:w-auto px-4 py-2.5 bg-sage-500 hover:bg-sage-600 text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
+        >
+          {nombreAccion}
+        </button>
+
+        {isAdmin(rol) && (
+          <EliminarButton
+            label={esCobro ? "Eliminar cobro completo" : "Eliminar pago completo"}
+            confirmTitle={esCobro ? "¿Eliminar este cobro completo?" : "¿Eliminar este pago completo?"}
+            successMessage={esCobro ? "Cobro eliminado" : "Pago eliminado"}
+            motivoBloqueo={
+              acuerdo.movimientos.length > 0
+                ? `No se puede eliminar: tiene ${acuerdo.movimientos.length} movimiento${acuerdo.movimientos.length === 1 ? "" : "s"} registrado${acuerdo.movimientos.length === 1 ? "" : "s"}`
+                : null
+            }
+            onEliminar={onEliminarAcuerdo}
+          />
+        )}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Cuotas */}

@@ -1,9 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockUpdate } = vi.hoisted(() => ({ mockUpdate: vi.fn() }));
-vi.mock("@/lib/db", () => ({ db: { unidad: { update: mockUpdate } } }));
+const { mockUpdate, mockDelete, mockCountAcuerdo, mockCountDocumento, mockGetAdminUser } = vi.hoisted(() => ({
+  mockUpdate: vi.fn(),
+  mockDelete: vi.fn(),
+  mockCountAcuerdo: vi.fn(),
+  mockCountDocumento: vi.fn(),
+  mockGetAdminUser: vi.fn(),
+}));
+vi.mock("@/lib/db", () => ({
+  db: {
+    unidad: { update: mockUpdate, delete: mockDelete },
+    acuerdoPago: { count: mockCountAcuerdo },
+    documentoUnidad: { count: mockCountDocumento },
+  },
+}));
+vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 
-import { PATCH } from "../route";
+import { PATCH, DELETE } from "../route";
 import { NextRequest } from "next/server";
 
 function makeRequest(body: unknown): NextRequest {
@@ -94,6 +107,67 @@ describe("PATCH /api/admin/unidades/[id]", () => {
   it("500 si la DB falla", async () => {
     mockUpdate.mockRejectedValueOnce(new Error("db down"));
     const res = await PATCH(makeRequest(VALID), { params: Promise.resolve({ id: "u1" }) });
+    expect(res.status).toBe(500);
+  });
+});
+
+function makeDeleteRequest(): NextRequest {
+  return new NextRequest("http://localhost/api/admin/unidades/u1", { method: "DELETE" });
+}
+
+describe("DELETE /api/admin/unidades/[id]", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("401 sin sesión", async () => {
+    mockGetAdminUser.mockResolvedValueOnce(null);
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "u1" }) });
+    expect(res.status).toBe(401);
+  });
+
+  it("403 si el rol no es admin", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Vend", email: "v@x.com", rol: "vendedor" });
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "u1" }) });
+    expect(res.status).toBe(403);
+  });
+
+  it("400 si tiene pagos y documentos asociados (mensaje combinado)", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockCountAcuerdo.mockResolvedValueOnce(2);
+    mockCountDocumento.mockResolvedValueOnce(3);
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "u1" }) });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toContain("2 pagos");
+    expect(json.error).toContain("3 documentos");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it("400 si solo tiene documentos (singular)", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockCountAcuerdo.mockResolvedValueOnce(0);
+    mockCountDocumento.mockResolvedValueOnce(1);
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "u1" }) });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toContain("1 documento");
+  });
+
+  it("elimina y devuelve 200 cuando no tiene pagos ni documentos", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockCountAcuerdo.mockResolvedValueOnce(0);
+    mockCountDocumento.mockResolvedValueOnce(0);
+    mockDelete.mockResolvedValueOnce({ id: "u1" });
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "u1" }) });
+    expect(res.status).toBe(200);
+    expect(mockDelete).toHaveBeenCalledWith({ where: { id: "u1" } });
+  });
+
+  it("500 si la DB falla al eliminar", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockCountAcuerdo.mockResolvedValueOnce(0);
+    mockCountDocumento.mockResolvedValueOnce(0);
+    mockDelete.mockRejectedValueOnce(new Error("db down"));
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "u1" }) });
     expect(res.status).toBe(500);
   });
 });

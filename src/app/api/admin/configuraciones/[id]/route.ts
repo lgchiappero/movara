@@ -6,6 +6,8 @@ import { estadoPedidoOptions, type EstadoPedido } from "@/lib/pedido/estado-pedi
 import { ensureNumeroPedido } from "@/lib/pedido/numero-pedido";
 import { buildEstadoEmail } from "@/lib/email/pedido-estado-email";
 import { calcularGarantiaFechaFin } from "@/lib/pedido/garantia";
+import { getAdminUser } from "@/lib/admin/current-user";
+import { isAdmin } from "@/lib/admin/roles";
 
 const numberOrNull = z.union([z.number(), z.null()]);
 const stringOrNull = z.union([z.string(), z.null()]).transform((v) => (v === "" ? null : v));
@@ -129,6 +131,29 @@ export async function PATCH(
   } catch (err) {
     console.error("[admin/configuraciones/:id PATCH]", err);
     return NextResponse.json({ error: "Error al guardar" }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
+  const session = await getAdminUser();
+  if (!session) {
+    return NextResponse.json({ error: "Sesión inválida" }, { status: 401 });
+  }
+  if (!isAdmin(session.rol)) {
+    return NextResponse.json({ error: "Solo un administrador puede eliminar" }, { status: 403 });
+  }
+
+  try {
+    await db.configuracionPedido.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[admin/configuraciones/:id DELETE]", err);
+    return NextResponse.json({ error: "Error al eliminar" }, { status: 500 });
   }
 }
 

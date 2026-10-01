@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { mockFindUnique, mockFindManyUsers, mockFindManyDocs, mockNotFound, mockGetSignedUrl } = vi.hoisted(() => ({
+const { mockFindUnique, mockFindManyUsers, mockFindManyDocs, mockNotFound, mockGetSignedUrl, mockGetAdminUser } = vi.hoisted(() => ({
   mockFindUnique: vi.fn(),
   mockFindManyUsers: vi.fn().mockResolvedValue([]),
   mockFindManyDocs: vi.fn().mockResolvedValue([]),
@@ -9,6 +9,7 @@ const { mockFindUnique, mockFindManyUsers, mockFindManyDocs, mockNotFound, mockG
     throw new Error("NEXT_NOT_FOUND");
   }),
   mockGetSignedUrl: vi.fn().mockResolvedValue("https://signed.example/x"),
+  mockGetAdminUser: vi.fn().mockResolvedValue({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" }),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -18,6 +19,7 @@ vi.mock("@/lib/db", () => ({
     documentoPedido: { findMany: mockFindManyDocs },
   },
 }));
+vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 vi.mock("next/navigation", () => ({ notFound: mockNotFound }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
@@ -36,6 +38,9 @@ vi.mock("@/components/admin/DocumentosPedidoSection", () => ({
   default: ({ documentos }: { documentos: unknown[] }) => <div>Documentos: {documentos.length}</div>,
 }));
 vi.mock("@/components/admin/ConfiguracionEspacioForm", () => ({ default: () => <div>ConfiguracionEspacioForm</div> }));
+vi.mock("@/components/admin/EliminarConfiguracionButton", () => ({
+  default: () => <div>EliminarConfiguracionButton</div>,
+}));
 
 import ConfiguracionDetailPage from "../page";
 
@@ -191,5 +196,18 @@ describe("ConfiguracionDetailPage", () => {
     expect(mockFindManyUsers).toHaveBeenCalledWith(
       expect.objectContaining({ where: { rol: "vendedor", activo: true } })
     );
+  });
+
+  it("rol admin ve el botón de eliminar", async () => {
+    mockFindUnique.mockResolvedValueOnce(CONFIG_BASE);
+    render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+    expect(screen.getByText("EliminarConfiguracionButton")).toBeInTheDocument();
+  });
+
+  it("rol vendedor no ve el botón de eliminar", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u2", nombre: "Vend", email: "v@x.com", rol: "vendedor" });
+    mockFindUnique.mockResolvedValueOnce(CONFIG_BASE);
+    render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+    expect(screen.queryByText("EliminarConfiguracionButton")).not.toBeInTheDocument();
   });
 });

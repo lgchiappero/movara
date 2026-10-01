@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { ETAPA_OPTIONS, ETAPA_LABELS, ORIGEN_OPTIONS, ORIGEN_LABELS, type Etapa, type Origen } from "@/lib/leads/constantes";
 import { tasaConversion } from "@/lib/leads/calc";
 import PipelineBoard from "@/components/admin/PipelineBoard";
+import { getAdminUser } from "@/lib/admin/current-user";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,8 @@ export default async function AdminPipelinePage({
   const hoy = hoyParaFiltro;
   const inicioMes = inicioMesParaFiltro;
 
-  const [leads, vendedores, totalActivos, nuevosHoy, enPropuesta, ganadosMes, totalMes] = await Promise.all([
+  const [session, leads, vendedores, totalActivos, nuevosHoy, enPropuesta, ganadosMes, totalMes] = await Promise.all([
+    getAdminUser(),
     db.lead.findMany({ where, orderBy: { createdAt: "desc" } }),
     db.adminUser.findMany({
       where: { rol: { in: ["vendedor", "admin"] }, activo: true },
@@ -223,6 +225,7 @@ export default async function AdminPipelinePage({
           }))}
           vendedores={vendedores}
           highlightLeadId={sp.leadId ?? null}
+          rol={session?.rol ?? "vendedor"}
         />
       )}
     </div>

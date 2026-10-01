@@ -8,6 +8,7 @@ const {
   mockFindManyAcuerdo,
   mockNotFound,
   mockGetSignedUrl,
+  mockGetAdminUser,
 } = vi.hoisted(() => ({
   mockFindUnique: vi.fn(),
   mockFindManyCliente: vi.fn().mockResolvedValue([]),
@@ -17,6 +18,7 @@ const {
     throw new Error("NEXT_NOT_FOUND");
   }),
   mockGetSignedUrl: vi.fn().mockResolvedValue("https://signed.example/doc.pdf"),
+  mockGetAdminUser: vi.fn().mockResolvedValue({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" }),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -27,6 +29,7 @@ vi.mock("@/lib/db", () => ({
     acuerdoPago: { findMany: mockFindManyAcuerdo },
   },
 }));
+vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 vi.mock("next/navigation", () => ({ notFound: mockNotFound }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
@@ -44,6 +47,13 @@ vi.mock("@/components/admin/DocumentosPorSeccion", () => ({
 }));
 vi.mock("@/components/admin/CobranzaUnidadSection", () => ({
   default: ({ acuerdos }: { acuerdos: unknown[] }) => <div>CobranzaUnidadSection: {acuerdos.length}</div>,
+}));
+vi.mock("@/components/admin/EliminarUnidadButton", () => ({
+  default: ({ cantidadPagos, cantidadDocumentos }: { cantidadPagos: number; cantidadDocumentos: number }) => (
+    <div>
+      EliminarUnidadButton cantidadPagos={cantidadPagos} cantidadDocumentos={cantidadDocumentos}
+    </div>
+  ),
 }));
 
 import UnidadDetailPage from "../page";
@@ -316,5 +326,39 @@ describe("UnidadDetailPage", () => {
     render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
     expect(mockFindManyAcuerdo).toHaveBeenCalledWith(expect.objectContaining({ where: { unidadId: "u1" } }));
     expect(screen.getByText("CobranzaUnidadSection: 1")).toBeInTheDocument();
+  });
+
+  it("rol admin ve el botón de eliminar con las cantidades de pagos y documentos", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      ...UNIDAD_BASE,
+      documentos: [
+        { id: "d1", seccion: "01_cliente", nombre: "doc.pdf", descripcion: null, subidoPor: "a@x.com", createdAt: new Date("2026-01-01T00:00:00.000Z"), url: "u1/doc.pdf" },
+      ],
+    });
+    mockFindManyAcuerdo.mockResolvedValueOnce([
+      {
+        id: "a1",
+        unidad: { numeroUnidad: "MOV-1", modelo: null, estadoFabricacion: "pendiente", cliente: { id: "c1", nombre: "Juan" } },
+        tipo: "cobro",
+        concepto: "venta",
+        descripcion: null,
+        contraparte: "Juan",
+        moneda: "USD",
+        totalAcordado: 1000,
+        notas: null,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        cuotas: [],
+        movimientos: [],
+      },
+    ]);
+    render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
+    expect(screen.getByText("EliminarUnidadButton cantidadPagos=1 cantidadDocumentos=1")).toBeInTheDocument();
+  });
+
+  it("rol vendedor no ve el botón de eliminar", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u2", nombre: "Vend", email: "v@x.com", rol: "vendedor" });
+    mockFindUnique.mockResolvedValueOnce(UNIDAD_BASE);
+    render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
+    expect(screen.queryByText(/EliminarUnidadButton/)).not.toBeInTheDocument();
   });
 });

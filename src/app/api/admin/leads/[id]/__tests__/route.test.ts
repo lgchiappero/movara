@@ -1,14 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockUpdate } = vi.hoisted(() => ({
+const { mockUpdate, mockDelete, mockCountConfig, mockGetAdminUser } = vi.hoisted(() => ({
   mockUpdate: vi.fn(),
+  mockDelete: vi.fn(),
+  mockCountConfig: vi.fn(),
+  mockGetAdminUser: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
-  db: { lead: { update: mockUpdate } },
+  db: { lead: { update: mockUpdate, delete: mockDelete }, configuracionPedido: { count: mockCountConfig } },
 }));
+vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 
-import { PATCH } from "../route";
+import { PATCH, DELETE } from "../route";
 import { NextRequest } from "next/server";
 
 function makeRequest(body: unknown): NextRequest {
@@ -76,6 +80,53 @@ describe("PATCH /api/admin/leads/[id]", () => {
     const res = await PATCH(makeRequest({ contactado: true }), {
       params: Promise.resolve({ id: "lead1" }),
     });
+    expect(res.status).toBe(500);
+  });
+});
+
+function makeDeleteRequest(): NextRequest {
+  return new NextRequest("http://localhost/api/admin/leads/lead1", { method: "DELETE" });
+}
+
+describe("DELETE /api/admin/leads/[id]", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("401 sin sesión", async () => {
+    mockGetAdminUser.mockResolvedValueOnce(null);
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "lead1" }) });
+    expect(res.status).toBe(401);
+  });
+
+  it("403 si el rol no es admin", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Vend", email: "v@x.com", rol: "vendedor" });
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "lead1" }) });
+    expect(res.status).toBe(403);
+  });
+
+  it("400 si tiene consultas/pedidos asociados", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockCountConfig.mockResolvedValueOnce(1);
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "lead1" }) });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toContain("1 consulta asociada");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it("elimina y devuelve 200 cuando no tiene consultas asociadas", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockCountConfig.mockResolvedValueOnce(0);
+    mockDelete.mockResolvedValueOnce({ id: "lead1" });
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "lead1" }) });
+    expect(res.status).toBe(200);
+    expect(mockDelete).toHaveBeenCalledWith({ where: { id: "lead1" } });
+  });
+
+  it("500 si la DB falla al eliminar", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockCountConfig.mockResolvedValueOnce(0);
+    mockDelete.mockRejectedValueOnce(new Error("db down"));
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "lead1" }) });
     expect(res.status).toBe(500);
   });
 });

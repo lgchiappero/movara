@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
+import EliminarButton from "@/components/admin/EliminarButton";
+import { isAdmin } from "@/lib/admin/roles";
 
 export type CitaAdmin = {
   id: string;
@@ -60,6 +62,13 @@ function fechaConDiaYHora(fechaKey: string, horario: string): string {
   return `${DIAS_SEMANA_LARGO[diaSemanaIdx]} ${pad2(d)}/${pad2(m)}/${y} a las ${horario}hs`;
 }
 
+const TREINTA_DIAS_MS = 30 * 24 * 60 * 60 * 1000;
+
+function esCitaMuyAntigua(fechaKey: string): boolean {
+  const [y, m, d] = fechaKey.split("-").map(Number);
+  return Date.now() - new Date(Date.UTC(y, m - 1, d)).getTime() > TREINTA_DIAS_MS;
+}
+
 export default function AgendaVistaPanel({
   anio,
   mesIdx0,
@@ -67,6 +76,7 @@ export default function AgendaVistaPanel({
   citasDelMes,
   todasLasCitas,
   citaIdInicial,
+  rol,
 }: {
   anio: number;
   mesIdx0: number;
@@ -74,6 +84,7 @@ export default function AgendaVistaPanel({
   citasDelMes: CitaAdmin[];
   todasLasCitas: CitaAdmin[];
   citaIdInicial?: string | null;
+  rol: string;
 }) {
   const router = useRouter();
   const [seleccionadaId, setSeleccionadaId] = useState<string | null>(citaIdInicial ?? null);
@@ -296,6 +307,25 @@ export default function AgendaVistaPanel({
               >
                 Cancelar visita
               </button>
+            </div>
+          )}
+
+          {isAdmin(rol) && (seleccionada.estado === "cancelada" || esCitaMuyAntigua(seleccionada.fechaKey)) && (
+            <div className="pt-2">
+              <EliminarButton
+                label="Eliminar visita"
+                confirmTitle="¿Eliminar esta visita?"
+                successMessage="Visita eliminada"
+                onEliminar={async () => {
+                  const res = await fetch(`/api/admin/agenda/citas/${seleccionada.id}`, { method: "DELETE" });
+                  const json = await res.json().catch(() => null);
+                  return res.ok ? { ok: true } : { ok: false, error: json?.error };
+                }}
+                onSuccess={() => {
+                  setSeleccionadaId(null);
+                  router.refresh();
+                }}
+              />
             </div>
           )}
         </div>

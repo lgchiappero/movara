@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { estadoFabricacionLabels, type EstadoFabricacion } from "@/lib/envios/constantes";
 import ClienteDetailForm from "@/components/admin/ClienteDetailForm";
+import EliminarClienteButton from "@/components/admin/EliminarClienteButton";
+import { getAdminUser } from "@/lib/admin/current-user";
+import { isAdmin } from "@/lib/admin/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -24,17 +27,24 @@ export default async function ClienteDetailPage({
 
   if (!cliente) notFound();
 
+  const session = await getAdminUser();
+
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 space-y-6">
       <Link href="/admin/clientes" className="text-sm text-stone-500 hover:text-stone-700">
         ← Volver a la lista
       </Link>
 
-      <div>
-        <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">
-          Panel MOVARA
-        </p>
-        <h1 className="text-2xl font-bold text-[#2F2F2F]">{cliente.nombre}</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">
+            Panel MOVARA
+          </p>
+          <h1 className="text-2xl font-bold text-[#2F2F2F]">{cliente.nombre}</h1>
+        </div>
+        {session && isAdmin(session.rol) && (
+          <EliminarClienteButton id={id} cantidadUnidades={cliente.unidades.length} />
+        )}
       </div>
 
       <ClienteDetailForm

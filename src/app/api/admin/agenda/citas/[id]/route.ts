@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { citaAdminActionSchema } from "@/lib/validators/admin-agenda";
+import { getAdminUser } from "@/lib/admin/current-user";
+import { isAdmin } from "@/lib/admin/roles";
 import {
   buildCancelacionClienteEmail,
   buildCancelacionAdminEmail,
@@ -76,4 +78,37 @@ export async function PATCH(
 
   const actualizada = await db.cita.update({ where: { id }, data: { estado: "completada" } });
   return NextResponse.json({ ok: true, cita: actualizada });
+}
+
+const TREINTA_DIAS_MS = 30 * 24 * 60 * 60 * 1000;
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
+  const session = await getAdminUser();
+  if (!session) {
+    return NextResponse.json({ error: "Sesión inválida" }, { status: 401 });
+  }
+  if (!isAdmin(session.rol)) {
+    return NextResponse.json({ error: "Solo un administrador puede eliminar" }, { status: 403 });
+  }
+
+  const cita = await db.cita.findUnique({ where: { id } });
+  if (!cita) {
+    return NextResponse.json({ error: "No encontrada" }, { status: 404 });
+  }
+
+  const esMuyAntigua = Date.now() - cita.fecha.getTime() > TREINTA_DIAS_MS;
+  if (cita.estado !== "cancelada" && !esMuyAntigua) {
+    return NextResponse.json(
+      { error: "Solo se pueden eliminar visitas canceladas o con más de 30 días de antigüedad" },
+      { status: 400 }
+    );
+  }
+
+  await db.cita.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
 }

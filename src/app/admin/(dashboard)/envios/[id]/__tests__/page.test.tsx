@@ -1,18 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { mockFindUnique, mockFindManyUnidad, mockNotFound, mockGetSignedUrl } = vi.hoisted(() => ({
+const { mockFindUnique, mockFindManyUnidad, mockNotFound, mockGetSignedUrl, mockGetAdminUser } = vi.hoisted(() => ({
   mockFindUnique: vi.fn(),
   mockFindManyUnidad: vi.fn(),
   mockNotFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   }),
   mockGetSignedUrl: vi.fn().mockResolvedValue("https://signed.example/doc.pdf"),
+  mockGetAdminUser: vi.fn().mockResolvedValue({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" }),
 }));
 
 vi.mock("@/lib/db", () => ({
   db: { envio: { findUnique: mockFindUnique }, unidad: { findMany: mockFindManyUnidad } },
 }));
+vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 vi.mock("next/navigation", () => ({ notFound: mockNotFound }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
@@ -31,6 +33,11 @@ vi.mock("@/components/admin/UnidadEnvioRow", () => ({
 }));
 vi.mock("@/components/admin/DocumentosPorSeccion", () => ({
   default: ({ documentos }: { documentos: unknown[] }) => <div>Documentos: {documentos.length}</div>,
+}));
+vi.mock("@/components/admin/EliminarEnvioButton", () => ({
+  default: ({ cantidadUnidades }: { cantidadUnidades: number }) => (
+    <div>EliminarEnvioButton cantidadUnidades={cantidadUnidades}</div>
+  ),
 }));
 
 import EnvioDetailPage from "../page";
@@ -104,5 +111,21 @@ describe("EnvioDetailPage", () => {
     render(await EnvioDetailPage({ params: Promise.resolve({ id: "e1" }) }));
     expect(mockGetSignedUrl).toHaveBeenCalledWith("documentos-movara", "envios/e1/bl.pdf");
     expect(screen.getByText("Documentos: 1")).toBeInTheDocument();
+  });
+
+  it("rol admin ve el botón de eliminar con la cantidad de unidades", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      ...ENVIO_BASE,
+      unidades: [{ id: "u1", numeroUnidad: "MOV-1", modelo: null, estadoFabricacion: "pendiente", cliente: { nombre: "Juan" } }],
+    });
+    render(await EnvioDetailPage({ params: Promise.resolve({ id: "e1" }) }));
+    expect(screen.getByText("EliminarEnvioButton cantidadUnidades=1")).toBeInTheDocument();
+  });
+
+  it("rol vendedor no ve el botón de eliminar", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u2", nombre: "Vend", email: "v@x.com", rol: "vendedor" });
+    mockFindUnique.mockResolvedValueOnce(ENVIO_BASE);
+    render(await EnvioDetailPage({ params: Promise.resolve({ id: "e1" }) }));
+    expect(screen.queryByText(/EliminarEnvioButton/)).not.toBeInTheDocument();
   });
 });

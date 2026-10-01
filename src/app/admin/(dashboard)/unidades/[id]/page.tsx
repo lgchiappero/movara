@@ -7,8 +7,11 @@ import UnidadDetailForm from "@/components/admin/UnidadDetailForm";
 import DocumentosPorSeccion, { type DocumentoSeccionConUrl } from "@/components/admin/DocumentosPorSeccion";
 import CobranzaUnidadSection from "@/components/admin/CobranzaUnidadSection";
 import UnidadTimeline from "@/components/admin/UnidadTimeline";
+import EliminarUnidadButton from "@/components/admin/EliminarUnidadButton";
 import { serializeAcuerdo } from "@/lib/cobranza/serialize";
 import { calcularPasos, accionesPasoActual, type DatosTimelineUnidad } from "@/lib/envios/timeline";
+import { getAdminUser } from "@/lib/admin/current-user";
+import { isAdmin } from "@/lib/admin/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +83,7 @@ export default async function UnidadDetailPage({
   ]);
 
   const acuerdos = acuerdosRaw.map(serializeAcuerdo);
+  const session = await getAdminUser();
 
   // Primer cobro registrado para esta unidad — cualquiera de sus acuerdos
   // de tipo "cobro", el movimiento más antiguo entre todos ellos.
@@ -120,6 +124,13 @@ export default async function UnidadDetailPage({
             {unidad.cliente.nombre}
           </Link>
         </div>
+        {session && isAdmin(session.rol) && (
+          <EliminarUnidadButton
+            id={id}
+            cantidadPagos={acuerdos.length}
+            cantidadDocumentos={unidad.documentos.length}
+          />
+        )}
       </div>
 
       <UnidadTimeline pasos={pasosTimeline} actual={accionActual} envioId={unidad.envioId} />

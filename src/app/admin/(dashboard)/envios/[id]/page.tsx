@@ -7,6 +7,9 @@ import EnvioDetailForm from "@/components/admin/EnvioDetailForm";
 import DocumentosPorSeccion, { type DocumentoSeccionConUrl } from "@/components/admin/DocumentosPorSeccion";
 import AgregarUnidadSelector from "@/components/admin/AgregarUnidadSelector";
 import UnidadEnvioRow from "@/components/admin/UnidadEnvioRow";
+import EliminarEnvioButton from "@/components/admin/EliminarEnvioButton";
+import { getAdminUser } from "@/lib/admin/current-user";
+import { isAdmin } from "@/lib/admin/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +36,8 @@ export default async function EnvioDetailPage({
 
   if (!envio) notFound();
 
+  const session = await getAdminUser();
+
   const documentosConUrl: DocumentoSeccionConUrl[] = await Promise.all(
     envio.documentos.map(async (d) => ({
       id: d.id,
@@ -51,13 +56,18 @@ export default async function EnvioDetailPage({
         ← Volver a la lista
       </Link>
 
-      <div>
-        <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">
-          Panel MOVARA
-        </p>
-        <h1 className="text-2xl font-bold text-[#2F2F2F]">
-          {envio.numeroPI ? `Envío ${envio.numeroPI}` : "Envío sin PI cargado"}
-        </h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">
+            Panel MOVARA
+          </p>
+          <h1 className="text-2xl font-bold text-[#2F2F2F]">
+            {envio.numeroPI ? `Envío ${envio.numeroPI}` : "Envío sin PI cargado"}
+          </h1>
+        </div>
+        {session && isAdmin(session.rol) && (
+          <EliminarEnvioButton id={id} cantidadUnidades={envio.unidades.length} />
+        )}
       </div>
 
       <EnvioDetailForm

@@ -1,14 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { mockFindManyCita, mockFindManyDisp } = vi.hoisted(() => ({
+const { mockFindManyCita, mockFindManyDisp, mockGetAdminUser } = vi.hoisted(() => ({
   mockFindManyCita: vi.fn(),
   mockFindManyDisp: vi.fn(),
+  mockGetAdminUser: vi.fn().mockResolvedValue({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" }),
 }));
 
 vi.mock("@/lib/db", () => ({
   db: { cita: { findMany: mockFindManyCita }, disponibilidadAgenda: { findMany: mockFindManyDisp } },
 }));
+vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 vi.mock("@/components/admin/AgendaVistaPanel", () => ({
   default: ({
     anio,

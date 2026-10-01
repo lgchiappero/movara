@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { dateToFechaKey } from "@/lib/agenda/fecha";
 import AgendaVistaPanel, { type CitaAdmin } from "@/components/admin/AgendaVistaPanel";
 import DisponibilidadPanel, { type DiaDisponibilidad } from "@/components/admin/DisponibilidadPanel";
+import { getAdminUser } from "@/lib/admin/current-user";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,8 @@ export default async function AgendaAdminPage({
   const desdeDisp = new Date(Date.UTC(dispAnio, dispMesIdx0, 1));
   const hastaDisp = new Date(Date.UTC(dispAnio, dispMesIdx0 + 3, 1));
 
-  const [citasDelMes, todasLasCitas, disponibilidadRows, citasEnRangoDisp] = await Promise.all([
+  const [session, citasDelMes, todasLasCitas, disponibilidadRows, citasEnRangoDisp] = await Promise.all([
+    getAdminUser(),
     db.cita.findMany({
       where: { fecha: { gte: desdeMes, lt: hastaMes } },
       orderBy: [{ fecha: "asc" }, { horario: "asc" }],
@@ -104,6 +106,7 @@ export default async function AgendaAdminPage({
           citasDelMes={citasDelMes.map(serializeCita)}
           todasLasCitas={todasLasCitas.map(serializeCita)}
           citaIdInicial={sp.citaId ?? null}
+          rol={session?.rol ?? "vendedor"}
         />
       </section>
 

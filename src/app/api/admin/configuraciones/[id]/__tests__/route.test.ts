@@ -1,14 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockFindUnique, mockUpdate, mockFindUniqueOrThrow, mockEnsureNumeroPedido, mockBuildEstadoEmail, mockSend } =
-  vi.hoisted(() => ({
-    mockFindUnique: vi.fn(),
-    mockUpdate: vi.fn(),
-    mockFindUniqueOrThrow: vi.fn(),
-    mockEnsureNumeroPedido: vi.fn(),
-    mockBuildEstadoEmail: vi.fn(),
-    mockSend: vi.fn().mockResolvedValue({ id: "email1" }),
-  }));
+const {
+  mockFindUnique,
+  mockUpdate,
+  mockFindUniqueOrThrow,
+  mockDelete,
+  mockEnsureNumeroPedido,
+  mockBuildEstadoEmail,
+  mockSend,
+  mockGetAdminUser,
+} = vi.hoisted(() => ({
+  mockFindUnique: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockFindUniqueOrThrow: vi.fn(),
+  mockDelete: vi.fn(),
+  mockEnsureNumeroPedido: vi.fn(),
+  mockBuildEstadoEmail: vi.fn(),
+  mockSend: vi.fn().mockResolvedValue({ id: "email1" }),
+  mockGetAdminUser: vi.fn(),
+}));
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -16,18 +26,20 @@ vi.mock("@/lib/db", () => ({
       findUnique: mockFindUnique,
       update: mockUpdate,
       findUniqueOrThrow: mockFindUniqueOrThrow,
+      delete: mockDelete,
     },
   },
 }));
 vi.mock("@/lib/pedido/numero-pedido", () => ({ ensureNumeroPedido: mockEnsureNumeroPedido }));
 vi.mock("@/lib/email/pedido-estado-email", () => ({ buildEstadoEmail: mockBuildEstadoEmail }));
+vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 vi.mock("resend", () => ({
   Resend: class {
     emails = { send: mockSend };
   },
 }));
 
-import { PATCH } from "../route";
+import { PATCH, DELETE } from "../route";
 import { NextRequest } from "next/server";
 
 function makeRequest(body: unknown): NextRequest {
@@ -246,6 +258,41 @@ describe("PATCH /api/admin/configuraciones/[id]", () => {
   it("500 si la DB falla", async () => {
     mockUpdate.mockRejectedValueOnce(new Error("db down"));
     const res = await PATCH(makeRequest(BASE), { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(500);
+  });
+});
+
+function makeDeleteRequest(): NextRequest {
+  return new NextRequest("http://localhost/api/admin/configuraciones/p1", { method: "DELETE" });
+}
+
+describe("DELETE /api/admin/configuraciones/[id]", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("401 sin sesión", async () => {
+    mockGetAdminUser.mockResolvedValueOnce(null);
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(401);
+  });
+
+  it("403 si el rol no es admin", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Vend", email: "v@x.com", rol: "vendedor" });
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(403);
+  });
+
+  it("elimina y devuelve 200", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockDelete.mockResolvedValueOnce({ id: "p1" });
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(200);
+    expect(mockDelete).toHaveBeenCalledWith({ where: { id: "p1" } });
+  });
+
+  it("500 si la DB falla al eliminar", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockDelete.mockRejectedValueOnce(new Error("db down"));
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "p1" }) });
     expect(res.status).toBe(500);
   });
 });

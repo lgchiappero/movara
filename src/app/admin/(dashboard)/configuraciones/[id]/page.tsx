@@ -10,6 +10,9 @@ import { getSignedUrl, BUCKET_PEDIDOS } from "@/lib/admin/storage";
 import GestionPedidoPanel from "@/components/admin/GestionPedidoPanel";
 import DocumentosPedidoSection, { type DocumentoConUrl } from "@/components/admin/DocumentosPedidoSection";
 import ConfiguracionEspacioForm from "@/components/admin/ConfiguracionEspacioForm";
+import EliminarConfiguracionButton from "@/components/admin/EliminarConfiguracionButton";
+import { getAdminUser } from "@/lib/admin/current-user";
+import { isAdmin } from "@/lib/admin/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +29,8 @@ export default async function ConfiguracionDetailPage({
   const config = await db.configuracionPedido.findUnique({ where: { id } });
 
   if (!config) notFound();
+
+  const session = await getAdminUser();
 
   const [vendedores, documentos] = await Promise.all([
     db.adminUser.findMany({
@@ -70,12 +75,15 @@ export default async function ConfiguracionDetailPage({
           </p>
           <h1 className="text-2xl font-bold text-[#2F2F2F]">{config.clienteNombre}</h1>
         </div>
-        <a
-          href={`/api/admin/configuraciones/${id}/pdf`}
-          className="px-5 py-3 bg-sage-500 hover:bg-sage-600 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
-        >
-          Descargar PDF
-        </a>
+        <div className="flex items-center gap-3">
+          <a
+            href={`/api/admin/configuraciones/${id}/pdf`}
+            className="px-5 py-3 bg-sage-500 hover:bg-sage-600 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
+          >
+            Descargar PDF
+          </a>
+          {session && isAdmin(session.rol) && <EliminarConfiguracionButton id={id} />}
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 mb-6 space-y-2 text-sm">

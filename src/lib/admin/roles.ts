@@ -26,3 +26,11 @@ export function isAllowedForRole(rol: AdminRole, pathname: string): boolean {
   const restricted = [...ADMIN_ONLY_PREFIXES, ...ADMIN_ONLY_API_PREFIXES];
   return !restricted.some((prefix) => matchesPrefix(pathname, prefix));
 }
+
+/** Gate de "solo admin puede eliminar" — a diferencia de
+ * isAllowedForRole (que bloquea rutas/páginas enteras), esto se usa
+ * botón por botón: la página sigue siendo visible para "vendedor", solo
+ * el botón de Eliminar no. */
+export function isAdmin(rol: string): boolean {
+  return rol === "admin";
+}

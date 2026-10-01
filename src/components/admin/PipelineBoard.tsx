@@ -52,10 +52,12 @@ export default function PipelineBoard({
   leads,
   vendedores,
   highlightLeadId,
+  rol,
 }: {
   leads: LeadPipeline[];
   vendedores: Vendedor[];
   highlightLeadId?: string | null;
+  rol: string;
 }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(highlightLeadId ?? null);
@@ -172,9 +174,14 @@ export default function PipelineBoard({
         <PipelineDetailPanel
           lead={selectedLead}
           vendedores={vendedores}
+          rol={rol}
           onClose={() => setSelectedId(null)}
           onSaved={handlePanelSaved}
           onConverted={() => router.refresh()}
+          onDeleted={() => {
+            setSelectedId(null);
+            router.refresh();
+          }}
         />
       )}
     </>

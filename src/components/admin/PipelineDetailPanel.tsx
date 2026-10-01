@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ETAPA_OPTIONS, ETAPA_LABELS, ORIGEN_OPTIONS, ORIGEN_LABELS } from "@/lib/leads/constantes";
 import { buildWhatsAppLeadUrl } from "@/lib/leads/calc";
 import { useToast } from "@/components/admin/Toast";
+import EliminarButton from "@/components/admin/EliminarButton";
+import { isAdmin } from "@/lib/admin/roles";
 import type { LeadPipeline, Vendedor } from "@/components/admin/PipelineBoard";
 
 const inputClass =
@@ -18,18 +20,22 @@ function toNumberOrNull(value: string): number | null {
 export default function PipelineDetailPanel({
   lead,
   vendedores,
+  rol,
   onClose,
   onSaved,
   onConverted,
+  onDeleted,
 }: {
   lead: LeadPipeline;
   vendedores: Vendedor[];
+  rol: string;
   onClose: () => void;
   /** Guardado de etapa/origen/vendedor/notas/valor — cierra el panel y
    * muestra la confirmación (a diferencia de convertir, que se queda
    * abierto mostrando el link al cliente recién creado). */
   onSaved: () => void;
   onConverted: () => void;
+  onDeleted: () => void;
 }) {
   const [etapa, setEtapa] = useState(lead.etapa);
   const [origen, setOrigen] = useState(lead.origen ?? "");
@@ -257,6 +263,23 @@ export default function PipelineDetailPanel({
           >
             {saving ? "Guardando..." : "Guardar cambios"}
           </button>
+
+          {isAdmin(rol) && (
+            <div className="border-t border-[#F0F0F0] pt-4">
+              <EliminarButton
+                label="Eliminar lead"
+                confirmTitle="¿Eliminar este lead?"
+                successMessage="Lead eliminado"
+                className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-colors"
+                onEliminar={async () => {
+                  const res = await fetch(`/api/admin/leads/${lead.id}`, { method: "DELETE" });
+                  const json = await res.json().catch(() => null);
+                  return res.ok ? { ok: true } : { ok: false, error: json?.error };
+                }}
+                onSuccess={onDeleted}
+              />
+            </div>
+          )}
         </div>
       </div>
     </>

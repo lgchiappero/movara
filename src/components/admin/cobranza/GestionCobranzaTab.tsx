@@ -51,6 +51,7 @@ export default function GestionCobranzaTab({
   subInicial,
   estadoInicial,
   monedaInicial,
+  rol,
   onNuevoAcuerdo,
   onRegistrarMovimiento,
 }: {
@@ -59,6 +60,7 @@ export default function GestionCobranzaTab({
   subInicial?: "cobros" | "pagos";
   estadoInicial?: string;
   monedaInicial?: "USD" | "ARS";
+  rol: string;
   onNuevoAcuerdo: (tipo: "cobro" | "pago") => void;
   onRegistrarMovimiento: (acuerdo: AcuerdoConDetalle) => void;
 }) {
@@ -94,6 +96,14 @@ export default function GestionCobranzaTab({
     } catch {
       showError("No pudimos eliminar el pago. Probá de nuevo.");
     }
+  }
+
+  async function eliminarAcuerdo(acuerdo: AcuerdoConDetalle): Promise<{ ok: boolean; error?: string }> {
+    const res = await fetch(`/api/admin/cobranza/acuerdos/${acuerdo.id}`, { method: "DELETE" });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) return { ok: false, error: json?.error };
+    setExpandedId(null);
+    return { ok: true };
   }
 
   const ahora = new Date();
@@ -243,11 +253,13 @@ export default function GestionCobranzaTab({
               <FilaAcuerdo
                 key={f.acuerdo.id}
                 {...f}
+                rol={rol}
                 expanded={expandedId === f.acuerdo.id}
                 onToggle={() => setExpandedId(expandedId === f.acuerdo.id ? null : f.acuerdo.id)}
                 onRegistrarMovimiento={() => onRegistrarMovimiento(f.acuerdo)}
                 onEditarMovimiento={(m) => setEditando({ acuerdo: f.acuerdo, movimiento: m })}
                 onEliminarMovimiento={(m) => eliminarMovimiento(f.acuerdo, m)}
+                onEliminarAcuerdo={() => eliminarAcuerdo(f.acuerdo)}
               />
             ))}
           </tbody>
@@ -275,22 +287,26 @@ function FilaAcuerdo({
   pendiente,
   estado,
   proximoVencimiento: proxVenc,
+  rol,
   expanded,
   onToggle,
   onRegistrarMovimiento,
   onEditarMovimiento,
   onEliminarMovimiento,
+  onEliminarAcuerdo,
 }: {
   acuerdo: AcuerdoConDetalle;
   movido: number;
   pendiente: number;
   estado: EstadoAcuerdo;
   proximoVencimiento: string | null;
+  rol: string;
   expanded: boolean;
   onToggle: () => void;
   onRegistrarMovimiento: () => void;
   onEditarMovimiento: (movimiento: MovimientoDetalle) => void;
   onEliminarMovimiento: (movimiento: MovimientoDetalle) => void;
+  onEliminarAcuerdo: () => Promise<{ ok: boolean; error?: string }>;
 }) {
   return (
     <>
@@ -329,9 +345,11 @@ function FilaAcuerdo({
               acuerdo={acuerdo}
               movido={movido}
               pendiente={pendiente}
+              rol={rol}
               onRegistrarMovimiento={onRegistrarMovimiento}
               onEditarMovimiento={onEditarMovimiento}
               onEliminarMovimiento={onEliminarMovimiento}
+              onEliminarAcuerdo={onEliminarAcuerdo}
             />
           </td>
         </tr>

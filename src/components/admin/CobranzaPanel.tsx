@@ -313,6 +313,7 @@ export default function CobranzaPanel({
           subInicial={subInicial}
           estadoInicial={estadoInicial}
           monedaInicial={monedaInicial}
+          rol={rol}
           onNuevoAcuerdo={(tipo) => setNuevoAcuerdoTipo(tipo)}
           onRegistrarMovimiento={(acuerdo) => setMovimientoAcuerdo(acuerdo)}
         />

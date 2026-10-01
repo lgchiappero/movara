@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { mockFindManyLead, mockFindManyVendedor, mockCountLead } = vi.hoisted(() => ({
+const { mockFindManyLead, mockFindManyVendedor, mockCountLead, mockGetAdminUser } = vi.hoisted(() => ({
   mockFindManyLead: vi.fn(),
   mockFindManyVendedor: vi.fn(),
   mockCountLead: vi.fn(),
+  mockGetAdminUser: vi.fn().mockResolvedValue({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" }),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -13,6 +14,7 @@ vi.mock("@/lib/db", () => ({
     adminUser: { findMany: mockFindManyVendedor },
   },
 }));
+vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
     <a href={href} {...props}>{children}</a>
@@ -23,13 +25,16 @@ vi.mock("@/components/admin/PipelineBoard", () => ({
     leads,
     vendedores,
     highlightLeadId,
+    rol,
   }: {
     leads: unknown[];
     vendedores: unknown[];
     highlightLeadId?: string | null;
+    rol: string;
   }) => (
     <div>
-      PipelineBoard leads={leads.length} vendedores={vendedores.length} highlightLeadId={highlightLeadId ?? "none"}
+      PipelineBoard leads={leads.length} vendedores={vendedores.length} highlightLeadId={highlightLeadId ?? "none"}{" "}
+      rol={rol}
     </div>
   ),
 }));
@@ -195,5 +200,18 @@ describe("AdminPipelinePage", () => {
     mockCountLead.mockResolvedValue(0); // totalMes también queda en 0 → tasaConversion devuelve null
     render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText("Conversión del mes").previousElementSibling?.textContent).toBe("—");
+  });
+
+  it("pasa el rol de la sesión a PipelineBoard (default 'vendedor' sin sesión)", async () => {
+    mockFindManyLead.mockResolvedValueOnce([LEAD]);
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByText(/rol=admin/)).toBeInTheDocument();
+  });
+
+  it("sin sesión, el rol pasado a PipelineBoard cae a 'vendedor'", async () => {
+    mockGetAdminUser.mockResolvedValueOnce(null);
+    mockFindManyLead.mockResolvedValueOnce([LEAD]);
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByText(/rol=vendedor/)).toBeInTheDocument();
   });
 });
