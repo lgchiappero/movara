@@ -11,6 +11,14 @@ import {
   type EstadoPagoUnidad,
 } from "@/lib/cobranza/pagos-unidad";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
+import { exportarExcel } from "@/lib/admin/exportar-excel";
+import {
+  fechaLarga,
+  pagadoEnRangoPlanes,
+  rangoDesdeFiltro,
+  type FiltroPeriodo,
+} from "@/lib/cobranza/planes-unidad";
+import FiltroPeriodoSelect, { selectFiltroClass } from "@/components/admin/planes/FiltroPeriodo";
 import { PlanDePago } from "@/components/admin/planes/DetallePlanesUnidad";
 import type { AccionesPlanes } from "@/components/admin/planes/useAccionesPlanes";
 import type { AcuerdoConDetalle } from "@/lib/cobranza/types";
@@ -19,14 +27,11 @@ type FiltroEstado = EstadoPagoUnidad | "todos" | "con_saldo";
 
 const FILTRO_ESTADO_LABELS: Record<FiltroEstado, string> = {
   todos: "Todos los estados",
-  pendiente: "Pendiente",
-  parcial: "Parcial",
-  pagado: "Pagado",
-  vencido: "Vencido",
+  ...ESTADO_PAGO_UNIDAD_LABELS,
   con_saldo: "Con saldo pendiente",
 };
 
-const selectClass = "rounded-lg border border-[#E5E5E5] px-2.5 py-1.5 text-sm text-[#2F2F2F] bg-white";
+const selectClass = selectFiltroClass;
 const th = "px-2 py-2 font-medium";
 const td = "px-2 py-2";
 const soloDesktop = "hidden md:table-cell";
@@ -54,6 +59,9 @@ export default function PagosPorUnidadGrid({
 }) {
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>(estadoInicial);
   const [filtroConcepto, setFiltroConcepto] = useState<string>("todos");
+  const [filtroPeriodo, setFiltroPeriodo] = useState<FiltroPeriodo>("todo");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const busquedaDebounced = useDebouncedValue(busqueda, 300);
   const [pagina, setPagina] = useState(1);
@@ -69,6 +77,7 @@ export default function PagosPorUnidadGrid({
             pagado,
             pendiente: Math.max(0, plan.totalAcordado - pagado),
             estado: estadoPagoUnidad(plan, ahora),
+            ultimoPago: plan.movimientos.reduce<string | null>((max, m) => (max === null || m.fecha > max ? m.fecha : max), null),
           };
         })
         .sort(
@@ -79,9 +88,17 @@ export default function PagosPorUnidadGrid({
     [planes, ahora]
   );
 
+  const rango = useMemo(() => rangoDesdeFiltro(filtroPeriodo, desde, hasta, ahora), [filtroPeriodo, desde, hasta, ahora]);
+
   const filtradas = useMemo(() => {
     const q = busquedaDebounced.trim().toLowerCase();
-    return filas.filter((f) => {
+    return filas.flatMap((f) => {
+      const enPeriodo = rango ? pagadoEnRangoPlanes([f.plan], rango) : null;
+      // Con período: solo los pagos a proveedores con pagos realizados en
+      // el rango, y la columna Pagado pasa a ser lo de ese período.
+      if (enPeriodo && enPeriodo.cantidad === 0) return [];
+      return [{ ...f, enPeriodo }];
+    }).filter((f) => {
       if (filtroConcepto !== "todos" && f.plan.concepto !== filtroConcepto) return false;
       if (filtroEstado === "con_saldo" ? f.estado === "pagado" : filtroEstado !== "todos" && f.estado !== filtroEstado) {
         return false;
@@ -92,9 +109,9 @@ export default function PagosPorUnidadGrid({
       }
       return true;
     });
-  }, [filas, filtroConcepto, filtroEstado, busquedaDebounced]);
+  }, [filas, filtroConcepto, filtroEstado, busquedaDebounced, rango]);
 
-  const filtroKey = `${filtroEstado}|${filtroConcepto}|${busquedaDebounced}`;
+  const filtroKey = `${filtroEstado}|${filtroConcepto}|${busquedaDebounced}|${rango?.desde.getTime()}|${rango?.hasta.getTime()}`;
   const [filtroKeyAnterior, setFiltroKeyAnterior] = useState(filtroKey);
   if (filtroKeyAnterior !== filtroKey) {
     setFiltroKeyAnterior(filtroKey);
@@ -109,17 +126,50 @@ export default function PagosPorUnidadGrid({
   const opcionesEstado: FiltroEstado[] = ["todos", "pendiente", "parcial", "pagado", "vencido"];
   if (!opcionesEstado.includes(filtroEstado)) opcionesEstado.push(filtroEstado);
 
+  /** Exporta exactamente las filas filtradas que se ven en pantalla. */
+  function exportar() {
+    exportarExcel(
+      filtradas.map(({ plan, pagado, pendiente, estado, ultimoPago, enPeriodo }) => ({
+        "Número unidad": plan.unidadNumero ?? "Sin número",
+        Cliente: plan.clienteNombre,
+        Modelo: plan.unidadModelo ?? "",
+        Proveedor: plan.contraparte,
+        Concepto: CONCEPTO_LABELS[plan.concepto as keyof typeof CONCEPTO_LABELS] ?? plan.concepto,
+        Descripción: plan.descripcion ?? "",
+        Moneda: plan.moneda,
+        "Total acordado": plan.totalAcordado,
+        "Total pagado": pagado,
+        ...(enPeriodo ? { "Pagado en el período": enPeriodo.monto } : {}),
+        "Saldo pendiente": pendiente,
+        Estado: ESTADO_PAGO_UNIDAD_LABELS[estado],
+        "Fecha último pago": fechaLarga(ultimoPago),
+        Notas: plan.notas ?? "",
+      })),
+      "Pagos por unidad",
+      "pagos-por-unidad.xlsx"
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500">Fábrica y logística nacional</h2>
-        <button
-          type="button"
-          onClick={() => acciones.abrirNuevoPlan()}
-          className="px-3 py-1.5 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
-        >
-          + Nuevo pago a proveedor
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={exportar}
+            className="px-3 py-1.5 bg-white border border-[#E5E5E5] hover:border-stone-300 text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
+          >
+            Exportar Excel
+          </button>
+          <button
+            type="button"
+            onClick={() => acciones.abrirNuevoPlan()}
+            className="px-3 py-1.5 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
+          >
+            + Nuevo pago a proveedor
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 bg-white rounded-xl border border-[#E5E5E5] p-2.5">
@@ -138,12 +188,20 @@ export default function PagosPorUnidadGrid({
             </option>
           ))}
         </select>
+        <FiltroPeriodoSelect
+          valor={filtroPeriodo}
+          desde={desde}
+          hasta={hasta}
+          onValor={setFiltroPeriodo}
+          onDesde={setDesde}
+          onHasta={setHasta}
+        />
         <input
           type="search"
           aria-label="Buscar"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Buscar unidad, cliente o proveedor..."
+          placeholder="Buscar cliente, N° de unidad o proveedor..."
           className={`${selectClass} flex-1 min-w-[12rem]`}
         />
       </div>
@@ -157,7 +215,7 @@ export default function PagosPorUnidadGrid({
               <th className={th}>Proveedor</th>
               <th className={th}>Concepto</th>
               <th className={`${th} ${soloDesktop} text-right`}>Total</th>
-              <th className={`${th} ${soloDesktop} text-right`}>Pagado</th>
+              <th className={`${th} ${soloDesktop} text-right`}>{rango ? "Pagado (período)" : "Pagado"}</th>
               <th className={`${th} text-right`}>Pendiente</th>
               <th className={th}>Estado</th>
             </tr>
@@ -170,7 +228,7 @@ export default function PagosPorUnidadGrid({
                 </td>
               </tr>
             )}
-            {filasPagina.map(({ plan, pagado, pendiente, estado }) => {
+            {filasPagina.map(({ plan, pagado, pendiente, estado, enPeriodo }) => {
               const abierta = expandida === plan.id;
               return (
                 <Fragment key={plan.id}>
@@ -200,7 +258,9 @@ export default function PagosPorUnidadGrid({
                     <td className={`${td} ${soloDesktop} text-right whitespace-nowrap text-stone-600`}>
                       {formatMoneda(plan.totalAcordado, plan.moneda)}
                     </td>
-                    <td className={`${td} ${soloDesktop} text-right whitespace-nowrap text-stone-600`}>{formatMoneda(pagado, plan.moneda)}</td>
+                    <td className={`${td} ${soloDesktop} text-right whitespace-nowrap text-stone-600`}>
+                      {formatMoneda(enPeriodo ? enPeriodo.monto : pagado, plan.moneda)}
+                    </td>
                     <td className={`${td} text-right whitespace-nowrap ${pendiente > 0 ? "text-red-700 font-medium" : "text-stone-500"}`}>
                       {formatMoneda(pendiente, plan.moneda)}
                     </td>

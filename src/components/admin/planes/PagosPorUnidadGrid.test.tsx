@@ -3,6 +3,8 @@ import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+const { mockExportar } = vi.hoisted(() => ({ mockExportar: vi.fn() }));
+vi.mock("@/lib/admin/exportar-excel", () => ({ exportarExcel: mockExportar }));
 
 import { ToastProvider } from "@/components/admin/Toast";
 import PagosPorUnidadGrid from "./PagosPorUnidadGrid";
@@ -106,8 +108,8 @@ describe("PagosPorUnidadGrid — tab 'Por unidad'", () => {
     expect(heshi).toHaveTextContent("Fábrica");
     expect(heshi).toHaveTextContent("USD 30.000");
     expect(heshi).toHaveTextContent("USD 15.000");
-    expect(heshi).toHaveTextContent("Parcial");
-    expect(screen.getByText("Grúas Sur").closest("tr")).toHaveTextContent("Pagado");
+    expect(heshi).toHaveTextContent("En curso");
+    expect(screen.getByText("Grúas Sur").closest("tr")).toHaveTextContent("Saldado");
     expect(screen.getByText("Transportes Ruta 5").closest("tr")).toHaveTextContent("Vencido");
     expect(screen.getByText("Naviera vieja").closest("tr")).toHaveTextContent("Flete");
     expect(screen.getByText("Naviera vieja").closest("tr")).toHaveTextContent("ARS 500");
@@ -168,5 +170,73 @@ describe("PagosPorUnidadGrid — tab 'Por unidad'", () => {
     expect(screen.getByText("Página 2 de 2 (51 pagos)")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "← Anterior" }));
     expect(screen.getByText("Página 1 de 2 (51 pagos)")).toBeInTheDocument();
+  });
+
+  it("filtro por estado: Todos | Pendiente | En curso | Saldado | Vencido", async () => {
+    const { user } = renderGrid();
+    const select = screen.getByLabelText("Filtrar por estado") as HTMLSelectElement;
+    expect(Array.from(select.options).map((o) => o.text)).toEqual(["Todos los estados", "Pendiente", "En curso", "Saldado", "Vencido"]);
+    await user.selectOptions(select, "parcial");
+    expect(proveedores()).toEqual(["Heshi"]);
+    await user.selectOptions(select, "pagado");
+    expect(proveedores()).toEqual(["Grúas Sur"]);
+  });
+
+  it("filtro por período: solo pagos con pagos realizados en el rango, y Pagado muestra lo del período", async () => {
+    const { user } = renderGrid();
+    const periodo = screen.getByLabelText("Filtrar por período") as HTMLSelectElement;
+    expect(Array.from(periodo.options).map((o) => o.text)).toEqual([
+      "Todo el historial",
+      "Este mes",
+      "Mes anterior",
+      "Este trimestre",
+      "Rango personalizado",
+    ]);
+    // HOY = 7/10/2026; los pagos son del 10/9.
+    await user.selectOptions(periodo, "mes_actual");
+    expect(screen.getByText("Ningún pago coincide con los filtros.")).toBeInTheDocument();
+    await user.selectOptions(periodo, "mes_anterior");
+    expect(proveedores()).toEqual(["Grúas Sur", "Heshi"]);
+    expect(screen.getByRole("columnheader", { name: "Pagado (período)" })).toBeInTheDocument();
+    await user.selectOptions(periodo, "personalizado");
+    await user.type(screen.getByLabelText("Desde"), "2026-09-01");
+    await user.type(screen.getByLabelText("Hasta"), "2026-09-09");
+    expect(screen.getByText("Ningún pago coincide con los filtros.")).toBeInTheDocument();
+  });
+
+  it("Exportar Excel descarga exactamente las filas filtradas, con las columnas pedidas", async () => {
+    mockExportar.mockClear();
+    const { user } = renderGrid();
+    await user.selectOptions(screen.getByLabelText("Filtrar por concepto"), "fabrica");
+    await user.click(screen.getByRole("button", { name: "Exportar Excel" }));
+    const [filas, hoja, archivo] = mockExportar.mock.calls[0];
+    expect(hoja).toBe("Pagos por unidad");
+    expect(archivo).toBe("pagos-por-unidad.xlsx");
+    expect(filas).toEqual([
+      {
+        "Número unidad": "MOV-UNIDAD-2026-001",
+        Cliente: "Ana Pérez",
+        Modelo: "Flex 38",
+        Proveedor: "Heshi",
+        Concepto: "Fábrica",
+        Descripción: "",
+        Moneda: "USD",
+        "Total acordado": 30000,
+        "Total pagado": 15000,
+        "Saldo pendiente": 15000,
+        Estado: "En curso",
+        "Fecha último pago": "10/09/2026",
+        Notas: "",
+      },
+    ]);
+  });
+
+  it("con período, el Excel agrega lo pagado en el período", async () => {
+    mockExportar.mockClear();
+    const { user } = renderGrid();
+    await user.selectOptions(screen.getByLabelText("Filtrar por período"), "mes_anterior");
+    await user.click(screen.getByRole("button", { name: "Exportar Excel" }));
+    const filas = mockExportar.mock.calls[0][0] as Record<string, unknown>[];
+    expect(filas.map((f) => f["Pagado en el período"])).toEqual([800, 15000]);
   });
 });

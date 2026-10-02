@@ -104,8 +104,21 @@ test.describe("Pagos — por unidad y logística internacional", () => {
     await page.getByLabel(/Cuota que salda/).selectOption({ label: "Anticipo 50% (al confirmar) — USD 15.000 — Pendiente" });
     await page.getByRole("button", { name: "Registrar pago realizado" }).last().click();
     await expect(page.getByText("Pago realizado registrado")).toBeVisible();
-    await expect(fila).toContainText("Parcial");
+    await expect(fila).toContainText("En curso");
     await expect(fila).toContainText("USD 15.000");
+
+    // ── Filtros y Excel del tab "Por unidad" ────────────────────────────
+    await page.getByLabel("Buscar").fill("Heshi");
+    await page.getByLabel("Filtrar por concepto").selectOption("fabrica");
+    await page.getByLabel("Filtrar por estado").selectOption("parcial");
+    await page.getByLabel("Filtrar por período").selectOption("mes_actual");
+    await expect(page.locator("tr[aria-expanded]", { hasText: numero })).toHaveCount(1);
+    await page.getByLabel("Filtrar por estado").selectOption("pagado");
+    await expect(page.getByText("Ningún pago coincide con los filtros.")).toBeVisible();
+    await page.getByLabel("Filtrar por estado").selectOption("todos");
+    const descarga = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Exportar Excel" }).click();
+    expect((await descarga).suggestedFilename()).toBe("pagos-por-unidad.xlsx");
   });
 
   test("logística internacional: costo prorrateado desde el envío, visible en Pagos, en la unidad y en Rentabilidad", async ({ page }) => {
@@ -151,6 +164,19 @@ test.describe("Pagos — por unidad y logística internacional", () => {
     await expect(filaCosto).toContainText("Flete marítimo");
     await expect(filaCosto).toContainText("USD 4.200");
     await expect(filaCosto.getByRole("link", { name: pi })).toHaveAttribute("href", `/admin/envios/${envioId}`);
+
+    // Filtros y Excel del tab "Logística internacional".
+    await page.getByLabel("Buscar").fill("MSCU0000001");
+    await page.getByLabel("Filtrar por concepto").selectOption("flete");
+    await page.getByLabel("Filtrar por estado").selectOption("pagado");
+    await page.getByLabel("Filtrar por período").selectOption("mes_actual");
+    await expect(filaCosto).toBeVisible();
+    await page.getByLabel("Filtrar por estado").selectOption("pendiente");
+    await expect(page.getByText("Ningún costo coincide con los filtros.")).toBeVisible();
+    await page.getByLabel("Filtrar por estado").selectOption("todos");
+    const descarga = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Exportar Excel" }).click();
+    expect((await descarga).suggestedFilename()).toBe("logistica-internacional.xlsx");
 
     // ── Ficha de la unidad: referencia de solo lectura ──────────────────
     await page.goto(`/admin/unidades/${unidades[0]}`);

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import PagosPorUnidadGrid from "@/components/admin/planes/PagosPorUnidadGrid";
 import { useAccionesPlanes } from "@/components/admin/planes/useAccionesPlanes";
-import TablaCostosLogistica from "@/components/admin/logistica/TablaCostosLogistica";
+import LogisticaGrid from "@/components/admin/logistica/LogisticaGrid";
 import { useAccionesLogistica } from "@/components/admin/logistica/useAccionesLogistica";
 import type { EnvioOpcion } from "@/components/admin/logistica/CostoLogisticaModal";
 import type { CostoLogisticaRow, TotalesPorMoneda } from "@/lib/cobranza/logistica";
@@ -93,19 +93,7 @@ export default function PagosPanel({
           estadoInicial={estadoInicial}
         />
       ) : (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500">Costos del envío / contenedor</h2>
-            <button
-              type="button"
-              onClick={() => logisticaUI.acciones.abrirNuevo()}
-              className="px-3 py-1.5 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
-            >
-              + Nuevo costo de logística
-            </button>
-          </div>
-          <TablaCostosLogistica costos={costos} rol={rol} acciones={logisticaUI.acciones} mostrarEnvio />
-        </div>
+        <LogisticaGrid costos={costos} envios={envios} rol={rol} acciones={logisticaUI.acciones} />
       )}
 
       {planesUI.modales}

@@ -8,17 +8,16 @@ import {
   ESTADO_PLAN_UNIDAD_COLORS,
   FILTRO_ESTADO_VISIBLES,
   FILTRO_ESTADO_LABELS as FILTRO_LABELS_COBRO,
-  FILTRO_PERIODO_OPTIONS,
-  FILTRO_PERIODO_LABELS,
   cumpleFiltroEstado,
   pagadoEnRango,
+  rangoDesdeFiltro,
   fechaCorta,
   type EstadoPlanUnidad,
   type FilaPlanUnidad,
   type FiltroEstadoPlan,
   type FiltroPeriodo,
 } from "@/lib/cobranza/planes-unidad";
-import { calcularRangoPeriodo } from "@/lib/cobranza/periodo";
+import FiltroPeriodoSelect, { selectFiltroClass } from "@/components/admin/planes/FiltroPeriodo";
 import type { TipoAcuerdo } from "@/lib/cobranza/constantes";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import DetallePlanesUnidad, { TEXTOS_TIPO } from "@/components/admin/planes/DetallePlanesUnidad";
@@ -45,7 +44,7 @@ const FILTRO_LABELS_PAGO: Record<FiltroEstadoPlan, string> = {
 
 const PAGE_SIZE = 50;
 
-const selectClass = "rounded-lg border border-[#E5E5E5] px-2.5 py-1.5 text-sm text-[#2F2F2F] bg-white";
+const selectClass = selectFiltroClass;
 const th = "px-2 py-2 font-medium";
 const td = "px-2 py-2";
 // Columnas que se ocultan en mobile — quedan Unidad, Cliente, Saldo, Estado y Acciones.
@@ -95,11 +94,7 @@ export default function PlanesUnidadGrid({
 
   // Rango del período elegido — null = todo el historial (o un rango
   // personalizado todavía incompleto).
-  const rango = useMemo(() => {
-    if (filtroPeriodo === "todo") return null;
-    if (filtroPeriodo === "personalizado" && (!desde || !hasta)) return null;
-    return calcularRangoPeriodo(filtroPeriodo, ahora, desde, hasta);
-  }, [filtroPeriodo, desde, hasta, ahora]);
+  const rango = useMemo(() => rangoDesdeFiltro(filtroPeriodo, desde, hasta, ahora), [filtroPeriodo, desde, hasta, ahora]);
 
   const filtradas = useMemo(() => {
     const q = busquedaDebounced.trim().toLowerCase();
@@ -211,25 +206,14 @@ export default function PlanesUnidadGrid({
             </option>
           ))}
         </select>
-        <select
-          aria-label="Filtrar por período"
-          value={filtroPeriodo}
-          onChange={(e) => setFiltroPeriodo(e.target.value as FiltroPeriodo)}
-          className={selectClass}
-        >
-          {FILTRO_PERIODO_OPTIONS.map((p) => (
-            <option key={p} value={p}>
-              {FILTRO_PERIODO_LABELS[p]}
-            </option>
-          ))}
-        </select>
-        {filtroPeriodo === "personalizado" && (
-          <span className="flex items-center gap-1">
-            <input type="date" aria-label="Desde" value={desde} onChange={(e) => setDesde(e.target.value)} className={selectClass} />
-            <span className="text-stone-400 text-xs">a</span>
-            <input type="date" aria-label="Hasta" value={hasta} onChange={(e) => setHasta(e.target.value)} className={selectClass} />
-          </span>
-        )}
+        <FiltroPeriodoSelect
+          valor={filtroPeriodo}
+          desde={desde}
+          hasta={hasta}
+          onValor={setFiltroPeriodo}
+          onDesde={setDesde}
+          onHasta={setHasta}
+        />
         <select
           aria-label="Filtrar por moneda"
           value={filtroMoneda}

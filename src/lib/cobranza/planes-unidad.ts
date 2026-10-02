@@ -1,5 +1,5 @@
 import { sumaImportes } from "@/lib/cobranza/calc";
-import { inicioSemana, finSemana } from "@/lib/cobranza/periodo";
+import { inicioSemana, finSemana, calcularRangoPeriodo } from "@/lib/cobranza/periodo";
 import type { AcuerdoConDetalle } from "@/lib/cobranza/types";
 
 // Tolerancia para comparar sumas de floats — misma que calc.ts.
@@ -264,27 +264,58 @@ function claveDia(d: Date): string {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
-/** Lo cobrado/pagado en la unidad dentro de [desde, hasta). Las fechas de
- * pago son días (se guardan a medianoche UTC), así que se comparan como
- * "YYYY-MM-DD" — comparar instantes las corría al día anterior en Argentina. */
-export function pagadoEnRango(
-  fila: FilaPlanUnidad,
+/** Rango del filtro de período — null = todo el historial (o un rango
+ * personalizado todavía incompleto). */
+export function rangoDesdeFiltro(
+  filtro: FiltroPeriodo,
+  desde: string,
+  hasta: string,
+  ahora: Date
+): { desde: Date; hasta: Date } | null {
+  if (filtro === "todo") return null;
+  if (filtro === "personalizado" && (!desde || !hasta)) return null;
+  return calcularRangoPeriodo(filtro, ahora, desde, hasta);
+}
+
+/** ¿La fecha (un día de pago, guardado a medianoche UTC) cae en [desde,
+ * hasta)? Se compara como "YYYY-MM-DD" — comparar instantes corría los
+ * pagos al día anterior en Argentina. */
+export function fechaEnRango(fechaIso: string, rango: { desde: Date; hasta: Date }): boolean {
+  const dia = fechaIso.slice(0, 10);
+  return dia >= claveDia(rango.desde) && dia < claveDia(rango.hasta);
+}
+
+/** Lo cobrado/pagado en un conjunto de planes dentro del rango. */
+export function pagadoEnRangoPlanes(
+  planes: AcuerdoConDetalle[],
   rango: { desde: Date; hasta: Date }
 ): { monto: number; cantidad: number } {
-  const desde = claveDia(rango.desde);
-  const hasta = claveDia(rango.hasta);
   let monto = 0;
   let cantidad = 0;
-  for (const p of fila.planes) {
+  for (const p of planes) {
     for (const m of p.movimientos) {
-      const dia = m.fecha.slice(0, 10);
-      if (dia >= desde && dia < hasta) {
+      if (fechaEnRango(m.fecha, rango)) {
         monto += m.importe;
         cantidad++;
       }
     }
   }
   return { monto, cantidad };
+}
+
+/** Lo cobrado/pagado en la unidad dentro de [desde, hasta). */
+export function pagadoEnRango(
+  fila: FilaPlanUnidad,
+  rango: { desde: Date; hasta: Date }
+): { monto: number; cantidad: number } {
+  return pagadoEnRangoPlanes(fila.planes, rango);
+}
+
+/** "20/09/2026" — fecha completa (día de pago, en UTC), para exportar. */
+export function fechaLarga(iso: string | null): string {
+  if (!iso) return "";
+  const [yyyy, mm, dd] = iso.slice(0, 10).split("-");
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 /** "20/09" — fecha corta para la grilla (día de pago, en UTC). */

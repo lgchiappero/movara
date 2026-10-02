@@ -10,8 +10,8 @@ export type EstadoPagoUnidad = "pendiente" | "parcial" | "pagado" | "vencido";
 
 export const ESTADO_PAGO_UNIDAD_LABELS: Record<EstadoPagoUnidad, string> = {
   pendiente: "Pendiente",
-  parcial: "Parcial",
-  pagado: "Pagado",
+  parcial: "En curso",
+  pagado: "Saldado",
   vencido: "Vencido",
 };
 

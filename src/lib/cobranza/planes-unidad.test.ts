@@ -8,6 +8,10 @@ import {
   filtroEstadoDesdeQuery,
   cumpleFiltroEstado,
   pagadoEnRango,
+  pagadoEnRangoPlanes,
+  rangoDesdeFiltro,
+  fechaEnRango,
+  fechaLarga,
   fechaCorta,
   type UnidadParaPlanes,
 } from "./planes-unidad";
@@ -306,5 +310,31 @@ describe("pagadoEnRango / fechaCorta", () => {
   it("fechaCorta → dd/mm (o — sin fecha)", () => {
     expect(fechaCorta("2026-09-05T00:00:00.000Z")).toBe("05/09");
     expect(fechaCorta(null)).toBe("—");
+  });
+});
+
+describe("rangoDesdeFiltro / fechaEnRango / fechaLarga / pagadoEnRangoPlanes", () => {
+  it("rangoDesdeFiltro: todo → null; personalizado incompleto → null; si no, el rango del período", () => {
+    expect(rangoDesdeFiltro("todo", "", "", AHORA)).toBeNull();
+    expect(rangoDesdeFiltro("personalizado", "2026-09-01", "", AHORA)).toBeNull();
+    expect(rangoDesdeFiltro("mes_anterior", "", "", AHORA)).toEqual({ desde: new Date(2026, 8, 1), hasta: new Date(2026, 9, 1) });
+    expect(rangoDesdeFiltro("personalizado", "2026-09-01", "2026-09-30", AHORA)!.desde).toEqual(new Date("2026-09-01"));
+  });
+
+  it("fechaEnRango compara por día", () => {
+    const septiembre = { desde: new Date(2026, 8, 1), hasta: new Date(2026, 9, 1) };
+    expect(fechaEnRango("2026-09-30T00:00:00.000Z", septiembre)).toBe(true);
+    expect(fechaEnRango("2026-10-01T00:00:00.000Z", septiembre)).toBe(false);
+  });
+
+  it("fechaLarga → dd/mm/aaaa (vacío sin fecha)", () => {
+    expect(fechaLarga("2026-09-05T00:00:00.000Z")).toBe("05/09/2026");
+    expect(fechaLarga(null)).toBe("");
+  });
+
+  it("pagadoEnRangoPlanes suma los pagos de varios planes dentro del rango", () => {
+    const p1 = plan({ movimientos: [pago("m1", 100, "2026-09-10T00:00:00.000Z"), pago("m2", 50, "2026-10-02T00:00:00.000Z")] });
+    const p2 = plan({ id: "a2", movimientos: [pago("m3", 25, "2026-09-11T00:00:00.000Z")] });
+    expect(pagadoEnRangoPlanes([p1, p2], { desde: new Date(2026, 8, 1), hasta: new Date(2026, 9, 1) })).toEqual({ monto: 125, cantidad: 2 });
   });
 });
