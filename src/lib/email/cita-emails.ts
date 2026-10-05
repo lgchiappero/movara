@@ -1,4 +1,4 @@
-import { SHOWROOM_DIRECCION, SHOWROOM_WHATSAPP } from "@/lib/agenda/showroom";
+import { SHOWROOM_DIRECCION, SHOWROOM_MAPS_URL, SHOWROOM_WHATSAPP } from "@/lib/agenda/showroom";
 import { fechaKeyToDate, dateToFechaKey } from "@/lib/agenda/fecha";
 
 export type CitaEmailData = {
@@ -57,7 +57,7 @@ export function buildConfirmacionClienteEmail(cita: CitaEmailData): { subject: s
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:16px;">
       <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px 0;color:#888;width:110px">Fecha</td><td style="padding:8px 0;color:#222;font-weight:600">${fechaEs(cita.fecha)}</td></tr>
       <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px 0;color:#888">Horario</td><td style="padding:8px 0;color:#222;font-weight:600">${cita.horario} hs</td></tr>
-      <tr><td style="padding:8px 0;color:#888">Dónde</td><td style="padding:8px 0;color:#222">${SHOWROOM_DIRECCION}</td></tr>
+      <tr><td style="padding:8px 0;color:#888">Dónde</td><td style="padding:8px 0;color:#222">${SHOWROOM_DIRECCION}<br><a href="${SHOWROOM_MAPS_URL}" style="color:#D4B06A;font-size:13px;">Cómo llegar (Google Maps)</a></td></tr>
     </table>
     <p style="margin:0 0 16px;color:#555;font-size:14px;line-height:1.6;">Te pedimos llegar 5 minutos antes de la hora agendada.</p>
     <div style="padding:14px 16px;background:#f9f5ee;border-left:4px solid #D4B06A;border-radius:4px;font-size:13px;color:#555;line-height:1.6;">
@@ -108,7 +108,7 @@ export function buildRecordatorioEmail(cita: CitaEmailData): { subject: string; 
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:16px;">
       <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px 0;color:#888;width:110px">Fecha</td><td style="padding:8px 0;color:#222;font-weight:600">${fechaEs(cita.fecha)}</td></tr>
       <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px 0;color:#888">Horario</td><td style="padding:8px 0;color:#222;font-weight:600">${cita.horario} hs</td></tr>
-      <tr><td style="padding:8px 0;color:#888">Dónde</td><td style="padding:8px 0;color:#222">${SHOWROOM_DIRECCION}</td></tr>
+      <tr><td style="padding:8px 0;color:#888">Dónde</td><td style="padding:8px 0;color:#222">${SHOWROOM_DIRECCION}<br><a href="${SHOWROOM_MAPS_URL}" style="color:#D4B06A;font-size:13px;">Cómo llegar (Google Maps)</a></td></tr>
     </table>
     <p style="margin:0 0 16px;color:#555;font-size:14px;line-height:1.6;">Te pedimos llegar 5 minutos antes de la hora agendada.</p>
     <div style="padding:14px 16px;background:#f9f5ee;border-left:4px solid #D4B06A;border-radius:4px;font-size:13px;color:#555;line-height:1.6;">
