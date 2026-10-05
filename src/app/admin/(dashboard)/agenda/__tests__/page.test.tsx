@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { mockFindManyCita, mockFindManyDisp, mockGetAdminUser } = vi.hoisted(() => ({
+const { mockFindManyCita, mockFindManyDisp, mockGetAdminUser, mockCountCita } = vi.hoisted(() => ({
+  mockCountCita: vi.fn(),
   mockFindManyCita: vi.fn(),
   mockFindManyDisp: vi.fn(),
   mockGetAdminUser: vi.fn().mockResolvedValue({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" }),
 }));
 
 vi.mock("@/lib/db", () => ({
-  db: { cita: { findMany: mockFindManyCita }, disponibilidadAgenda: { findMany: mockFindManyDisp } },
+  db: { cita: { findMany: mockFindManyCita, count: mockCountCita }, disponibilidadAgenda: { findMany: mockFindManyDisp } },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 vi.mock("@/components/admin/AgendaVistaPanel", () => ({
@@ -63,6 +64,7 @@ describe("AgendaAdminPage", () => {
     vi.clearAllMocks();
     mockFindManyCita.mockResolvedValue([]);
     mockFindManyDisp.mockResolvedValue([]);
+    mockCountCita.mockResolvedValue(0);
   });
 
   it("pasa citaId como citaIdInicial a AgendaVistaPanel (deep link 'resaltada' desde el dashboard)", async () => {
@@ -161,5 +163,20 @@ describe("AgendaAdminPage", () => {
     });
     render(await AgendaAdminPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText(/diasConCitas=1/)).toBeInTheDocument();
+  });
+
+  it("vista lista: pagina de a 50 (take/skip) y muestra Anterior/Siguiente conservando mes y vista", async () => {
+    mockCountCita.mockResolvedValueOnce(120);
+    mockFindManyCita.mockResolvedValueOnce([]).mockResolvedValueOnce([CITA]);
+    render(await AgendaAdminPage({ searchParams: Promise.resolve({ vista: "lista", mes: "2026-10", page: "2" }) }));
+    expect(mockFindManyCita).toHaveBeenCalledWith(expect.objectContaining({ take: 50, skip: 50 }));
+    expect(screen.getByRole("link", { name: "← Anterior" })).toHaveAttribute("href", "/admin/agenda?mes=2026-10&vista=lista");
+    expect(screen.getByRole("link", { name: "Siguiente →" })).toHaveAttribute("href", "/admin/agenda?mes=2026-10&vista=lista&page=3");
+  });
+
+  it("vista calendario: no cuenta ni pagina la lista", async () => {
+    render(await AgendaAdminPage({ searchParams: Promise.resolve({ mes: "2026-10" }) }));
+    expect(mockCountCita).not.toHaveBeenCalled();
+    expect(screen.queryByRole("link", { name: "Siguiente →" })).not.toBeInTheDocument();
   });
 });

@@ -148,4 +148,18 @@ describe("AdminLeadsPage", () => {
     render(await AdminLeadsPage({ searchParams: Promise.resolve({}) }));
     expect(screen.queryByText(/página 1 de/i)).not.toBeInTheDocument();
   });
+
+  it("el link de Exportar CSV incluye 'sin responder' (exporta lo mismo que se ve)", async () => {
+    mockFindMany.mockResolvedValueOnce([]);
+    mockCount.mockResolvedValueOnce(0);
+    render(await AdminLeadsPage({ searchParams: Promise.resolve({ sinResponder: "1" }) }));
+    expect(screen.getByRole("link", { name: "Exportar CSV" })).toHaveAttribute("href", "/api/admin/leads/export?sinResponder=1");
+  });
+
+  it("una fecha inválida en la URL no rompe la página", async () => {
+    mockFindMany.mockResolvedValueOnce([]);
+    mockCount.mockResolvedValueOnce(0);
+    render(await AdminLeadsPage({ searchParams: Promise.resolve({ desde: "no-es-fecha" }) }));
+    expect(mockFindMany.mock.calls[0][0].where).toEqual({});
+  });
 });

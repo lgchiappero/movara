@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
+import { buildLeadsWhere } from "@/lib/admin/leads-filtro";
 import MarcarContactadoButton from "@/components/admin/MarcarContactadoButton";
 import PaginacionLinks from "@/components/admin/PaginacionLinks";
 
@@ -10,44 +10,13 @@ const PAGE_SIZE = 50;
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
 
-function buildWhere(
-  desde?: string,
-  hasta?: string,
-  provincia?: string,
-  sinResponder?: string
-): Prisma.LeadWhereInput {
-  const where: Prisma.LeadWhereInput = {};
-
-  if (desde || hasta) {
-    where.createdAt = {};
-    if (desde) where.createdAt.gte = new Date(`${desde}T00:00:00`);
-    if (hasta) where.createdAt.lte = new Date(`${hasta}T23:59:59`);
-  }
-
-  if (provincia) {
-    where.provincia = { contains: provincia, mode: "insensitive" };
-  }
-
-  // Mismo criterio que la alerta del dashboard: sin marcar como contactado
-  // y con más de 48hs desde que llegó.
-  if (sinResponder === "1") {
-    where.contactado = false;
-    where.createdAt = {
-      ...(typeof where.createdAt === "object" ? where.createdAt : {}),
-      lte: new Date(Date.now() - 48 * 60 * 60 * 1000),
-    };
-  }
-
-  return where;
-}
-
 export default async function AdminLeadsPage({
   searchParams,
 }: {
   searchParams: Promise<{ desde?: string; hasta?: string; provincia?: string; sinResponder?: string; page?: string }>;
 }) {
   const { desde, hasta, provincia, sinResponder, page: pageParam } = await searchParams;
-  const where = buildWhere(desde, hasta, provincia, sinResponder);
+  const where = buildLeadsWhere({ desde, hasta, provincia, sinResponder });
   const page = Math.max(1, Number(pageParam) || 1);
 
   const [leads, totalLeads] = await Promise.all([
@@ -76,6 +45,7 @@ export default async function AdminLeadsPage({
   if (desde) exportParams.set("desde", desde);
   if (hasta) exportParams.set("hasta", hasta);
   if (provincia) exportParams.set("provincia", provincia);
+  if (sinResponder) exportParams.set("sinResponder", sinResponder);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">

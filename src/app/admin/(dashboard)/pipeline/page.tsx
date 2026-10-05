@@ -123,14 +123,21 @@ export default async function AdminPipelinePage({
       sp.sinContactar === "1"
   );
 
+  // Filtros que vienen de los links del dashboard (no tienen control propio
+  // en la página) — se conservan al paginar, cambiar de tab o filtrar.
+  const etapaParam = etapasValidas.join(",");
+  const filtrosDashboard: [string, string][] = [
+    ...(sp.desde === "hoy" ? [["desde", "hoy"] as [string, string]] : []),
+    ...(sp.periodo === "mes" ? [["periodo", "mes"] as [string, string]] : []),
+    ...(sp.sinContactar === "1" ? [["sinContactar", "1"] as [string, string]] : []),
+  ];
+
   function buildHref(nuevaPagina: number): string {
     const params = new URLSearchParams();
-    if (etapaValida) params.set("etapa", etapaValida);
+    if (etapaParam) params.set("etapa", etapaParam);
     if (sp.vendedorId) params.set("vendedorId", sp.vendedorId);
     if (origenValido) params.set("origen", origenValido);
-    if (sp.desde) params.set("desde", sp.desde);
-    if (sp.periodo) params.set("periodo", sp.periodo);
-    if (sp.sinContactar) params.set("sinContactar", sp.sinContactar);
+    for (const [k, v] of filtrosDashboard) params.set(k, v);
     if (nuevaPagina > 1) params.set("page", String(nuevaPagina));
     const qs = params.toString();
     return `/admin/pipeline${qs ? `?${qs}` : ""}`;
@@ -161,6 +168,7 @@ export default async function AdminPipelinePage({
           if (tab !== "todos") params.set("etapa", tab);
           if (sp.vendedorId) params.set("vendedorId", sp.vendedorId);
           if (origenValido) params.set("origen", origenValido);
+          for (const [k, v] of filtrosDashboard) params.set(k, v);
           const qs = params.toString();
           return (
             <Link
@@ -179,7 +187,10 @@ export default async function AdminPipelinePage({
       </div>
 
       <form method="GET" action="/admin/pipeline" className="flex flex-wrap items-end gap-3">
-        {etapaValida && <input type="hidden" name="etapa" value={etapaValida} />}
+        {etapaParam && <input type="hidden" name="etapa" value={etapaParam} />}
+        {filtrosDashboard.map(([k, v]) => (
+          <input key={k} type="hidden" name={k} value={v} />
+        ))}
         <label className="block space-y-1">
           <span className="text-xs font-medium text-stone-500">Vendedor</span>
           <select

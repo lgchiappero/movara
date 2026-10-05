@@ -54,4 +54,20 @@ describe("GET /api/admin/leads/export", () => {
     await GET(new NextRequest("http://localhost/api/admin/leads/export"));
     expect(mockFindMany).toHaveBeenCalledWith({ where: {}, orderBy: { createdAt: "desc" } });
   });
+
+  it("aplica 'sin responder' igual que la página (no contactados de más de 48hs)", async () => {
+    mockFindMany.mockResolvedValueOnce([]);
+    await GET(new NextRequest("http://localhost/api/admin/leads/export?sinResponder=1"));
+    const where = mockFindMany.mock.calls[0][0].where;
+    expect(where.contactado).toBe(false);
+    expect(where.createdAt.lte).toBeInstanceOf(Date);
+    expect(where.createdAt.lte.getTime()).toBeLessThan(Date.now() - 47 * 60 * 60 * 1000);
+  });
+
+  it("una fecha inválida se ignora en vez de romper", async () => {
+    mockFindMany.mockResolvedValueOnce([LEAD]);
+    const res = await GET(new NextRequest("http://localhost/api/admin/leads/export?desde=xyz"));
+    expect(res.status).toBe(200);
+    expect(mockFindMany.mock.calls[0][0].where).toEqual({});
+  });
 });

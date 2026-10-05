@@ -166,4 +166,24 @@ describe("LogisticaGrid — tab 'Logística internacional'", () => {
     renderGrid([]);
     expect(screen.getByText("Todavía no hay costos de logística internacional cargados.")).toBeInTheDocument();
   });
+
+  it("pagina de a 50 y vuelve a la primera página al filtrar; el Excel exporta todas las páginas", async () => {
+    const muchos = Array.from({ length: 51 }, (_, i) => ({
+      ...COSTOS[0],
+      id: `x${i}`,
+      fecha: `2026-09-${String((i % 28) + 1).padStart(2, "0")}T00:00:00.000Z`,
+    }));
+    const { user } = renderGrid(muchos);
+    expect(screen.getAllByRole("row")).toHaveLength(51); // encabezado + 50
+    expect(screen.getByText("Página 1 de 2 (51 costos)")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Siguiente →" }));
+    expect(screen.getByText("Página 2 de 2 (51 costos)")).toBeInTheDocument();
+    expect(screen.getAllByRole("row")).toHaveLength(2);
+    await user.click(screen.getByRole("button", { name: "← Anterior" }));
+    await user.click(screen.getByRole("button", { name: "Siguiente →" }));
+    await user.selectOptions(screen.getByLabelText("Filtrar por estado"), "pagado");
+    expect(screen.getByText("Página 1 de 2 (51 costos)")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Exportar Excel" }));
+    expect(mockExportar.mock.calls[0][0]).toHaveLength(51);
+  });
 });

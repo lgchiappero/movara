@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { buildLeadsCsv } from "@/lib/admin/leads-csv";
+import { buildLeadsWhere } from "@/lib/admin/leads-filtro";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const desde = searchParams.get("desde") ?? undefined;
-  const hasta = searchParams.get("hasta") ?? undefined;
-  const provincia = searchParams.get("provincia") ?? undefined;
-
-  const where: Prisma.LeadWhereInput = {};
-  if (desde || hasta) {
-    where.createdAt = {};
-    if (desde) where.createdAt.gte = new Date(`${desde}T00:00:00`);
-    if (hasta) where.createdAt.lte = new Date(`${hasta}T23:59:59`);
-  }
-  if (provincia) {
-    where.provincia = { contains: provincia, mode: "insensitive" };
-  }
+  const where = buildLeadsWhere({
+    desde: searchParams.get("desde") ?? undefined,
+    hasta: searchParams.get("hasta") ?? undefined,
+    provincia: searchParams.get("provincia") ?? undefined,
+    sinResponder: searchParams.get("sinResponder") ?? undefined,
+  });
 
   const leads = await db.lead.findMany({ where, orderBy: { createdAt: "desc" } });
 

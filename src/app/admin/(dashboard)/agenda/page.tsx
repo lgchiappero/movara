@@ -3,6 +3,10 @@ import { dateToFechaKey } from "@/lib/agenda/fecha";
 import AgendaVistaPanel, { type CitaAdmin } from "@/components/admin/AgendaVistaPanel";
 import DisponibilidadPanel, { type DiaDisponibilidad } from "@/components/admin/DisponibilidadPanel";
 import { getAdminUser } from "@/lib/admin/current-user";
+import PaginacionLinks from "@/components/admin/PaginacionLinks";
+
+// Vista lista: todas las citas (no solo las del mes), paginadas de a 50.
+const PAGE_SIZE_LISTA = 50;
 
 export const dynamic = "force-dynamic";
 
@@ -48,11 +52,12 @@ function serializeCita(c: {
 export default async function AgendaAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mes?: string; vista?: string; tab?: string; dispDesde?: string; citaId?: string }>;
+  searchParams: Promise<{ mes?: string; vista?: string; tab?: string; dispDesde?: string; citaId?: string; page?: string }>;
 }) {
   const sp = await searchParams;
   const { anio, mesIdx0 } = parseMesParam(sp.mes);
   const vistaLista = sp.vista === "lista";
+  const pagina = Math.max(1, Number(sp.page) || 1);
 
   const desdeMes = new Date(Date.UTC(anio, mesIdx0, 1));
   const hastaMes = new Date(Date.UTC(anio, mesIdx0 + 1, 1));
@@ -62,15 +67,20 @@ export default async function AgendaAdminPage({
   const desdeDisp = new Date(Date.UTC(dispAnio, dispMesIdx0, 1));
   const hastaDisp = new Date(Date.UTC(dispAnio, dispMesIdx0 + 3, 1));
 
-  const [session, citasDelMes, todasLasCitas, disponibilidadRows, citasEnRangoDisp] = await Promise.all([
+  const [session, citasDelMes, todasLasCitas, totalCitas, disponibilidadRows, citasEnRangoDisp] = await Promise.all([
     getAdminUser(),
     db.cita.findMany({
       where: { fecha: { gte: desdeMes, lt: hastaMes } },
       orderBy: [{ fecha: "asc" }, { horario: "asc" }],
     }),
     vistaLista
-      ? db.cita.findMany({ orderBy: [{ fecha: "desc" }, { horario: "asc" }] })
+      ? db.cita.findMany({
+          orderBy: [{ fecha: "desc" }, { horario: "asc" }],
+          take: PAGE_SIZE_LISTA,
+          skip: (pagina - 1) * PAGE_SIZE_LISTA,
+        })
       : Promise.resolve([]),
+    vistaLista ? db.cita.count() : Promise.resolve(0),
     db.disponibilidadAgenda.findMany({ where: { fecha: { gte: desdeDisp, lt: hastaDisp } } }),
     db.cita.findMany({
       where: { fecha: { gte: desdeDisp, lt: hastaDisp }, estado: { not: "cancelada" } },
@@ -108,6 +118,13 @@ export default async function AgendaAdminPage({
           citaIdInicial={sp.citaId ?? null}
           rol={session?.rol ?? "vendedor"}
         />
+        {vistaLista && (
+          <PaginacionLinks
+            page={pagina}
+            totalPages={Math.max(1, Math.ceil(totalCitas / PAGE_SIZE_LISTA))}
+            buildHref={(n) => `/admin/agenda?mes=${anio}-${String(mesIdx0 + 1).padStart(2, "0")}&vista=lista${n > 1 ? `&page=${n}` : ""}`}
+          />
+        )}
       </section>
 
       <section>

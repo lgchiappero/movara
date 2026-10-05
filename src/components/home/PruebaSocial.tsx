@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   type LucideIcon,
 } from "lucide-react";
+import { SHOWROOM_DIRECCION, SHOWROOM_MAPS_URL } from "@/lib/agenda/showroom";
 
 type BadgeItem = {
   _key?: string;
@@ -187,20 +188,20 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
             </p>
             <div className="flex items-center gap-2 mt-3 text-stone-400 text-sm">
               <span>📍</span>
-              <span>Sunchales, Santa Fe, Argentina</span>
+              <span>{SHOWROOM_DIRECCION}</span>
             </div>
           </div>
 
           {/* Map */}
           <a
-            href="https://www.google.com/maps/search/Sunchales,+Santa+Fe,+Argentina"
+            href={SHOWROOM_MAPS_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="block relative group"
-            aria-label="Ver Sunchales en Google Maps"
+            aria-label="Ver el showroom en Google Maps"
           >
             <iframe
-              src="https://maps.google.com/maps?q=-31.5333,-61.5667&z=13&output=embed"
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(`${SHOWROOM_DIRECCION}, Argentina`)}&z=16&output=embed`}
               width="100%"
               height="260"
               style={{ border: 0, display: "block" }}

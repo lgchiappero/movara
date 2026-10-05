@@ -267,4 +267,40 @@ describe("AdminPipelinePage", () => {
     render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText("NuevoLeadButton vendedores=1")).toBeInTheDocument();
   });
+
+  it("con varias etapas (link del dashboard), la paginación conserva todas", async () => {
+    mockFindManyLead.mockResolvedValueOnce([LEAD]);
+    mockCountLead.mockResolvedValueOnce(120);
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({ etapa: "en_contacto,propuesta_enviada" }) }));
+    const href = screen.getByRole("link", { name: /siguiente/i }).getAttribute("href")!;
+    expect(new URLSearchParams(href.split("?")[1]).get("etapa")).toBe("en_contacto,propuesta_enviada");
+    expect(href).toContain("page=2");
+  });
+
+  it("los tabs de etapa y el formulario conservan desde/periodo/sinContactar del dashboard", async () => {
+    mockFindManyLead.mockResolvedValueOnce([LEAD]);
+    const { container } = render(
+      await AdminPipelinePage({
+        searchParams: Promise.resolve({ etapa: "en_contacto,propuesta_enviada", desde: "hoy", periodo: "mes", sinContactar: "1" }),
+      })
+    );
+    const tabGanado = screen.getByRole("link", { name: "Ganado" }).getAttribute("href")!;
+    const params = new URLSearchParams(tabGanado.split("?")[1]);
+    expect(params.get("etapa")).toBe("ganado");
+    expect(params.get("desde")).toBe("hoy");
+    expect(params.get("periodo")).toBe("mes");
+    expect(params.get("sinContactar")).toBe("1");
+    const ocultos = Object.fromEntries(
+      Array.from(container.querySelectorAll<HTMLInputElement>('form input[type="hidden"]')).map((i) => [i.name, i.value])
+    );
+    expect(ocultos).toEqual({ etapa: "en_contacto,propuesta_enviada", desde: "hoy", periodo: "mes", sinContactar: "1" });
+  });
+
+  it("valores desconocidos de desde/periodo/sinContactar no se propagan", async () => {
+    mockFindManyLead.mockResolvedValueOnce([LEAD]);
+    const { container } = render(
+      await AdminPipelinePage({ searchParams: Promise.resolve({ desde: "ayer", periodo: "anio", sinContactar: "0" }) })
+    );
+    expect(container.querySelectorAll('form input[type="hidden"]')).toHaveLength(0);
+  });
 });

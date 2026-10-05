@@ -76,7 +76,7 @@ export default async function AdminUnidadesPage({
 
   const totalPages = Math.max(1, Math.ceil(totalUnidades / PAGE_SIZE));
   const provincias = provinciasRows.map((r) => r.provinciaDestino!).filter(Boolean);
-  const hayFiltros = Boolean(sp.estado || sp.clienteId || sp.envioId || sp.provincia);
+  const hayFiltros = Boolean(sp.estado || sp.clienteId || sp.envioId || sp.provincia || sp.periodo === "mes");
 
   function buildHref(nuevaPagina: number): string {
     const params = new URLSearchParams();
@@ -125,6 +125,9 @@ export default async function AdminUnidadesPage({
       </div>
 
       <form action="/admin/unidades" method="GET" className="flex flex-wrap items-end gap-3 mb-6">
+        {/* "periodo=mes" llega desde el dashboard ("Entregadas este mes") y no
+            tiene control propio — se conserva al volver a filtrar. */}
+        {sp.periodo === "mes" && <input type="hidden" name="periodo" value="mes" />}
         <label className="block space-y-1">
           <span className="text-xs font-medium text-stone-500">Estado</span>
           <select

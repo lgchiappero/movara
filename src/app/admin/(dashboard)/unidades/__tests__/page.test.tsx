@@ -284,4 +284,29 @@ describe("AdminUnidadesPage", () => {
     render(await AdminUnidadesPage({ searchParams: Promise.resolve({}) }));
     expect(screen.queryByText(/página 1 de/i)).not.toBeInTheDocument();
   });
+
+  it("periodo=mes (link 'Entregadas este mes' del dashboard) se conserva al volver a filtrar y cuenta como filtro activo", async () => {
+    mockFindManyUnidad.mockResolvedValueOnce([]); // lista
+    mockCountUnidad.mockResolvedValueOnce(0);
+    mockFindManyUnidad.mockResolvedValueOnce([]); // provincias
+    const { container } = render(
+      await AdminUnidadesPage({ searchParams: Promise.resolve({ estado: "entregado", periodo: "mes" }) })
+    );
+    expect(container.querySelector<HTMLInputElement>('form input[type="hidden"][name="periodo"]')?.value).toBe("mes");
+    expect(screen.getByRole("link", { name: "Limpiar filtros" })).toBeInTheDocument();
+  });
+
+  it("solo periodo=mes también muestra 'Limpiar filtros'; otro valor de periodo no se conserva", async () => {
+    mockFindManyUnidad.mockResolvedValueOnce([]);
+    mockCountUnidad.mockResolvedValueOnce(0);
+    mockFindManyUnidad.mockResolvedValueOnce([]);
+    const { unmount } = render(await AdminUnidadesPage({ searchParams: Promise.resolve({ periodo: "mes" }) }));
+    expect(screen.getByRole("link", { name: "Limpiar filtros" })).toBeInTheDocument();
+    unmount();
+    mockFindManyUnidad.mockResolvedValueOnce([]);
+    mockCountUnidad.mockResolvedValueOnce(0);
+    mockFindManyUnidad.mockResolvedValueOnce([]);
+    const r2 = render(await AdminUnidadesPage({ searchParams: Promise.resolve({ periodo: "anio" }) }));
+    expect(r2.container.querySelector('form input[name="periodo"]')).toBeNull();
+  });
 });

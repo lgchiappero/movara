@@ -14,6 +14,8 @@ import type { AccionesLogistica } from "@/components/admin/logistica/useAcciones
 
 type FiltroEstado = "todos" | "pendiente" | "pagado";
 
+const PAGE_SIZE = 50;
+
 /** Tab "Logística internacional" de /admin/pagos: filtros (búsqueda por PI o
  * contenedor, concepto, estado, período y envío), exportación a Excel de lo
  * filtrado, y la tabla de costos. */
@@ -38,6 +40,7 @@ export default function LogisticaGrid({
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [envioId, setEnvioId] = useState("");
+  const [pagina, setPagina] = useState(1);
 
   const rango = useMemo(() => rangoDesdeFiltro(filtroPeriodo, desde, hasta, ahora), [filtroPeriodo, desde, hasta, ahora]);
 
@@ -55,7 +58,19 @@ export default function LogisticaGrid({
     );
   }, [costos, envioId, filtroConcepto, filtroEstado, rango, busquedaDebounced]);
 
-  /** Exporta exactamente los costos filtrados que se ven en pantalla. */
+  // Volver a la página 1 cada vez que cambia un filtro (ajuste de estado
+  // durante el render, no en un efecto).
+  const filtroKey = `${envioId}|${filtroConcepto}|${filtroEstado}|${busquedaDebounced}|${rango?.desde.getTime()}|${rango?.hasta.getTime()}`;
+  const [filtroKeyAnterior, setFiltroKeyAnterior] = useState(filtroKey);
+  if (filtroKeyAnterior !== filtroKey) {
+    setFiltroKeyAnterior(filtroKey);
+    setPagina(1);
+  }
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
+  const paginaEfectiva = Math.min(pagina, totalPaginas);
+  const costosPagina = filtrados.slice((paginaEfectiva - 1) * PAGE_SIZE, paginaEfectiva * PAGE_SIZE);
+
+  /** Exporta todos los costos filtrados (todas las páginas). */
   function exportar() {
     exportarExcel(
       filtrados.map((c) => ({
@@ -151,7 +166,31 @@ export default function LogisticaGrid({
       {filtrados.length === 0 && costos.length > 0 ? (
         <p className="text-sm text-stone-400 px-1 py-4">Ningún costo coincide con los filtros.</p>
       ) : (
-        <TablaCostosLogistica costos={filtrados} rol={rol} acciones={acciones} mostrarEnvio />
+        <TablaCostosLogistica costos={costosPagina} rol={rol} acciones={acciones} mostrarEnvio />
+      )}
+
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-between pt-1">
+          <button
+            type="button"
+            disabled={paginaEfectiva <= 1}
+            onClick={() => setPagina(paginaEfectiva - 1)}
+            className="px-4 py-2 rounded-lg text-sm font-bold border border-[#E5E5E5] text-[#2F2F2F] disabled:opacity-40"
+          >
+            ← Anterior
+          </button>
+          <span className="text-xs text-stone-400">
+            Página {paginaEfectiva} de {totalPaginas} ({filtrados.length} costos)
+          </span>
+          <button
+            type="button"
+            disabled={paginaEfectiva >= totalPaginas}
+            onClick={() => setPagina(paginaEfectiva + 1)}
+            className="px-4 py-2 rounded-lg text-sm font-bold border border-[#E5E5E5] text-[#2F2F2F] disabled:opacity-40"
+          >
+            Siguiente →
+          </button>
+        </div>
       )}
     </div>
   );

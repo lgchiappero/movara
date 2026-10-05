@@ -59,6 +59,6 @@ test.describe("Cobranza — autocompletado del modal Nuevo cobro/pago", () => {
     await abrirModalYElegirUnidad(page, "+ Nuevo pago a proveedor", datos.nombre);
 
     await expect(page.getByLabel("Proveedor", { exact: true })).toHaveValue("");
-    await expect(page.getByLabel("Importe", { exact: true })).toHaveValue("");
+    await expect(page.getByLabel(/Total acordado/)).toHaveValue("");
   });
 });
