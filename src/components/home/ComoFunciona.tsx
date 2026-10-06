@@ -33,7 +33,7 @@ const DEFAULT_PASOS: Paso[] = [
 
 /** Cifras con conteo animado al entrar al viewport. */
 export const STATS = [
-  { valor: 90, unidad: "días", label: "Plazo máximo de entrega" },
+  { valor: 90, unidad: "días", label: "90 días en adelante" },
   { valor: 12, unidad: "meses", label: "De garantía MOVARA" },
   { valor: 3, unidad: "tamaños", label: "De módulo para elegir" },
 ];

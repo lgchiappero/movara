@@ -14,9 +14,11 @@ test.describe("Home page", () => {
     await expect(page.getByRole("heading", { name: "500" })).not.toBeVisible();
   });
 
-  test("Test 2: botón 'Encontrá tu modelo' navega a /configurador", async ({ page }) => {
-    // The primary CTA in Hero links to /configurador
-    const ctaLink = page.getByRole("link", { name: /Encontrá tu modelo/i });
+  test("Test 2: botón 'Empezar ahora' navega a /configurador", async ({ page }) => {
+    // El CTA de la sección de proceso (ComoFunciona) es el que lleva al
+    // configurador desde la home.
+    const ctaLink = page.getByRole("link", { name: /Empezar ahora/i });
+    await ctaLink.scrollIntoViewIfNeeded();
     await expect(ctaLink).toBeVisible();
 
     await ctaLink.click();
@@ -24,13 +26,10 @@ test.describe("Home page", () => {
     await expect(page.getByText("Paso 1 de 7")).toBeVisible();
   });
 
-  test("Test 3: banner regional de modelos es visible", async ({ page }) => {
-    // RegionalBanner is always rendered on the home page.
-    // "8 modelos regionales" badge is hardcoded in the component.
-    await expect(page.getByText("8 modelos regionales")).toBeVisible();
-
-    // Regional model nombres are hardcoded from REGIONAL_MODELS data
-    await expect(page.getByText("Pampa").first()).toBeVisible();
-    await expect(page.getByText("Tehuelche").first()).toBeVisible();
+  test("Test 3: sección de modelos es visible", async ({ page }) => {
+    // El banner regional ("8 modelos regionales") ya no existe; la home
+    // muestra los modelos en ModelosHome. "Nuestros modelos" es su título por
+    // defecto — si se edita en Sanity, actualizar este texto.
+    await expect(page.getByRole("heading", { name: "Nuestros modelos" })).toBeVisible();
   });
 });
