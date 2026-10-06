@@ -60,7 +60,8 @@ describe("cita-emails", () => {
 
   it("confirmación y recordatorio incluyen la dirección del showroom y el link a Google Maps", () => {
     for (const { html } of [buildConfirmacionClienteEmail(cita), buildRecordatorioEmail(cita)]) {
-      expect(html).toContain("F. Ramella 1640, Sunchales, Santa Fe");
+      expect(html).toContain("Sunchales, Santa Fe");
+      expect(html).not.toMatch(/\d{3,4}, Sunchales/); // sin calle todavía
       expect(html).toContain('href="https://maps.app.goo.gl/Pv2sDR4CpixoPQpL6"');
       expect(html).toContain("Cómo llegar (Google Maps)");
     }

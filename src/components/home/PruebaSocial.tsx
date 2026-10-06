@@ -201,7 +201,7 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
             aria-label="Ver el showroom en Google Maps"
           >
             <iframe
-              src={`https://maps.google.com/maps?q=${encodeURIComponent(`${SHOWROOM_DIRECCION}, Argentina`)}&z=16&output=embed`}
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(`${SHOWROOM_DIRECCION}, Argentina`)}&z=13&output=embed`}
               width="100%"
               height="260"
               style={{ border: 0, display: "block" }}
