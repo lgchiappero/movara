@@ -76,7 +76,7 @@ export const configuradorPageType = defineType({
           name: 'descInversor',
           title: 'Descripción — Inversor 💰',
           type: 'string',
-          initialValue: 'Transformá capital en renta en semanas',
+          initialValue: 'Transformá capital en renta, sin años de obra',
         }),
         defineField({
           name: 'descAgro',

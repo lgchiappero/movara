@@ -9,7 +9,7 @@ const FALLBACK_PILLARS = [
     icon: <ClockIcon />,
     title: "Entrega en plazo",
     description:
-      "60 a 90 días desde la aprobación del diseño. Sin excusas, sin sorpresas. Lo prometemos en el contrato.",
+      "90 días en adelante desde que confirmás el pedido con el anticipo, sujeto a logística y aduana. Te mantenemos informado en cada etapa.",
   },
   {
     icon: <CreditIcon />,

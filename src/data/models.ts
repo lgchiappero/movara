@@ -77,7 +77,7 @@ const SPECS_FAMILIAR: ModelSpecs = {
   aislacion: "Lana de roca 50 mm + barrera de vapor",
   instalaciones: "Eléctrica, sanitaria, gas natural/GLP",
   terminaciones: "Piso vinílico SPC, pintura látex premium",
-  tiempo: "60–90 días desde aprobación",
+  tiempo: "90 días en adelante desde el anticipo",
   garantia: "12 meses de garantía MOVARA",
 };
 
@@ -88,7 +88,7 @@ const SPECS_TURISTICO: ModelSpecs = {
   aislacion: "Lana de roca 80 mm",
   instalaciones: "Eléctrica, sanitaria, split de calefacción",
   terminaciones: "Deck de madera, revestimiento de madera terciada",
-  tiempo: "45–75 días desde aprobación",
+  tiempo: "90 días en adelante desde el anticipo",
   garantia: "12 meses de garantía MOVARA",
 };
 
@@ -99,7 +99,7 @@ const SPECS_OFICINA: ModelSpecs = {
   aislacion: "Lana de roca 50 mm + barrera de vapor",
   instalaciones: "Eléctrica trifásica, datos CAT6, split inverter",
   terminaciones: "Piso flotante laminado, pintura antihumedad",
-  tiempo: "30–60 días desde aprobación",
+  tiempo: "90 días en adelante desde el anticipo",
   garantia: "12 meses de garantía MOVARA",
 };
 
@@ -110,7 +110,7 @@ export const MODELS: ProductModel[] = [
     tag: "Más elegido",
     tagline: "El punto de partida ideal para tu familia",
     description:
-      "El Familiar 65 es nuestro modelo más popular. Tres ambientes bien pensados, cocina integrada al comedor y dos baños completos. Diseñado para familias que quieren confort sin complicaciones, con todos los materiales certificados y entrega en 60 días.",
+      "El Familiar 65 es nuestro modelo más popular. Tres ambientes bien pensados, cocina integrada al comedor y dos baños completos. Diseñado para familias que quieren confort sin complicaciones, con todos los materiales certificados.",
     size: 65,
     rooms: 3,
     baths: 2,
@@ -273,7 +273,7 @@ export const MODELS: ProductModel[] = [
   {
     slug: "oficina-20",
     name: "Oficina 20",
-    tagline: "Tu espacio de trabajo en 30 días",
+    tagline: "Tu espacio de trabajo en el jardín, sin obra",
     description:
       "Un espacio de trabajo compacto y funcional para instalar en el jardín. Open space con escritorio integrado, iluminación cenital y baño de cortesía. La solución más rápida para separar el trabajo del hogar.",
     size: 20,

@@ -206,12 +206,12 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
       {
         pregunta: "¿Cuánto tarda en estar lista?",
         respuesta:
-          "La fabricación toma entre 4 y 8 semanas, según el modelo y la configuración. A eso se suma el transporte hasta tu provincia (varía según la distancia) y la instalación en el terreno, que toma entre 1 y 3 días. En total, es un proceso de semanas — no de meses o años como una obra tradicional.",
+          "Desde que confirmás el pedido con el anticipo, tu MOVARA está lista en 90 días en adelante — en general, entre 90 y 120 días. Ese plazo incluye la fabricación en planta, el transporte, la nacionalización y el traslado hasta tu provincia, y puede variar según la logística y los tiempos de aduana. Una vez que llega, la instalación en el terreno toma entre 1 y 3 días. Te mantenemos informado en cada etapa.",
       },
       {
         pregunta: "¿Necesito hacer obra en el terreno?",
         respuesta:
-          "Necesitás una base o fundación básica — puede ser una platea de hormigón, vigas de nivel o pilotes, según tu terreno — más acceso para un camión con grúa. No es obra tradicional: no hay albañilería, no hay meses de plazo, y te asesoramos en cada caso según tu ubicación.",
+          "Necesitás una base o fundación básica — puede ser una platea de hormigón, vigas de nivel o pilotes, según tu terreno — más acceso para un camión con grúa. No es obra tradicional: no hay albañilería ni meses de obra en el terreno, y te asesoramos en cada caso según tu ubicación.",
       },
       {
         pregunta: "¿Qué pasa si algo llega dañado?",

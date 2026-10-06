@@ -19,7 +19,7 @@ const columns = [
     label: "MOVARA",
     icon: "✦",
     variant: "highlight" as const,
-    items: ["4–8 semanas", "Precio fijo, sin sorpresas", "Garantía escrita incluida"],
+    items: ["90 días en adelante", "Precio fijo, sin sorpresas", "Garantía escrita incluida"],
   },
 ];
 

@@ -42,7 +42,7 @@ export default function ProcessSteps({ data }: { data?: ProcessData | null }) {
   const title = data?.title ?? "Simple. Transparente. Sin sorpresas.";
   const subtitle =
     data?.subtitle ??
-    "Cuatro pasos desde que elegís hasta que recibís las llaves. En promedio, 60 a 90 días corridos.";
+    "Cuatro pasos desde que elegís hasta que recibís las llaves. 90 días en adelante desde el anticipo.";
 
   const steps =
     data?.steps?.length
@@ -99,7 +99,7 @@ export default function ProcessSteps({ data }: { data?: ProcessData | null }) {
           <div className="inline-flex items-center gap-3 bg-sage-100 border border-sage-200 rounded-full px-6 py-3 text-sm text-stone-600">
             <span className="w-2 h-2 rounded-full bg-sage-500 shrink-0" />
             Tiempo total estimado:
-            <strong className="text-stone-900">60 a 90 días corridos</strong>
+            <strong className="text-stone-900">90 días en adelante</strong>
           </div>
         </div>
       </div>

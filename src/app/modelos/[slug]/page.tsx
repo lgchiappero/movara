@@ -81,7 +81,7 @@ export default async function ModelDetailPage({ params }: Props) {
             { key: "Aislación", val: model.specs.aislacion },
             { key: "Instalaciones", val: model.specs.instalaciones },
             { key: "Terminaciones", val: model.specs.terminaciones },
-            { key: "Tiempo de obra", val: model.specs.tiempo },
+            { key: "Plazo de entrega", val: model.specs.tiempo },
             { key: "Garantía", val: model.specs.garantia },
           ].filter((r) => r.val)
         : [];

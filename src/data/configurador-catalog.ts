@@ -31,7 +31,7 @@ export const MOVARA_MODELS = [
 export type ModeloKey = (typeof MOVARA_MODELS)[number]["key"];
 
 export const FINALIDADES = [
-  { key: "inversor", emoji: "💰", label: "Inversor", desc: "Transformá capital en renta en semanas", subdesc: "Airbnb, renta, glamping" },
+  { key: "inversor", emoji: "💰", label: "Inversor", desc: "Transformá capital en renta, sin años de obra", subdesc: "Airbnb, renta, glamping" },
   { key: "agro", emoji: "🌾", label: "Agro / Campo", desc: "Infraestructura lista para tu campo, sin meses de obra", subdesc: "Vivienda o infraestructura rural" },
   { key: "vivienda", emoji: "🏠", label: "Primera vivienda", desc: "Una nueva forma de habitar", subdesc: "Tu hogar propio" },
   { key: "turismo", emoji: "🏕️", label: "Turismo y hospitalidad", desc: "Eco resort, glamping o expansión rápida", subdesc: "Eco resort, glamping" },

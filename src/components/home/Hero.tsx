@@ -19,7 +19,7 @@ type HeroContent = {
 const DEFAULTS = {
   badgePreventa: "Precio Lanzamiento Exclusivo — Activo",
   titulo: "Vivienda modular de precisión.",
-  tituloDestacado: "Sin obra. Lista en semanas.",
+  tituloDestacado: "Sin obra. Lista en meses, no en años.",
   subtitulo:
     "Las primeras unidades MOVARA ya están disponibles, con condiciones exclusivas de lanzamiento para clientes seleccionados.",
   ctaPrimario: "Hablar con un asesor",

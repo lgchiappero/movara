@@ -28,7 +28,7 @@ export const homePageType = defineType({
           name: 'tituloDestacado',
           title: 'Título destacado (línea dorada)',
           type: 'string',
-          initialValue: 'Lista en semanas.',
+          initialValue: 'Lista en meses, no en años.',
         }),
         defineField({
           name: 'subtitulo',

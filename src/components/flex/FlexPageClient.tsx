@@ -28,7 +28,7 @@ const TITLE_DEFAULT = "MOVARA Flex";
 const CTA_PRIMARIO_DEFAULT = "Quiero este modelo";
 
 const DESCRIPCION_DEFAULT =
-  "El MOVARA Flex es una unidad plegable y expandible que se transporta cerrada y se despliega en destino. Vivienda, inversión turística u oficina rural, lista en días y no en meses de obra.";
+  "El MOVARA Flex es una unidad plegable y expandible que se transporta cerrada y se despliega en destino. Vivienda, inversión turística u oficina rural: llega en 90 días en adelante desde el anticipo y se despliega en destino, sin meses de obra.";
 
 const PRECIO_POR_M2_DEFAULT = 594;
 const PRECIO_NOTA_DEFAULT =

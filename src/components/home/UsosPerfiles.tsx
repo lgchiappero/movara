@@ -6,10 +6,10 @@ const FALLBACK_USOS = [
     category: "Vivienda familiar",
     title: "Tu espacio propio, sin años de espera.",
     description:
-      "Dejá de alquilar. En 60 días podés tener tu casa en el terreno que ya tenés. Sin obra tradicional, sin imprevistos.",
+      "Dejá de alquilar. Tu casa en el terreno que ya tenés, lista en 90 días en adelante desde el anticipo. Sin obra tradicional, sin imprevistos.",
     href: "/modelos?tipo=familiar",
-    statValue: "60 días",
-    statLabel: "entrega promedio",
+    statValue: "90+ días",
+    statLabel: "desde el anticipo",
   },
   {
     emoji: "🌊",
