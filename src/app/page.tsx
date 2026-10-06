@@ -12,6 +12,7 @@ import FAQ from "@/components/home/FAQ";
 import ContactoForm from "@/components/home/ContactoForm";
 import ConfiguradorRegional from "@/components/configurador/ConfiguradorRegional";
 import Footer from "@/components/home/Footer";
+import Reveal from "@/components/motion/Reveal";
 import { client } from "@/sanity/lib/client";
 import { SITE_CONFIG_QUERY, HOME_PAGE_QUERY, MODELOS_HOME_QUERY, FAQ_PAGE_QUERY } from "@/sanity/lib/queries";
 import type { FaqCategory } from "@/data/faq";
@@ -61,7 +62,10 @@ export default async function HomePage() {
         <ComoFunciona content={homePage?.comoFunciona} />
         <PruebaSocial content={homePage?.pruebaSocial} />
         <FAQ categorias={faqCategorias} />
-        <ContactoForm waNumber={waNumber} content={homePage?.formularioContacto} />
+        {/* Única sección sin reveal propio — el resto ya anima al entrar. */}
+        <Reveal>
+          <ContactoForm waNumber={waNumber} content={homePage?.formularioContacto} />
+        </Reveal>
       </main>
       <Footer />
       <ExitIntentPopup />

@@ -6,6 +6,7 @@ import WizardModal from "@/components/wizard/WizardModal";
 import BackToTop from "@/components/ui/BackToTop";
 import WhatsAppStickyBar from "@/components/ui/WhatsAppStickyBar";
 import { MetaPixelPageView } from "@/components/MetaPixelPageView";
+import MotionProvider from "@/components/motion/MotionProvider";
 import { SanityLive } from "@/sanity/lib/live";
 import { client } from "@/sanity/lib/client";
 import { SITE_CONFIG_QUERY, CUPOS_QUERY } from "@/sanity/lib/queries";
@@ -87,14 +88,16 @@ export default async function RootLayout({
             alt=""
           />
         </noscript>
-        {children}
-        <WizardModal waNumber={waNumber} />
-        <WhatsAppStickyBar
-          waNumber={waNumber}
-          total={cupos?.totalUnidades ?? 20}
-          reservadas={cupos?.unidadesReservadas ?? 7}
-        />
-        <BackToTop />
+        <MotionProvider>
+          {children}
+          <WizardModal waNumber={waNumber} />
+          <WhatsAppStickyBar
+            waNumber={waNumber}
+            total={cupos?.totalUnidades ?? 20}
+            reservadas={cupos?.unidadesReservadas ?? 7}
+          />
+          <BackToTop />
+        </MotionProvider>
         {process.env.SANITY_API_TOKEN && <SanityLive />}
         <MetaPixelPageView />
         <Script

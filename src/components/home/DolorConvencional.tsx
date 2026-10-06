@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
+import Reveal from "@/components/motion/Reveal";
 
 type Stat = { _key?: string; stat: string; label: string; sub: string };
 type Problema = {
@@ -27,8 +28,7 @@ const DEFAULT_PROBLEMAS: Problema[] = [
   },
   {
     titulo: "Presupuestos que no cierran",
-    descripcion:
-      "Te dijeron un precio. A mitad de obra ya iban el doble. Los materiales siempre terminan siendo más — el desperdicio de los albañiles corre por tu cuenta.",
+    descripcion: "Te dijeron un precio. A mitad de obra ya iba el doble, y el desperdicio corre por tu cuenta.",
   },
   {
     titulo: "Meses que se vuelven años",
@@ -48,6 +48,18 @@ const DEFAULT_PROBLEMAS: Problema[] = [
   },
 ];
 
+/** Variaciones sutiles de la misma base #2F2F2F: cambia solo hacia dónde
+ * cae la luz del gradiente y el offset de la trama, así las 6 cards se leen
+ * como una serie y no como copias. */
+const VARIACIONES = [
+  { angulo: 160, luz: "20% 15%", trama: "0 0" },
+  { angulo: 200, luz: "80% 10%", trama: "14px 0" },
+  { angulo: 175, luz: "50% 0%", trama: "0 14px" },
+  { angulo: 145, luz: "15% 85%", trama: "14px 14px" },
+  { angulo: 190, luz: "85% 80%", trama: "7px 7px" },
+  { angulo: 165, luz: "50% 100%", trama: "21px 7px" },
+];
+
 export default function DolorConvencional({ content }: { content?: DolorContent | null }) {
   const titulo = content?.titulo ?? "¿Ya pasaste por problemas como estos?";
   const subtitulo =
@@ -65,70 +77,62 @@ export default function DolorConvencional({ content }: { content?: DolorContent 
     <section className="py-32 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Heading */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mb-16"
-        >
+        <Reveal className="mb-16">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#2F2F2F] leading-[1.08] max-w-3xl mb-6">
             {titulo}
           </h2>
           <p className="text-lg text-stone-500 max-w-2xl leading-relaxed">
             {subtitulo}
           </p>
-        </motion.div>
+        </Reveal>
 
-        {/* Problem cards */}
+        {/* Problem cards — grid 3x2 editorial, misma base oscura en las 6 */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-16">
           {problemas.map((p, i) => {
             const numero = String(i + 1).padStart(2, "0");
+            const v = VARIACIONES[i % VARIACIONES.length];
 
             return (
-              <motion.div
-                key={p._key ?? p.titulo}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.07 }}
-                className="group relative h-[280px] lg:h-[380px] rounded-2xl overflow-hidden cursor-default"
-              >
-                {/* "Foto" de fondo (color de marca + textura) con zoom sutil en hover.
-                    Mismo #2F2F2F en las 6 cards — sin variaciones de tono. */}
-                <div className="absolute inset-0 bg-[#2F2F2F] transition-transform duration-500 ease-out group-hover:scale-105">
+              <Reveal key={p._key ?? p.titulo} delay={i * 0.07}>
+                <article
+                  className="group relative h-[240px] lg:h-[300px] rounded-2xl overflow-hidden cursor-default transition-[transform,filter] duration-500 ease-out hover:scale-[1.02] hover:brightness-125 motion-reduce:transition-none motion-reduce:hover:scale-100"
+                  style={{
+                    backgroundColor: "#2F2F2F",
+                    backgroundImage: [
+                      `radial-gradient(ellipse at ${v.luz}, rgba(212,176,106,0.10) 0%, transparent 55%)`,
+                      `linear-gradient(${v.angulo}deg, #3A3A3A 0%, #2F2F2F 45%, #222222 100%)`,
+                    ].join(", "),
+                  }}
+                >
+                  {/* Trama de puntos dorados — textura editorial muy tenue */}
                   <div
-                    className="absolute inset-0 opacity-[0.05]"
+                    className="absolute inset-0 opacity-[0.06]"
                     style={{
                       backgroundImage: "radial-gradient(circle, #D4B06A 1px, transparent 1px)",
                       backgroundSize: "28px 28px",
+                      backgroundPosition: v.trama,
                     }}
                   />
-                </div>
 
-                {/* Overlay oscuro de abajo hacia arriba — mismo gradiente en las 6 cards,
-                    se aclara levemente en hover */}
-                <div
-                  className="absolute inset-0 transition-opacity duration-500 group-hover:opacity-80"
-                  style={{ backgroundImage: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 100%)" }}
-                />
+                  {/* Borde sutil */}
+                  <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/[0.06]" />
 
-                {/* Borde sutil */}
-                <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/[0.06]" />
-
-                {/* Contenido — número, título y descripción centrados en la card */}
-                <div className="absolute inset-0 flex flex-col justify-center p-6">
-                  <span className="text-4xl lg:text-5xl font-bold text-[#D4B06A] leading-none mb-3">
+                  {/* Número grande dorado en la esquina superior izquierda */}
+                  <span className="absolute top-5 left-6 text-5xl lg:text-6xl font-bold text-[#D4B06A] leading-none select-none">
                     {numero}
                   </span>
-                  <h3 className="font-bold text-white text-xl lg:text-2xl leading-tight mb-2">
-                    {p.titulo}
-                  </h3>
-                  <p className="text-stone-200 text-sm leading-relaxed">
-                    {p.descripcion}
-                  </p>
-                </div>
-              </motion.div>
+
+                  {/* Título y descripción centrados verticalmente */}
+                  <div className="absolute inset-0 flex flex-col justify-center px-6 pt-10">
+                    <h3 className="font-bold text-white text-xl lg:text-2xl leading-tight mb-2">
+                      {p.titulo}
+                    </h3>
+                    <p className="text-stone-300 text-sm leading-relaxed line-clamp-2">
+                      {p.descripcion}
+                    </p>
+                  </div>
+                </article>
+              </Reveal>
             );
           })}
         </div>
