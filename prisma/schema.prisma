@@ -164,6 +164,11 @@ model ConfiguracionPedido {
   // ─── Gestión del pedido (post-venta) ──────────────────────
   numeroConsulta      String? // formato MOV-CONSULTA-{AÑO}-{NRO 3 dígitos}, generado al enviar el configurador
   numeroPedido        String? // formato MOV-{AÑO}-{NRO 3 dígitos}, generado al confirmar
+  // Token secreto del link de seguimiento (/mi-pedido?t=...). Lo genera la
+  // base (2 UUID v4 = 244 bits de azar) en cualquier alta, configurador o
+  // manual. Los números de consulta/pedido son correlativos: nunca sirven
+  // solos para ver un pedido.
+  tokenSeguimiento    String    @unique @default(dbgenerated("(replace((gen_random_uuid())::text, '-'::text, ''::text) || replace((gen_random_uuid())::text, '-'::text, ''::text))"))
   estadoPedido        String    @default("consulta") // "consulta" | "presupuestado" | "confirmado" | "en_produccion" | "en_transito" | "en_aduana" | "entregado"
   precioFinal         Float?
   anticipo            Float?
@@ -557,4 +562,15 @@ model ProrrateoLogistica {
   @@unique([costoId, unidadId])
   @@index([unidadId])
   @@map("prorrateos_logistica")
+}
+
+/// Rate limit compartido entre instancias de Vercel (el de memoria de
+/// src/lib/rate-limit.ts es por instancia). `key` = scope + HMAC de la IP.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+  @@map("rate_limit_hits")
 }

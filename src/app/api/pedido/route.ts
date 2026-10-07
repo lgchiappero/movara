@@ -59,9 +59,9 @@ export async function POST(req: NextRequest) {
 
     const data = parsed.data;
 
-    const numeroConsulta = await db.$transaction(async (tx) => {
+    const { numeroConsulta, tokenSeguimiento } = await db.$transaction(async (tx) => {
       const numero = await generateNumeroConsulta(tx);
-      await tx.configuracionPedido.create({
+      const creado = await tx.configuracionPedido.create({
         data: {
           clienteNombre: data.clienteNombre,
           clienteWhatsapp: data.clienteWhatsapp,
@@ -84,13 +84,14 @@ export async function POST(req: NextRequest) {
           precioEstimado: data.precioEstimado,
           numeroConsulta: numero,
         },
+        select: { tokenSeguimiento: true },
       });
-      return numero;
+      return { numeroConsulta: numero, tokenSeguimiento: creado.tokenSeguimiento };
     });
 
     await sendNotificationEmail(data.clienteNombre, modeloLabelsEs[data.modelo], numeroConsulta);
 
-    return NextResponse.json({ ok: true, numeroConsulta });
+    return NextResponse.json({ ok: true, numeroConsulta, tokenSeguimiento });
   } catch (err) {
     console.error("[pedido]", err);
     return NextResponse.json({ error: "Error al procesar la solicitud" }, { status: 500 });

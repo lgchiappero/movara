@@ -47,15 +47,16 @@ async function getIdByNumeroConsulta(page: Page, numeroConsulta: string): Promis
 }
 
 test.describe("/mi-pedido", () => {
-  test("Test 1: código inválido muestra mensaje de error, sin crashear", async ({ page }) => {
+  test("Test 1: sin link no hay buscador por código; un link inválido muestra error sin crashear", async ({ page }) => {
     await page.goto("/mi-pedido");
-    await page.getByPlaceholder("MOV-2025-001").fill("MOV-9999-999");
-    await page.getByRole("button", { name: "Ver mi pedido" }).click();
+    await expect(page.getByRole("textbox")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Pedir mi link por WhatsApp/ })).toBeVisible();
 
-    await expect(page.getByText("No encontramos un pedido con ese código")).toBeVisible();
+    await page.goto(`/mi-pedido?t=${"0".repeat(64)}`);
+    await expect(page.getByText("El link de seguimiento no es válido")).toBeVisible();
   });
 
-  test("Test 2: código válido muestra la línea de tiempo del pedido", async ({ page }) => {
+  test("Test 2: el link con token muestra la línea de tiempo; el código correlativo ya no da acceso", async ({ page }) => {
     // Simula el submit real del configurador público — /admin/configuraciones
     // ya no crea nada, solo gestiona lo que llega desde ahí. Ruta pública.
     const seedRes = await page.request.post("/api/pedido", {
@@ -78,7 +79,8 @@ test.describe("/mi-pedido", () => {
         upgrades: [],
       },
     });
-    const { numeroConsulta: seedNumeroConsulta } = await seedRes.json();
+    const { numeroConsulta: seedNumeroConsulta, tokenSeguimiento } = await seedRes.json();
+    expect(tokenSeguimiento).toMatch(/^[a-f0-9]{64}$/);
 
     // A partir de acá sí hace falta sesión (leer/editar en el panel admin).
     await loginAsAdmin(page);
@@ -89,10 +91,15 @@ test.describe("/mi-pedido", () => {
     const numeroRes = await page.request.post(`/api/admin/configuraciones/${id}/numero`);
     const { numeroPedido } = await numeroRes.json();
 
-    await page.goto("/mi-pedido");
-    await page.getByPlaceholder("MOV-2025-001").fill(numeroPedido);
-    await page.getByRole("button", { name: "Ver mi pedido" }).click();
+    // El admin ve el link personal para mandárselo al cliente.
+    await page.goto(`/admin/configuraciones/${id}`);
+    await expect(page.getByLabel("Link de seguimiento")).toHaveValue(`https://movara.com.ar/mi-pedido?t=${tokenSeguimiento}`);
 
+    // Los números correlativos ya no sirven para consultar un pedido.
+    const porCodigo = await page.request.post("/api/mi-pedido", { data: { codigo: numeroPedido } });
+    expect(porCodigo.status()).toBe(404);
+
+    await page.goto(`/mi-pedido?t=${tokenSeguimiento}`);
     await expect(page.getByText("Playwright Mi Pedido")).toBeVisible();
     await expect(page.getByText("Confirmado")).toBeVisible();
     await expect(page.getByText("Gracias por elegirnos")).toBeVisible();

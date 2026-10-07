@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   estadoPedidoOptions,
   estadoPedidoLabels,
@@ -8,9 +8,6 @@ import {
   type EstadoPedido,
 } from "@/lib/pedido/estado-pedido";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
-
-const inputClass =
-  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-sage-500";
 
 type Pedido = {
   numeroConsulta: string | null;
@@ -45,66 +42,77 @@ function formatFecha(value: string | null): string | null {
   });
 }
 
-export default function BuscarPedidoForm() {
-  const [codigo, setCodigo] = useState("");
-  const [loading, setLoading] = useState(false);
+/** Vista de seguimiento: solo se accede con el token secreto del link
+ * (/mi-pedido?t=...). Sin token no hay búsqueda posible — los códigos de
+ * pedido son correlativos y no alcanzan para identificar al dueño. */
+export default function BuscarPedidoForm({ token }: { token: string | null }) {
+  const [loading, setLoading] = useState(token !== null);
   const [error, setError] = useState<string | null>(null);
   const [pedido, setPedido] = useState<Pedido | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setPedido(null);
-
-    if (!codigo.trim()) {
-      setError("Ingresá tu código de pedido.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch("/api/mi-pedido", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ codigo: codigo.trim() }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        setError(json.error ?? "No pudimos encontrar tu pedido.");
-        return;
+  useEffect(() => {
+    if (!token) return;
+    let cancelado = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/mi-pedido", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        const json = await res.json().catch(() => null);
+        if (cancelado) return;
+        if (!res.ok) {
+          setError(json?.error ?? "No pudimos encontrar tu pedido.");
+          return;
+        }
+        setPedido(json);
+      } catch {
+        if (!cancelado) setError("No pudimos cargar tu pedido. Probá de nuevo.");
+      } finally {
+        if (!cancelado) setLoading(false);
       }
-      setPedido(json);
-    } catch {
-      setError("No pudimos buscar tu pedido. Probá de nuevo.");
-    } finally {
-      setLoading(false);
-    }
-  }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [token]);
 
   const currentIndex = pedido ? estadoPedidoIndex(pedido.estadoPedido) : -1;
   const codigoMostrado = pedido ? (pedido.numeroPedido ?? pedido.numeroConsulta) : null;
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-[#2F2F2F]">Código de pedido</span>
-          <input
-            className={inputClass}
-            value={codigo}
-            onChange={(e) => setCodigo(e.target.value)}
-            placeholder="MOV-2025-001"
-          />
-        </label>
-        {error && <p className="text-xs text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 bg-sage-500 hover:bg-sage-600 disabled:opacity-60 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
-        >
-          {loading ? "Buscando..." : "Ver mi pedido"}
-        </button>
-      </form>
+      {!token && (
+        <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4 text-sm text-stone-600">
+          <p>
+            Para ver tu pedido necesitás el link de seguimiento que te enviamos por email o WhatsApp.
+            Si no lo tenés, pedínoslo y te lo reenviamos.
+          </p>
+          <a
+            href={getWhatsAppUrl("Hola! Necesito el link de seguimiento de mi pedido MOVARA.")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-center py-2.5 border border-sage-500 text-sage-600 font-bold text-sm rounded-xl hover:bg-sage-50 transition-colors"
+          >
+            Pedir mi link por WhatsApp
+          </a>
+        </div>
+      )}
+      {loading && <p className="text-sm text-stone-500">Cargando tu pedido...</p>}
+      {error && (
+        <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-3">
+          <p className="text-sm text-red-600">{error}</p>
+          <a
+            href={getWhatsAppUrl("Hola! Mi link de seguimiento MOVARA no funciona, ¿me mandan uno nuevo?")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-center py-2.5 border border-sage-500 text-sage-600 font-bold text-sm rounded-xl hover:bg-sage-50 transition-colors"
+          >
+            Pedir un link nuevo por WhatsApp
+          </a>
+        </div>
+      )}
 
       {pedido && (
         <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-6">

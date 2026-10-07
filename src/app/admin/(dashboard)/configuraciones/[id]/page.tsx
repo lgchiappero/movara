@@ -1,4 +1,6 @@
 import Link from "next/link";
+import LinkSeguimiento from "@/components/admin/LinkSeguimiento";
+import { linkSeguimiento } from "@/lib/email/pedido-estado-email";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -98,6 +100,11 @@ export default async function ConfiguracionDetailPage({
         <div className="flex justify-between">
           <span className="text-stone-500">Número de consulta</span>
           <span className="text-[#2F2F2F] font-medium">{config.numeroConsulta || "—"}</span>
+        </div>
+        {/* Único acceso del cliente a /mi-pedido — mandárselo por WhatsApp. */}
+        <div className="flex justify-between items-center gap-4">
+          <span className="text-stone-500 shrink-0">Link de seguimiento</span>
+          <LinkSeguimiento url={linkSeguimiento(config.tokenSeguimiento)} />
         </div>
         <div className="flex justify-between">
           <span className="text-stone-500">Creado</span>

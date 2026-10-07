@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { Resend } from "resend";
+import { getClientIP } from "@/lib/rate-limit";
+import { claveIP, consumirRateLimit } from "@/lib/rate-limit-db";
+import { escapeHtml } from "@/lib/email/escape-html";
+
+// Formulario público que dispara emails (incluido uno a la dirección que se
+// ingresa): tope estricto por IP para que no sirva de relay de spam.
+const LEADS_MAX_POR_HORA = 3;
+const UNA_HORA_MS = 60 * 60_000;
 
 const LeadSchema = z.object({
   nombre: z.string().min(2).max(100),
@@ -47,7 +55,7 @@ function buildAdminHtml(lead: LeadData, receivedAt: string) {
         ${rows.map(([label, value]) => `
         <tr style="border-bottom:1px solid #f0f0f0;">
           <td style="padding:10px 0;color:#888;width:150px;vertical-align:top">${label}</td>
-          <td style="padding:10px 0;color:#222;font-weight:500;white-space:pre-wrap">${value}</td>
+          <td style="padding:10px 0;color:#222;font-weight:500;white-space:pre-wrap">${escapeHtml(value)}</td>
         </tr>`).join("")}
       </table>
       <p style="margin:20px 0 0;font-size:12px;color:#bbb;">Recibido el ${receivedAt}</p>
@@ -75,17 +83,17 @@ function buildClientHtml(lead: LeadData) {
       <p style="margin:0;color:#D4B06A;font-size:18px;font-weight:bold;">MOVARA — Espacios Modulares</p>
     </div>
     <div style="padding:24px;">
-      <p style="font-size:16px;color:#222;">Hola ${nombre},</p>
+      <p style="font-size:16px;color:#222;">Hola ${escapeHtml(nombre)},</p>
       <p style="color:#555;line-height:1.6;">Recibimos tu consulta y un asesor MOVARA te va a contactar a la brevedad con toda la información que necesitás.</p>
       <p style="color:#555;line-height:1.6;font-weight:600;margin-top:20px;">Resumen de lo que nos enviaste:</p>
       <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:8px;">
         ${rows.map(([label, value]) => `
         <tr style="border-bottom:1px solid #f0f0f0;">
           <td style="padding:8px 0;color:#888;width:120px">${label}</td>
-          <td style="padding:8px 0;color:#222">${value}</td>
+          <td style="padding:8px 0;color:#222">${escapeHtml(value)}</td>
         </tr>`).join("")}
       </table>
-      ${lead.mensaje ? `<div style="margin-top:16px;padding:12px;background:#f9f5ee;border-left:4px solid #D4B06A;border-radius:4px;font-size:13px;color:#555;white-space:pre-wrap">${lead.mensaje}</div>` : ""}
+      ${lead.mensaje ? `<div style="margin-top:16px;padding:12px;background:#f9f5ee;border-left:4px solid #D4B06A;border-radius:4px;font-size:13px;color:#555;white-space:pre-wrap">${escapeHtml(lead.mensaje)}</div>` : ""}
       <p style="color:#888;font-size:13px;margin-top:24px;">Ante cualquier duda podés responder este email.</p>
       <p style="color:#888;font-size:13px;">— El equipo MOVARA</p>
     </div>
@@ -149,6 +157,21 @@ export async function POST(req: NextRequest) {
     const parsed = LeadSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+    }
+
+    // Solo cuentan los envíos válidos: un error de tipeo no consume cupo.
+    // Si la base no responde se deja pasar (con log): esta ruta ya está hecha
+    // para no perder el lead aunque la DB falle — sigue llegando por email.
+    const permitido = await consumirRateLimit(claveIP("leads", getClientIP(req)), LEADS_MAX_POR_HORA, UNA_HORA_MS)
+      .catch((err) => {
+        console.error("[leads] Rate limit no disponible — se permite el envío:", err);
+        return true;
+      });
+    if (!permitido) {
+      return NextResponse.json(
+        { error: "Recibimos varias consultas desde tu conexión. Probá en una hora o escribinos por WhatsApp." },
+        { status: 429 }
+      );
     }
 
     const data: LeadData = {

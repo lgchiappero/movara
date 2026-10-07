@@ -21,13 +21,19 @@ export default function CitaCancelarView({ cita }: { cita: CitaCancelarData }) {
   const [estado, setEstado] = useState(cita.estado);
   const [accion, setAccion] = useState<"idle" | "cancelando" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   async function cancelar() {
     if (!window.confirm("¿Seguro que querés cancelar tu visita?")) return;
     setAccion("cancelando");
     setError(null);
     try {
-      const res = await fetch(`/api/agenda/citas/${cita.id}/cancelar`, { method: "POST" });
+      const res = await fetch(`/api/agenda/citas/${cita.id}/cancelar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
       const json = await res.json().catch(() => null);
       if (!res.ok) {
         setError(json?.error ?? "No pudimos cancelar tu visita.");
@@ -68,10 +74,22 @@ export default function CitaCancelarView({ cita }: { cita: CitaCancelarData }) {
 
       {estado === "confirmada" && (
         <div className="space-y-3">
+          {/* Confirma que quien cancela es el dueño de la visita. */}
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-[#2F2F2F]">Email con el que agendaste</span>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              placeholder="tu@email.com"
+              className="w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+          </label>
           {error && <p className="text-xs text-red-600">{error}</p>}
           <button
             type="button"
-            disabled={accion === "cancelando"}
+            disabled={accion === "cancelando" || !emailValido}
             onClick={cancelar}
             className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-sm rounded-xl transition-colors"
           >

@@ -163,6 +163,7 @@ async function enviarEmailEstado(
     clienteEmail: string | null;
     clienteNombre: string;
     numeroPedido: string | null;
+    tokenSeguimiento: string;
     fechaDespacho: Date | null;
     fechaArriboEstimado: Date | null;
   }
@@ -172,6 +173,7 @@ async function enviarEmailEstado(
   const email = buildEstadoEmail(estado, {
     clienteNombre: config.clienteNombre,
     numeroPedido: config.numeroPedido,
+    tokenSeguimiento: config.tokenSeguimiento,
     fechaDespacho: config.fechaDespacho,
     fechaArriboEstimado: config.fechaArriboEstimado,
   });

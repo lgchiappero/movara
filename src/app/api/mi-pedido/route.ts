@@ -4,21 +4,25 @@ import { db } from "@/lib/db";
 import { modeloLabelsEs } from "@/lib/pdf/pedido-labels-es";
 import type { PedidoInput } from "@/lib/validators/pedido";
 
+// Solo el token secreto del link de seguimiento da acceso: los números de
+// consulta/pedido son correlativos y se podían recorrer para ver pedidos
+// ajenos.
 const Schema = z.object({
-  codigo: z.string().trim().min(1),
+  token: z.string().trim().regex(/^[a-f0-9]{64}$/),
 });
+
+// Mismo mensaje para token mal formado o inexistente: no revela cuáles existen.
+const LINK_INVALIDO = "El link de seguimiento no es válido. Pedinos uno nuevo por WhatsApp.";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const parsed = Schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Ingresá un código de pedido" }, { status: 400 });
+    return NextResponse.json({ error: LINK_INVALIDO }, { status: 404 });
   }
 
-  const codigo = parsed.data.codigo.toUpperCase();
-
-  const config = await db.configuracionPedido.findFirst({
-    where: { OR: [{ numeroConsulta: codigo }, { numeroPedido: codigo }] },
+  const config = await db.configuracionPedido.findUnique({
+    where: { tokenSeguimiento: parsed.data.token },
     select: {
       numeroConsulta: true,
       numeroPedido: true,
@@ -35,7 +39,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (!config) {
-    return NextResponse.json({ error: "No encontramos un pedido con ese código" }, { status: 404 });
+    return NextResponse.json({ error: LINK_INVALIDO }, { status: 404 });
   }
 
   return NextResponse.json({

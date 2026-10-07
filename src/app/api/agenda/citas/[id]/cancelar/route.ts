@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { Resend } from "resend";
 import { db } from "@/lib/db";
 import {
@@ -32,15 +33,24 @@ async function enviarEmailsCancelacion(cita: CitaEmailData) {
   }
 }
 
+const CancelarSchema = z.object({ email: z.string().trim().email().max(200) });
+
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
 
+  const parsed = CancelarSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Ingresá el email con el que agendaste la visita" }, { status: 400 });
+  }
+
+  // Mismo 403 para "no existe" y "el email no coincide": no revela qué ids
+  // existen. El email se compara sin distinguir mayúsculas.
   const cita = await db.cita.findUnique({ where: { id } });
-  if (!cita) {
-    return NextResponse.json({ error: "No encontramos esa visita" }, { status: 404 });
+  if (!cita || cita.email.trim().toLowerCase() !== parsed.data.email.toLowerCase()) {
+    return NextResponse.json({ error: "El email no coincide con el de la visita" }, { status: 403 });
   }
   if (cita.estado === "cancelada") {
     return NextResponse.json({ ok: true, yaEstabaCancelada: true });

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { citaSchema } from "@/lib/validators/cita";
-import { fechaKeyToDate, hoyFechaKey, dateToFechaKey } from "@/lib/agenda/fecha";
+import { fechaKeyToDate, hoyFechaKey } from "@/lib/agenda/fecha";
 import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
 import {
   buildConfirmacionClienteEmail,
@@ -107,16 +107,10 @@ export async function POST(req: NextRequest) {
       orderBy: { fecha: "asc" },
     });
     if (citaFuturaExistente) {
+      // Sin id, fecha ni horario: con solo conocer un email se podía obtener
+      // el id de la visita ajena y cancelarla.
       return NextResponse.json(
-        {
-          error: "Ya tenés una visita agendada",
-          code: "cita-duplicada",
-          citaExistente: {
-            id: citaFuturaExistente.id,
-            fecha: dateToFechaKey(citaFuturaExistente.fecha),
-            horario: citaFuturaExistente.horario,
-          },
-        },
+        { error: "Ya tenés una visita agendada con este email", code: "cita-duplicada" },
         { status: 409 }
       );
     }

@@ -53,13 +53,7 @@ function hoyKey() {
   return fechaKey(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
-function formatDDMMYYYY(key: string): string {
-  const [y, m, d] = key.split("-");
-  return `${d}/${m}/${y}`;
-}
-
 type Paso = "calendario" | "horario" | "form" | "confirmado";
-type CitaDuplicada = { id: string; fecha: string; horario: string };
 
 export default function AgendaBooking() {
   const now = new Date();
@@ -91,7 +85,7 @@ export default function AgendaBooking() {
   const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [intentoEnviar, setIntentoEnviar] = useState(false);
-  const [citaDuplicada, setCitaDuplicada] = useState<CitaDuplicada | null>(null);
+  const [citaDuplicada, setCitaDuplicada] = useState(false);
 
   function touch(field: string) {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -160,11 +154,11 @@ export default function AgendaBooking() {
     !errors.consulta &&
     !errors.razonSocial;
 
-  async function confirmarVisita(reemplazarCitaId?: string) {
+  async function confirmarVisita() {
     setIntentoEnviar(true);
     if (!fechaSel || !horarioSel || !puedeConfirmar) return;
     setError(null);
-    setCitaDuplicada(null);
+    setCitaDuplicada(false);
     setEnviando(true);
     try {
       const res = await fetch("/api/agenda/citas", {
@@ -179,13 +173,12 @@ export default function AgendaBooking() {
           telefono: form.telefono.trim(),
           razonSocial: form.razonSocial.trim() || undefined,
           consulta: form.consulta.trim(),
-          ...(reemplazarCitaId ? { reemplazarCitaId } : {}),
         }),
       });
       const json = await res.json();
       if (!res.ok) {
-        if (json.code === "cita-duplicada" && json.citaExistente) {
-          setCitaDuplicada(json.citaExistente);
+        if (json.code === "cita-duplicada") {
+          setCitaDuplicada(true);
           return;
         }
         setError(json.error ?? "No pudimos agendar tu visita.");
@@ -455,31 +448,21 @@ export default function AgendaBooking() {
           {error && <p className="text-xs text-red-600">{error}</p>}
 
           {citaDuplicada ? (
-            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3">
+            // Sin datos de la visita existente ni opción de reemplazarla desde
+            // acá: el email solo no prueba que sea el dueño. El link de
+            // cancelación del email de confirmación sí.
+            <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3">
               <p className="text-sm text-amber-900 leading-relaxed">
-                Ya tenés una visita agendada para el {formatDDMMYYYY(citaDuplicada.fecha)} a las{" "}
-                {citaDuplicada.horario}hs.
-                <br />
-                Si agendás una nueva, cancelamos la anterior automáticamente.
+                Ya tenés una visita agendada con este email. Para cambiarla, cancelala desde el link de tu
+                email de confirmación y volvé a agendar.
               </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <button
-                  type="button"
-                  disabled={enviando}
-                  onClick={() => confirmarVisita(citaDuplicada.id)}
-                  className="flex-1 py-2.5 bg-[#D4B06A] hover:bg-[#c19f5a] disabled:opacity-50 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
-                >
-                  {enviando ? "Confirmando..." : "Cancelar la anterior y agendar nueva"}
-                </button>
-                <button
-                  type="button"
-                  disabled={enviando}
-                  onClick={() => setCitaDuplicada(null)}
-                  className="flex-1 py-2.5 border border-stone-300 text-stone-600 hover:bg-stone-50 disabled:opacity-50 font-medium text-sm rounded-xl transition-colors"
-                >
-                  Mantener mi cita actual
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setCitaDuplicada(false)}
+                className="w-full py-2.5 border border-stone-300 text-stone-600 hover:bg-stone-50 font-medium text-sm rounded-xl transition-colors"
+              >
+                Entendido
+              </button>
             </div>
           ) : (
             <button

@@ -298,6 +298,11 @@ export default function ConfiguradorMovara({
   const [waMessage, setWaMessage] = useState("");
   const [numeroConsulta, setNumeroConsulta] = useState<string | null>(null);
   const [enviandoPedido, setEnviandoPedido] = useState(false);
+  const [errorPedido, setErrorPedido] = useState<string | null>(null);
+  const [tokenSeguimiento, setTokenSeguimiento] = useState<string | null>(null);
+  // Misma regla que valida /api/pedido — sin localidad válida el server
+  // rechaza la consulta, así que no se puede pasar del paso 3.
+  const localidadValida = !validateField(localidadSchema, localidad.trim());
 
   const modeloSeleccionado = modelo ? MOVARA_MODELS.find((m) => m.key === modelo)! : null;
   const maxHab = modeloSeleccionado?.maxHab ?? 3;
@@ -319,13 +324,14 @@ export default function ConfiguradorMovara({
   const canNext =
     (step === 1 && modelo !== null) ||
     (step === 2 && finalidad !== null) ||
-    (step === 3 && provincia !== "") ||
+    (step === 3 && provincia !== "" && localidadValida) ||
     step === 4 ||
     step === 5 ||
     (step === 6 && step6Valid);
 
   async function submitPedido() {
     setEnviandoPedido(true);
+    setErrorPedido(null);
     try {
       const clienteNombre = tipoCliente === "particular" ? nombre.trim() : razonSocial.trim();
       const res = await fetch("/api/pedido", {
@@ -353,11 +359,17 @@ export default function ConfiguradorMovara({
           precioEstimado: precioResumen.total,
         }),
       });
-      if (!res.ok) throw new Error("request-failed");
-      const json = await res.json();
-      setNumeroConsulta(json.numeroConsulta ?? null);
-    } catch (err) {
-      console.error("[configurador] No se pudo guardar la consulta:", err);
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        // Nunca silenciar: el cliente tiene que saber que la consulta no se
+        // registró. Se muestra el primer error de validación con su campo.
+        setErrorPedido(mensajeErrorPedido(json));
+        return;
+      }
+      setNumeroConsulta(json?.numeroConsulta ?? null);
+      setTokenSeguimiento(json?.tokenSeguimiento ?? null);
+    } catch {
+      setErrorPedido("No pudimos conectarnos con el servidor.");
     } finally {
       setEnviandoPedido(false);
     }
@@ -449,7 +461,10 @@ export default function ConfiguradorMovara({
               waButtonText={cms.resultado.waButtonText}
               trustText={cms.resultado.trustText}
               numeroConsulta={numeroConsulta}
+              tokenSeguimiento={tokenSeguimiento}
               enviandoPedido={enviandoPedido}
+              errorPedido={errorPedido}
+              onRetry={() => void submitPedido()}
             />
           </motion.div>
         </div>
@@ -734,6 +749,19 @@ function StepFinalidad({ finalidad, onSelect, title, subtitle, descs }: {
 // Step 3 — Ubicación
 // ─────────────────────────────────────────────────────────
 
+/** Texto del error de /api/pedido para mostrar en pantalla: el primer issue
+ * de Zod con su campo ("localidad: Mínimo 2 caracteres"), o el mensaje
+ * general del server. */
+export function mensajeErrorPedido(json: unknown): string {
+  const body = (json ?? {}) as { error?: unknown; details?: { path?: unknown[]; message?: unknown }[] };
+  const detalle = Array.isArray(body.details) ? body.details[0] : undefined;
+  if (detalle && typeof detalle.message === "string") {
+    const campo = Array.isArray(detalle.path) && detalle.path.length ? `${detalle.path.join(".")}: ` : "";
+    return `${campo}${detalle.message}`;
+  }
+  return typeof body.error === "string" ? body.error : "Error desconocido. Probá de nuevo.";
+}
+
 function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, regional, title, subtitle, localidadLabel, provinciaLabel }: {
   localidad: string;
   setLocalidad: (v: string) => void;
@@ -746,14 +774,20 @@ function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, regio
   provinciaLabel: string;
 }) {
   const [locTouched, setLocTouched] = useState(false);
-  const locError = locTouched && localidad.trim() !== ""
-    ? validateField(localidadSchema, localidad.trim())
-    : null;
+  // Error visible si la tocó y la dejó vacía o inválida, o si ya eligió
+  // provincia sin completar la localidad (el botón Siguiente está bloqueado
+  // y el usuario tiene que saber por qué).
+  const mostrarLocError = locTouched || provincia !== "";
+  const locError = !mostrarLocError
+    ? null
+    : localidad.trim() === ""
+      ? "Ingresá tu localidad para continuar"
+      : validateField(localidadSchema, localidad.trim());
   const locIsValid = localidad.trim() !== "" && !validateField(localidadSchema, localidad.trim());
 
   function locCls() {
     const base = "w-full px-4 py-3 rounded-xl border-2 outline-none text-stone-900 text-sm placeholder:text-stone-400 transition-all bg-white";
-    if (!locTouched || localidad.trim() === "") return `${base} border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20`;
+    if (!mostrarLocError) return `${base} border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20`;
     if (locError) return `${base} border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-400/20`;
     return `${base} border-green-400 focus:border-green-500 focus:ring-2 focus:ring-green-400/20`;
   }
@@ -766,7 +800,7 @@ function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, regio
       <div className="space-y-5">
         <div>
           <label htmlFor="cfg-localidad" className="block text-sm font-semibold text-stone-700 mb-1.5">
-            {localidadLabel}
+            {localidadLabel} <span className="text-sage-500">*</span>
             {locIsValid && <span className="ml-1.5 text-green-500 text-xs">✓</span>}
           </label>
           <input
@@ -1399,7 +1433,7 @@ export function StepDatos({
 // Result screen — Paso 7
 // ─────────────────────────────────────────────────────────
 
-function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habitaciones, incluyeCocina, tipoCocina, incluyeBano, tipoAgua, lavarropas, upgradesSeleccionados, regionalKey, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText, numeroConsulta, enviandoPedido }: {
+function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habitaciones, incluyeCocina, tipoCocina, incluyeBano, tipoAgua, lavarropas, upgradesSeleccionados, regionalKey, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText, numeroConsulta, tokenSeguimiento, enviandoPedido, errorPedido, onRetry }: {
   modelo: ModeloKey;
   finalidad: FinalidadKey;
   localidad: string;
@@ -1420,7 +1454,10 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habit
   waButtonText: string;
   trustText: string;
   numeroConsulta: string | null;
+  tokenSeguimiento: string | null;
   enviandoPedido: boolean;
+  errorPedido: string | null;
+  onRetry: () => void;
 }) {
   const m = MOVARA_MODELS.find((x) => x.key === modelo)!;
   const f = FINALIDADES.find((x) => x.key === finalidad)!;
@@ -1436,10 +1473,27 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habit
             Tu consulta fue registrada con el código{" "}
             <span className="font-bold text-sage-800">{numeroConsulta}</span>
           </p>
+          {tokenSeguimiento && (
+            <a
+              href={`/mi-pedido?t=${tokenSeguimiento}`}
+              className="inline-block mt-1.5 text-xs font-bold text-sage-700 hover:underline"
+            >
+              Seguí tu consulta →
+            </a>
+          )}
         </div>
       ) : enviandoPedido ? (
         <div className="bg-stone-100 rounded-2xl p-4 text-center">
           <p className="text-sm text-stone-500">Registrando tu consulta...</p>
+        </div>
+      ) : errorPedido ? (
+        <div role="alert" className="bg-red-50 border border-red-200 rounded-2xl p-4 text-center space-y-2">
+          <p className="text-sm text-red-700 font-semibold">No pudimos registrar tu consulta.</p>
+          <p className="text-xs text-red-600">{errorPedido}</p>
+          <button type="button" onClick={onRetry} className="text-xs font-bold text-red-700 underline">
+            Reintentar
+          </button>
+          <p className="text-xs text-stone-500">También podés enviárnosla por WhatsApp con el botón de abajo.</p>
         </div>
       ) : null}
 

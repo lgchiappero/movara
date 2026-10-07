@@ -3,6 +3,9 @@ import type { EstadoPedido } from "@/lib/pedido/estado-pedido";
 export type EstadoEmailData = {
   clienteNombre: string;
   numeroPedido: string | null;
+  /** Token secreto del link de seguimiento — el número de pedido solo ya
+   * no da acceso a /mi-pedido. */
+  tokenSeguimiento: string;
   fechaDespacho: Date | null;
   fechaArriboEstimado: Date | null;
 };
@@ -12,9 +15,13 @@ function fechaEs(value: Date | null): string {
   return value.toLocaleDateString("es-AR", { year: "numeric", month: "long", day: "numeric" });
 }
 
+export function linkSeguimiento(token: string): string {
+  return `https://movara.com.ar/mi-pedido?t=${token}`;
+}
+
 const MENSAJES: Partial<Record<EstadoPedido, (data: EstadoEmailData) => string>> = {
   confirmado: (data) =>
-    `Tu pedido está confirmado. Seguilo en movara.com.ar/mi-pedido con tu código ${data.numeroPedido ?? ""}`,
+    `Tu pedido${data.numeroPedido ? ` ${data.numeroPedido}` : ""} está confirmado. Seguilo en <a href="${linkSeguimiento(data.tokenSeguimiento)}" style="color:#D4B06A;">este link</a> (es personal, no lo compartas).`,
   en_produccion: (data) =>
     `Tu MOVARA está en producción. Fecha estimada de despacho: ${fechaEs(data.fechaDespacho)}`,
   en_transito: (data) =>
