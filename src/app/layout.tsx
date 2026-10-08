@@ -64,7 +64,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: config?.metaTitle ?? "MOVARA — Casas Modulares de Calidad",
     description:
       config?.metaDescription ??
-      "Diseñamos, fabricamos y entregamos casas modulares sustentables en toda la Argentina. Llave en mano.",
+      "Diseñamos y entregamos casas modulares sustentables en toda la Argentina. Llave en mano.",
   };
 }
 

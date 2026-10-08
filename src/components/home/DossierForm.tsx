@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, FileCheck, Lock, ArrowLeft, ArrowRight, Phone } from "lucide-react";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
+import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -219,6 +220,7 @@ export default function DossierForm({
           email: form.email || undefined,
           provincia: form.provincia || undefined,
           mensaje: buildMensaje(),
+          formulario: "dossier",
         }),
       });
     } catch (err) {
@@ -252,6 +254,7 @@ export default function DossierForm({
           email: form.email || undefined,
           provincia: form.provincia || undefined,
           mensaje: buildMensaje("Prefiere que lo llamen (no completó el formulario completo)"),
+          formulario: "dossier-llamada",
         }),
       });
     } catch (err) {
@@ -604,6 +607,7 @@ export default function DossierForm({
                       </button>
                     </div>
                   )}
+                  <AvisoPrivacidad tono="oscuro" className="text-center" />
                 </form>
 
                 <div className="pt-6 mt-6 border-t border-white/10">

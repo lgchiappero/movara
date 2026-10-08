@@ -10,6 +10,7 @@ import {
   buildReagendacionAdminEmail,
   type CitaEmailData,
 } from "@/lib/email/cita-emails";
+import { resumenError } from "@/lib/log-seguro";
 
 function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -28,7 +29,7 @@ async function enviarEmails(cita: CitaEmailData) {
   try {
     await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "contacto@movara.com.ar", subject: cliente.subject, html: cliente.html });
   } catch (err) {
-    console.error("[agenda/citas] Error enviando confirmación al cliente:", err);
+    console.error(`[agenda/citas] Falló la confirmación al cliente: ${resumenError(err)}`);
   }
 
   if (contactEmail) {
@@ -36,7 +37,7 @@ async function enviarEmails(cita: CitaEmailData) {
     try {
       await resend.emails.send({ from: fromEmail, to: contactEmail, replyTo: "lucianogchiappero@gmail.com", subject: admin.subject, html: admin.html });
     } catch (err) {
-      console.error("[agenda/citas] Error enviando notificación al admin:", err);
+      console.error(`[agenda/citas] Falló el aviso a MOVARA: ${resumenError(err)}`);
     }
   }
 }
@@ -54,7 +55,7 @@ async function enviarEmailsReagendacion(
   try {
     await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "contacto@movara.com.ar", subject: cliente.subject, html: cliente.html });
   } catch (err) {
-    console.error("[agenda/citas] Error enviando confirmación de reagendación al cliente:", err);
+    console.error(`[agenda/citas] Falló la confirmación de reagendación: ${resumenError(err)}`);
   }
 
   if (contactEmail) {
@@ -70,7 +71,7 @@ async function enviarEmailsReagendacion(
     try {
       await resend.emails.send({ from: fromEmail, to: contactEmail, replyTo: "lucianogchiappero@gmail.com", subject: admin.subject, html: admin.html });
     } catch (err) {
-      console.error("[agenda/citas] Error enviando aviso de reagendación al admin:", err);
+      console.error(`[agenda/citas] Falló el aviso de reagendación a MOVARA: ${resumenError(err)}`);
     }
   }
 }
@@ -181,7 +182,7 @@ export async function POST(req: NextRequest) {
         });
       }
     } catch (err) {
-      console.error("[agenda/citas] Error guardando lead:", err);
+      console.error(`[agenda/citas] cita=${cita.id} No se pudo guardar el lead: ${resumenError(err)}`);
     }
 
     const emailData: CitaEmailData = {
@@ -213,7 +214,7 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
-    console.error("[agenda/citas]", err);
+    console.error(`[agenda/citas] ${resumenError(err)}`);
     return NextResponse.json({ error: "Error al agendar la visita" }, { status: 500 });
   }
 }

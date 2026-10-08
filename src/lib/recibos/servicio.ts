@@ -299,7 +299,7 @@ export async function despuesDeConfirmar(r: ReciboConformidad): Promise<void> {
   for (const { to, para } of envios) {
     const { subject, html } = buildEmailReciboConfirmado(datos, para);
     const res = await enviarEmailRecibo({ to, subject, html, attachments: adjunto }, { prueba });
-    if (!res.ok) console.error(`[recibos] No se pudo enviar ${r.numeroRecibo} confirmado a ${to}:`, res.error);
+    if (!res.ok) console.error(`[recibos] No se pudo enviar ${r.numeroRecibo} confirmado (${para === "cliente" ? "al cliente" : "a MOVARA"}): ${res.error}`);
   }
 }
 

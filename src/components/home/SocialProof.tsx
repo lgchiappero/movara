@@ -1,7 +1,7 @@
 const STATS = [
   { value: "+50",    label: "Casas entregadas" },
   { value: "+8",     label: "Años de experiencia" },
-  { value: "100%",   label: "Fabricación argentina" },
+  { value: "100%",   label: "Llave en mano" },
   { value: "12 meses", label: "Garantía MOVARA" },
 ];
 

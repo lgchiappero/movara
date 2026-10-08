@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
+import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 
 const PROVINCIAS = [
   "Buenos Aires", "Ciudad Autónoma de Buenos Aires", "Catamarca", "Chaco",
@@ -48,7 +49,7 @@ export default function ContactoForm({
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, formulario: "contacto" }),
       });
       if (res.ok) {
         localStorage.setItem("movara_exit_popup_submitted", "true");
@@ -219,6 +220,7 @@ export default function ContactoForm({
                 >
                   {status === "sending" ? "Enviando…" : (content?.textoCTA ?? "Solicitar asesoramiento privado")}
                 </button>
+                <AvisoPrivacidad tono="oscuro" className="text-center" />
               </form>
             )}
           </div>

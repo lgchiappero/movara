@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SHOWROOM_DIRECCION } from "@/lib/agenda/showroom";
+import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 
 export type CitaCancelarData = {
   id: string;
@@ -95,6 +96,7 @@ export default function CitaCancelarView({ cita }: { cita: CitaCancelarData }) {
           >
             {accion === "cancelando" ? "Cancelando..." : "Cancelar mi visita"}
           </button>
+          <AvisoPrivacidad accion="Al continuar" className="text-center" />
         </div>
       )}
 

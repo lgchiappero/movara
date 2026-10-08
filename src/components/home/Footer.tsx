@@ -30,7 +30,7 @@ const FALLBACK_NAV_LINKS = [
   { label: "Configurador", url: "/configurador" },
   { label: "Quiénes somos", url: "/quienes-somos" },
   { label: "Cómo funciona", url: "/#proceso" },
-  { label: "Testimonios", url: "/#testimonios" },
+  { label: "Preguntas frecuentes", url: "/faq" },
 ];
 
 const FALLBACK: ResolvedConfig = {
@@ -39,7 +39,7 @@ const FALLBACK: ResolvedConfig = {
   address: "Buenos Aires, Argentina",
   instagram: "https://www.instagram.com/movara.homes/",
   footerDescription:
-    "Estamos repensando la forma de habitar. Casas modulares de calidad superior, fabricación argentina.",
+    "Estamos repensando la forma de habitar. Casas modulares de diseño, listas para habitar.",
   footerNavLinks: FALLBACK_NAV_LINKS,
   copyrightText: "MOVARA. Todos los derechos reservados.",
 };

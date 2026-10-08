@@ -36,6 +36,7 @@ import {
   normalizarTelefono,
   sanitizarMensaje,
 } from "@/lib/validators/configurador";
+import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 
 // ─────────────────────────────────────────────────────────
 // Constants
@@ -1424,6 +1425,7 @@ export function StepDatos({
         <p className="text-xs text-stone-400 text-center">
           Campos con <span className="text-sage-500 font-semibold">*</span> son obligatorios. Tus datos solo se usan para preparar tu presupuesto.
         </p>
+        <AvisoPrivacidad accion="Al ver tu configuración" className="text-center" />
       </div>
     </div>
   );

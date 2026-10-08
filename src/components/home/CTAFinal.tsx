@@ -76,7 +76,7 @@ export default function CTAFinal({
               {[
                 { value: "+50", label: "Casas entregadas" },
                 { value: "8+", label: "Años de experiencia" },
-                { value: "100%", label: "Fabricación argentina" },
+                { value: "100%", label: "Llave en mano" },
               ].map(({ value, label }) => (
                 <div key={label}>
                   <p className="text-2xl font-bold text-stone-900">{value}</p>

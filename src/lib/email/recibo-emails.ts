@@ -1,5 +1,5 @@
 import { escapeHtml } from "@/lib/email/escape-html";
-import { WHATSAPP_MOVARA_NUMERO, WHATSAPP_MOVARA_VISIBLE } from "@/lib/recibos/constantes";
+import { URL_PUBLICA, WHATSAPP_MOVARA_NUMERO, WHATSAPP_MOVARA_VISIBLE } from "@/lib/recibos/constantes";
 
 const NEGRO = "#1A1A1A";
 const DORADO = "#D4B36A";
@@ -34,6 +34,9 @@ function layout(contenido: string): string {
         </td></tr>
         <tr><td style="background:#FFFFFF;padding:32px 28px;border-radius:0 0 12px 12px;">
           ${contenido}
+        </td></tr>
+        <tr><td style="padding:16px 12px;text-align:center;font-size:11px;color:#9A9A9A;">
+          MOVARA · <a href="${URL_PUBLICA}/privacidad" style="color:#9A9A9A;">Política de Privacidad</a>
         </td></tr>
       </table>
     </td></tr>

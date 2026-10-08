@@ -7,6 +7,7 @@ import {
   buildCancelacionAdminEmail,
   type CitaEmailData,
 } from "@/lib/email/cita-emails";
+import { resumenError } from "@/lib/log-seguro";
 
 async function enviarEmailsCancelacion(cita: CitaEmailData) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -20,7 +21,7 @@ async function enviarEmailsCancelacion(cita: CitaEmailData) {
   try {
     await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "contacto@movara.com.ar", subject: cliente.subject, html: cliente.html });
   } catch (err) {
-    console.error("[agenda/citas/cancelar] Error enviando email al cliente:", err);
+    console.error(`[agenda/citas/cancelar] cita=${cita.id} Falló el email al cliente: ${resumenError(err)}`);
   }
 
   if (contactEmail) {
@@ -28,7 +29,7 @@ async function enviarEmailsCancelacion(cita: CitaEmailData) {
     try {
       await resend.emails.send({ from: fromEmail, to: contactEmail, replyTo: "lucianogchiappero@gmail.com", subject: admin.subject, html: admin.html });
     } catch (err) {
-      console.error("[agenda/citas/cancelar] Error enviando email al admin:", err);
+      console.error(`[agenda/citas/cancelar] cita=${cita.id} Falló el email a MOVARA: ${resumenError(err)}`);
     }
   }
 }

@@ -42,6 +42,7 @@ describe("/recibo/[token]", () => {
     await renderPage("cualquier-cosa");
     expect(screen.getByRole("heading", { name: "Link no válido" })).toBeInTheDocument();
     expect(m.porToken).not.toHaveBeenCalled();
+    expect(screen.getByRole("link", { name: "Política de Privacidad" })).toHaveAttribute("href", "/privacidad");
   });
 
   it("token inexistente o anulado: mismo mensaje genérico", async () => {

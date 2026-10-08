@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { trackExitIntentLead } from "@/lib/meta-pixel";
+import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 
 // Apagado temporal del popup — para reactivarlo, cambiar a `true`. El resto
 // del componente queda intacto, solo condicionado a esta constante.
@@ -276,6 +277,7 @@ export default function ExitIntentPopup() {
                 >
                   No gracias, prefiero no recibirlo
                 </button>
+                <AvisoPrivacidad tono="oscuro" className="text-center mt-2" />
               </form>
             </>
           )}

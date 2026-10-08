@@ -123,7 +123,7 @@ describe("POST /api/leads", () => {
     mockSend.mockRejectedValue(new Error("resend"));
     const res = await POST(req(LEAD));
     expect(res.status).toBe(201);
-    expect(err).toHaveBeenCalledWith("[leads] Both DB and email failed for lead:", expect.anything(), expect.anything());
+    expect(err).toHaveBeenCalledWith("[leads] id=- origen=web db=error email=no-enviado — el lead no quedó registrado");
     mockSend.mockResolvedValue({ data: { id: "e1" }, error: null });
   });
 
@@ -139,5 +139,24 @@ describe("POST /api/leads", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await POST(new NextRequest("http://localhost/api/leads", { method: "POST", body: "x" }));
     expect(res.status).toBe(500);
+  });
+
+  it("los logs solo registran id, origen y resultado — nunca nombre, DNI, email ni teléfono", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockCreate.mockResolvedValueOnce({ id: "lead123" });
+    await POST(req({ ...LEAD, apellido: "Pérez", dni: "30123456", provincia: "Santa Fe", formulario: "dossier" }));
+    expect(log).toHaveBeenCalledWith("[leads] id=lead123 origen=dossier db=ok email=ok");
+
+    // Un error de Prisma trae los datos en el mensaje: se registra solo tipo y código.
+    const prismaError = Object.assign(new Error("Invalid `db.lead.create()` invocation: { nombre: 'Ana', dni: '30123456' }"), {
+      name: "PrismaClientValidationError",
+    });
+    mockCreate.mockRejectedValueOnce(prismaError);
+    await POST(req({ ...LEAD, dni: "30123456" }));
+    expect(err).toHaveBeenCalledWith("[leads] origen=web No se pudo guardar el lead: PrismaClientValidationError");
+
+    const todo = JSON.stringify([...log.mock.calls, ...err.mock.calls]);
+    for (const dato of ["Ana", "Pérez", "30123456", "5491155554444", "ana@example.com", "Santa Fe"]) expect(todo).not.toContain(dato);
   });
 });

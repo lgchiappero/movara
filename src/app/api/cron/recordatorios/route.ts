@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { buildRecordatorioEmail, type CitaEmailData } from "@/lib/email/cita-emails";
 import { addDiasFechaKey, hoyFechaKey, fechaKeyToDate } from "@/lib/agenda/fecha";
+import { resumenError } from "@/lib/log-seguro";
 
 // Vercel Cron llama este endpoint por GET y, si CRON_SECRET está seteado en
 // el proyecto, agrega automáticamente `Authorization: Bearer <CRON_SECRET>`
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
     try {
       await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "contacto@movara.com.ar", subject, html });
     } catch (err) {
-      console.error("[cron/recordatorios] Error enviando a", cita.email, err);
+      console.error(`[cron/recordatorios] cita=${cita.id} Falló el recordatorio: ${resumenError(err)}`);
       continue; // no marca recordatorioEnviado si el envío falló
     }
     await db.cita.update({ where: { id: cita.id }, data: { recordatorioEnviado: true } });

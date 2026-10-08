@@ -12,6 +12,7 @@ import {
   validateField,
 } from "@/lib/validators/configurador";
 import { SHOWROOM_DIRECCION } from "@/lib/agenda/showroom";
+import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
@@ -474,6 +475,7 @@ export default function AgendaBooking() {
               {enviando ? "Confirmando..." : "Confirmar visita"}
             </button>
           )}
+          <AvisoPrivacidad accion="Al confirmar la visita" className="text-center" />
         </div>
       )}
     </div>

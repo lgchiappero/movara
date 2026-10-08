@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db/index";
 import { Resend } from "resend";
+import { resumenError } from "@/lib/log-seguro";
 
 const Schema = z.object({
   email: z.string().email(),
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
         VALUES (${email}, ${source})
       `;
     } catch (dbErr) {
-      console.error("[leads-email] DB error:", dbErr);
+      console.error(`[leads-email] No se pudo guardar: ${resumenError(dbErr)}`);
     }
 
     const apiKey = process.env.RESEND_API_KEY;
@@ -59,13 +60,13 @@ export async function POST(req: NextRequest) {
 </html>`,
         });
       } catch (emailErr) {
-        console.error("[leads-email] Email error:", emailErr);
+        console.error(`[leads-email] Falló el email a MOVARA: ${resumenError(emailErr)}`);
       }
     }
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (err) {
-    console.error("[leads-email]", err);
+    console.error(`[leads-email] ${resumenError(err)}`);
     return NextResponse.json({ error: "Error al procesar" }, { status: 500 });
   }
 }

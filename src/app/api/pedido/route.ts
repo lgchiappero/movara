@@ -5,6 +5,7 @@ import { pedidoSchema } from "@/lib/validators/pedido";
 import { modeloLabelsEs } from "@/lib/pdf/pedido-labels-es";
 import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
 import { generateNumeroConsulta } from "@/lib/pedido/numero-consulta";
+import { resumenError } from "@/lib/log-seguro";
 
 async function sendNotificationEmail(clienteNombre: string, modelo: string, numeroConsulta: string) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -36,7 +37,7 @@ async function sendNotificationEmail(clienteNombre: string, modelo: string, nume
 </html>`,
     });
   } catch (err) {
-    console.error("[pedido] Email error:", err);
+    console.error(`[pedido] Falló el email a MOVARA: ${resumenError(err)}`);
   }
 }
 
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, numeroConsulta, tokenSeguimiento });
   } catch (err) {
-    console.error("[pedido]", err);
+    console.error(`[pedido] ${resumenError(err)}`);
     return NextResponse.json({ error: "Error al procesar la solicitud" }, { status: 500 });
   }
 }

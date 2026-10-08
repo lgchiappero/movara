@@ -32,6 +32,7 @@ describe("buildEmailSolicitudRecibo", () => {
     expect(html).toContain("#1A1A1A");
     expect(html).toContain("#D4B36A");
     expect(html).not.toContain("<b>García</b>");
+    expect(html).toContain('href="https://movara.com.ar/privacidad"');
   });
 
   it("muestra las observaciones cuando hay", () => {

@@ -18,7 +18,7 @@ const FALLBACK_STEPS = [
     icon: <TruckIcon />,
     title: "Coordinamos la instalación",
     description:
-      "Fabricamos en planta, coordinamos el transporte y gestionamos todos los trámites de habilitación municipal.",
+      "Producción en planta con controles de calidad; coordinamos el transporte y gestionamos todos los trámites de habilitación municipal.",
   },
   {
     number: "04",
