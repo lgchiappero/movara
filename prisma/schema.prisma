@@ -387,6 +387,7 @@ model Unidad {
   documentos          DocumentoUnidad[]
   acuerdosPago        AcuerdoPago[]
   prorrateosLogistica ProrrateoLogistica[]
+  recibos             ReciboConformidad[]
 
   @@map("unidades")
 }
@@ -573,4 +574,56 @@ model RateLimitHit {
 
   @@index([key, createdAt])
   @@map("rate_limit_hits")
+}
+
+/// Recibo en Conformidad de entrega. El cliente lo confirma desde el link
+/// /recibo/[token] que recibe por email (firma electrónica, art. 5 Ley
+/// 25.506). Una unidad tiene a lo sumo un recibo no anulado — se controla
+/// en código (Prisma no soporta índices únicos parciales).
+model ReciboConformidad {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unidadId String
+  unidad   Unidad @relation(fields: [unidadId], references: [id])
+
+  numeroRecibo String @unique // REC-2026-001
+  // Mismo método que ConfiguracionPedido.tokenSeguimiento: 244 bits de azar.
+  token        String @unique @default(dbgenerated("(replace((gen_random_uuid())::text, '-'::text, ''::text) || replace((gen_random_uuid())::text, '-'::text, ''::text))"))
+  estado       String @default("pendiente") // pendiente | confirmado | anulado
+
+  fechaEntrega  DateTime
+  lugarEntrega  String
+  observaciones String?
+  creadoPor     String
+
+  // ─── Snapshot al crear (no cambia si se edita el Cliente o la Unidad) ──
+  clienteNombre   String
+  clienteDni      String?
+  clienteCuit     String?
+  clienteEmail    String
+  clienteTelefono String?
+  numeroUnidad    String
+  modelo          String
+
+  // ─── Envío del email con el link ───────────────────────────────────────
+  emailEnviadoAt DateTime?
+  emailEnviadoA  String?
+
+  // ─── Evidencia de la confirmación ──────────────────────────────────────
+  confirmadoAt    DateTime?
+  ipConfirmacion  String?
+  userAgent       String?
+  textoConfirmado String? // texto exacto que el cliente confirmó
+  hashContenido   String? // SHA-256 de texto + datos + evidencia
+  pdfPath         String? // PDF confirmado en Storage (bucket documentos-movara)
+
+  // ─── Anulación ─────────────────────────────────────────────────────────
+  anuladoAt  DateTime?
+  anuladoPor String?
+
+  @@index([unidadId])
+  @@index([estado, fechaEntrega])
+  @@map("recibos_conformidad")
 }

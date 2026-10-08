@@ -6,6 +6,7 @@ import ClienteDetailForm from "@/components/admin/ClienteDetailForm";
 import EliminarClienteButton from "@/components/admin/EliminarClienteButton";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { isAdmin } from "@/lib/admin/roles";
+import RecibosClienteSection from "@/components/admin/recibos/RecibosClienteSection";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,13 @@ export default async function ClienteDetailPage({
     include: {
       unidades: {
         orderBy: { createdAt: "desc" },
-        include: { envio: { select: { numeroPI: true } } },
+        include: {
+          envio: { select: { numeroPI: true } },
+          recibos: {
+            orderBy: { createdAt: "desc" },
+            select: { id: true, numeroRecibo: true, numeroUnidad: true, unidadId: true, modelo: true, estado: true, confirmadoAt: true },
+          },
+        },
       },
     },
   });
@@ -87,6 +94,8 @@ export default async function ClienteDetailPage({
           </div>
         )}
       </div>
+
+      <RecibosClienteSection recibos={cliente.unidades.flatMap((u) => u.recibos)} />
     </div>
   );
 }

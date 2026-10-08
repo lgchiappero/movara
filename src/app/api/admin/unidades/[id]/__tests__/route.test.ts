@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockFindUnique, mockUpdate, mockDelete, mockCountAcuerdo, mockCountDocumento, mockGetAdminUser } = vi.hoisted(() => ({
+const { mockFindUnique, mockUpdate, mockDelete, mockCountAcuerdo, mockCountDocumento, mockGetAdminUser, mockReciboFindFirst, mockReciboDeleteMany } = vi.hoisted(() => ({
+  mockReciboFindFirst: vi.fn().mockResolvedValue(null),
+  mockReciboDeleteMany: vi.fn(),
   mockFindUnique: vi.fn(),
   mockUpdate: vi.fn(),
   mockDelete: vi.fn(),
@@ -13,6 +15,9 @@ vi.mock("@/lib/db", () => ({
     unidad: { findUnique: mockFindUnique, update: mockUpdate, delete: mockDelete },
     acuerdoPago: { count: mockCountAcuerdo },
     documentoUnidad: { count: mockCountDocumento },
+    reciboConformidad: { findFirst: mockReciboFindFirst, deleteMany: mockReciboDeleteMany },
+    // El DELETE borra recibos y unidad en una transacción por lotes.
+    $transaction: (ops: Promise<unknown>[]) => Promise.all(ops),
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -116,6 +121,20 @@ describe("PATCH /api/admin/unidades/[id]", () => {
     expect(data.garantiaFin.getUTCFullYear()).toBe(2027);
   });
 
+  it("con un Recibo en Conformidad confirmado no pisa la garantía que activó", async () => {
+    mockReciboFindFirst.mockResolvedValueOnce({ id: "r1" });
+    mockUpdate.mockResolvedValueOnce({ id: "u1", ...VALID });
+    await PATCH(makeRequest({ ...VALID, garantiaActivada: false, garantiaInicio: "2020-01-01" }), {
+      params: Promise.resolve({ id: "u1" }),
+    });
+    expect(mockReciboFindFirst.mock.calls[0][0].where).toEqual({ unidadId: "u1", estado: "confirmado" });
+    const data = mockUpdate.mock.calls[0][0].data;
+    expect(data).not.toHaveProperty("garantiaActivada");
+    expect(data).not.toHaveProperty("garantiaInicio");
+    expect(data).not.toHaveProperty("garantiaFin");
+    expect(data.estadoFabricacion).toBe(VALID.estadoFabricacion);
+  });
+
   it("400 si el body no es JSON válido", async () => {
     const req = new NextRequest("http://localhost/api/admin/unidades/u1", {
       method: "PATCH",
@@ -190,6 +209,19 @@ describe("DELETE /api/admin/unidades/[id]", () => {
     const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "u1" }) });
     expect(res.status).toBe(200);
     expect(mockDelete).toHaveBeenCalledWith({ where: { id: "u1" } });
+    // Los recibos pendientes/anulados se borran junto con la unidad.
+    expect(mockReciboDeleteMany).toHaveBeenCalledWith({ where: { unidadId: "u1" } });
+  });
+
+  it("400 si tiene un Recibo en Conformidad confirmado", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockCountAcuerdo.mockResolvedValueOnce(0);
+    mockCountDocumento.mockResolvedValueOnce(0);
+    mockReciboFindFirst.mockResolvedValueOnce({ numeroRecibo: "REC-2026-001" });
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "u1" }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("REC-2026-001 confirmado");
+    expect(mockDelete).not.toHaveBeenCalled();
   });
 
   it("500 si la DB falla al eliminar", async () => {

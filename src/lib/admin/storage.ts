@@ -1,10 +1,35 @@
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
+import { mkdir, readFile, writeFile } from "fs/promises";
+import path from "path";
 
 const SIGNED_URL_TTL_SECONDS = 300; // 5 minutos
 
 export const BUCKET_PEDIDOS = "documentos-pedidos";
 export const BUCKET_MOVARA = "documentos-movara"; // envíos y unidades
+
+/** Carpeta del storage local de desarrollo (en .gitignore). */
+export const LOCAL_STORAGE_DIR = path.join(process.cwd(), ".storage-local");
+
+/** Sin credenciales de Supabase y fuera de producción, los archivos se
+ * guardan en una carpeta local — así el flujo completo (subir documentos,
+ * PDF del Recibo en Conformidad) funciona en dev y en los tests e2e. En
+ * producción nunca: sin credenciales, getStorageClient() tira error. */
+export function usaStorageLocal(): boolean {
+  const sinCredenciales = !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return sinCredenciales && process.env.NODE_ENV !== "production";
+}
+
+/** Ruta absoluta de un archivo del storage local, sin permitir salir de la
+ * carpeta (bucket y path vienen de la base, pero no se confía igual). */
+export function rutaLocal(bucket: string, storagePath: string): string {
+  const base = path.resolve(LOCAL_STORAGE_DIR);
+  const destino = path.resolve(base, bucket, storagePath);
+  if (!destino.startsWith(base + path.sep)) {
+    throw new Error("[storage] Path fuera del storage local");
+  }
+  return destino;
+}
 
 function getStorageClient() {
   const url = process.env.SUPABASE_URL;
@@ -32,6 +57,12 @@ export async function uploadDocument(
   bytes: ArrayBuffer,
   contentType: string
 ): Promise<void> {
+  if (usaStorageLocal()) {
+    const destino = rutaLocal(bucket, path);
+    await mkdir(dirnameLocal(destino), { recursive: true });
+    await writeFile(destino, Buffer.from(bytes));
+    return;
+  }
   const client = getStorageClient();
 
   const attemptUpload = () =>
@@ -62,6 +93,11 @@ export async function getSignedUrl(
   path: string,
   expiresInSeconds = SIGNED_URL_TTL_SECONDS
 ): Promise<string | null> {
+  if (usaStorageLocal()) {
+    // Servido por /api/admin/storage-local (protegido por el proxy de admin
+    // y deshabilitado en producción).
+    return `/api/admin/storage-local?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`;
+  }
   const client = getStorageClient();
   const { data, error } = await client.storage.from(bucket).createSignedUrl(path, expiresInSeconds);
   if (error || !data) {
@@ -69,4 +105,21 @@ export async function getSignedUrl(
     return null;
   }
   return data.signedUrl;
+}
+
+/** Descarga un archivo del bucket (o del storage local en dev). */
+export async function downloadDocument(bucket: string, storagePath: string): Promise<Buffer> {
+  if (usaStorageLocal()) {
+    return readFile(rutaLocal(bucket, storagePath));
+  }
+  const client = getStorageClient();
+  const { data, error } = await client.storage.from(bucket).download(storagePath);
+  if (error || !data) {
+    throw new Error(`[storage] Error al descargar: ${error?.message ?? "sin datos"}`);
+  }
+  return Buffer.from(await data.arrayBuffer());
+}
+
+function dirnameLocal(archivo: string): string {
+  return path.dirname(archivo);
 }

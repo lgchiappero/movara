@@ -98,6 +98,7 @@ const UNIDAD_BASE = {
   cliente: { id: "c1", nombre: "Juan García" },
   envio: null,
   documentos: [],
+  recibos: [],
   configuracion: null,
   modelo: null,
   precioCliente: null,

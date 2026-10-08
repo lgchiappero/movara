@@ -68,6 +68,7 @@ describe("ClienteDetailPage", () => {
           modelo: "Flex 18",
           estadoFabricacion: "en_produccion",
           envio: { numeroPI: "PI-001" },
+          recibos: [],
         },
         {
           id: "u2",
@@ -75,6 +76,7 @@ describe("ClienteDetailPage", () => {
           modelo: null,
           estadoFabricacion: "pendiente",
           envio: null,
+          recibos: [],
         },
       ],
     });
@@ -87,7 +89,7 @@ describe("ClienteDetailPage", () => {
   });
 
   it("rol admin ve el botón de eliminar con la cantidad de unidades", async () => {
-    mockFindUnique.mockResolvedValueOnce({ ...CLIENTE, unidades: [{}, {}] });
+    mockFindUnique.mockResolvedValueOnce({ ...CLIENTE, unidades: [{ recibos: [] }, { recibos: [] }] });
     render(await ClienteDetailPage({ params: Promise.resolve({ id: "c1" }) }));
     expect(screen.getByText("EliminarClienteButton cantidadUnidades=2")).toBeInTheDocument();
   });

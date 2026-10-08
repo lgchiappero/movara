@@ -46,8 +46,17 @@ export async function PATCH(
       { status: 400 }
     );
   }
-  const data = parsed.data;
-  const garantiaFin = calcularGarantiaFechaFin(data.garantiaInicio);
+  // Si la garantía la activó un Recibo en Conformidad confirmado, manda el
+  // recibo: el PATCH no toca garantiaActivada/Inicio/Fin (los quita del
+  // update), así editar otros datos de la unidad no la pisa.
+  const reciboConfirmado = await db.reciboConformidad.findFirst({
+    where: { unidadId: id, estado: "confirmado" },
+    select: { id: true },
+  });
+  const { garantiaActivada, garantiaInicio, ...resto } = parsed.data;
+  const data = reciboConfirmado
+    ? resto
+    : { ...resto, garantiaActivada, garantiaInicio, garantiaFin: calcularGarantiaFechaFin(garantiaInicio) };
 
   try {
     const unidad = await db.unidad.update({
@@ -58,7 +67,6 @@ export async function PATCH(
         // NULL" — un `null` de JS a secas ahí es ambiguo para Prisma.
         configuracion:
           data.configuracion === null ? Prisma.JsonNull : (data.configuracion as Prisma.InputJsonValue),
-        garantiaFin,
       },
     });
     return NextResponse.json({ ok: true, unidad });
@@ -82,10 +90,18 @@ export async function DELETE(
     return NextResponse.json({ error: "Solo un administrador puede eliminar" }, { status: 403 });
   }
 
-  const [cantidadPagos, cantidadDocumentos] = await Promise.all([
+  const [cantidadPagos, cantidadDocumentos, reciboConfirmado] = await Promise.all([
     db.acuerdoPago.count({ where: { unidadId: id } }),
     db.documentoUnidad.count({ where: { unidadId: id } }),
+    db.reciboConformidad.findFirst({ where: { unidadId: id, estado: "confirmado" }, select: { numeroRecibo: true } }),
   ]);
+
+  if (reciboConfirmado) {
+    return NextResponse.json(
+      { error: `No se puede eliminar: tiene el Recibo en Conformidad ${reciboConfirmado.numeroRecibo} confirmado` },
+      { status: 400 }
+    );
+  }
 
   if (cantidadPagos > 0 || cantidadDocumentos > 0) {
     const partes: string[] = [];
@@ -98,7 +114,12 @@ export async function DELETE(
   }
 
   try {
-    await db.unidad.delete({ where: { id } });
+    // Los recibos pendientes o anulados no tienen valor sin la unidad: se
+    // borran con ella (la FK no permite dejarlos huérfanos).
+    await db.$transaction([
+      db.reciboConformidad.deleteMany({ where: { unidadId: id } }),
+      db.unidad.delete({ where: { id } }),
+    ]);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[admin/unidades/:id DELETE]", err);

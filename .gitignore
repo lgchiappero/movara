@@ -47,3 +47,9 @@ next-env.d.ts
 # imágenes de trabajo temporales — no forman parte del repo
 /docs/heshi-catalogue/
 /docs/heshi-catalogue-150dpi/
+
+# SQL para correr a mano en el SQL Editor de Supabase — no se versiona
+/sql/
+
+# Storage local de desarrollo/tests (ver src/lib/admin/storage.ts)
+/.storage-local/

@@ -16,6 +16,7 @@ import { resumirMovimientos, RESUMEN_COBRANZA_VACIO } from "@/lib/cobranza/resum
 import { calcularPasos, accionesPasoActual, type DatosTimelineUnidad } from "@/lib/envios/timeline";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { isAdmin } from "@/lib/admin/roles";
+import ReciboUnidadSection from "@/components/admin/recibos/ReciboUnidadSection";
 
 export const dynamic = "force-dynamic";
 
@@ -40,10 +41,17 @@ export default async function UnidadDetailPage({
         },
       },
       documentos: { orderBy: { createdAt: "desc" } },
+      recibos: {
+        where: { estado: { not: "anulado" } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { id: true, numeroRecibo: true, estado: true, fechaEntrega: true, confirmadoAt: true },
+      },
     },
   });
 
   if (!unidad) notFound();
+  const reciboVigente = unidad.recibos[0] ?? null;
 
   const [clientes, envios, documentosUnidadConUrl, documentosEnvioConUrl, acuerdosRaw] = await Promise.all([
     db.cliente.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
@@ -181,7 +189,10 @@ export default async function UnidadDetailPage({
           garantiaFin: unidad.garantiaFin?.toISOString() ?? null,
           notas: unidad.notas,
         }}
+        garantiaPorRecibo={reciboVigente?.estado === "confirmado" ? reciboVigente.numeroRecibo : null}
       />
+
+      <ReciboUnidadSection unidadId={id} recibo={reciboVigente} />
 
       <div>
         <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600 mb-4">

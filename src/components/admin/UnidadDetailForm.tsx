@@ -98,11 +98,15 @@ export default function UnidadDetailForm({
   initial,
   clientes,
   envios,
+  garantiaPorRecibo = null,
 }: {
   id: string;
   initial: Unidad;
   clientes: Cliente[];
   envios: Envio[];
+  /** Nº del Recibo en Conformidad confirmado que activó la garantía: si
+   * existe, la garantía no se edita desde acá (el servidor tampoco la pisa). */
+  garantiaPorRecibo?: string | null;
 }) {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -374,9 +378,15 @@ export default function UnidadDetailForm({
 
       <div id="garantia" className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
         <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600">Garantía MOVARA (12 meses)</h2>
+        {garantiaPorRecibo && (
+          <p className="text-xs text-stone-500">
+            Activada por el Recibo en Conformidad {garantiaPorRecibo}, desde la fecha de entrega. No se puede modificar desde acá.
+          </p>
+        )}
         <label className={checkboxRowClass}>
           <input
             type="checkbox"
+            disabled={!!garantiaPorRecibo}
             checked={form.garantiaActivada}
             onChange={(e) => set("garantiaActivada", e.target.checked)}
           />
@@ -388,6 +398,7 @@ export default function UnidadDetailForm({
             <input
               type="date"
               className={inputClass}
+              disabled={!!garantiaPorRecibo}
               value={form.garantiaInicio}
               onChange={(e) => set("garantiaInicio", e.target.value)}
             />

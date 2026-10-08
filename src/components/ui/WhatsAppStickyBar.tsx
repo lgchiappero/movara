@@ -27,7 +27,9 @@ export default function WhatsAppStickyBar({
   if (
     pathname?.startsWith("/configurador") ||
     pathname?.startsWith("/studio") ||
-    pathname?.startsWith("/admin")
+    pathname?.startsWith("/admin") ||
+    // En el celular taparía el botón de confirmación del recibo.
+    pathname?.startsWith("/recibo")
   ) {
     return null;
   }

@@ -101,3 +101,74 @@ describe("uploadDocument", () => {
     await expect(uploadDocument("bucket-x", "path", bytes, "application/pdf")).rejects.toThrow(/Disk full/);
   });
 });
+
+describe("storage local (dev/tests)", () => {
+  it("usaStorageLocal: solo sin credenciales y fuera de producción", async () => {
+    const { usaStorageLocal } = await import("@/lib/admin/storage");
+    vi.stubEnv("SUPABASE_URL", "");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    expect(usaStorageLocal()).toBe(true);
+    vi.stubEnv("NODE_ENV", "production");
+    expect(usaStorageLocal()).toBe(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("en producción sin credenciales tira error, nunca cae a local", async () => {
+    const { uploadDocument, downloadDocument } = await import("@/lib/admin/storage");
+    vi.stubEnv("SUPABASE_URL", "");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    vi.stubEnv("NODE_ENV", "production");
+    await expect(uploadDocument("b", "p.pdf", new ArrayBuffer(1), "application/pdf")).rejects.toThrow("no configurados");
+    await expect(downloadDocument("b", "p.pdf")).rejects.toThrow("no configurados");
+    vi.unstubAllEnvs();
+  });
+
+  it("rutaLocal no deja salir de la carpeta", async () => {
+    const { rutaLocal, LOCAL_STORAGE_DIR } = await import("@/lib/admin/storage");
+    expect(rutaLocal("bucket", "unidades/u1/a.pdf")).toBe(`${LOCAL_STORAGE_DIR}/bucket/unidades/u1/a.pdf`);
+    expect(() => rutaLocal("bucket", "../../../etc/passwd")).toThrow("fuera del storage local");
+  });
+
+  it("sube, firma y descarga en la carpeta local", async () => {
+    const { uploadDocument, downloadDocument, getSignedUrl, LOCAL_STORAGE_DIR } = await import("@/lib/admin/storage");
+    const { rm } = await import("fs/promises");
+    vi.stubEnv("SUPABASE_URL", "");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    const path = `tests/${Date.now()}/hola.txt`;
+    await uploadDocument("vitest", path, new TextEncoder().encode("hola").buffer as ArrayBuffer, "text/plain");
+    expect((await downloadDocument("vitest", path)).toString()).toBe("hola");
+    expect(await getSignedUrl("vitest", path)).toBe(`/api/admin/storage-local?bucket=vitest&path=${encodeURIComponent(path)}`);
+    await rm(`${LOCAL_STORAGE_DIR}/vitest`, { recursive: true, force: true });
+    vi.unstubAllEnvs();
+  });
+
+  it("downloadDocument con Supabase: devuelve el archivo o tira el error", async () => {
+    const { downloadDocument } = await import("@/lib/admin/storage");
+    process.env.SUPABASE_URL = "https://test.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
+    const mockDownload = vi.fn()
+      .mockResolvedValueOnce({ data: new Blob(["pdf"]), error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "Object not found" } })
+      .mockResolvedValueOnce({ data: null, error: null });
+    mockFrom.mockReturnValue({ download: mockDownload });
+    expect((await downloadDocument("b", "p")).toString()).toBe("pdf");
+    await expect(downloadDocument("b", "p")).rejects.toThrow("Object not found");
+    await expect(downloadDocument("b", "p")).rejects.toThrow("sin datos");
+  });
+});
+
+describe("getSignedUrl con Supabase", () => {
+  it("devuelve la URL firmada, o null si Supabase falla", async () => {
+    const { getSignedUrl } = await import("@/lib/admin/storage");
+    process.env.SUPABASE_URL = "https://test.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const createSignedUrl = vi.fn()
+      .mockResolvedValueOnce({ data: { signedUrl: "https://firmada" }, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "not found" } });
+    mockFrom.mockReturnValue({ createSignedUrl });
+    expect(await getSignedUrl("b", "p")).toBe("https://firmada");
+    expect(createSignedUrl).toHaveBeenCalledWith("p", 300);
+    expect(await getSignedUrl("b", "p", 60)).toBeNull();
+  });
+});
