@@ -19,9 +19,9 @@ export const REGIONAL_MODELS: Record<string, RegionalModel> = {
     region: "Mesopotamia Húmeda",
     tagline: "Diseñado para el calor y la humedad del litoral",
     descripcion:
-      "Optimizado para la alta humedad y temperaturas de Mesopotamia. Panel PU antihongos, doble vidriado PVC y ventilación mecánica controlada para eliminar condensación y mantener el confort todo el año.",
+      "Optimizado para la alta humedad y temperaturas de Mesopotamia. Panel PU antihongos, aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico) y ventilación mecánica controlada para eliminar condensación y mantener el confort todo el año.",
     panel: "Panel 75 mm poliuretano (PU)",
-    ventanas: "DVH PVC antitérmico",
+    ventanas: "Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico)",
     climatizacion: "Split inverter modo dry + VMC",
     extras: [
       "Barrera antivapor clase 4",
@@ -39,7 +39,7 @@ export const REGIONAL_MODELS: Record<string, RegionalModel> = {
     descripcion:
       "Para las zonas de mayor temperatura de Argentina. Aislación termorradiante bajo cubierta, parasoles y ventilación cruzada forzada que reducen la temperatura interior hasta 12°C.",
     panel: "Panel 75 mm lana de roca + manta termorradiante",
-    ventanas: "DVH aluminio rompecorriente + parasoles fijos",
+    ventanas: "Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico)",
     climatizacion: "Split inverter alta eficiencia (COP ≥ 4) + ventilación cruzada",
     extras: [
       "Aleros perimetrales 1 m",
@@ -57,7 +57,7 @@ export const REGIONAL_MODELS: Record<string, RegionalModel> = {
     descripcion:
       "Clima templado con cuatro estaciones marcadas. Modelo de referencia MOVARA: aislación balanceada, aberturas amplias para el sol de invierno y ventilación natural en verano.",
     panel: "Panel SIP 100 mm lana de roca",
-    ventanas: "DVH aluminio estándar",
+    ventanas: "Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico)",
     climatizacion: "Split inverter + instalación gas natural",
     extras: [
       "Barrera de vapor clase 2",
@@ -73,13 +73,12 @@ export const REGIONAL_MODELS: Record<string, RegionalModel> = {
     region: "Cuyo Árido",
     tagline: "Contra el viento y la amplitud térmica de Cuyo",
     descripcion:
-      "Diseñado para la amplitud térmica extrema y el viento Zonda. Sellados extra, doble vidriado con protección UV y calefacción radiante para los inviernos secos y fríos.",
+      "Diseñado para la amplitud térmica extrema y el viento Zonda. Sellados extra, aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico) y calefacción radiante para los inviernos secos y fríos.",
     panel: "Panel 100 mm lana de roca + barrera de vapor reforzada",
-    ventanas: "DVH aluminio rompecorriente + filtro UV",
+    ventanas: "Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico)",
     climatizacion: "Split inverter + losa radiante eléctrica",
     extras: [
       "Sellados perimetrales anti-polvo y viento",
-      "Protección UV en aberturas",
       "Membrana impermeabilizante anti-UV",
       "Cisterna enterrada 2.000 L",
     ],
@@ -93,7 +92,7 @@ export const REGIONAL_MODELS: Record<string, RegionalModel> = {
     descripcion:
       "Adaptado para la puna y los valles del NOA. Gran amplitud térmica diaria, radiación UV intensa y temporada de lluvias. Aislación para noches frías y protección contra el sol de altura.",
     panel: "Panel 100 mm lana de roca + revestimiento anti-UV",
-    ventanas: "DVH aluminio con lámina control solar UV",
+    ventanas: "Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico)",
     climatizacion: "Split inverter + calefactor a gas/GLP",
     extras: [
       "Cubierta impermeabilizada para lluvias estivales",
@@ -111,7 +110,7 @@ export const REGIONAL_MODELS: Record<string, RegionalModel> = {
     descripcion:
       "La Patagonia exige lo mejor en aislación y resistencia al viento. Panel de 150 mm, estructura reforzada para ráfagas y calefacción central para los inviernos más fríos.",
     panel: "Panel 150 mm lana de roca alta densidad",
-    ventanas: "DVH aluminio rompecorriente térmico",
+    ventanas: "Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico)",
     climatizacion: "Calefacción central a gas + split inverter",
     extras: [
       "Estructura reforzada vientos 180 km/h",
@@ -127,9 +126,9 @@ export const REGIONAL_MODELS: Record<string, RegionalModel> = {
     region: "Andes Patagónicos",
     tagline: "La solución andina para Bariloche, San Martín y Esquel",
     descripcion:
-      "La cordillera patagónica suma nevada, lluvia intensa y frío extremo. Triple vidriado, panel PU de 150 mm y cubierta reforzada para carga de nieve. El más completo de la línea.",
+      "La cordillera patagónica suma nevada, lluvia intensa y frío extremo. Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico), panel PU de 150 mm y cubierta reforzada para carga de nieve. El más completo de la línea.",
     panel: "Panel 150 mm poliuretano (PU)",
-    ventanas: "Triple vidriado hermético PVC",
+    ventanas: "Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico)",
     climatizacion: "Piso radiante eléctrico + split inverter",
     extras: [
       "Cubierta reforzada nieve (150 kg/m²)",
@@ -145,9 +144,9 @@ export const REGIONAL_MODELS: Record<string, RegionalModel> = {
     region: "Tierra del Fuego",
     tagline: "El módulo más aislado para el fin del mundo",
     descripcion:
-      "Tierra del Fuego impone las condiciones más extremas de Argentina. El Yagán ofrece 200 mm de PU, triple vidriado PVC y calefacción de alto rendimiento para temperaturas bajo cero.",
+      "Tierra del Fuego impone las condiciones más extremas de Argentina. El Yagán ofrece 200 mm de PU, aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico) y calefacción de alto rendimiento para temperaturas bajo cero.",
     panel: "Panel 200 mm poliuretano (PU) alta densidad",
-    ventanas: "Triple vidriado PVC (Uw ≤ 1,0 W/m²K)",
+    ventanas: "Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico)",
     climatizacion: "Calefacción geotérmica / piso radiante + recuperador de calor",
     extras: [
       "Estructura reforzada nieve + viento 200 km/h",

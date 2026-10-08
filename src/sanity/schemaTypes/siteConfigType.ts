@@ -81,7 +81,7 @@ export const siteConfigType = defineType({
       rows: 3,
       description: 'Párrafo corto que aparece debajo del logo en el footer.',
       initialValue:
-        'Estamos repensando la forma de habitar. Casas modulares de diseño, listas para habitar.',
+        'Estamos repensando la forma de habitar. Casas modulares de diseño.',
       group: 'footer',
     }),
     defineField({
@@ -135,7 +135,7 @@ export const siteConfigType = defineType({
       rows: 3,
       description: 'Descripción corta (150–160 caracteres) para Google.',
       initialValue:
-        'Diseñamos y entregamos casas modulares sustentables en toda la Argentina. Llave en mano.',
+        'Casas modulares de diseño, llave en mano, con entrega en toda la Argentina.',
       group: 'seo',
     }),
     defineField({

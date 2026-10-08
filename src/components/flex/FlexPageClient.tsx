@@ -39,7 +39,7 @@ const SPECS_CLAVE_DEFAULT = [
   "Paredes de lana de roca 75mm — incombustible, alta aislación térmica",
   "Techo panel sándwich de poliuretano — sin goteras, aislación superior",
   "Piso impermeable — resistente a la humedad y a termitas",
-  "Ventanas DVH con rotura de puente térmico — sin condensación",
+  "Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico) — sin condensación",
   "Instalación eléctrica lista para la red argentina",
   "Baño y cocina completos, instalados y listos para usar",
   "Calefón eléctrico incluido de fábrica",

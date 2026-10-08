@@ -100,7 +100,7 @@ describe("ComoFunciona", () => {
     render(<ComoFunciona />);
     const pasos = screen.getAllByRole("listitem");
     expect(pasos).toHaveLength(4);
-    ["Configurás tu espacio", "Recibís tu presupuesto", "Fabricamos y coordinamos", "Llega listo"].forEach(
+    ["Configurás tu espacio", "Recibís tu presupuesto", "Producción y logística", "Llega listo"].forEach(
       (titulo, i) => {
         expect(within(pasos[i]).getByRole("heading", { name: titulo })).toBeInTheDocument();
         expect(within(pasos[i]).getByText(`0${i + 1}`)).toBeInTheDocument();

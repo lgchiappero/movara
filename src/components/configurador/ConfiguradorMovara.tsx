@@ -1120,7 +1120,7 @@ function StepMejoras({
             description="Aislación térmica y acústica superior — R: 2.1 m²K/W, absorción acústica 0.70-0.75"
           />
           <IncludeItem
-            label="DVH con rotura de puente térmico"
+            label="Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico)"
             description="52% menos pérdida de calor vs vidrio simple — reduce ruido 30-50 dB"
           />
           <IncludeItem label="Mosquiteros en todas las aberturas" />

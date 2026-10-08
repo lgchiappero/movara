@@ -39,7 +39,7 @@ const FALLBACK: ResolvedConfig = {
   address: "Buenos Aires, Argentina",
   instagram: "https://www.instagram.com/movara.homes/",
   footerDescription:
-    "Estamos repensando la forma de habitar. Casas modulares de diseño, listas para habitar.",
+    "Estamos repensando la forma de habitar. Casas modulares de diseño.",
   footerNavLinks: FALLBACK_NAV_LINKS,
   copyrightText: "MOVARA. Todos los derechos reservados.",
 };

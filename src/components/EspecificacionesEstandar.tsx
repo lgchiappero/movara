@@ -35,7 +35,7 @@ const AISLACION_ROWS = [
 const ABERTURAS_ROWS = [
   {
     label: "Tipo",
-    value: "DVH con rotura de puente térmico",
+    value: "Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico)",
     detail: "Aluminio de alta prestación",
   },
   {

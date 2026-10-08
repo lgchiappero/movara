@@ -41,7 +41,7 @@ const CERT_CARDS = [
   {
     icon: Eye,
     titulo: "DVH con RPT",
-    descripcion: "Doble vidrio con rotura de puente térmico",
+    descripcion: "Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico)",
   },
 ];
 

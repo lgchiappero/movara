@@ -19,7 +19,6 @@ export default defineConfig({
         "src/data/**/*.ts",
         "src/components/catalog/**/*.tsx",
         "src/components/detail/**/*.tsx",
-        "src/components/home/CTAFinal.tsx",
         "src/components/home/Hero.tsx",
         "src/components/home/DolorConvencional.tsx",
         "src/components/home/ComoFunciona.tsx",

@@ -29,7 +29,7 @@ const DEFAULT_COLUMNAS: Columna[] = [
   {
     titulo: "Es infraestructura habitacional de precisión",
     descripcion:
-      "Fabricada en planta bajo estrictos controles de calidad. Aislación de lana de roca 75mm, doble vidriado hermético con RPT y acabados de primera línea. Llave en mano.",
+      "Producida en planta bajo estrictos controles de calidad. Aislación de lana de roca 75 mm, aberturas con DVH y RPT y terminaciones de primera línea. Llave en mano.",
     tachado: false,
     destacado: true,
   },

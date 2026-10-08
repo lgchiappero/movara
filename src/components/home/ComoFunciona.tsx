@@ -22,8 +22,8 @@ const DEFAULT_PASOS: Paso[] = [
     descripcion: "Precio fijo, acorde a tus necesidades. Sin letra chica ni sorpresas.",
   },
   {
-    titulo: "Fabricamos y coordinamos",
-    descripcion: "Producción en planta con controles de calidad. Logística hasta tu terreno incluida.",
+    titulo: "Producción y logística",
+    descripcion: "Producción en planta con controles de calidad. Coordinamos la logística hasta tu terreno.",
   },
   {
     titulo: "Llega listo",
@@ -163,8 +163,8 @@ function IconoPresupuesto() {
   );
 }
 
-/** Fabricamos: planta industrial con techo en diente de sierra. */
-function IconoFabricar() {
+/** Producción: planta industrial con techo en diente de sierra. */
+function IconoProduccion() {
   return (
     <svg {...iconProps}>
       <path d="M4 27V14l6 4v-4l6 4v-4l6 4V6h5v21z" />
@@ -185,7 +185,7 @@ function IconoListo() {
   );
 }
 
-const ICONOS = [IconoConfigurar, IconoPresupuesto, IconoFabricar, IconoListo];
+const ICONOS = [IconoConfigurar, IconoPresupuesto, IconoProduccion, IconoListo];
 
 function ArrowRightIcon() {
   return (

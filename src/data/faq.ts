@@ -29,7 +29,7 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
       {
         pregunta: "¿Qué es una unidad MOVARA? ¿Es lo mismo que un container?",
         respuesta:
-          "No. Una unidad MOVARA es infraestructura habitacional modular de acero certificado, diseñada específicamente para ser habitada. No es un container adaptado — tiene aislación de lana de roca 75mm, aberturas con doble vidrio y rotura de puente térmico, sistema eléctrico certificado CE y terminaciones de calidad. Es un producto industrializado de precisión, no una adaptación.",
+          "No. Una unidad MOVARA es infraestructura habitacional modular de acero certificado, diseñada específicamente para ser habitada. No es un container adaptado — tiene aislación de lana de roca 75mm, aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico), sistema eléctrico certificado CE y terminaciones de calidad. Es un producto industrializado de precisión, no una adaptación.",
       },
       {
         pregunta: "¿Cuánto dura una unidad MOVARA?",
@@ -169,12 +169,12 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
       {
         pregunta: "¿Cómo se comporta en el calor del norte argentino?",
         respuesta:
-          "Bien, porque la aislación no es un agregado sino parte de la estructura: paredes con lana de roca 75mm (aislación térmica 4 veces superior a una pared de ladrillos), techo de panel sándwich de poliuretano con sistema de impermeabilización de 5 capas, y ventanas DVH con rotura de puente térmico que evitan la entrada de calor.",
+          "Bien, porque la aislación no es un agregado sino parte de la estructura: paredes con lana de roca 75mm (aislación térmica 4 veces superior a una pared de ladrillos), techo de panel sándwich de poliuretano con sistema de impermeabilización de 5 capas, y aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico) que evitan la entrada de calor.",
       },
       {
         pregunta: "¿Y en la Patagonia con el frío y el viento?",
         respuesta:
-          "La estructura está calculada específicamente para cargas de viento, con un margen de 6 veces por encima del mínimo normativo. Las aberturas DVH con RPT evitan condensación y puentes térmicos, y el panel de lana de roca de las paredes incluye barrera de vapor integrada de fábrica — no es algo que se agrega después según el clima de cada obra.",
+          "La estructura está calculada específicamente para cargas de viento, con un margen de 6 veces por encima del mínimo normativo. Las aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico) evitan condensación y puentes térmicos, y el panel de lana de roca de las paredes incluye barrera de vapor integrada de fábrica — no es algo que se agrega después según el clima de cada obra.",
       },
       {
         pregunta: "¿Aguanta la lluvia y la humedad del litoral?",

@@ -82,7 +82,7 @@ export const PRODUCTO_SECCIONES: ProductoSeccion[] = [
     numero: "04",
     titulo: "Las ventanas",
     descripcion:
-      "Doble vidrio hermético con rotura de puente térmico. Es la tecnología que usan los edificios premium en Buenos Aires y Europa.",
+      "Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico). Es la tecnología que usan los edificios premium en Buenos Aires y Europa.",
     beneficios: [
       "No hay condensación en el vidrio en invierno",
       "El frío no entra por el marco",
