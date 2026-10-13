@@ -24,3 +24,4 @@
 ## Base de datos
 - Nunca correr prisma migrate deploy sin antes verificar el diff
 - Siempre generar el SQL y revisarlo antes de aplicar en Supabase producción
+- RLS habilitado en todas las tablas de public, sin políticas. No crear políticas para anon/public: la app accede solo con Prisma (rol postgres) y la service role.
