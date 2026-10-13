@@ -14,24 +14,16 @@ import ConfiguradorRegional from "@/components/configurador/ConfiguradorRegional
 import Footer from "@/components/home/Footer";
 import Reveal from "@/components/motion/Reveal";
 import { client } from "@/sanity/lib/client";
-import { SITE_CONFIG_QUERY, HOME_PAGE_QUERY, MODELOS_HOME_QUERY, FAQ_PAGE_QUERY } from "@/sanity/lib/queries";
+import { SITE_CONFIG_QUERY, HOME_PAGE_QUERY, MODELOS_CARD_QUERY, FAQ_PAGE_QUERY } from "@/sanity/lib/queries";
 import type { FaqCategory } from "@/data/faq";
-
-type ModeloHomeItem = {
-  _id: string;
-  nombre?: string | null;
-  slug?: string | null;
-  tagline?: string | null;
-  imagen?: string | null;
-  proximamente?: boolean | null;
-};
+import type { ModeloCardData } from "@/components/modelos/ModeloCard";
 
 async function getPageData() {
   try {
     const [config, homePage, modelos, faqPage] = await Promise.all([
       client.fetch<{ whatsappNumber?: string | null }>(SITE_CONFIG_QUERY),
       client.fetch(HOME_PAGE_QUERY),
-      client.fetch<ModeloHomeItem[]>(MODELOS_HOME_QUERY),
+      client.fetch<ModeloCardData[]>(MODELOS_CARD_QUERY),
       client.fetch<{ categorias?: FaqCategory[] } | null>(FAQ_PAGE_QUERY),
     ]);
     return {

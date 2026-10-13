@@ -29,8 +29,11 @@ html {
   scroll-padding-top: 4rem; /* compensar navbar fijo de 64px en todos los anchor links */
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-montserrat);
+/* En @layer base para que las utilidades (ej. font-playfair) puedan pisarla. */
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-montserrat);
+  }
 }
 
 @keyframes float {

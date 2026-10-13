@@ -29,7 +29,8 @@ const poppins = Poppins({
 const playfair = Playfair_Display({
   variable: "--font-playfair-display",
   subsets: ["latin"],
-  style: ["italic"],
+  // normal: títulos de las cards de modelos; italic: frases destacadas.
+  style: ["normal", "italic"],
   weight: ["500", "600"],
   display: "swap",
 });

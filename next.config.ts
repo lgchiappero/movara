@@ -52,6 +52,8 @@ const STUDIO_SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   images: {
+    // 85: la foto del Hero (Next 16 solo permite 75 por defecto).
+    qualities: [75, 85],
     remotePatterns: [
       { protocol: "https", hostname: "cdn.sanity.io" },
       { protocol: "https", hostname: "img.youtube.com" },

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { client } from "@/sanity/lib/client";
-import { MODELOS_QUERY, FLEX_CARD_QUERY, FLEX_MODELO_SLUG } from "@/sanity/lib/queries";
-import { type ProductModel } from "@/data/models";
-import CatalogGrid from "@/components/catalog/CatalogGrid";
-import FlexFeatureCard, { type FlexCardData } from "@/components/modelos/FlexFeatureCard";
+import { MODELOS_CARD_QUERY } from "@/sanity/lib/queries";
+import ModelosGrid from "@/components/modelos/ModelosGrid";
+import type { ModeloCardData } from "@/components/modelos/ModeloCard";
 
 export const metadata: Metadata = {
   title: "Catálogo de Modelos — MOVARA",
@@ -13,61 +12,34 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-// Sin fallback a datos hardcodeados: el catálogo muestra exactamente lo que
-// hay en Sanity. Si la consulta falla o no hay modelos cargados, se muestra
-// vacío en vez de sustituir con contenido de ejemplo.
-//
-// "MOVARA Flex" es un documento "modelo" más (para poder ordenarse junto
-// al resto vía el campo "order") pero en esta página ya se muestra aparte,
-// como tarjeta destacada fija (ver FlexFeatureCard/FLEX_CARD_QUERY más
-// abajo) — se filtra acá para no duplicarlo en la grilla.
-async function getModelos(): Promise<ProductModel[]> {
+// Sin fallback a datos hardcodeados: el catálogo muestra exactamente los
+// modelos activos de Sanity, ordenados por "order" — con la misma card y la
+// misma grilla que la home.
+async function getModelos(): Promise<ModeloCardData[]> {
   try {
-    const data = await client.fetch<ProductModel[]>(MODELOS_QUERY);
-    return Array.isArray(data) ? data.filter((m) => m.slug !== FLEX_MODELO_SLUG) : [];
+    const data = await client.fetch<ModeloCardData[]>(MODELOS_CARD_QUERY);
+    return Array.isArray(data) ? data : [];
   } catch {
     return [];
   }
 }
 
-async function getFlex(): Promise<FlexCardData> {
-  try {
-    return await client.fetch<FlexCardData>(FLEX_CARD_QUERY);
-  } catch {
-    return null;
-  }
-}
-
 export default async function CatalogPage() {
-  const [models, flex] = await Promise.all([getModelos(), getFlex()]);
+  const modelos = await getModelos();
 
   return (
-    <>
-      {/* Page header */}
-      <div className="bg-sage-50 border-b border-sage-100 pt-28 pb-14">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <p className="text-sage-600 text-sm font-semibold uppercase tracking-widest mb-3">
-            Catálogo completo
+    <div className="bg-[#1A1A1A] min-h-screen">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-24">
+        <header className="text-center mb-14">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-4 block">Catálogo completo</span>
+          <h1 className="font-playfair font-medium text-4xl lg:text-5xl text-white">Nuestros modelos</h1>
+          <p className="mt-5 text-stone-300 text-lg font-medium max-w-2xl mx-auto leading-relaxed">
+            Todos los modelos son personalizables en distribución, terminaciones y colores. Entregamos en toda la
+            Argentina.
           </p>
-          <h1 className="text-4xl lg:text-5xl font-bold text-stone-900 tracking-tight">
-            Nuestros modelos
-          </h1>
-          <p className="mt-4 text-stone-500 text-lg max-w-xl">
-            Todos los modelos son personalizables en distribución, terminaciones y
-            colores. Entregamos en toda la Argentina.
-          </p>
-        </div>
+        </header>
+        <ModelosGrid modelos={modelos} eagerPrimeras />
       </div>
-
-      {/* MOVARA Flex */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-14">
-        <FlexFeatureCard flex={flex} ctaLabel="Ver modelo" />
-      </div>
-
-      {/* Catalog */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-14">
-        <CatalogGrid models={models} />
-      </div>
-    </>
+    </div>
   );
 }

@@ -17,7 +17,8 @@ export default defineConfig({
       include: [
         "src/store/**/*.ts",
         "src/data/**/*.ts",
-        "src/components/catalog/**/*.tsx",
+        "src/components/modelos/**/*.tsx",
+        "src/components/home/ModelosHome.tsx",
         "src/components/detail/**/*.tsx",
         "src/components/home/Hero.tsx",
         "src/components/home/DolorConvencional.tsx",

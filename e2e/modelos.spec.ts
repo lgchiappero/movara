@@ -1,29 +1,57 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
-test.describe("Catálogo de modelos", () => {
-  test("Test 1: /modelos carga con el listado de modelos", async ({ page }) => {
-    await page.goto("/modelos");
+// Home y /modelos muestran la misma card por modelo (MOVARA Flex y MOVARA
+// Duplex, desde Sanity). Cada card linkea a la página de su modelo.
+const MODELOS = [
+  { nombre: /MOVARA Flex/, url: /\/modelos\/flex$/ },
+  { nombre: /MOVARA Duplex/, url: /\/modelos\/movara-duplex[a-z0-9-]*$/ },
+];
 
-    await expect(page.getByRole("heading", { name: /Nuestros modelos/i })).toBeVisible();
+async function verificarCards(page: Page, contenedor: string) {
+  const cards = page.locator(contenedor).locator("[data-modelo-card]");
+  await expect(cards).toHaveCount(2);
+  for (const { nombre } of MODELOS) {
+    const link = page.locator(contenedor).getByRole("link", { name: nombre });
+    await expect(link).toBeVisible();
+    // Imagen completa (object-contain), nunca recortada.
+    const img = link.getByRole("img");
+    if (await img.count()) await expect(img).toHaveClass(/object-contain/);
+  }
+  // Las dos cards a la misma altura.
+  const [a, b] = await Promise.all([cards.nth(0).boundingBox(), cards.nth(1).boundingBox()]);
+  expect(Math.abs(a!.height - b!.height)).toBeLessThan(2);
+}
 
-    // At least one "Ver detalles" link rendered by ModelCard
-    const links = page.getByRole("link", { name: /Ver detalles/i });
-    await expect(links.first()).toBeVisible();
-    const count = await links.count();
-    expect(count).toBeGreaterThanOrEqual(1);
+test.describe("Cards de modelos", () => {
+  test("home: sección 'Nuestros modelos' con las 2 cards y link al catálogo", async ({ page }) => {
+    await page.goto("/");
+    const seccion = page.locator("section#modelos");
+    await seccion.scrollIntoViewIfNeeded();
+    await expect(seccion.getByRole("heading", { name: "Nuestros modelos" })).toBeVisible();
+    await verificarCards(page, "section#modelos");
+    await seccion.getByRole("link", { name: "Ver catálogo completo" }).click();
+    await expect(page).toHaveURL(/\/modelos$/);
   });
 
-  test("Test 2: click en 'Ver detalles' navega a la página del modelo", async ({ page }) => {
+  test("/modelos: las mismas 2 cards", async ({ page }) => {
     await page.goto("/modelos");
+    await expect(page.getByRole("heading", { level: 1, name: "Nuestros modelos" })).toBeVisible();
+    await verificarCards(page, "main");
+  });
 
-    // Click the first "Ver detalles" link
-    const firstLink = page.getByRole("link", { name: /Ver detalles/i }).first();
-    await firstLink.click();
+  for (const { nombre, url } of MODELOS) {
+    test(`/modelos → ${nombre.source} abre la página del modelo`, async ({ page }) => {
+      await page.goto("/modelos");
+      await page.locator("main").getByRole("link", { name: nombre }).click();
+      await expect(page).toHaveURL(url);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    });
+  }
 
-    // URL should match /modelos/<slug>
-    await expect(page).toHaveURL(/\/modelos\/[a-z0-9-]+/);
-
-    // Model detail page renders an h1 with the model name
+  test("home → card del Flex abre /modelos/flex", async ({ page }) => {
+    await page.goto("/");
+    await page.locator("section#modelos").getByRole("link", { name: /MOVARA Flex/ }).click();
+    await expect(page).toHaveURL(/\/modelos\/flex$/);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 });

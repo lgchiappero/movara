@@ -5,45 +5,16 @@ import { groq } from 'next-sanity'
 // poder ordenarse junto al resto vía el campo "order".
 export const FLEX_MODELO_SLUG = 'movara-flex'
 
-export const MODELOS_QUERY = groq`
+// Card de modelo (home y /modelos): solo lo necesario para pintarla. La
+// imagen viene como referencia al asset para armar la URL con urlFor.
+export const MODELOS_CARD_QUERY = groq`
   *[_type == "modelo" && activo != false] | order(order asc, _createdAt asc) {
-    _id,
-    "slug": slug.current,
-    name,
-    tagline,
-    "description": coalesce(descripcion, description),
-    tamano,
-    size,
-    rooms,
-    baths,
-    incluyeCocina,
-    incluyeBano,
-    tag,
-    "features": coalesce(upgrades, features),
-    especificaciones[] { clave, valor },
-    specs,
-    images[defined(asset)] { "asset": asset, hotspot, crop, label },
-    videos[] { url, titulo },
-    video { url, label },
-    maxHabitaciones,
-    permiteCocinaSiMax3Hab,
-    finalidades,
-    destacado,
-    activo,
-    order,
-    proximamente,
-  }
-`
-
-// Versión liviana para listados tipo card (home + catálogo básico) — trae
-// solo lo necesario para pintar la card, no toda la ficha del modelo.
-export const MODELOS_HOME_QUERY = groq`
-  *[_type == "modelo" && activo != false] | order(order asc) {
     _id,
     "nombre": name,
     "slug": slug.current,
     tagline,
-    "imagen": images[0].asset->url,
+    "imagen": images[defined(asset)][0]{ asset, hotspot, crop },
+    "tamanos": [size][defined(@)],
     proximamente
   }
 `
@@ -167,16 +138,6 @@ export const CONFIGURADOR_MODELOS_QUERY = groq`
       imagenPrincipal,
       galeria[defined(asset)] { "asset": asset, hotspot, crop, label },
     },
-  }
-`
-
-// Misma forma de salida que antes (nombre/imagen) — ahora sourceada desde
-// modeloType filtrando por slug en vez del singleton flexPage, así
-// FlexFeatureCard/FlexCardData no necesitan ningún cambio.
-export const FLEX_CARD_QUERY = groq`
-  *[_type == "modelo" && slug.current == "${FLEX_MODELO_SLUG}"][0] {
-    "nombre": name,
-    "imagen": images[defined(asset)][0]{ asset, hotspot, crop },
   }
 `
 
