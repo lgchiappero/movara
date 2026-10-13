@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { animate, useInView, useReducedMotion } from "framer-motion";
+import { animate, useInView } from "framer-motion";
+import { useReducedMotionSeguro } from "@/lib/hooks/useReducedMotionSeguro";
 
 /** Número que cuenta desde 0 hasta `to` cuando entra al viewport. Con
  * prefers-reduced-motion muestra el valor final directamente. */
@@ -16,7 +17,7 @@ export default function CountUp({
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionSeguro();
   const [value, setValue] = useState(0);
 
   useEffect(() => {

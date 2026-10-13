@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useInView, useReducedMotion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
+import { useReducedMotionSeguro } from "@/lib/hooks/useReducedMotionSeguro";
 
 /** Fade + slide up cuando el bloque entra al viewport (una sola vez). Con
  * prefers-reduced-motion se muestra directo, sin desplazamiento. */
@@ -18,7 +19,7 @@ export default function Reveal({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "0px 0px -10% 0px" });
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionSeguro();
   const visible = inView || reduce;
 
   return (

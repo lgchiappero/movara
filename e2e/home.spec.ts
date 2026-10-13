@@ -33,3 +33,20 @@ test.describe("Home page", () => {
     await expect(page.getByRole("heading", { name: "Nuestros modelos" })).toBeVisible();
   });
 });
+
+test.describe("Home con 'reducir movimiento'", () => {
+  test("hidrata sin errores y el indicador de scroll queda sin la línea animada", async ({ page }) => {
+    const errores: string[] = [];
+    page.on("console", (m) => { if (m.type() === "error") errores.push(m.text()); });
+    page.on("pageerror", (e) => errores.push(e.message));
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+    expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
+    await expect(page.getByText("Scroll", { exact: true })).toBeVisible();
+    // Tras hidratar, React vuelve a renderizar con la preferencia real y
+    // quita la línea (en dev la hidratación puede tardar varios segundos).
+    await expect(page.locator('span[class*="via-[#D4B06A]"]')).toHaveCount(0, { timeout: 30_000 });
+    expect(errores.filter((e) => /hydrat/i.test(e))).toEqual([]);
+  });
+});
+

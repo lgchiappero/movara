@@ -31,6 +31,7 @@ export default defineConfig({
         "src/lib/email/escape-html.ts",
         "src/lib/email/pedido-estado-email.ts",
         "src/lib/email/enviar.ts",
+        "src/lib/hooks/useReducedMotionSeguro.ts",
         "src/lib/leads/**/*.ts",
         "src/components/home/LeadNoGuardado.tsx",
         "src/app/api/leads-email/route.ts",

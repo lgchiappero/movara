@@ -6,8 +6,9 @@ const reduce = vi.fn(() => false);
 
 vi.mock("framer-motion", async (importOriginal) => {
   const actual = await importOriginal<typeof import("framer-motion")>();
-  return { ...actual, useInView: () => true, useReducedMotion: () => reduce() };
+  return { ...actual, useInView: () => true };
 });
+vi.mock("@/lib/hooks/useReducedMotionSeguro", () => ({ useReducedMotionSeguro: () => reduce() }));
 vi.mock("next/image", () => ({
   // eslint-disable-next-line @next/next/no-img-element, @typescript-eslint/no-unused-vars
   default: ({ fill, priority, quality, ...rest }: Record<string, unknown>) => <img {...(rest as object)} alt="" />,

@@ -7,8 +7,9 @@ const pathname = vi.fn(() => "/");
 
 vi.mock("framer-motion", async (importOriginal) => {
   const actual = await importOriginal<typeof import("framer-motion")>();
-  return { ...actual, useInView: () => inView(), useReducedMotion: () => reduce() };
+  return { ...actual, useInView: () => inView() };
 });
+vi.mock("@/lib/hooks/useReducedMotionSeguro", () => ({ useReducedMotionSeguro: () => reduce() }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname() }));
 
 import Reveal from "../Reveal";

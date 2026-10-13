@@ -3,9 +3,10 @@
 import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
+import { useReducedMotionSeguro } from "@/lib/hooks/useReducedMotionSeguro";
 
 type HeroContent = {
   badgePreventa?: string;
@@ -35,7 +36,7 @@ export default function Hero({
 }) {
   const c = { ...DEFAULTS, ...content };
   const sectionRef = useRef<HTMLElement>(null);
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionSeguro();
   // Parallax: mientras el hero sale de pantalla, la foto baja un 25% de su
   // propia altura (120% del hero) — se mueve más lento que el scroll. La
   // altura extra cubre ese desplazamiento sin dejar huecos.
