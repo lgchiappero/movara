@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { mockCreate, mockSend, mockConsumir } = vi.hoisted(() => ({
-  mockCreate: vi.fn().mockResolvedValue({}),
+  mockCreate: vi.fn().mockResolvedValue({ id: "lead1" }),
   mockSend: vi.fn().mockResolvedValue({ data: { id: "e1" }, error: null }),
   mockConsumir: vi.fn(),
 }));
@@ -110,20 +110,34 @@ describe("POST /api/leads", () => {
   it("sin RESEND_API_KEY no envía emails pero igual guarda el lead", async () => {
     delete process.env.RESEND_API_KEY;
     vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await POST(req(LEAD));
     expect(res.status).toBe(201);
     expect(mockCreate).toHaveBeenCalled();
     expect(mockSend).not.toHaveBeenCalled();
   });
 
-  it("si la base y los emails fallan igual responde 201 (y lo loguea)", async () => {
-    vi.spyOn(console, "log").mockImplementation(() => {});
+  it("503 si no se pudo guardar en la base: no confirma ni manda emails", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     mockCreate.mockRejectedValueOnce(new Error("db"));
-    mockSend.mockRejectedValue(new Error("resend"));
+    const res = await POST(req({ ...LEAD, formulario: "contacto" }));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "No pudimos registrar tu consulta. Escribinos por WhatsApp", code: "lead-no-guardado" });
+    expect(mockSend).not.toHaveBeenCalled();
+    expect(err).toHaveBeenCalledWith("[leads] origen=contacto db=error No se pudo guardar el lead: Error");
+  });
+
+  it("si Resend devuelve { error } responde 201 (el lead está guardado) y loguea solo el tipo", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockSend.mockResolvedValue({ data: null, error: { name: "validation_error", statusCode: 422, message: "Invalid to: ana@example.com" } });
     const res = await POST(req(LEAD));
     expect(res.status).toBe(201);
-    expect(err).toHaveBeenCalledWith("[leads] id=- origen=web db=error email=no-enviado — el lead no quedó registrado");
+    expect(err).toHaveBeenCalledWith("[leads] id=lead1 Falló el email a MOVARA: validation_error (422)");
+    expect(err).toHaveBeenCalledWith("[leads] id=lead1 Falló el email de confirmación: validation_error (422)");
+    // Antes, un { error } de Resend contaba como "email=ok".
+    expect(log).toHaveBeenCalledWith("[leads] id=lead1 origen=web db=ok email=no-enviado");
+    expect(JSON.stringify(err.mock.calls)).not.toContain("ana@example.com");
     mockSend.mockResolvedValue({ data: { id: "e1" }, error: null });
   });
 
@@ -154,7 +168,7 @@ describe("POST /api/leads", () => {
     });
     mockCreate.mockRejectedValueOnce(prismaError);
     await POST(req({ ...LEAD, dni: "30123456" }));
-    expect(err).toHaveBeenCalledWith("[leads] origen=web No se pudo guardar el lead: PrismaClientValidationError");
+    expect(err).toHaveBeenCalledWith("[leads] origen=web db=error No se pudo guardar el lead: PrismaClientValidationError");
 
     const todo = JSON.stringify([...log.mock.calls, ...err.mock.calls]);
     for (const dato of ["Ana", "Pérez", "30123456", "5491155554444", "ana@example.com", "Santa Fe"]) expect(todo).not.toContain(dato);

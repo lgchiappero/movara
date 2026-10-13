@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
+import { enviarLead, mensajeWhatsAppConsulta } from "@/lib/leads/enviar-lead";
+import LeadNoGuardado from "./LeadNoGuardado";
 
 const PROVINCIAS = [
   "Buenos Aires", "Ciudad Autónoma de Buenos Aires", "Catamarca", "Chaco",
@@ -36,7 +38,7 @@ export default function ContactoForm({
   content?: ContactoContent | null;
 }) {
   const [form, setForm] = useState<FormState>(EMPTY);
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error" | "no-guardado">("idle");
 
   const set = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -45,21 +47,13 @@ export default function ContactoForm({
     e.preventDefault();
     if (!form.nombre.trim() || !form.telefono.trim()) return;
     setStatus("sending");
-    try {
-      const res = await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, formulario: "contacto" }),
-      });
-      if (res.ok) {
-        localStorage.setItem("movara_exit_popup_submitted", "true");
-        window.dispatchEvent(new Event("movara:form:submitted"));
-        setStatus("sent");
-      } else {
-        setStatus("error");
-      }
-    } catch {
-      setStatus("error");
+    const resultado = await enviarLead({ ...form, formulario: "contacto" });
+    if (resultado === "ok") {
+      localStorage.setItem("movara_exit_popup_submitted", "true");
+      window.dispatchEvent(new Event("movara:form:submitted"));
+      setStatus("sent");
+    } else {
+      setStatus(resultado);
     }
   };
 
@@ -206,6 +200,15 @@ export default function ContactoForm({
                     className={`${inputCls} resize-none`}
                   />
                 </div>
+
+                {status === "no-guardado" && (
+                  <LeadNoGuardado
+                    waUrl={getWhatsAppUrl(
+                      mensajeWhatsAppConsulta({ nombre: form.nombre, telefono: form.telefono, provincia: form.provincia, mensaje: form.mensaje }),
+                      waNumber
+                    )}
+                  />
+                )}
 
                 {status === "error" && (
                   <p className="text-red-400 text-sm">

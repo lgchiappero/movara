@@ -80,6 +80,26 @@ describe("POST /api/pedido", () => {
     delete process.env.RESEND_API_KEY;
   });
 
+  it("si Resend devuelve { error } lo loguea con el tipo, sin datos personales, y responde 200", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
+    mockSend.mockResolvedValueOnce({ data: null, error: { name: "validation_error", statusCode: 422, message: "to: ana@example.com" } });
+    expect((await POST(req(BASE, "10.0.0.6"))).status).toBe(200);
+    const linea = log.mock.calls.map((c) => c.join(" ")).join("\n");
+    expect(linea).toMatch(/\[pedido\] MOV-CONSULTA-\d{4}-\d{3} Falló el email a MOVARA: validation_error \(422\)/);
+    expect(linea).not.toMatch(/Ana|ana@example\.com/);
+    delete process.env.RESEND_API_KEY;
+  });
+
+  it("escapa el nombre del cliente en el HTML del aviso", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
+    await POST(req({ ...BASE, clienteNombre: "Ana & Hijos" }, "10.0.0.7"));
+    expect(mockSend.mock.calls[0][0].html).toContain("Ana &amp; Hijos completó");
+    delete process.env.RESEND_API_KEY;
+  });
+
   it("500 si falla la base", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     mockCreate.mockRejectedValue(new Error("db"));

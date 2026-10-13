@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, FileCheck, Lock, ArrowLeft, ArrowRight, Phone } from "lucide-react";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
+import { enviarLead, mensajeWhatsAppConsulta } from "@/lib/leads/enviar-lead";
+import LeadNoGuardado from "./LeadNoGuardado";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -150,7 +152,7 @@ export default function DossierForm({
 }) {
   const [form, setForm] = useState<Form>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error" | "no-guardado">("idle");
   const [sentVia, setSentVia] = useState<"form" | "llamada">("form");
   const [step, setStep] = useState(1);
   const [step1Touched, setStep1Touched] = useState(false);
@@ -207,24 +209,19 @@ export default function DossierForm({
     if (emailErr || telErr || dniErr) return;
 
     setStatus("sending");
-
-    try {
-      await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre: form.nombre,
-          apellido: form.apellido || undefined,
-          dni: form.dni || undefined,
-          telefono: form.telefono,
-          email: form.email || undefined,
-          provincia: form.provincia || undefined,
-          mensaje: buildMensaje(),
-          formulario: "dossier",
-        }),
-      });
-    } catch (err) {
-      console.error("[DossierForm] submit error:", err);
+    const resultado = await enviarLead({
+      nombre: form.nombre,
+      apellido: form.apellido || undefined,
+      dni: form.dni || undefined,
+      telefono: form.telefono,
+      email: form.email || undefined,
+      provincia: form.provincia || undefined,
+      mensaje: buildMensaje(),
+      formulario: "dossier",
+    });
+    if (resultado !== "ok") {
+      setStatus(resultado);
+      return;
     }
 
     setSentVia("form");
@@ -242,23 +239,18 @@ export default function DossierForm({
     if (telErr || !nombreOk) return;
 
     setStatus("sending");
-
-    try {
-      await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre: form.nombre,
-          apellido: form.apellido || undefined,
-          telefono: form.telefono,
-          email: form.email || undefined,
-          provincia: form.provincia || undefined,
-          mensaje: buildMensaje("Prefiere que lo llamen (no completó el formulario completo)"),
-          formulario: "dossier-llamada",
-        }),
-      });
-    } catch (err) {
-      console.error("[DossierForm] quick-call submit error:", err);
+    const resultado = await enviarLead({
+      nombre: form.nombre,
+      apellido: form.apellido || undefined,
+      telefono: form.telefono,
+      email: form.email || undefined,
+      provincia: form.provincia || undefined,
+      mensaje: buildMensaje("Prefiere que lo llamen (no completó el formulario completo)"),
+      formulario: "dossier-llamada",
+    });
+    if (resultado !== "ok") {
+      setStatus(resultado);
+      return;
     }
 
     setSentVia("llamada");
@@ -558,6 +550,26 @@ export default function DossierForm({
                         </p>
                       </div>
                     </div>
+                  )}
+
+                  {status === "no-guardado" && (
+                    <LeadNoGuardado
+                      waUrl={getWhatsAppUrl(
+                        mensajeWhatsAppConsulta({
+                          nombre: form.nombre,
+                          apellido: form.apellido,
+                          telefono: form.telefono,
+                          provincia: form.provincia,
+                          mensaje: buildMensaje(),
+                        }),
+                        waNumber
+                      )}
+                    />
+                  )}
+                  {status === "error" && (
+                    <p role="alert" className="text-red-400 text-sm">
+                      Hubo un error. Intentá de nuevo o escribinos por WhatsApp.
+                    </p>
                   )}
 
                   {/* Navegación */}

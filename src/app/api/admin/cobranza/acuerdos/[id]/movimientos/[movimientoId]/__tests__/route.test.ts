@@ -245,6 +245,15 @@ describe("DELETE /api/admin/cobranza/acuerdos/[id]/movimientos/[movimientoId]", 
     expect(res.status).toBe(401);
   });
 
+  it("403 si el rol no es admin (vendedor): no busca ni borra el pago", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ ...SESSION, rol: "vendedor" });
+    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "a1", movimientoId: "m1" }) });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("Solo un administrador puede eliminar");
+    expect(mockFindUniqueMovimiento).not.toHaveBeenCalled();
+    expect(mockDeleteMovimiento).not.toHaveBeenCalled();
+  });
+
   it("404 si el pago no existe o pertenece a otro acuerdo", async () => {
     mockFindUniqueMovimiento.mockResolvedValueOnce({ ...MOVIMIENTO, acuerdoId: "otro" });
     const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "a1", movimientoId: "m1" }) });

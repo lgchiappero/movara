@@ -45,9 +45,9 @@ vi.mock("@/lib/admin/storage", () => ({
   uploadDocument: m.upload,
   downloadDocument: m.download,
 }));
-vi.mock("./enviar-email", async (orig) => ({
-  ...(await orig<typeof import("./enviar-email")>()),
-  enviarEmailRecibo: m.enviar,
+vi.mock("@/lib/email/enviar", async (orig) => ({
+  ...(await orig<typeof import("@/lib/email/enviar")>()),
+  enviarEmail: m.enviar,
 }));
 vi.mock("@react-pdf/renderer", () => ({ renderToBuffer: m.render }));
 vi.mock("@/lib/pdf/ReciboConformidadDocument", () => ({ ReciboConformidadDocument: (props: unknown) => props }));
@@ -189,6 +189,7 @@ describe("enviarSolicitud", () => {
     expect(res).toEqual({ ok: true });
     const [email, opciones] = m.enviar.mock.calls[0];
     expect(email.to).toBe("ana@movara.test");
+    expect(email.replyTo).toBe("contacto@movara.com.ar");
     expect(email.subject).toBe("Confirmá la recepción de tu MOVARA · REC-2026-001");
     expect(email.html).toContain(`http://localhost:3000/recibo/${TOKEN}`);
     expect(opciones).toEqual({ prueba: false });

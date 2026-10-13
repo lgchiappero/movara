@@ -5,7 +5,7 @@ import { loginAsAdmin } from "./helpers/login";
 
 // Fuera de producción, los recibos de clientes con email @example.com mandan
 // sus emails a esta bandeja local en vez de a Resend (ver
-// src/lib/recibos/enviar-email.ts) — así el test cubre "crear → email →
+// src/lib/email/enviar.ts) — así el test cubre "crear → email →
 // abrir link" sin enviar correos reales.
 const OUTBOX = path.join(process.cwd(), ".storage-local", "outbox");
 

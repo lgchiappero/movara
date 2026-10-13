@@ -323,13 +323,15 @@ export function PlanDePago({
                         >
                           Editar
                         </button>
-                        <EliminarButton
-                          label="Eliminar"
-                          confirmTitle="¿Eliminar este pago?"
-                          successMessage="Pago eliminado"
-                          onEliminar={() => acciones.eliminarPago(plan, pago)}
-                          className="text-red-500 hover:text-red-700 font-medium"
-                        />
+                        {isAdmin(rol) && (
+                          <EliminarButton
+                            label="Eliminar"
+                            confirmTitle="¿Eliminar este pago?"
+                            successMessage="Pago eliminado"
+                            onEliminar={() => acciones.eliminarPago(plan, pago)}
+                            className="text-red-500 hover:text-red-700 font-medium"
+                          />
+                        )}
                       </td>
                     </tr>
                   );

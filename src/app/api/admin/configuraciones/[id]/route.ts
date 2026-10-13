@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { estadoPedidoOptions, type EstadoPedido } from "@/lib/pedido/estado-pedido";
 import { ensureNumeroPedido } from "@/lib/pedido/numero-pedido";
 import { buildEstadoEmail } from "@/lib/email/pedido-estado-email";
+import { enviarEmail } from "@/lib/email/enviar";
 import { calcularGarantiaFechaFin } from "@/lib/pedido/garantia";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { isAdmin } from "@/lib/admin/roles";
@@ -179,20 +179,13 @@ async function enviarEmailEstado(
   });
   if (!email) return;
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "MOVARA <onboarding@resend.dev>";
-  if (!apiKey) return;
-
-  try {
-    const resend = new Resend(apiKey);
-    await resend.emails.send({
-      from: fromEmail,
-      to: config.clienteEmail,
-      replyTo: "contacto@movara.com.ar",
-      subject: email.subject,
-      html: email.html,
-    });
-  } catch (err) {
-    console.error("[admin/configuraciones/:id] error al enviar email de estado:", err);
+  const resultado = await enviarEmail({
+    to: config.clienteEmail,
+    replyTo: "contacto@movara.com.ar",
+    subject: email.subject,
+    html: email.html,
+  });
+  if (!resultado.ok) {
+    console.error(`[admin/configuraciones/:id] ${config.numeroPedido ?? "-"} Falló el email de estado "${estado}": ${resultado.error}`);
   }
 }

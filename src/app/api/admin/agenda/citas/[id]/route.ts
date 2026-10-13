@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { citaAdminActionSchema } from "@/lib/validators/admin-agenda";
 import { getAdminUser } from "@/lib/admin/current-user";
@@ -9,29 +8,19 @@ import {
   buildCancelacionAdminEmail,
   type CitaEmailData,
 } from "@/lib/email/cita-emails";
+import { enviarEmail } from "@/lib/email/enviar";
 
 async function enviarEmailsCancelacion(cita: CitaEmailData) {
-  const apiKey = process.env.RESEND_API_KEY;
   const contactEmail = process.env.CONTACT_EMAIL;
-  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "MOVARA <onboarding@resend.dev>";
-  if (!apiKey) return;
 
-  const resend = new Resend(apiKey);
-
-  try {
-    const { subject, html } = buildCancelacionClienteEmail(cita);
-    await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "contacto@movara.com.ar", subject, html });
-  } catch (err) {
-    console.error("[admin/agenda/citas] Error avisando cancelación al cliente:", err);
-  }
+  const cliente = buildCancelacionClienteEmail(cita);
+  const rCliente = await enviarEmail({ to: cita.email, replyTo: "contacto@movara.com.ar", subject: cliente.subject, html: cliente.html });
+  if (!rCliente.ok) console.error(`[admin/agenda/citas] cita=${cita.id} Falló el aviso de cancelación al cliente: ${rCliente.error}`);
 
   if (contactEmail) {
-    try {
-      const { subject, html } = buildCancelacionAdminEmail(cita);
-      await resend.emails.send({ from: fromEmail, to: contactEmail, replyTo: "lucianogchiappero@gmail.com", subject, html });
-    } catch (err) {
-      console.error("[admin/agenda/citas] Error avisando cancelación al admin:", err);
-    }
+    const admin = buildCancelacionAdminEmail(cita);
+    const rAdmin = await enviarEmail({ to: contactEmail, replyTo: "lucianogchiappero@gmail.com", subject: admin.subject, html: admin.html });
+    if (!rAdmin.ok) console.error(`[admin/agenda/citas] cita=${cita.id} Falló el aviso de cancelación a MOVARA: ${rAdmin.error}`);
   }
 }
 

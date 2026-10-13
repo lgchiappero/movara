@@ -104,4 +104,19 @@ describe("POST /api/agenda/citas/[id]/cancelar", () => {
     delete process.env.RESEND_API_KEY;
     delete process.env.CONTACT_EMAIL;
   });
+
+  it("lee el { error } de Resend y loguea solo el id de la cita y el tipo", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    process.env.CONTACT_EMAIL = "contacto@movara.com.ar";
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockFindUnique.mockResolvedValue(CITA);
+    mockUpdate.mockResolvedValue({ ...CITA, estado: "cancelada", canceladaPor: "cliente" });
+    mockSend.mockResolvedValue({ data: null, error: { name: "validation_error", statusCode: 422, message: "Juan@Example.com" } });
+    expect((await POST(req({ email: "juan@example.com" }), params)).status).toBe(200);
+    expect(log).toHaveBeenCalledWith(`[agenda/citas/cancelar] cita=${CITA.id} Falló el email al cliente: validation_error (422)`);
+    expect(log).toHaveBeenCalledWith(`[agenda/citas/cancelar] cita=${CITA.id} Falló el email a MOVARA: validation_error (422)`);
+    expect(JSON.stringify(log.mock.calls).toLowerCase()).not.toContain("juan@example.com");
+    delete process.env.RESEND_API_KEY;
+    delete process.env.CONTACT_EMAIL;
+  });
 });

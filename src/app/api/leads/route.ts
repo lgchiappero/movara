@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { Resend } from "resend";
+import { enviarEmail } from "@/lib/email/enviar";
 import { getClientIP } from "@/lib/rate-limit";
 import { claveIP, consumirRateLimit } from "@/lib/rate-limit-db";
 import { escapeHtml } from "@/lib/email/escape-html";
 import { resumenError } from "@/lib/log-seguro";
+import { MENSAJE_LEAD_NO_GUARDADO } from "@/lib/leads/enviar-lead";
 
 // Formulario público que dispara emails (incluido uno a la dirección que se
 // ingresa): tope estricto por IP para que no sirva de relay de spam.
@@ -105,14 +106,11 @@ function buildClientHtml(lead: LeadData) {
 </html>`;
 }
 
-async function sendEmails(lead: LeadData): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
+/** Aviso a MOVARA y confirmación al cliente. Devuelve si salió el aviso a
+ * MOVARA. Los logs llevan el id del lead y el tipo de error, nunca datos
+ * personales. */
+async function sendEmails(lead: LeadData, leadId: string): Promise<boolean> {
   const contactEmail = process.env.CONTACT_EMAIL;
-  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "MOVARA <onboarding@resend.dev>";
-
-  if (!apiKey) return false;
-
-  const resend = new Resend(apiKey);
   const nombreCompleto = [lead.nombre, lead.apellido].filter(Boolean).join(" ");
   const now = new Date().toLocaleString("es-AR", {
     timeZone: "America/Argentina/Buenos_Aires",
@@ -123,32 +121,24 @@ async function sendEmails(lead: LeadData): Promise<boolean> {
   let sent = false;
 
   if (contactEmail) {
-    try {
-      await resend.emails.send({
-        from: fromEmail,
-        to: contactEmail,
-        replyTo: "lucianogchiappero@gmail.com",
-        subject: `MOVARA | Consulta — ${nombreCompleto} | ${lead.telefono}`,
-        html: buildAdminHtml(lead, now),
-      });
-      sent = true;
-    } catch (err) {
-      console.error(`[leads] Falló el email a MOVARA: ${resumenError(err)}`);
-    }
+    const r = await enviarEmail({
+      to: contactEmail,
+      replyTo: "lucianogchiappero@gmail.com",
+      subject: `MOVARA | Consulta — ${nombreCompleto} | ${lead.telefono}`,
+      html: buildAdminHtml(lead, now),
+    });
+    if (r.ok) sent = true;
+    else console.error(`[leads] id=${leadId} Falló el email a MOVARA: ${r.error}`);
   }
 
   if (lead.email) {
-    try {
-      await resend.emails.send({
-        from: fromEmail,
-        to: lead.email,
-        replyTo: "contacto@movara.com.ar",
-        subject: "Recibimos tu consulta — MOVARA",
-        html: buildClientHtml(lead),
-      });
-    } catch (err) {
-      console.error(`[leads] Falló el email de confirmación: ${resumenError(err)}`);
-    }
+    const r = await enviarEmail({
+      to: lead.email,
+      replyTo: "contacto@movara.com.ar",
+      subject: "Recibimos tu consulta — MOVARA",
+      html: buildClientHtml(lead),
+    });
+    if (!r.ok) console.error(`[leads] id=${leadId} Falló el email de confirmación: ${r.error}`);
   }
 
   return sent;
@@ -163,8 +153,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Solo cuentan los envíos válidos: un error de tipeo no consume cupo.
-    // Si la base no responde se deja pasar (con log): esta ruta ya está hecha
-    // para no perder el lead aunque la DB falle — sigue llegando por email.
+    // Si la tabla del rate limit no responde se deja pasar (con log); si
+    // tampoco se puede guardar el lead, más abajo se responde 503.
     const permitido = await consumirRateLimit(claveIP("leads", getClientIP(req)), LEADS_MAX_POR_HORA, UNA_HORA_MS)
       .catch((err) => {
         console.error(`[leads] Rate limit no disponible — se permite el envío: ${resumenError(err)}`);
@@ -190,18 +180,19 @@ export async function POST(req: NextRequest) {
     // Los logs registran solo id, origen y resultado — nunca nombre, DNI,
     // email ni teléfono.
     const origen = parsed.data.formulario ?? "web";
-    let leadId: string | null = null;
+    let leadId: string;
     try {
       leadId = (await db.lead.create({ data })).id;
     } catch (dbError) {
-      console.error(`[leads] origen=${origen} No se pudo guardar el lead: ${resumenError(dbError)}`);
+      // Sin registro en la base no se confirma nada al usuario (ni 201 ni
+      // email de "recibimos tu consulta"): el formulario le ofrece WhatsApp
+      // para que la consulta no se pierda.
+      console.error(`[leads] origen=${origen} db=error No se pudo guardar el lead: ${resumenError(dbError)}`);
+      return NextResponse.json({ error: MENSAJE_LEAD_NO_GUARDADO, code: "lead-no-guardado" }, { status: 503 });
     }
 
-    const emailSent = await sendEmails(data);
-
-    const resultado = `[leads] id=${leadId ?? "-"} origen=${origen} db=${leadId ? "ok" : "error"} email=${emailSent ? "ok" : "no-enviado"}`;
-    if (leadId || emailSent) console.log(resultado);
-    else console.error(`${resultado} — el lead no quedó registrado`);
+    const emailSent = await sendEmails(data, leadId);
+    console.log(`[leads] id=${leadId} origen=${origen} db=ok email=${emailSent ? "ok" : "no-enviado"}`);
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db/index";
-import { Resend } from "resend";
+import { enviarEmail } from "@/lib/email/enviar";
+import { escapeHtml } from "@/lib/email/escape-html";
 import { resumenError } from "@/lib/log-seguro";
 
 const Schema = z.object({
@@ -28,19 +29,13 @@ export async function POST(req: NextRequest) {
       console.error(`[leads-email] No se pudo guardar: ${resumenError(dbErr)}`);
     }
 
-    const apiKey = process.env.RESEND_API_KEY;
     const contactEmail = process.env.CONTACT_EMAIL;
-    const fromEmail = process.env.RESEND_FROM_EMAIL ?? "MOVARA <onboarding@resend.dev>";
-
-    if (apiKey && contactEmail) {
-      try {
-        const resend = new Resend(apiKey);
-        await resend.emails.send({
-          from: fromEmail,
-          to: contactEmail,
-          replyTo: "lucianogchiappero@gmail.com",
-          subject: "MOVARA | Nuevo email capturado — exit intent",
-          html: `<!DOCTYPE html>
+    if (contactEmail) {
+      const r = await enviarEmail({
+        to: contactEmail,
+        replyTo: "lucianogchiappero@gmail.com",
+        subject: "MOVARA | Nuevo email capturado — exit intent",
+        html: `<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="utf-8"></head>
 <body style="margin:0;padding:20px;background:#f4f4f4;font-family:Arial,sans-serif;">
@@ -50,18 +45,16 @@ export async function POST(req: NextRequest) {
     </div>
     <div style="padding:24px;">
       <table style="width:100%;border-collapse:collapse;font-size:14px;">
-        <tr><td style="padding:10px 0;color:#888;width:100px">Email</td><td style="padding:10px 0;color:#222;font-weight:600">${email}</td></tr>
-        <tr><td style="padding:10px 0;color:#888">Fuente</td><td style="padding:10px 0;color:#222">${source}</td></tr>
+        <tr><td style="padding:10px 0;color:#888;width:100px">Email</td><td style="padding:10px 0;color:#222;font-weight:600">${escapeHtml(email)}</td></tr>
+        <tr><td style="padding:10px 0;color:#888">Fuente</td><td style="padding:10px 0;color:#222">${escapeHtml(source)}</td></tr>
         <tr><td style="padding:10px 0;color:#888">Fecha</td><td style="padding:10px 0;color:#222">${new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}</td></tr>
       </table>
     </div>
   </div>
 </body>
 </html>`,
-        });
-      } catch (emailErr) {
-        console.error(`[leads-email] Falló el email a MOVARA: ${resumenError(emailErr)}`);
-      }
+      });
+      if (!r.ok) console.error(`[leads-email] Falló el email a MOVARA: ${r.error}`);
     }
 
     return NextResponse.json({ ok: true }, { status: 201 });

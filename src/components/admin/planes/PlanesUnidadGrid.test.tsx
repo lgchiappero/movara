@@ -423,11 +423,13 @@ describe("Detalle de la unidad (fila desplegada) — plan de pago unificado", ()
     expect(a.eliminarPlan).toHaveBeenCalled();
   });
 
-  it("un vendedor no ve 'Eliminar plan' pero sí 'Editar plan'", async () => {
+  it("un vendedor no ve 'Eliminar plan' ni 'Eliminar' de los pagos, pero sí los botones de editar", async () => {
     const { user } = renderGrid({ rol: "vendedor" });
     const d = await abrirU1(user);
     expect(within(d).queryByRole("button", { name: "Eliminar plan" })).not.toBeInTheDocument();
+    expect(within(d).queryByRole("button", { name: "Eliminar" })).not.toBeInTheDocument();
     expect(within(d).getByRole("button", { name: "Editar plan" })).toBeInTheDocument();
+    expect(within(d).getAllByRole("button", { name: "Editar" }).length).toBeGreaterThan(0);
   });
 
   it("click de nuevo en la fila la colapsa", async () => {

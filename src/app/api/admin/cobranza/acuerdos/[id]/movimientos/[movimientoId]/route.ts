@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/admin/current-user";
+import { isAdmin } from "@/lib/admin/roles";
 import { validateFileMovara } from "@/lib/admin/file-validation";
 import { buildStoragePath, uploadDocument, BUCKET_MOVARA } from "@/lib/admin/storage";
 import { registrarMovimientoSchema } from "@/lib/validators/cobranza";
@@ -127,6 +128,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<Pa
   const session = await getAdminUser();
   if (!session) {
     return NextResponse.json({ error: "Sesión inválida" }, { status: 401 });
+  }
+  if (!isAdmin(session.rol)) {
+    return NextResponse.json({ error: "Solo un administrador puede eliminar" }, { status: 403 });
   }
 
   const movimiento = await findMovimiento(acuerdoId, movimientoId);

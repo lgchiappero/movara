@@ -148,6 +148,19 @@ describe("PATCH /api/admin/agenda/citas/[id]", () => {
     const res = await PATCH(makeRequest({ accion: "cancelar" }), { params: Promise.resolve({ id: "c1" }) });
     expect(res.status).toBe(200);
   });
+
+  it("lee el { error } de Resend: lo loguea con el id de la cita y el tipo, sin datos personales", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockSend.mockResolvedValue({ data: null, error: { name: "rate_limit_exceeded", statusCode: 429, message: "juan@x.com" } });
+    mockFindUnique.mockResolvedValueOnce(CITA);
+    mockUpdate.mockResolvedValueOnce({ ...CITA, estado: "cancelada" });
+    const res = await PATCH(makeRequest({ accion: "cancelar" }), { params: Promise.resolve({ id: "c1" }) });
+    expect(res.status).toBe(200);
+    expect(log).toHaveBeenCalledWith("[admin/agenda/citas] cita=c1 Falló el aviso de cancelación al cliente: rate_limit_exceeded (429)");
+    expect(log).toHaveBeenCalledWith("[admin/agenda/citas] cita=c1 Falló el aviso de cancelación a MOVARA: rate_limit_exceeded (429)");
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/juan@x\.com|Juan/);
+    mockSend.mockResolvedValue({ id: "email1" });
+  });
 });
 
 function makeDeleteRequest(): NextRequest {

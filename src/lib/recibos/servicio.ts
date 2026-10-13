@@ -9,7 +9,7 @@ import { EMAIL_CONTACTO_MOVARA, NOMBRE_DOCUMENTO, linkRecibo } from "./constante
 import { construirTextoRecibo, fechaFinGarantia, fechaHoraAR, fechaLargaUTC, textoPlano, type DatosTextoRecibo } from "./texto";
 import { calcularHashRecibo } from "./hash";
 import { generateNumeroRecibo } from "./numero-recibo";
-import { enviarEmailRecibo, esReciboDePrueba, type ResultadoEmail } from "./enviar-email";
+import { enviarEmail, esEmailDePrueba, type ResultadoEmail } from "@/lib/email/enviar";
 
 type Fallo = { ok: false; status: number; error: string };
 
@@ -123,9 +123,9 @@ class ReciboVigenteError extends Error {
  * a quién. Nunca lanza. */
 export async function enviarSolicitud(recibo: ReciboConformidad, baseUrl?: string): Promise<ResultadoEmail> {
   const { subject, html } = buildEmailSolicitudRecibo(datosEmail(recibo), linkRecibo(recibo.token, baseUrl));
-  const resultado = await enviarEmailRecibo(
-    { to: recibo.clienteEmail, subject, html },
-    { prueba: esReciboDePrueba(recibo.clienteEmail) }
+  const resultado = await enviarEmail(
+    { to: recibo.clienteEmail, replyTo: EMAIL_CONTACTO_MOVARA, subject, html },
+    { prueba: esEmailDePrueba(recibo.clienteEmail) }
   );
   if (resultado.ok) {
     await db.reciboConformidad.update({
@@ -133,7 +133,7 @@ export async function enviarSolicitud(recibo: ReciboConformidad, baseUrl?: strin
       data: { emailEnviadoAt: new Date(), emailEnviadoA: recibo.clienteEmail },
     });
   } else {
-    console.error(`[recibos] No se pudo enviar el email de ${recibo.numeroRecibo}:`, resultado.error);
+    console.error(`[recibos] No se pudo enviar el email de ${recibo.numeroRecibo}: ${resultado.error}`);
   }
   return resultado;
 }
@@ -290,7 +290,9 @@ export async function despuesDeConfirmar(r: ReciboConformidad): Promise<void> {
     confirmadoTexto: fechaHoraAR(r.confirmadoAt!),
     garantiaHastaTexto: fechaLargaUTC(fechaFinGarantia(r.fechaEntrega)),
   };
-  const prueba = esReciboDePrueba(r.clienteEmail);
+  // Recibo de prueba: TODOS sus emails, incluida la copia a MOVARA, van a la
+  // bandeja local (ver esEmailDePrueba).
+  const prueba = esEmailDePrueba(r.clienteEmail);
   const adjunto = [{ filename: nombre, content: pdf }];
   const envios: { to: string; para: "cliente" | "movara" }[] = [
     { to: r.clienteEmail, para: "cliente" },
@@ -298,7 +300,7 @@ export async function despuesDeConfirmar(r: ReciboConformidad): Promise<void> {
   ];
   for (const { to, para } of envios) {
     const { subject, html } = buildEmailReciboConfirmado(datos, para);
-    const res = await enviarEmailRecibo({ to, subject, html, attachments: adjunto }, { prueba });
+    const res = await enviarEmail({ to, replyTo: EMAIL_CONTACTO_MOVARA, subject, html, attachments: adjunto }, { prueba });
     if (!res.ok) console.error(`[recibos] No se pudo enviar ${r.numeroRecibo} confirmado (${para === "cliente" ? "al cliente" : "a MOVARA"}): ${res.error}`);
   }
 }

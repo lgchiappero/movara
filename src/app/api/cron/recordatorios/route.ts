@@ -1,21 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
+import { createHash, timingSafeEqual } from "crypto";
 import { db } from "@/lib/db";
 import { buildRecordatorioEmail, type CitaEmailData } from "@/lib/email/cita-emails";
+import { enviarEmail } from "@/lib/email/enviar";
 import { addDiasFechaKey, hoyFechaKey, fechaKeyToDate } from "@/lib/agenda/fecha";
-import { resumenError } from "@/lib/log-seguro";
 
-// Vercel Cron llama este endpoint por GET y, si CRON_SECRET está seteado en
-// el proyecto, agrega automáticamente `Authorization: Bearer <CRON_SECRET>`
-// — ver vercel.json. Sin CRON_SECRET configurado no se exige auth (permite
-// probar el endpoint a mano en dev).
+/** Compara en tiempo constante (los hashes igualan el largo). */
+function igualSeguro(a: string, b: string): boolean {
+  const ha = createHash("sha256").update(a).digest();
+  const hb = createHash("sha256").update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
+
+// Vercel Cron llama este endpoint por GET (ver vercel.json) y, si la variable
+// CRON_SECRET existe en el proyecto, agrega automáticamente
+// `Authorization: Bearer <CRON_SECRET>`. Sin CRON_SECRET configurado se
+// rechaza todo: el endpoint nunca queda abierto.
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+  const auth = req.headers.get("authorization") ?? "";
+  if (!cronSecret || !igualSeguro(auth, `Bearer ${cronSecret}`)) {
+    if (!cronSecret) console.error("[cron/recordatorios] CRON_SECRET no configurado — pedido rechazado");
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
   const mananaKey = addDiasFechaKey(hoyFechaKey(), 1);
@@ -25,16 +31,13 @@ export async function GET(req: NextRequest) {
     where: { fecha, estado: "confirmada", recordatorioEnviado: false },
   });
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  if (!process.env.RESEND_API_KEY) {
     console.warn("[cron/recordatorios] RESEND_API_KEY no configurado — no se envió ningún recordatorio");
-    return NextResponse.json({ ok: true, total: citas.length, enviados: 0, motivo: "sin RESEND_API_KEY" });
+    return NextResponse.json({ ok: true, total: citas.length, enviados: 0, fallidos: citas.length, motivo: "sin RESEND_API_KEY" });
   }
 
-  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "MOVARA <onboarding@resend.dev>";
-  const resend = new Resend(apiKey);
-
   let enviados = 0;
+  let fallidos = 0;
   for (const cita of citas) {
     const data: CitaEmailData = {
       id: cita.id,
@@ -48,15 +51,16 @@ export async function GET(req: NextRequest) {
       consulta: cita.consulta,
     };
     const { subject, html } = buildRecordatorioEmail(data);
-    try {
-      await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "contacto@movara.com.ar", subject, html });
-    } catch (err) {
-      console.error(`[cron/recordatorios] cita=${cita.id} Falló el recordatorio: ${resumenError(err)}`);
-      continue; // no marca recordatorioEnviado si el envío falló
+    const resultado = await enviarEmail({ to: cita.email, replyTo: "contacto@movara.com.ar", subject, html });
+    if (!resultado.ok) {
+      // No se marca recordatorioEnviado: la cita queda pendiente y se ve en el log.
+      console.error(`[cron/recordatorios] cita=${cita.id} recordatorio no enviado: ${resultado.error}`);
+      fallidos++;
+      continue;
     }
     await db.cita.update({ where: { id: cita.id }, data: { recordatorioEnviado: true } });
     enviados++;
   }
 
-  return NextResponse.json({ ok: true, total: citas.length, enviados });
+  return NextResponse.json({ ok: true, total: citas.length, enviados, fallidos });
 }

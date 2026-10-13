@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { citaSchema } from "@/lib/validators/cita";
 import { fechaKeyToDate, hoyFechaKey } from "@/lib/agenda/fecha";
@@ -10,35 +9,20 @@ import {
   buildReagendacionAdminEmail,
   type CitaEmailData,
 } from "@/lib/email/cita-emails";
+import { enviarEmail } from "@/lib/email/enviar";
 import { resumenError } from "@/lib/log-seguro";
 
-function getResend() {
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "MOVARA <onboarding@resend.dev>";
-  if (!apiKey) return null;
-  return { resend: new Resend(apiKey), fromEmail };
-}
-
 async function enviarEmails(cita: CitaEmailData) {
-  const setup = getResend();
-  if (!setup) return;
-  const { resend, fromEmail } = setup;
   const contactEmail = process.env.CONTACT_EMAIL;
 
   const cliente = buildConfirmacionClienteEmail(cita);
-  try {
-    await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "contacto@movara.com.ar", subject: cliente.subject, html: cliente.html });
-  } catch (err) {
-    console.error(`[agenda/citas] Falló la confirmación al cliente: ${resumenError(err)}`);
-  }
+  const rCliente = await enviarEmail({ to: cita.email, replyTo: "contacto@movara.com.ar", subject: cliente.subject, html: cliente.html });
+  if (!rCliente.ok) console.error(`[agenda/citas] cita=${cita.id} Falló la confirmación al cliente: ${rCliente.error}`);
 
   if (contactEmail) {
     const admin = buildNuevaVisitaAdminEmail(cita);
-    try {
-      await resend.emails.send({ from: fromEmail, to: contactEmail, replyTo: "lucianogchiappero@gmail.com", subject: admin.subject, html: admin.html });
-    } catch (err) {
-      console.error(`[agenda/citas] Falló el aviso a MOVARA: ${resumenError(err)}`);
-    }
+    const rAdmin = await enviarEmail({ to: contactEmail, replyTo: "lucianogchiappero@gmail.com", subject: admin.subject, html: admin.html });
+    if (!rAdmin.ok) console.error(`[agenda/citas] cita=${cita.id} Falló el aviso a MOVARA: ${rAdmin.error}`);
   }
 }
 
@@ -46,17 +30,11 @@ async function enviarEmailsReagendacion(
   cita: CitaEmailData,
   citaAnterior: { fecha: Date; horario: string }
 ) {
-  const setup = getResend();
-  if (!setup) return;
-  const { resend, fromEmail } = setup;
   const contactEmail = process.env.CONTACT_EMAIL;
 
   const cliente = buildConfirmacionClienteEmail(cita);
-  try {
-    await resend.emails.send({ from: fromEmail, to: cita.email, replyTo: "contacto@movara.com.ar", subject: cliente.subject, html: cliente.html });
-  } catch (err) {
-    console.error(`[agenda/citas] Falló la confirmación de reagendación: ${resumenError(err)}`);
-  }
+  const rCliente = await enviarEmail({ to: cita.email, replyTo: "contacto@movara.com.ar", subject: cliente.subject, html: cliente.html });
+  if (!rCliente.ok) console.error(`[agenda/citas] cita=${cita.id} Falló la confirmación de reagendación: ${rCliente.error}`);
 
   if (contactEmail) {
     const admin = buildReagendacionAdminEmail({
@@ -68,11 +46,8 @@ async function enviarEmailsReagendacion(
       fechaNueva: cita.fecha,
       horarioNueva: cita.horario,
     });
-    try {
-      await resend.emails.send({ from: fromEmail, to: contactEmail, replyTo: "lucianogchiappero@gmail.com", subject: admin.subject, html: admin.html });
-    } catch (err) {
-      console.error(`[agenda/citas] Falló el aviso de reagendación a MOVARA: ${resumenError(err)}`);
-    }
+    const rAdmin = await enviarEmail({ to: contactEmail, replyTo: "lucianogchiappero@gmail.com", subject: admin.subject, html: admin.html });
+    if (!rAdmin.ok) console.error(`[agenda/citas] cita=${cita.id} Falló el aviso de reagendación a MOVARA: ${rAdmin.error}`);
   }
 }
 

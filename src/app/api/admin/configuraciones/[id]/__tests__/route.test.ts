@@ -255,6 +255,17 @@ describe("PATCH /api/admin/configuraciones/[id]", () => {
     expect(res.status).toBe(200);
   });
 
+  it("lee el { error } de Resend: loguea número de pedido, estado y tipo, sin el email del cliente", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockUpdate.mockResolvedValueOnce({ ...CONFIG_BASE, estadoPedido: "presupuestado", numeroPedido: "MOV-2026-007" });
+    mockBuildEstadoEmail.mockReturnValueOnce({ subject: "x", html: "y" });
+    mockSend.mockResolvedValueOnce({ data: null, error: { name: "validation_error", statusCode: 422, message: "juan@x.com" } });
+    const res = await PATCH(makeRequest({ ...BASE, estadoPedido: "presupuestado" }), { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(200);
+    expect(log).toHaveBeenCalledWith('[admin/configuraciones/:id] MOV-2026-007 Falló el email de estado "presupuestado": validation_error (422)');
+    expect(JSON.stringify(log.mock.calls)).not.toContain("juan@x.com");
+  });
+
   it("500 si la DB falla", async () => {
     mockUpdate.mockRejectedValueOnce(new Error("db down"));
     const res = await PATCH(makeRequest(BASE), { params: Promise.resolve({ id: "p1" }) });
