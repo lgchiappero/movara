@@ -16,7 +16,10 @@ export type ModeloCardData = {
   slug?: string | null;
   tagline?: string | null;
   imagen?: ImagenSanity;
-  tamanos?: (number | null)[] | null;
+  /** "Tamaños disponibles (m²)" — varios tamaños del mismo modelo. */
+  tamanosDisponibles?: (number | null)[] | null;
+  /** "Superficie total (m²)" — se usa si no hay tamaños disponibles. */
+  superficie?: number | null;
   proximamente?: boolean | null;
 };
 
@@ -30,6 +33,12 @@ export function hrefModelo(slug?: string | null): string {
 export function lineaTamanos(tamanos?: (number | null)[] | null): string | null {
   const validos = (tamanos ?? []).filter((n): n is number => typeof n === "number" && n > 0);
   return validos.length ? `${validos.join(" · ")} m²` : null;
+}
+
+/** Línea de tamaños de la card: primero "Tamaños disponibles"; si está
+ * vacío o falta, "Superficie total". */
+export function tamanosDeCard(modelo: Pick<ModeloCardData, "tamanosDisponibles" | "superficie">): string | null {
+  return lineaTamanos(modelo.tamanosDisponibles) ?? lineaTamanos([modelo.superficie ?? null]);
 }
 
 /** Card única de modelo — la misma en la home y en /modelos. La imagen se
@@ -50,7 +59,7 @@ export default function ModeloCard({
   const imagenUrl = modelo.imagen?.asset?._ref
     ? urlFor(modelo.imagen as Parameters<typeof urlFor>[0]).width(1200).fit("max").auto("format").url()
     : null;
-  const tamanos = lineaTamanos(modelo.tamanos);
+  const tamanos = tamanosDeCard(modelo);
 
   const card = (
     <div

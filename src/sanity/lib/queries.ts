@@ -14,7 +14,8 @@ export const MODELOS_CARD_QUERY = groq`
     "slug": slug.current,
     tagline,
     "imagen": images[defined(asset)][0]{ asset, hotspot, crop },
-    "tamanos": [size][defined(@)],
+    tamanosDisponibles,
+    "superficie": size,
     proximamente
   }
 `

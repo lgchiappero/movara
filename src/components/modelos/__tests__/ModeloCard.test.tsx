@@ -12,12 +12,12 @@ vi.mock("next/image", () => ({
   default: ({ fill, priority, quality, alt, ...rest }: Record<string, unknown>) => <img alt={alt as string} {...(rest as object)} />,
 }));
 
-import ModeloCard, { hrefModelo, lineaTamanos, type ModeloCardData } from "../ModeloCard";
+import ModeloCard, { hrefModelo, lineaTamanos, tamanosDeCard, type ModeloCardData } from "../ModeloCard";
 import ModelosGrid from "../ModelosGrid";
 
 const IMG = { asset: { _ref: "image-32a39260aa871f40ac99c191aa9dea94cbac1021-1448x1086-png", _type: "reference" } };
-const FLEX: ModeloCardData = { _id: "f", nombre: "MOVARA Flex", slug: "movara-flex", tagline: "Se despliega en destino", imagen: IMG, tamanos: [] };
-const DUPLEX: ModeloCardData = { _id: "d", nombre: "MOVARA Duplex", slug: "movara-duplex-76m2", tagline: null, imagen: null, tamanos: [76] };
+const FLEX: ModeloCardData = { _id: "f", nombre: "MOVARA Flex", slug: "movara-flex", tagline: "Se despliega en destino", imagen: IMG, tamanosDisponibles: [18, 38, 77], superficie: 38 };
+const DUPLEX: ModeloCardData = { _id: "d", nombre: "MOVARA Duplex", slug: "movara-duplex-76m2", tagline: null, imagen: null, superficie: 76 };
 
 describe("ModeloCard — con imagen", () => {
   it("imagen completa (object-contain) desde Sanity con urlFor, sobre recuadro 4/3 oscuro", () => {
@@ -57,10 +57,36 @@ describe("ModeloCard — sin imagen", () => {
     expect(recuadro.parentElement).toHaveClass("aspect-[4/3]", "bg-[#141414]");
   });
 
-  it("muestra los tamaños de Sanity y linkea al slug", () => {
+  it("sin tamaños disponibles muestra la superficie total y linkea al slug", () => {
     render(<ModeloCard modelo={DUPLEX} />);
     expect(screen.getByText("76 m²")).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/modelos/movara-duplex-76m2");
+  });
+});
+
+describe("ModeloCard — tamaños", () => {
+  const linea = () => screen.queryByText(/m²$/);
+
+  it("lista con varios valores: los muestra todos, en vez de la superficie total", () => {
+    render(<ModeloCard modelo={FLEX} />);
+    expect(linea()).toHaveTextContent("18 · 38 · 77 m²");
+  });
+
+  it("lista vacía: usa la superficie total", () => {
+    render(<ModeloCard modelo={{ ...FLEX, tamanosDisponibles: [] }} />);
+    expect(linea()).toHaveTextContent(/^38 m²$/);
+  });
+
+  it("sin el campo: usa la superficie total", () => {
+    const sinCampo: ModeloCardData = { ...FLEX };
+    delete sinCampo.tamanosDisponibles;
+    render(<ModeloCard modelo={sinCampo} />);
+    expect(linea()).toHaveTextContent(/^38 m²$/);
+  });
+
+  it("sin tamaños ni superficie: no muestra la línea", () => {
+    render(<ModeloCard modelo={{ ...FLEX, tamanosDisponibles: null, superficie: null }} />);
+    expect(linea()).not.toBeInTheDocument();
   });
 });
 
@@ -88,6 +114,14 @@ describe("helpers", () => {
     expect(lineaTamanos([null, 0, 76])).toBe("76 m²");
     expect(lineaTamanos([])).toBeNull();
     expect(lineaTamanos(undefined)).toBeNull();
+  });
+
+  it("tamanosDeCard: tamaños disponibles primero, si no la superficie total", () => {
+    expect(tamanosDeCard({ tamanosDisponibles: [18, 38, 77], superficie: 38 })).toBe("18 · 38 · 77 m²");
+    expect(tamanosDeCard({ tamanosDisponibles: [], superficie: 76 })).toBe("76 m²");
+    expect(tamanosDeCard({ superficie: 76 })).toBe("76 m²");
+    expect(tamanosDeCard({ tamanosDisponibles: [null, 0], superficie: 76 })).toBe("76 m²");
+    expect(tamanosDeCard({})).toBeNull();
   });
 
   it("nombre por defecto si falta", () => {

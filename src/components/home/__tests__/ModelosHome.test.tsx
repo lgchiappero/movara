@@ -21,7 +21,7 @@ import ModelosHome from "../ModelosHome";
 
 const MODELOS = [
   { _id: "f", nombre: "MOVARA Flex", slug: "movara-flex" },
-  { _id: "d", nombre: "MOVARA Duplex", slug: "movara-duplex-76m2", tamanos: [76] },
+  { _id: "d", nombre: "MOVARA Duplex", slug: "movara-duplex-76m2", superficie: 76 },
 ];
 
 describe("ModelosHome", () => {

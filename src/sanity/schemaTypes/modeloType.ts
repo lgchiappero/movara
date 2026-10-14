@@ -67,6 +67,14 @@ export const modeloType = defineType({
         layout: 'radio',
       },
     }),
+    defineField({
+      name: 'tamanosDisponibles',
+      title: 'Tamaños disponibles (m²)',
+      type: 'array',
+      group: 'identificacion',
+      description: 'Si el modelo viene en varios tamaños, cargalos acá; la card los muestra como 18 · 38 · 77 m²',
+      of: [defineArrayMember({ type: 'number', validation: (Rule) => Rule.positive() })],
+    }),
 
     // ── Dimensiones e incluidos ─────────────────────────────
     defineField({
