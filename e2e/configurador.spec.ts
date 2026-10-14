@@ -2,6 +2,17 @@ import { test, expect, type Page } from "@playwright/test";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/** Abre el configurador y espera a que esté hidratado. Mientras carga, el HTML
+ * trae una copia oculta del paso 1 (el streaming de Suspense) y los clics antes
+ * de hidratar se pierden: por eso se espera la marca y se busca adentro. */
+async function abrirConfigurador(page: Page, url = "/configurador") {
+  await page.goto(url);
+  const cfg = page.locator('main[data-configurador="listo"]');
+  await expect(cfg).toHaveCount(1);
+  await expect(cfg.getByText("Paso 1 de 7", { exact: true })).toBeVisible();
+  return cfg;
+}
+
 /** Complete steps 1–5 of the configurador with default valid choices. */
 async function completarPasos1a5(page: Page) {
   // Step 1 — Modelo: MOVARA Flex 38
@@ -14,8 +25,9 @@ async function completarPasos1a5(page: Page) {
   await page.getByRole("button", { name: /Inversor/ }).click();
   await page.getByRole("button", { name: "Siguiente" }).click();
 
-  // Step 3 — Ubicación: Buenos Aires
+  // Step 3 — Ubicación: La Plata, Buenos Aires
   await expect(page.locator("#cfg-provincia")).toBeVisible();
+  await page.locator("#cfg-localidad").fill("La Plata");
   await page.selectOption("#cfg-provincia", "Buenos Aires");
   await page.getByRole("button", { name: "Siguiente" }).click();
 
@@ -25,7 +37,8 @@ async function completarPasos1a5(page: Page) {
   await page.getByRole("button", { name: "Siguiente" }).click();
 
   // Step 5 — Mejoras: saltar (opcionales)
-  await expect(page.getByText("Disponibles para todos los modelos")).toBeVisible();
+  await expect(page.getByText("Paso 5 de 7", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mejoras para tu MOVARA" })).toBeVisible();
   await page.getByRole("button", { name: "Siguiente" }).click();
 }
 
@@ -33,8 +46,7 @@ async function completarPasos1a5(page: Page) {
 
 test.describe("Configurador — flujo completo", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/configurador");
-    await expect(page.getByText("Paso 1 de 7")).toBeVisible();
+    await abrirConfigurador(page);
   });
 
   test("Test 1: flujo completo Particular — aparece botón de WhatsApp en resultado", async ({
@@ -66,7 +78,7 @@ test.describe("Configurador — flujo completo", () => {
 
     // Step 2: no finalidad → disabled
     await page.getByRole("button", { name: "Siguiente" }).click();
-    await expect(page.getByText("Paso 2 de 7")).toBeVisible();
+    await expect(page.getByText("Paso 2 de 7", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Siguiente" })).toBeDisabled();
 
     // Select Agro → enabled
@@ -75,11 +87,15 @@ test.describe("Configurador — flujo completo", () => {
 
     // Step 3: no provincia → disabled
     await page.getByRole("button", { name: "Siguiente" }).click();
-    await expect(page.getByText("Paso 3 de 7")).toBeVisible();
+    await expect(page.getByText("Paso 3 de 7", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Siguiente" })).toBeDisabled();
 
-    // Select provincia → enabled
+    // Solo la provincia no alcanza: la localidad es obligatoria
     await page.selectOption("#cfg-provincia", "Córdoba");
+    await expect(page.getByRole("button", { name: "Siguiente" })).toBeDisabled();
+
+    // Con localidad y provincia → enabled
+    await page.locator("#cfg-localidad").fill("Río Cuarto");
     await expect(page.getByRole("button", { name: "Siguiente" })).toBeEnabled();
   });
 
@@ -87,11 +103,11 @@ test.describe("Configurador — flujo completo", () => {
     // Step 1 → step 2
     await page.locator("button").filter({ hasText: "MOVARA Flex 38" }).first().click();
     await page.getByRole("button", { name: "Siguiente" }).click();
-    await expect(page.getByText("Paso 2 de 7")).toBeVisible();
+    await expect(page.getByText("Paso 2 de 7", { exact: true })).toBeVisible();
 
     // Back to step 1
     await page.getByRole("button", { name: "Atrás" }).click();
-    await expect(page.getByText("Paso 1 de 7")).toBeVisible();
+    await expect(page.getByText("Paso 1 de 7", { exact: true })).toBeVisible();
     await expect(page.getByText("MOVARA Flex 38").first()).toBeVisible();
 
     // Step 1 → step 2 → step 3 → back to step 2
@@ -99,9 +115,9 @@ test.describe("Configurador — flujo completo", () => {
     await page.getByRole("button", { name: "Siguiente" }).click();
     await page.getByRole("button", { name: /Vivienda/ }).click();
     await page.getByRole("button", { name: "Siguiente" }).click();
-    await expect(page.getByText("Paso 3 de 7")).toBeVisible();
+    await expect(page.getByText("Paso 3 de 7", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Atrás" }).click();
-    await expect(page.getByText("Paso 2 de 7")).toBeVisible();
+    await expect(page.getByText("Paso 2 de 7", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /Vivienda/ })).toBeVisible();
   });
 
@@ -137,14 +153,12 @@ test.describe("Configurador — flujo completo", () => {
 
 test.describe("Configurador — preselección vía ?modelo=", () => {
   test("con un modelo válido queda preseleccionado y se puede avanzar", async ({ page }) => {
-    await page.goto("/configurador?modelo=20ft");
-    await expect(page.getByText("Paso 1 de 7")).toBeVisible();
+    await abrirConfigurador(page, "/configurador?modelo=20ft");
     await expect(page.getByRole("button", { name: "Siguiente" })).toBeEnabled();
   });
 
   test("con un modelo inválido no preselecciona nada", async ({ page }) => {
-    await page.goto("/configurador?modelo=no-existe");
-    await expect(page.getByText("Paso 1 de 7")).toBeVisible();
+    await abrirConfigurador(page, "/configurador?modelo=no-existe");
     await expect(page.getByRole("button", { name: "Siguiente" })).toBeDisabled();
   });
 });

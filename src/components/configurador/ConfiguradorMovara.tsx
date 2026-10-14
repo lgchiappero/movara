@@ -474,7 +474,9 @@ export default function ConfiguradorMovara({
   }
 
   return (
-    <main className="min-h-screen bg-stone-50 pt-16">
+    // data-configurador="listo": ya hidratado e interactivo (los e2e lo esperan
+    // antes de hacer clic; durante la carga hay una copia oculta del HTML).
+    <main data-configurador={hydrated ? "listo" : "cargando"} className="min-h-screen bg-stone-50 pt-16">
       <div className="bg-[#2F2F2F] px-4 sm:px-6 pt-14 pb-10 text-center">
         <span className="text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Configurador</span>
         <h1 className="text-3xl sm:text-4xl font-bold text-white mt-2 tracking-tight">Diseñá tu MOVARA</h1>
