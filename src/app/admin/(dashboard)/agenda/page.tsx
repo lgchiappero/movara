@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { dateToFechaKey } from "@/lib/agenda/fecha";
+import { recordatorioNoEnviado } from "@/lib/agenda/recordatorios";
 import AgendaVistaPanel, { type CitaAdmin } from "@/components/admin/AgendaVistaPanel";
 import DisponibilidadPanel, { type DiaDisponibilidad } from "@/components/admin/DisponibilidadPanel";
 import { getAdminUser } from "@/lib/admin/current-user";
@@ -45,8 +46,24 @@ function serializeCita(c: {
   consulta: string;
   canceladaPor: string | null;
   motivoCancelacion: string | null;
+  recordatorioEnviado: boolean;
+  recordatorioIntentos: number;
 }): CitaAdmin {
-  return { ...c, fechaKey: dateToFechaKey(c.fecha) };
+  return {
+    id: c.id,
+    fechaKey: dateToFechaKey(c.fecha),
+    horario: c.horario,
+    estado: c.estado,
+    tipoCliente: c.tipoCliente,
+    nombre: c.nombre,
+    email: c.email,
+    telefono: c.telefono,
+    razonSocial: c.razonSocial,
+    consulta: c.consulta,
+    canceladaPor: c.canceladaPor,
+    motivoCancelacion: c.motivoCancelacion,
+    recordatorioNoEnviado: recordatorioNoEnviado(c, new Date()),
+  };
 }
 
 export default async function AgendaAdminPage({

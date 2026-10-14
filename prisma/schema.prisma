@@ -284,7 +284,9 @@ model Cita {
   canceladaPor      String? // "cliente" | "admin"
   motivoCancelacion String?
 
-  recordatorioEnviado Boolean @default(false)
+  recordatorioEnviado  Boolean @default(false)
+  recordatorioIntentos Int     @default(0) // el cron reintenta hasta 2 veces (ventana de 12 a 36 h)
+  recordatorioError    String? // tipo del último error de envío (sin datos personales)
 
   @@index([fecha, horario])
   @@map("citas")

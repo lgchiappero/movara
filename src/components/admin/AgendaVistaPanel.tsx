@@ -20,7 +20,17 @@ export type CitaAdmin = {
   consulta: string;
   canceladaPor: string | null;
   motivoCancelacion: string | null;
+  /** El cron intentó mandar el recordatorio, falló y ya no reintenta. */
+  recordatorioNoEnviado?: boolean;
 };
+
+function EtiquetaRecordatorioNoEnviado() {
+  return (
+    <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-700 border border-red-200">
+      Recordatorio no enviado
+    </span>
+  );
+}
 
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -194,8 +204,11 @@ export default function AgendaVistaPanel({
                         className={`w-full text-left text-[10px] px-1 py-0.5 rounded truncate ${ESTADO_CLASSES[c.estado] ?? "bg-stone-100 text-stone-500"} ${
                           c.id === citaIdInicial ? "ring-2 ring-[#D4B06A]" : ""
                         }`}
-                        title={`${c.horario} — ${c.nombre}`}
+                        title={`${c.horario} — ${c.nombre}${c.recordatorioNoEnviado ? " — Recordatorio no enviado" : ""}`}
                       >
+                        {c.recordatorioNoEnviado && (
+                          <span aria-label="Recordatorio no enviado" className="text-red-600 font-bold">! </span>
+                        )}
                         {c.horario} {c.nombre}
                       </button>
                     ))}
@@ -235,6 +248,11 @@ export default function AgendaVistaPanel({
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${ESTADO_CLASSES[c.estado] ?? "bg-stone-100 text-stone-500"}`}>
                       {c.estado}
                     </span>
+                    {c.recordatorioNoEnviado && (
+                      <div className="mt-1.5">
+                        <EtiquetaRecordatorioNoEnviado />
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -276,6 +294,12 @@ export default function AgendaVistaPanel({
               <p><span className="text-stone-500">Qué busca:</span> <span className="text-[#2F2F2F]">{seleccionada.consulta}</span></p>
             )}
             <p><span className="text-stone-500">Estado:</span> <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${ESTADO_CLASSES[seleccionada.estado] ?? ""}`}>{seleccionada.estado}</span></p>
+            {seleccionada.recordatorioNoEnviado && (
+              <p className="flex items-center gap-2">
+                <EtiquetaRecordatorioNoEnviado />
+                <span className="text-stone-500 text-xs">Avisale por WhatsApp o por teléfono.</span>
+              </p>
+            )}
             {seleccionada.estado === "cancelada" && (
               <p className="text-stone-500 text-xs">
                 Cancelada por {seleccionada.canceladaPor ?? "—"}

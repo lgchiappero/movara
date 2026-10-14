@@ -24,13 +24,13 @@ vi.mock("@/components/admin/AgendaVistaPanel", () => ({
     anio: number;
     mesIdx0: number;
     vista: string;
-    citasDelMes: unknown[];
+    citasDelMes: { recordatorioNoEnviado?: boolean }[];
     todasLasCitas: unknown[];
     citaIdInicial?: string | null;
   }) => (
     <div>
       AgendaVistaPanel: {anio}-{mesIdx0} {vista} citasDelMes={citasDelMes.length} todas={todasLasCitas.length}{" "}
-      citaIdInicial={citaIdInicial ?? "none"}
+      citaIdInicial={citaIdInicial ?? "none"} noEnviados={citasDelMes.filter((c) => c.recordatorioNoEnviado).length}
     </div>
   ),
 }));
@@ -57,6 +57,8 @@ const CITA = {
   consulta: "Info",
   canceladaPor: null,
   motivoCancelacion: null,
+  recordatorioEnviado: false,
+  recordatorioIntentos: 0,
 };
 
 describe("AgendaAdminPage", () => {
@@ -70,6 +72,16 @@ describe("AgendaAdminPage", () => {
   it("pasa citaId como citaIdInicial a AgendaVistaPanel (deep link 'resaltada' desde el dashboard)", async () => {
     render(await AgendaAdminPage({ searchParams: Promise.resolve({ citaId: "c1" }) }));
     expect(screen.getByText(/citaIdInicial=c1/)).toBeInTheDocument();
+  });
+
+  it("marca 'Recordatorio no enviado' en las citas cuyo recordatorio falló y ya no se reintenta", async () => {
+    mockFindManyCita.mockResolvedValueOnce([
+      CITA,
+      { ...CITA, id: "c2", recordatorioIntentos: 2 },
+      { ...CITA, id: "c3", recordatorioIntentos: 1, recordatorioEnviado: true },
+    ]);
+    render(await AgendaAdminPage({ searchParams: Promise.resolve({ mes: "2026-06" }) }));
+    expect(screen.getByText(/noEnviados=1/)).toBeInTheDocument();
   });
 
   it("sin citaId en el querystring, citaIdInicial es 'none'", async () => {

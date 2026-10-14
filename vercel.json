@@ -1,8 +1,12 @@
 {
   "crons": [
     {
-      "path": "/api/cron/recordatorios",
+      "path": "/api/cron/recordatorios?turno=manana",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/recordatorios?turno=noche",
+      "schedule": "0 0 * * *"
     }
   ]
 }
