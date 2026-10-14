@@ -45,13 +45,25 @@ export default async function UnidadDetailPage({
         where: { estado: { not: "anulado" } },
         orderBy: { createdAt: "desc" },
         take: 1,
-        select: { id: true, numeroRecibo: true, estado: true, fechaEntrega: true, confirmadoAt: true },
+        select: { id: true, numeroRecibo: true, estado: true, fechaEntrega: true, confirmadoAt: true, pdfPath: true },
       },
     },
   });
 
   if (!unidad) notFound();
-  const reciboVigente = unidad.recibos[0] ?? null;
+  const reciboConPdf = unidad.recibos[0] ?? null;
+  // El PDF de un recibo confirmado no se puede eliminar (lo bloquea también
+  // la ruta DELETE). El path del PDF no viaja al componente del recibo.
+  const pdfReciboConfirmado = reciboConPdf?.estado === "confirmado" ? reciboConPdf.pdfPath : null;
+  const reciboVigente = reciboConPdf
+    ? {
+        id: reciboConPdf.id,
+        numeroRecibo: reciboConPdf.numeroRecibo,
+        estado: reciboConPdf.estado,
+        fechaEntrega: reciboConPdf.fechaEntrega,
+        confirmadoAt: reciboConPdf.confirmadoAt,
+      }
+    : null;
 
   const [clientes, envios, documentosUnidadConUrl, documentosEnvioConUrl, acuerdosRaw] = await Promise.all([
     db.cliente.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
@@ -68,6 +80,10 @@ export default async function UnidadDetailPage({
         subidoPor: d.subidoPor,
         createdAt: d.createdAt.toISOString(),
         signedUrl: await getSignedUrl(BUCKET_MOVARA, d.url),
+        noEliminable:
+          pdfReciboConfirmado && d.url === pdfReciboConfirmado && reciboConPdf
+            ? `Recibo ${reciboConPdf.numeroRecibo} confirmado — no se puede eliminar`
+            : null,
       }))
     ),
     unidad.envio
@@ -203,6 +219,7 @@ export default async function UnidadDetailPage({
           subida={{ destino: "unidades", entidadId: id }}
           secciones={SECCIONES_UNIDAD}
           documentos={documentosUnidadConUrl}
+          puedeEliminar={!!session && isAdmin(session.rol)}
         />
       </div>
 

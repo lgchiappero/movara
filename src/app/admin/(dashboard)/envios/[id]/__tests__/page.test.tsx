@@ -32,7 +32,12 @@ vi.mock("@/components/admin/UnidadEnvioRow", () => ({
   default: ({ unidad }: { unidad: { numeroUnidad: string | null } }) => <div>Fila: {unidad.numeroUnidad}</div>,
 }));
 vi.mock("@/components/admin/DocumentosPorSeccion", () => ({
-  default: ({ documentos }: { documentos: unknown[] }) => <div>Documentos: {documentos.length}</div>,
+  default: ({ documentos, puedeEliminar }: { documentos: unknown[]; puedeEliminar?: boolean }) => (
+    <div>
+      Documentos: {documentos.length}
+      {puedeEliminar ? " (puede eliminar)" : ""}
+    </div>
+  ),
 }));
 vi.mock("@/components/admin/EliminarEnvioButton", () => ({
   default: ({ cantidadUnidades }: { cantidadUnidades: number }) => (
@@ -129,7 +134,7 @@ describe("EnvioDetailPage", () => {
     });
     render(await EnvioDetailPage({ params: Promise.resolve({ id: "e1" }) }));
     expect(mockGetSignedUrl).toHaveBeenCalledWith("documentos-movara", "envios/e1/bl.pdf");
-    expect(screen.getByText("Documentos: 1")).toBeInTheDocument();
+    expect(screen.getByText("Documentos: 1 (puede eliminar)")).toBeInTheDocument();
   });
 
   it("rol admin ve el botón de eliminar con la cantidad de unidades", async () => {
@@ -146,6 +151,13 @@ describe("EnvioDetailPage", () => {
     mockFindUnique.mockResolvedValueOnce(ENVIO_BASE);
     render(await EnvioDetailPage({ params: Promise.resolve({ id: "e1" }) }));
     expect(screen.queryByText(/EliminarEnvioButton/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/puede eliminar/)).not.toBeInTheDocument();
+  });
+
+  it("rol admin puede eliminar documentos del envío", async () => {
+    mockFindUnique.mockResolvedValueOnce(ENVIO_BASE);
+    render(await EnvioDetailPage({ params: Promise.resolve({ id: "e1" }) }));
+    expect(screen.getByText(/puede eliminar/)).toBeInTheDocument();
   });
 
   it("sección de costos de logística internacional: costos del envío serializados, con comprobante firmado", async () => {

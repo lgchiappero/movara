@@ -52,6 +52,8 @@ export default defineConfig({
         "src/lib/admin/subidas.ts",
         "src/lib/admin/subidas-comun.ts",
         "src/lib/admin/subida-cliente.ts",
+        "src/lib/admin/documentos-eliminar.ts",
+        "src/components/admin/EliminarDocumentoButton.tsx",
         "src/app/api/admin/subidas/route.ts",
         "src/components/admin/recibos/**/*.tsx",
         "src/components/recibo/**/*.tsx",

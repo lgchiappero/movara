@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
 import type { SeccionInfo } from "@/lib/envios/constantes";
+import EliminarDocumentoButton from "@/components/admin/EliminarDocumentoButton";
 
 export type DocumentoSeccionConUrl = {
   id: string;
@@ -13,6 +14,8 @@ export type DocumentoSeccionConUrl = {
   subidoPor: string;
   createdAt: string;
   signedUrl: string | null;
+  /** Motivo por el que no se puede eliminar (ej. Recibo en Conformidad confirmado). */
+  noEliminable?: string | null;
 };
 
 export default function DocumentosPorSeccion({
@@ -20,12 +23,15 @@ export default function DocumentosPorSeccion({
   subida,
   secciones,
   documentos,
+  puedeEliminar = false,
 }: {
   uploadUrl: string;
   /** Destino de la subida directa a Storage (archivos de más de 4,5 MB). */
   subida: { destino: "envios" | "unidades"; entidadId: string };
   secciones: SeccionInfo[];
   documentos: DocumentoSeccionConUrl[];
+  /** Solo rol admin: muestra "Eliminar" en cada documento. */
+  puedeEliminar?: boolean;
 }) {
   const porSeccion = new Map<string, DocumentoSeccionConUrl[]>();
   for (const d of documentos) {
@@ -36,7 +42,7 @@ export default function DocumentosPorSeccion({
   return (
     <div className="space-y-4">
       {secciones.map((s) => (
-        <SeccionCard key={s.key} seccion={s} documentos={porSeccion.get(s.key) ?? []} uploadUrl={uploadUrl} subida={subida} />
+        <SeccionCard key={s.key} seccion={s} documentos={porSeccion.get(s.key) ?? []} uploadUrl={uploadUrl} subida={subida} puedeEliminar={puedeEliminar} />
       ))}
     </div>
   );
@@ -47,11 +53,13 @@ function SeccionCard({
   documentos,
   uploadUrl,
   subida,
+  puedeEliminar,
 }: {
   seccion: SeccionInfo;
   documentos: DocumentoSeccionConUrl[];
   uploadUrl: string;
   subida: { destino: "envios" | "unidades"; entidadId: string };
+  puedeEliminar: boolean;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -111,18 +119,23 @@ function SeccionCard({
                   {d.descripcion ? ` · ${d.descripcion}` : ""}
                 </p>
               </div>
-              {d.signedUrl ? (
-                <a
-                  href={d.signedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sage-600 font-medium text-xs hover:underline flex-shrink-0"
-                >
-                  Ver
-                </a>
-              ) : (
-                <span className="text-stone-300 text-xs flex-shrink-0">No disponible</span>
-              )}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {d.signedUrl ? (
+                  <a
+                    href={d.signedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sage-600 font-medium text-xs hover:underline flex-shrink-0"
+                  >
+                    Ver
+                  </a>
+                ) : (
+                  <span className="text-stone-300 text-xs flex-shrink-0">No disponible</span>
+                )}
+                {puedeEliminar && (
+                  <EliminarDocumentoButton url={`${uploadUrl}/${d.id}`} nombre={d.nombre} motivoBloqueo={d.noEliminable} />
+                )}
+              </div>
             </div>
           ))}
         </div>

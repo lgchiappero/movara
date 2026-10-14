@@ -111,6 +111,9 @@ test.describe("Recibo en Conformidad", () => {
       .getByRole("heading", { name: "07 — Entrega" })
       .locator("xpath=ancestor::div[contains(@class,'bg-white')][1]");
     await expect(entrega.getByText(`Recibo en Conformidad ${numeroRecibo}.pdf`)).toBeVisible();
+    // El PDF del recibo confirmado no se puede eliminar: en su lugar se ve el motivo.
+    await expect(entrega.getByText(`Recibo ${numeroRecibo} confirmado — no se puede eliminar`)).toBeVisible();
+    await expect(entrega.getByRole("button", { name: "Eliminar" })).toHaveCount(0);
 
     // ── 8. Listado y ficha del cliente ─────────────────────────────────
     await page.goto("/admin/recibos");

@@ -35,7 +35,12 @@ vi.mock("next/image", () => ({
 vi.mock("@/lib/admin/storage", () => ({ getSignedUrl: mockGetSignedUrl, BUCKET_PEDIDOS: "documentos-pedidos" }));
 vi.mock("@/components/admin/GestionPedidoPanel", () => ({ default: () => <div>GestionPedidoPanel</div> }));
 vi.mock("@/components/admin/DocumentosPedidoSection", () => ({
-  default: ({ documentos }: { documentos: unknown[] }) => <div>Documentos: {documentos.length}</div>,
+  default: ({ documentos, puedeEliminar }: { documentos: unknown[]; puedeEliminar?: boolean }) => (
+    <div>
+      Documentos: {documentos.length}
+      {puedeEliminar ? " (puede eliminar)" : ""}
+    </div>
+  ),
 }));
 vi.mock("@/components/admin/ConfiguracionEspacioForm", () => ({ default: () => <div>ConfiguracionEspacioForm</div> }));
 vi.mock("@/components/admin/EliminarConfiguracionButton", () => ({
@@ -149,7 +154,7 @@ describe("ConfiguracionDetailPage", () => {
     expect(mockGetSignedUrl).toHaveBeenCalledWith("documentos-pedidos", "pedidos/p1/pi.pdf");
     expect(mockGetSignedUrl).toHaveBeenCalledWith("documentos-pedidos", "pedidos/p1/seguro.pdf");
     expect(mockGetSignedUrl).toHaveBeenCalledWith("documentos-pedidos", "pedidos/p1/extra.pdf");
-    expect(screen.getByText("Documentos: 1")).toBeInTheDocument();
+    expect(screen.getByText("Documentos: 1 (puede eliminar)")).toBeInTheDocument();
   });
 
   it("campos de documento en null no llaman a getSignedUrl para ellos", async () => {
@@ -202,6 +207,7 @@ describe("ConfiguracionDetailPage", () => {
     mockFindUnique.mockResolvedValueOnce(CONFIG_BASE);
     render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
     expect(screen.getByText("EliminarConfiguracionButton")).toBeInTheDocument();
+    expect(screen.getByText(/puede eliminar/)).toBeInTheDocument();
   });
 
   it("rol vendedor no ve el botón de eliminar", async () => {
@@ -209,5 +215,6 @@ describe("ConfiguracionDetailPage", () => {
     mockFindUnique.mockResolvedValueOnce(CONFIG_BASE);
     render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
     expect(screen.queryByText("EliminarConfiguracionButton")).not.toBeInTheDocument();
+    expect(screen.queryByText(/puede eliminar/)).not.toBeInTheDocument();
   });
 });

@@ -204,7 +204,7 @@ export default async function ConfiguracionDetailPage({
           vendedores={vendedores}
         />
 
-        <DocumentosPedidoSection pedidoId={id} documentos={documentosConUrl} />
+        <DocumentosPedidoSection pedidoId={id} documentos={documentosConUrl} puedeEliminar={!!session && isAdmin(session.rol)} />
       </div>
     </div>
   );

@@ -202,14 +202,30 @@ export async function infoArchivo(bucket: string, storagePath: string): Promise<
   return { tamano: data.size ?? 0, tipo: data.contentType ?? "" };
 }
 
-/** Borra un archivo (se usa para descartar una subida que no pasó la validación). */
-export async function eliminarArchivo(bucket: string, storagePath: string): Promise<void> {
+/** Borra un archivo (una subida que no pasó la validación, o un documento
+ * que se elimina desde el admin). Devuelve false si Storage no lo pudo
+ * borrar; un archivo que ya no existía cuenta como borrado. */
+export async function eliminarArchivo(bucket: string, storagePath: string): Promise<boolean> {
   if (usaStorageLocal()) {
-    const destino = rutaLocal(bucket, storagePath);
-    await rm(destino, { force: true });
-    await rm(`${destino}.tipo`, { force: true });
-    return;
+    try {
+      const destino = rutaLocal(bucket, storagePath);
+      await rm(destino, { force: true });
+      await rm(`${destino}.tipo`, { force: true });
+      return true;
+    } catch (err) {
+      console.error("[storage] Error al borrar:", err);
+      return false;
+    }
   }
-  const { error } = await getStorageClient().storage.from(bucket).remove([storagePath]);
-  if (error) console.error("[storage] Error al borrar:", error.message);
+  try {
+    const { error } = await getStorageClient().storage.from(bucket).remove([storagePath]);
+    if (error) {
+      console.error("[storage] Error al borrar:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[storage] Error al borrar:", err);
+    return false;
+  }
 }

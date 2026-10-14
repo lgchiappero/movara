@@ -39,9 +39,18 @@ vi.mock("next/link", () => ({
 vi.mock("@/lib/admin/storage", () => ({ getSignedUrl: mockGetSignedUrl, BUCKET_MOVARA: "documentos-movara" }));
 vi.mock("@/components/admin/UnidadDetailForm", () => ({ default: () => <div>UnidadDetailForm</div> }));
 vi.mock("@/components/admin/DocumentosPorSeccion", () => ({
-  default: ({ uploadUrl, documentos }: { uploadUrl: string; documentos: unknown[] }) => (
+  default: ({
+    uploadUrl,
+    documentos,
+    puedeEliminar,
+  }: {
+    uploadUrl: string;
+    documentos: { nombre: string; noEliminable?: string | null }[];
+    puedeEliminar?: boolean;
+  }) => (
     <div>
-      {uploadUrl} — {documentos.length} docs
+      {uploadUrl} — {documentos.length} docs{puedeEliminar ? " (puede eliminar)" : ""}
+      {documentos.map((d) => (d.noEliminable ? <p key={d.nombre}>{`${d.nombre}: ${d.noEliminable}`}</p> : null))}
     </div>
   ),
 }));
@@ -414,7 +423,7 @@ describe("UnidadDetailPage", () => {
       ],
     });
     render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
-    expect(screen.getByText("/api/admin/unidades/u1/documentos — 1 docs")).toBeInTheDocument();
+    expect(screen.getByText("/api/admin/unidades/u1/documentos — 1 docs (puede eliminar)")).toBeInTheDocument();
   });
 
   it("consulta los acuerdos de la unidad y separa la sección Cobranza (cobro) de la sección Pagos (pago)", async () => {
@@ -479,6 +488,35 @@ describe("UnidadDetailPage", () => {
     mockFindUnique.mockResolvedValueOnce(UNIDAD_BASE);
     render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
     expect(screen.queryByText(/EliminarUnidadButton/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/puede eliminar/)).not.toBeInTheDocument();
+  });
+
+  it("el PDF del Recibo en Conformidad confirmado no se puede eliminar; el resto sí", async () => {
+    const doc = (id: string, url: string) => ({
+      id, seccion: "07_entrega", nombre: `${id}.pdf`, descripcion: null, subidoPor: "a@x.com", createdAt: new Date(), url,
+    });
+    const recibo = {
+      id: "r1", numeroRecibo: "REC-2026-004", estado: "confirmado", fechaEntrega: new Date(), confirmadoAt: new Date(),
+      pdfPath: "unidades/u1/REC.pdf",
+    };
+    mockFindUnique.mockResolvedValueOnce({
+      ...UNIDAD_BASE,
+      documentos: [doc("recibo", "unidades/u1/REC.pdf"), doc("acta", "unidades/u1/acta.pdf")],
+      recibos: [recibo],
+    });
+    render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
+    expect(screen.getByText("/api/admin/unidades/u1/documentos — 2 docs (puede eliminar)")).toBeInTheDocument();
+    expect(screen.getByText("recibo.pdf: Recibo REC-2026-004 confirmado — no se puede eliminar")).toBeInTheDocument();
+    expect(screen.queryByText(/acta\.pdf:/)).not.toBeInTheDocument();
+
+    // Un recibo pendiente no bloquea nada.
+    mockFindUnique.mockResolvedValueOnce({
+      ...UNIDAD_BASE,
+      documentos: [doc("recibo2", "unidades/u1/REC.pdf")],
+      recibos: [{ ...recibo, estado: "pendiente" }],
+    });
+    render(await UnidadDetailPage({ params: Promise.resolve({ id: "u1" }) }));
+    expect(screen.queryByText(/recibo2\.pdf:/)).not.toBeInTheDocument();
   });
 
   it("Pagos a proveedores: referencia de solo lectura a la logística internacional del envío vinculado", async () => {

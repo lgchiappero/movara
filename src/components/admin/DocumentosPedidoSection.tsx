@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
+import EliminarDocumentoButton from "@/components/admin/EliminarDocumentoButton";
 import { tipoDocumentoOptions, tipoDocumentoLabels, type TipoDocumento } from "@/lib/validators/documentos";
 
 const inputClass =
@@ -21,9 +22,12 @@ export type DocumentoConUrl = {
 export default function DocumentosPedidoSection({
   pedidoId,
   documentos,
+  puedeEliminar = false,
 }: {
   pedidoId: string;
   documentos: DocumentoConUrl[];
+  /** Solo rol admin: muestra "Eliminar" en cada documento. */
+  puedeEliminar?: boolean;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -88,6 +92,7 @@ export default function DocumentosPedidoSection({
                 <th className="py-2 pr-3 font-medium">Fecha</th>
                 <th className="py-2 pr-3 font-medium">Subido por</th>
                 <th className="py-2 pr-3 font-medium"></th>
+                {puedeEliminar && <th className="py-2 pr-3 font-medium"></th>}
               </tr>
             </thead>
             <tbody>
@@ -115,6 +120,11 @@ export default function DocumentosPedidoSection({
                       <span className="text-stone-300">No disponible</span>
                     )}
                   </td>
+                  {puedeEliminar && (
+                    <td className="py-2 pr-3">
+                      <EliminarDocumentoButton url={`/api/admin/configuraciones/${pedidoId}/documentos/${d.id}`} nombre={d.nombre} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

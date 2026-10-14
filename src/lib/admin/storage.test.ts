@@ -202,8 +202,13 @@ describe("subida directa — storage local (dev/e2e)", () => {
     await expect(guardarSubidaLocal("vitest-subidas", path, new Uint8Array(1).buffer, "application/pdf")).rejects.toThrow();
     await unlink(`${LOCAL_STORAGE_DIR}/vitest-subidas/${path}.tipo`);
     expect(await infoArchivo("vitest-subidas", path)).toEqual({ tamano: 5, tipo: "" });
-    await eliminarArchivo("vitest-subidas", path);
+    expect(await eliminarArchivo("vitest-subidas", path)).toBe(true);
     expect(await infoArchivo("vitest-subidas", path)).toBeNull();
+    // Un archivo que ya no existe cuenta como borrado.
+    expect(await eliminarArchivo("vitest-subidas", path)).toBe(true);
+    // Un path que sale del storage local no se borra.
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await eliminarArchivo("vitest-subidas", "../../fuera.pdf")).toBe(false);
     await rm(`${LOCAL_STORAGE_DIR}/vitest-subidas`, { recursive: true, force: true });
     vi.unstubAllEnvs();
   });
@@ -266,13 +271,17 @@ describe("subida directa — Supabase", () => {
     expect(await infoArchivo("b", "p")).toBeNull();
   });
 
-  it("eliminarArchivo borra y solo loguea si falla", async () => {
+  it("eliminarArchivo devuelve true si borró y false (con log) si Storage falla o tira", async () => {
     const { eliminarArchivo } = await import("@/lib/admin/storage");
-    const remove = vi.fn().mockResolvedValueOnce({ error: null }).mockResolvedValueOnce({ error: { message: "x" } });
+    const remove = vi.fn()
+      .mockResolvedValueOnce({ error: null })
+      .mockResolvedValueOnce({ error: { message: "x" } })
+      .mockRejectedValueOnce(new Error("red caída"));
     mockFrom.mockReturnValue({ remove });
-    await eliminarArchivo("b", "p");
+    await expect(eliminarArchivo("b", "p")).resolves.toBe(true);
     expect(remove).toHaveBeenCalledWith(["p"]);
-    await expect(eliminarArchivo("b", "p")).resolves.toBeUndefined();
-    expect(console.error).toHaveBeenCalled();
+    await expect(eliminarArchivo("b", "p")).resolves.toBe(false);
+    await expect(eliminarArchivo("b", "p")).resolves.toBe(false);
+    expect(console.error).toHaveBeenCalledTimes(2);
   });
 });

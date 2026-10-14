@@ -152,6 +152,7 @@ export default async function EnvioDetailPage({
           subida={{ destino: "envios", entidadId: id }}
           secciones={SECCIONES_ENVIO}
           documentos={documentosConUrl}
+          puedeEliminar={!!session && isAdmin(session.rol)}
         />
       </div>
     </div>
