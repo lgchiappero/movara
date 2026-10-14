@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { urlFor } from "@/sanity/lib/image";
-import { FLEX_MODELO_SLUG } from "@/sanity/lib/queries";
+import { hrefModelo } from "@/lib/modelos/rutas";
 
 type ImagenSanity = {
   asset?: { _ref: string; _type?: string } | null;
@@ -23,11 +23,7 @@ export type ModeloCardData = {
   proximamente?: boolean | null;
 };
 
-export function hrefModelo(slug?: string | null): string {
-  if (!slug) return "/modelos";
-  // El Flex tiene página propia: se evita el redirect de /modelos/movara-flex.
-  return slug === FLEX_MODELO_SLUG ? "/modelos/flex" : `/modelos/${slug}`;
-}
+export { hrefModelo };
 
 /** "18 · 38 · 77 m²" — solo con los tamaños cargados en Sanity. */
 export function lineaTamanos(tamanos?: (number | null)[] | null): string | null {

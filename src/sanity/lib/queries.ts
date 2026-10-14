@@ -5,6 +5,14 @@ import { groq } from 'next-sanity'
 // poder ordenarse junto al resto vía el campo "order".
 export const FLEX_MODELO_SLUG = 'movara-flex'
 
+// Sitemap: modelos activos con página propia (los "Próximamente" no la tienen).
+export const MODELOS_SITEMAP_QUERY = groq`
+  *[_type == "modelo" && activo != false && proximamente != true && defined(slug.current)] | order(order asc, _createdAt asc) {
+    "slug": slug.current,
+    "actualizado": _updatedAt
+  }
+`
+
 // Card de modelo (home y /modelos): solo lo necesario para pintarla. La
 // imagen viene como referencia al asset para armar la URL con urlFor.
 export const MODELOS_CARD_QUERY = groq`

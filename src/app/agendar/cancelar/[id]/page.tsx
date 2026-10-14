@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import CitaCancelarView from "@/components/agenda/CitaCancelarView";
 
 export const dynamic = "force-dynamic";
+
+// La URL lleva el id de la cita: fuera de los buscadores y sin Referer.
+export const metadata: Metadata = {
+  title: "Cancelar visita — MOVARA",
+  robots: { index: false, follow: false },
+  referrer: "no-referrer",
+};
 
 function fechaEs(fecha: Date): string {
   return fecha.toLocaleDateString("es-AR", {
