@@ -26,6 +26,7 @@ export default defineConfig({
         "src/components/motion/**/*.tsx",
         "src/components/mi-pedido/**/*.tsx",
         "src/components/agenda/CitaCancelarView.tsx",
+        "src/components/agenda/ComoLlegarLink.tsx",
         "src/components/admin/LinkSeguimiento.tsx",
         "src/lib/rate-limit-db.ts",
         "src/lib/email/escape-html.ts",

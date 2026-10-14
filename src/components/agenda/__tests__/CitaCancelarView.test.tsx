@@ -9,6 +9,16 @@ beforeEach(() => vi.stubGlobal("confirm", () => true));
 afterEach(() => vi.unstubAllGlobals());
 
 describe("CitaCancelarView", () => {
+  it("muestra la dirección y debajo el link 'Cómo llegar (Google Maps)' a la ubicación exacta", () => {
+    render(<CitaCancelarView cita={CITA} />);
+    expect(screen.getByText("Sunchales, Santa Fe")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "Cómo llegar (Google Maps)" });
+    expect(link).toHaveAttribute("href", "https://maps.app.goo.gl/3q8E5RUDq5bGNZLS6");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(link).toHaveClass("text-[13px]", "text-[#D4B06A]");
+  });
+
   it("el botón queda deshabilitado hasta ingresar un email válido", async () => {
     render(<CitaCancelarView cita={CITA} />);
     const boton = screen.getByRole("button", { name: "Cancelar mi visita" });

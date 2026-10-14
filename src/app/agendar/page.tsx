@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AgendaBooking from "@/components/agenda/AgendaBooking";
+import ComoLlegarLink from "@/components/agenda/ComoLlegarLink";
 import { SHOWROOM_DIRECCION } from "@/lib/agenda/showroom";
 
 export const metadata: Metadata = {
@@ -14,9 +15,10 @@ export default function AgendarPage() {
         Showroom MOVARA
       </p>
       <h1 className="text-2xl font-bold text-[#2F2F2F] mb-2">Agendá tu visita</h1>
-      <p className="text-sm text-stone-600 mb-8">
+      <p className="text-sm text-stone-600 mb-1">
         Elegí un día y horario para conocer una unidad MOVARA en persona, en {SHOWROOM_DIRECCION}.
       </p>
+      <ComoLlegarLink className="inline-block mb-8" />
       <AgendaBooking />
     </div>
   );

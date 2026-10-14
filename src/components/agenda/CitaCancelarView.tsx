@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SHOWROOM_DIRECCION } from "@/lib/agenda/showroom";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
+import ComoLlegarLink from "./ComoLlegarLink";
 
 export type CitaCancelarData = {
   id: string;
@@ -65,7 +66,10 @@ export default function CitaCancelarView({ cita }: { cita: CitaCancelarData }) {
         </div>
         <div className="flex justify-between">
           <span className="text-stone-500">Dónde</span>
-          <span className="text-[#2F2F2F] font-medium">{SHOWROOM_DIRECCION}</span>
+          <span className="flex flex-col items-end">
+            <span className="text-[#2F2F2F] font-medium">{SHOWROOM_DIRECCION}</span>
+            <ComoLlegarLink />
+          </span>
         </div>
         <div className="flex justify-between">
           <span className="text-stone-500">Estado</span>

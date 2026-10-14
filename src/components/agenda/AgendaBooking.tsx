@@ -12,6 +12,7 @@ import {
   validateField,
 } from "@/lib/validators/configurador";
 import { SHOWROOM_DIRECCION } from "@/lib/agenda/showroom";
+import ComoLlegarLink from "./ComoLlegarLink";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 
 const inputClass =
@@ -215,7 +216,8 @@ export default function AgendaBooking() {
         <p className="text-stone-600 text-sm mb-1">
           {fechaTexto} a las {horarioSel} hs
         </p>
-        <p className="text-stone-600 text-sm mb-4">{SHOWROOM_DIRECCION}</p>
+        <p className="text-stone-600 text-sm">{SHOWROOM_DIRECCION}</p>
+        <ComoLlegarLink className="inline-block mb-4" />
         <p className="text-stone-500 text-xs">
           Te enviamos un email de confirmación con los detalles. Guardalo — ahí vas a encontrar el
           link para cancelar si no podés asistir.
