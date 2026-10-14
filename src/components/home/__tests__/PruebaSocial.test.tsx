@@ -19,16 +19,16 @@ vi.mock("framer-motion", () => ({
 import PruebaSocial from "../PruebaSocial";
 
 describe("PruebaSocial — showroom", () => {
-  it("muestra la ciudad del showroom, con el link de Google Maps al lugar exacto y el mapa de la ciudad", () => {
+  it("muestra la ciudad del showroom, con el link de Google Maps y el mapa centrado en el punto exacto", () => {
     render(<PruebaSocial />);
     expect(screen.getByText("Sunchales, Santa Fe")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ver el showroom en Google Maps" })).toHaveAttribute(
       "href",
-      "https://maps.app.goo.gl/Pv2sDR4CpixoPQpL6"
+      "https://maps.app.goo.gl/3q8E5RUDq5bGNZLS6"
     );
     expect(screen.getByTitle("Showroom MOVARA — Sunchales, Santa Fe")).toHaveAttribute(
       "src",
-      "https://maps.google.com/maps?q=Sunchales%2C%20Santa%20Fe%2C%20Argentina&z=13&output=embed"
+      "https://maps.google.com/maps?q=-30.942916,-61.540411&z=17&output=embed"
     );
   });
 });

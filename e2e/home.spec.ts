@@ -34,6 +34,19 @@ test.describe("Home page", () => {
   });
 });
 
+test.describe("Home — mapa del showroom", () => {
+  test("el mapa está centrado en el punto exacto y el link lleva a la misma ubicación", async ({ page }) => {
+    await page.goto("/");
+    const mapa = page.locator('iframe[title="Showroom MOVARA — Sunchales, Santa Fe"]');
+    await expect(mapa).toHaveAttribute("src", "https://maps.google.com/maps?q=-30.942916,-61.540411&z=17&output=embed");
+    await expect(page.getByRole("link", { name: "Ver el showroom en Google Maps" })).toHaveAttribute(
+      "href",
+      "https://maps.app.goo.gl/3q8E5RUDq5bGNZLS6"
+    );
+    await expect(page.getByText("Sunchales, Santa Fe", { exact: true }).first()).toBeVisible();
+  });
+});
+
 test.describe("Home con 'reducir movimiento'", () => {
   test("hidrata sin errores y el indicador de scroll queda sin la línea animada", async ({ page }) => {
     const errores: string[] = [];

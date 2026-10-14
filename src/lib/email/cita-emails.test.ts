@@ -62,7 +62,8 @@ describe("cita-emails", () => {
     for (const { html } of [buildConfirmacionClienteEmail(cita), buildRecordatorioEmail(cita)]) {
       expect(html).toContain("Sunchales, Santa Fe");
       expect(html).not.toMatch(/\d{3,4}, Sunchales/); // sin calle todavía
-      expect(html).toContain('href="https://maps.app.goo.gl/Pv2sDR4CpixoPQpL6"');
+      expect(html).toContain('href="https://maps.app.goo.gl/3q8E5RUDq5bGNZLS6"');
+      expect(html).not.toContain("Pv2sDR4CpixoPQpL6");
       expect(html).toContain("Cómo llegar (Google Maps)");
     }
   });

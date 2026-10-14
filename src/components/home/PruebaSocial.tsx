@@ -10,7 +10,7 @@ import {
   ClipboardCheck,
   type LucideIcon,
 } from "lucide-react";
-import { SHOWROOM_DIRECCION, SHOWROOM_MAPS_URL } from "@/lib/agenda/showroom";
+import { SHOWROOM_DIRECCION, SHOWROOM_MAPS_EMBED_URL, SHOWROOM_MAPS_URL } from "@/lib/agenda/showroom";
 
 type BadgeItem = {
   _key?: string;
@@ -201,7 +201,7 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
             aria-label="Ver el showroom en Google Maps"
           >
             <iframe
-              src={`https://maps.google.com/maps?q=${encodeURIComponent(`${SHOWROOM_DIRECCION}, Argentina`)}&z=13&output=embed`}
+              src={SHOWROOM_MAPS_EMBED_URL}
               width="100%"
               height="260"
               style={{ border: 0, display: "block" }}
