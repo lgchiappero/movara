@@ -149,6 +149,7 @@ export default async function EnvioDetailPage({
         </h2>
         <DocumentosPorSeccion
           uploadUrl={`/api/admin/envios/${id}/documentos`}
+          subida={{ destino: "envios", entidadId: id }}
           secciones={SECCIONES_ENVIO}
           documentos={documentosConUrl}
         />

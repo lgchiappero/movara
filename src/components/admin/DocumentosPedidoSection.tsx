@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
 import { tipoDocumentoOptions, tipoDocumentoLabels, type TipoDocumento } from "@/lib/validators/documentos";
 
 const inputClass =
@@ -44,7 +45,7 @@ export default function DocumentosPedidoSection({
 
     try {
       const form = new FormData();
-      form.append("file", file);
+      await adjuntarArchivo(form, "file", file, "pedidos", pedidoId);
       form.append("tipo", tipo);
       if (nombre.trim()) form.append("nombre", nombre.trim());
       if (notas.trim()) form.append("notas", notas.trim());
@@ -62,8 +63,8 @@ export default function DocumentosPedidoSection({
       setNotas("");
       if (inputRef.current) inputRef.current.value = "";
       router.refresh();
-    } catch {
-      setError("No pudimos subir el documento. Probá de nuevo.");
+    } catch (err) {
+      setError(mensajeDeError(err, "No pudimos subir el documento. Probá de nuevo."));
     } finally {
       setUploading(false);
     }

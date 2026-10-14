@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
 import {
   CONCEPTO_LOGISTICA_OPTIONS,
   CONCEPTO_LOGISTICA_LABELS,
@@ -87,7 +88,9 @@ export default function CostoLogisticaModal({
       form.set("estado", estado);
       form.set("notas", notas.trim());
       form.set("prorratear", String(prorratearCosto));
-      if (estado === "pagado" && comprobante) form.set("comprobante", comprobante);
+      if (estado === "pagado" && comprobante) {
+        await adjuntarArchivo(form, "comprobante", comprobante, "logistica", costo?.envioId ?? envioId);
+      }
 
       const res = await fetch(costo ? `/api/admin/logistica/${costo.id}` : "/api/admin/logistica", {
         method: costo ? "PATCH" : "POST",
@@ -102,9 +105,10 @@ export default function CostoLogisticaModal({
       }
       showSuccess(costo ? "Costo actualizado" : "Costo de logística registrado");
       onSaved();
-    } catch {
-      setError("No pudimos guardar el costo. Probá de nuevo.");
-      showError("No pudimos guardar el costo. Probá de nuevo.");
+    } catch (err) {
+      const mensaje = mensajeDeError(err, "No pudimos guardar el costo. Probá de nuevo.");
+      setError(mensaje);
+      showError(mensaje);
     } finally {
       setBusy(false);
     }

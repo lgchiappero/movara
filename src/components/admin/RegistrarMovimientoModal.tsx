@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
 import { MODALIDAD_OPTIONS, MODALIDAD_LABELS } from "@/lib/cobranza/constantes";
 import { useToast } from "@/components/admin/Toast";
 import { cuotasSaldables, etiquetaCuota } from "@/lib/cobranza/cuotas-saldables";
@@ -63,7 +64,7 @@ export default function RegistrarMovimientoModal({
       if (cuotaId) form.set("cuotaId", cuotaId);
       form.set("modalidad", modalidad);
       if (notas.trim()) form.set("notas", notas.trim());
-      if (comprobante) form.set("comprobante", comprobante);
+      if (comprobante) await adjuntarArchivo(form, "comprobante", comprobante, "cobranza", acuerdo.id);
 
       const res = await fetch(`/api/admin/cobranza/acuerdos/${acuerdo.id}/movimientos`, {
         method: "POST",
@@ -77,9 +78,10 @@ export default function RegistrarMovimientoModal({
       }
       showSuccess(`${acuerdo.tipo === "cobro" ? "Pago recibido" : "Pago realizado"} registrado`);
       onSaved();
-    } catch {
-      setError(`No pudimos registrar el ${nombreAccion}. Probá de nuevo.`);
-      showError(`No pudimos registrar el ${nombreAccion}. Probá de nuevo.`);
+    } catch (err) {
+      const mensaje = mensajeDeError(err, `No pudimos registrar el ${nombreAccion}. Probá de nuevo.`);
+      setError(mensaje);
+      showError(mensaje);
     } finally {
       setBusy(false);
     }

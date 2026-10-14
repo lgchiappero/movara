@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
 import type { SeccionInfo } from "@/lib/envios/constantes";
 
 export type DocumentoSeccionConUrl = {
@@ -16,10 +17,13 @@ export type DocumentoSeccionConUrl = {
 
 export default function DocumentosPorSeccion({
   uploadUrl,
+  subida,
   secciones,
   documentos,
 }: {
   uploadUrl: string;
+  /** Destino de la subida directa a Storage (archivos de más de 4,5 MB). */
+  subida: { destino: "envios" | "unidades"; entidadId: string };
   secciones: SeccionInfo[];
   documentos: DocumentoSeccionConUrl[];
 }) {
@@ -32,7 +36,7 @@ export default function DocumentosPorSeccion({
   return (
     <div className="space-y-4">
       {secciones.map((s) => (
-        <SeccionCard key={s.key} seccion={s} documentos={porSeccion.get(s.key) ?? []} uploadUrl={uploadUrl} />
+        <SeccionCard key={s.key} seccion={s} documentos={porSeccion.get(s.key) ?? []} uploadUrl={uploadUrl} subida={subida} />
       ))}
     </div>
   );
@@ -42,10 +46,12 @@ function SeccionCard({
   seccion,
   documentos,
   uploadUrl,
+  subida,
 }: {
   seccion: SeccionInfo;
   documentos: DocumentoSeccionConUrl[];
   uploadUrl: string;
+  subida: { destino: "envios" | "unidades"; entidadId: string };
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,7 +70,7 @@ function SeccionCard({
     setUploading(true);
     try {
       const form = new FormData();
-      form.append("file", file);
+      await adjuntarArchivo(form, "file", file, subida.destino, subida.entidadId);
       form.append("seccion", seccion.key);
       if (descripcion.trim()) form.append("descripcion", descripcion.trim());
 
@@ -77,8 +83,8 @@ function SeccionCard({
       setDescripcion("");
       if (inputRef.current) inputRef.current.value = "";
       router.refresh();
-    } catch {
-      setError("No pudimos subir el documento. Probá de nuevo.");
+    } catch (err) {
+      setError(mensajeDeError(err, "No pudimos subir el documento. Probá de nuevo."));
     } finally {
       setUploading(false);
     }

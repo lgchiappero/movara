@@ -4,7 +4,7 @@ import { getAdminUser } from "@/lib/admin/current-user";
 import { isAdmin } from "@/lib/admin/roles";
 import { periodoEstaCerrado } from "@/lib/cobranza/periodo-cerrado";
 import { leerCostoLogistica } from "@/lib/cobranza/costo-logistica-form";
-import { subirComprobante } from "@/lib/cobranza/comprobante";
+import { archivoDelFormulario } from "@/lib/admin/subidas";
 import { prorratear } from "@/lib/cobranza/logistica";
 
 const PERIODO_CERRADO = "Ese período ya está cerrado — no se pueden modificar pagos con esa fecha";
@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!leido.ok) {
     return NextResponse.json({ error: leido.error }, { status: leido.status });
   }
-  const { data, comprobante } = leido.value;
+  const { data } = leido.value;
 
   const costo = await db.costoLogistica.findUnique({
     where: { id },
@@ -58,11 +58,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // Pasar a pendiente quita el comprobante; uno nuevo reemplaza al anterior.
   let comprobanteUrl = data.estado === "pagado" ? costo.comprobanteUrl : null;
-  if (comprobante) {
-    const subida = await subirComprobante(comprobante, "logistica", costo.envioId);
-    if (!subida.ok) return NextResponse.json({ error: subida.error }, { status: subida.status });
-    comprobanteUrl = subida.value;
-  }
+  const comprobante = await archivoDelFormulario(form, "comprobante", "logistica", costo.envioId, "No pudimos subir el comprobante");
+  if (!comprobante.ok) return NextResponse.json({ error: comprobante.error }, { status: comprobante.status });
+  if (comprobante.value) comprobanteUrl = comprobante.value.path;
 
   await db.$transaction(async (tx) => {
     await tx.costoLogistica.update({

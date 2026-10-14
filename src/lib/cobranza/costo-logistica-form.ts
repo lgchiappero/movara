@@ -1,4 +1,5 @@
 import { costoLogisticaSchema, type CostoLogisticaInput } from "@/lib/validators/cobranza";
+import { campoSubido } from "@/lib/admin/subidas-comun";
 
 type Resultado<T> = { ok: true; value: T } | { ok: false; error: string; status: number };
 
@@ -23,7 +24,9 @@ export function leerCostoLogistica(form: FormData): Resultado<{ data: CostoLogis
   }
   const file = form.get("comprobante");
   const comprobante = file instanceof File && file.size > 0 ? file : null;
-  if (comprobante && parsed.data.estado !== "pagado") {
+  // También si vino subido directo a Storage (archivos de más de 4,5 MB).
+  const subido = form.get(campoSubido("comprobante"));
+  if ((comprobante || (typeof subido === "string" && subido)) && parsed.data.estado !== "pagado") {
     return { ok: false, error: "El comprobante solo se adjunta a un pago ya realizado", status: 400 };
   }
   return { ok: true, value: { data: parsed.data, comprobante } };

@@ -22,10 +22,18 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 vi.mock("@/lib/cobranza/periodo-cerrado", () => ({ periodoEstaCerrado: mockPeriodoCerrado }));
+const { mockInfoArchivo, mockEliminarArchivo } = vi.hoisted(() => ({
+  mockInfoArchivo: vi.fn(),
+  mockEliminarArchivo: vi.fn(),
+}));
 vi.mock("@/lib/admin/storage", () => ({
   buildStoragePath: (scope: string, id: string, name: string) => `${scope}/${id}/${name}`,
   uploadDocument: mockUpload,
   BUCKET_MOVARA: "documentos-movara",
+  BUCKET_PEDIDOS: "documentos-pedidos",
+  crearUrlSubida: vi.fn(),
+  infoArchivo: mockInfoArchivo,
+  eliminarArchivo: mockEliminarArchivo,
 }));
 
 import { PATCH, DELETE } from "../route";

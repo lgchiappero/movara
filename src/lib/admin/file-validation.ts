@@ -1,4 +1,4 @@
-export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20MB (subida directa a Storage)
 
 export const ALLOWED_MIME_TYPES = [
   "application/pdf",
@@ -14,7 +14,7 @@ export function validateFile(file: { size: number; type: string }): FileValidati
     return { valid: false, error: "El archivo está vacío" };
   }
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    return { valid: false, error: "El archivo supera el máximo de 10MB" };
+    return { valid: false, error: "El archivo supera el máximo de 20MB" };
   }
   if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
     return { valid: false, error: "Tipo de archivo no permitido — solo PDF, JPG, PNG o XLSX" };

@@ -15,10 +15,18 @@ const { mockGetAdminUser, mockFindUniqueEnvio, mockCreateCosto, mockPeriodoCerra
 vi.mock("@/lib/db", () => ({ db: { envio: { findUnique: mockFindUniqueEnvio }, costoLogistica: { create: mockCreateCosto } } }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 vi.mock("@/lib/cobranza/periodo-cerrado", () => ({ periodoEstaCerrado: mockPeriodoCerrado }));
+const { mockInfoArchivo, mockEliminarArchivo } = vi.hoisted(() => ({
+  mockInfoArchivo: vi.fn(),
+  mockEliminarArchivo: vi.fn(),
+}));
 vi.mock("@/lib/admin/storage", () => ({
   buildStoragePath: (scope: string, id: string, name: string) => `${scope}/${id}/${name}`,
   uploadDocument: mockUpload,
   BUCKET_MOVARA: "documentos-movara",
+  BUCKET_PEDIDOS: "documentos-pedidos",
+  crearUrlSubida: vi.fn(),
+  infoArchivo: mockInfoArchivo,
+  eliminarArchivo: mockEliminarArchivo,
 }));
 
 import { POST } from "../route";
@@ -118,6 +126,14 @@ describe("POST /api/admin/logistica — costo de logística internacional", () =
     await POST(makeRequest({ ...CAMPOS, estado: "pendiente" }));
     expect(mockPeriodoCerrado).not.toHaveBeenCalled();
     const res = await POST(makeRequest({ ...CAMPOS, estado: "pendiente", comprobante: pdf() }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/solo se adjunta a un pago ya realizado/);
+  });
+
+  it("pendiente con un comprobante subido directo (más de 4,5 MB) → 400 igual", async () => {
+    const res = await POST(
+      makeRequest({ ...CAMPOS, estado: "pendiente", comprobanteSubido: JSON.stringify({ path: "logistica/e1/x.pdf", nombre: "x.pdf" }) })
+    );
     expect(res.status).toBe(400);
     expect((await res.json()).error).toMatch(/solo se adjunta a un pago ya realizado/);
   });

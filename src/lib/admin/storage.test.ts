@@ -172,3 +172,107 @@ describe("getSignedUrl con Supabase", () => {
     expect(await getSignedUrl("b", "p", 60)).toBeNull();
   });
 });
+
+describe("subida directa — storage local (dev/e2e)", () => {
+  beforeEach(() => {
+    vi.stubEnv("SUPABASE_URL", "");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+  });
+
+  it("firma una URL de subida local que vence y no se puede adulterar", async () => {
+    const { crearUrlSubida, firmaSubidaLocalValida } = await import("@/lib/admin/storage");
+    const url = new URL(await crearUrlSubida("b", "envios/e1/x.pdf"), "http://localhost");
+    expect(url.pathname).toBe("/api/admin/storage-local");
+    const q = url.searchParams;
+    const vence = Number(q.get("vence"));
+    expect(firmaSubidaLocalValida("b", "envios/e1/x.pdf", vence, q.get("firma")!)).toBe(true);
+    expect(firmaSubidaLocalValida("b", "envios/e1/otro.pdf", vence, q.get("firma")!)).toBe(false);
+    expect(firmaSubidaLocalValida("b", "envios/e1/x.pdf", vence, "corta")).toBe(false);
+    expect(firmaSubidaLocalValida("b", "envios/e1/x.pdf", Date.now() - 1, q.get("firma")!)).toBe(false);
+    expect(firmaSubidaLocalValida("b", "envios/e1/x.pdf", NaN, q.get("firma")!)).toBe(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("guarda la subida, informa tamaño y tipo, no pisa y la borra", async () => {
+    const { guardarSubidaLocal, infoArchivo, eliminarArchivo, LOCAL_STORAGE_DIR } = await import("@/lib/admin/storage");
+    const { rm, unlink } = await import("fs/promises");
+    const path = `tests/${Date.now()}/grande.pdf`;
+    await guardarSubidaLocal("vitest-subidas", path, new Uint8Array(5).buffer, "application/pdf");
+    expect(await infoArchivo("vitest-subidas", path)).toEqual({ tamano: 5, tipo: "application/pdf" });
+    await expect(guardarSubidaLocal("vitest-subidas", path, new Uint8Array(1).buffer, "application/pdf")).rejects.toThrow();
+    await unlink(`${LOCAL_STORAGE_DIR}/vitest-subidas/${path}.tipo`);
+    expect(await infoArchivo("vitest-subidas", path)).toEqual({ tamano: 5, tipo: "" });
+    await eliminarArchivo("vitest-subidas", path);
+    expect(await infoArchivo("vitest-subidas", path)).toBeNull();
+    await rm(`${LOCAL_STORAGE_DIR}/vitest-subidas`, { recursive: true, force: true });
+    vi.unstubAllEnvs();
+  });
+
+  it("sin AUTH_SECRET firma igual con NEXTAUTH_SECRET o el secreto de desarrollo", async () => {
+    const { firmaSubidaLocal } = await import("@/lib/admin/storage");
+    vi.stubEnv("AUTH_SECRET", "");
+    vi.stubEnv("NEXTAUTH_SECRET", "");
+    const dev = firmaSubidaLocal("b", "p", 1);
+    vi.stubEnv("NEXTAUTH_SECRET", "otro");
+    expect(firmaSubidaLocal("b", "p", 1)).not.toBe(dev);
+    vi.unstubAllEnvs();
+  });
+});
+
+describe("subida directa — Supabase", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.SUPABASE_URL = "https://test.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("crearUrlSubida usa createSignedUploadUrl y crea el bucket si falta", async () => {
+    const { crearUrlSubida } = await import("@/lib/admin/storage");
+    const createSignedUploadUrl = vi.fn()
+      .mockResolvedValueOnce({ data: { signedUrl: "https://sube" }, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "Bucket not found" } })
+      .mockResolvedValueOnce({ data: { signedUrl: "https://sube2" }, error: null });
+    mockFrom.mockReturnValue({ createSignedUploadUrl });
+    expect(await crearUrlSubida("b", "p")).toBe("https://sube");
+    expect(createSignedUploadUrl).toHaveBeenCalledWith("p");
+    mockCreateBucket.mockResolvedValueOnce({ error: null });
+    expect(await crearUrlSubida("b", "p")).toBe("https://sube2");
+    expect(mockCreateBucket).toHaveBeenCalledWith("b", { public: false });
+  });
+
+  it("crearUrlSubida tira si no puede firmar o crear el bucket", async () => {
+    const { crearUrlSubida } = await import("@/lib/admin/storage");
+    const createSignedUploadUrl = vi.fn()
+      .mockResolvedValueOnce({ data: null, error: { message: "denied" } })
+      .mockResolvedValueOnce({ data: null, error: { message: "Bucket not found" } });
+    mockFrom.mockReturnValue({ createSignedUploadUrl });
+    await expect(crearUrlSubida("b", "p")).rejects.toThrow("denied");
+    mockCreateBucket.mockResolvedValueOnce({ error: { message: "permission denied" } });
+    await expect(crearUrlSubida("b", "p")).rejects.toThrow("Error al crear el bucket");
+    createSignedUploadUrl.mockResolvedValueOnce({ data: null, error: null });
+    await expect(crearUrlSubida("b", "p")).rejects.toThrow("sin datos");
+  });
+
+  it("infoArchivo devuelve tamaño y tipo, o null si no existe", async () => {
+    const { infoArchivo } = await import("@/lib/admin/storage");
+    const info = vi.fn()
+      .mockResolvedValueOnce({ data: { size: 9_000_000, contentType: "application/pdf" }, error: null })
+      .mockResolvedValueOnce({ data: {}, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "Object not found" } });
+    mockFrom.mockReturnValue({ info });
+    expect(await infoArchivo("b", "p")).toEqual({ tamano: 9_000_000, tipo: "application/pdf" });
+    expect(await infoArchivo("b", "p")).toEqual({ tamano: 0, tipo: "" });
+    expect(await infoArchivo("b", "p")).toBeNull();
+  });
+
+  it("eliminarArchivo borra y solo loguea si falla", async () => {
+    const { eliminarArchivo } = await import("@/lib/admin/storage");
+    const remove = vi.fn().mockResolvedValueOnce({ error: null }).mockResolvedValueOnce({ error: { message: "x" } });
+    mockFrom.mockReturnValue({ remove });
+    await eliminarArchivo("b", "p");
+    expect(remove).toHaveBeenCalledWith(["p"]);
+    await expect(eliminarArchivo("b", "p")).resolves.toBeUndefined();
+    expect(console.error).toHaveBeenCalled();
+  });
+});

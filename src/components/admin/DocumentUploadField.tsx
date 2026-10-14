@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { TipoDocumento, CampoDestino } from "@/lib/validators/documentos";
+import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
 
 export default function DocumentUploadField({
   pedidoId,
@@ -32,7 +33,7 @@ export default function DocumentUploadField({
 
     try {
       const form = new FormData();
-      form.append("file", file);
+      await adjuntarArchivo(form, "file", file, "pedidos", pedidoId);
       form.append("tipo", tipo);
       if (campo) form.append("campo", campo);
 
@@ -46,8 +47,8 @@ export default function DocumentUploadField({
         return;
       }
       onUploaded();
-    } catch {
-      setError("No pudimos subir el archivo. Probá de nuevo.");
+    } catch (err) {
+      setError(mensajeDeError(err, "No pudimos subir el archivo. Probá de nuevo."));
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";

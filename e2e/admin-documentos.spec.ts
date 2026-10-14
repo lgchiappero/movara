@@ -126,3 +126,62 @@ test.describe("Upload de documentos en /admin/unidades", () => {
     }
   });
 });
+
+test.describe("Subida de archivos de más de 4,5 MB (subida directa a Storage)", () => {
+  // Corre contra el storage local (CI y dev sin credenciales): no se suben
+  // 6 MB de prueba al Storage real.
+  test.skip(STORAGE_REAL, "Con Storage real no se suben archivos grandes de prueba");
+
+  test("un PDF de 6 MB se sube directo, se registra y aparece en su sección", async ({ page }) => {
+    await loginAsAdmin(page);
+    const suffix = Date.now();
+    const cliente = await (
+      await page.request.post("/api/admin/clientes", {
+        data: { nombre: `Cliente E2E Grande ${suffix}`, dni: null, cuit: null, domicilio: null, email: null, telefono: null, notas: null },
+      })
+    ).json();
+    const unidad = await (await page.request.post("/api/admin/unidades", { data: { clienteId: cliente.id } })).json();
+
+    const pedidos: string[] = [];
+    page.on("request", (r) => {
+      if (r.method() !== "GET") pedidos.push(`${r.method()} ${new URL(r.url()).pathname}`);
+    });
+
+    await page.goto(`/admin/unidades/${unidad.id}`);
+    const seccion = page
+      .getByRole("heading", { name: "01 — Cliente" })
+      .locator("xpath=ancestor::div[contains(@class,'bg-white')][1]");
+    const grande = Buffer.concat([PDF_BYTES, Buffer.alloc(6 * 1024 * 1024, 32)]);
+    await seccion.locator('input[type="file"]').setInputFiles({ name: "plano-grande.pdf", mimeType: "application/pdf", buffer: grande });
+    await seccion.getByRole("button", { name: "Subir archivo" }).click();
+
+    await expect(seccion.getByText("plano-grande.pdf")).toBeVisible({ timeout: 30000 });
+    await expect(seccion.locator("p.text-red-600")).toHaveCount(0);
+    // Firma, PUT directo al storage y registro (sin el archivo en el formulario).
+    expect(pedidos).toEqual(
+      expect.arrayContaining([
+        "POST /api/admin/subidas",
+        "PUT /api/admin/storage-local",
+        `POST /api/admin/unidades/${unidad.id}/documentos`,
+      ])
+    );
+  });
+
+  test("más de 20 MB se rechaza en el servidor antes de firmar", async ({ page }) => {
+    await loginAsAdmin(page);
+    const res = await page.request.post("/api/admin/subidas", {
+      data: { destino: "unidades", entidadId: "cualquiera", nombre: "x.pdf", tipo: "application/pdf", tamano: 21 * 1024 * 1024 },
+      failOnStatusCode: false,
+    });
+    expect(res.status()).toBe(400);
+    expect((await res.json()).error).toBe("El archivo supera el máximo de 20MB");
+  });
+
+  test("sin sesión no se firma ninguna subida", async ({ request }) => {
+    const res = await request.post("/api/admin/subidas", {
+      data: { destino: "unidades", entidadId: "x", nombre: "x.pdf", tipo: "application/pdf", tamano: 10 },
+      failOnStatusCode: false,
+    });
+    expect(res.status()).toBe(401);
+  });
+});

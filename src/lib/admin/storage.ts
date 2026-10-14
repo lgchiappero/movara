@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { createHmac, timingSafeEqual } from "crypto";
+import { mkdir, readFile, rm, stat, writeFile } from "fs/promises";
 import path from "path";
 
 const SIGNED_URL_TTL_SECONDS = 300; // 5 minutos
@@ -122,4 +123,93 @@ export async function downloadDocument(bucket: string, storagePath: string): Pro
 
 function dirnameLocal(archivo: string): string {
   return path.dirname(archivo);
+}
+
+// ─── Subida directa desde el navegador (archivos de más de 4,5 MB) ─────────
+// Vercel corta los cuerpos de más de 4,5 MB: el navegador sube directo a
+// Supabase con una URL firmada de subida que genera el servidor, y después
+// el servidor verifica el archivo subido antes de registrarlo.
+
+const SUBIDA_LOCAL_TTL_MS = 2 * 60 * 60 * 1000; // 2 horas, como Supabase
+
+function secretoSubidaLocal(): string {
+  return process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "storage-local-dev";
+}
+
+/** Firma de la URL de subida del storage local (solo desarrollo y e2e). */
+export function firmaSubidaLocal(bucket: string, storagePath: string, vence: number): string {
+  return createHmac("sha256", secretoSubidaLocal()).update(`${bucket}:${storagePath}:${vence}`).digest("hex");
+}
+
+export function firmaSubidaLocalValida(bucket: string, storagePath: string, vence: number, firma: string): boolean {
+  if (!Number.isFinite(vence) || vence < Date.now()) return false;
+  const esperada = Buffer.from(firmaSubidaLocal(bucket, storagePath, vence));
+  const recibida = Buffer.from(firma);
+  return esperada.length === recibida.length && timingSafeEqual(esperada, recibida);
+}
+
+/** URL firmada para que el navegador suba el archivo con un PUT. */
+export async function crearUrlSubida(bucket: string, storagePath: string): Promise<string> {
+  if (usaStorageLocal()) {
+    const vence = Date.now() + SUBIDA_LOCAL_TTL_MS;
+    const q = new URLSearchParams({
+      bucket,
+      path: storagePath,
+      vence: String(vence),
+      firma: firmaSubidaLocal(bucket, storagePath, vence),
+    });
+    return `/api/admin/storage-local?${q}`;
+  }
+  const client = getStorageClient();
+  const firmar = () => client.storage.from(bucket).createSignedUploadUrl(storagePath);
+  let { data, error } = await firmar();
+  // Mismo criterio que uploadDocument: si el bucket no existe, se crea privado.
+  if (error && /bucket not found/i.test(error.message)) {
+    const { error: createError } = await client.storage.createBucket(bucket, { public: false });
+    if (createError && !/already exists/i.test(createError.message)) {
+      throw new Error(`[storage] Error al crear el bucket "${bucket}": ${createError.message}`);
+    }
+    ({ data, error } = await firmar());
+  }
+  if (error || !data) throw new Error(`[storage] Error al firmar la subida: ${error?.message ?? "sin datos"}`);
+  return data.signedUrl;
+}
+
+/** Guarda un archivo subido al storage local (el PUT de la URL firmada local). */
+export async function guardarSubidaLocal(bucket: string, storagePath: string, bytes: ArrayBuffer, contentType: string) {
+  const destino = rutaLocal(bucket, storagePath);
+  await mkdir(dirnameLocal(destino), { recursive: true });
+  await writeFile(destino, Buffer.from(bytes), { flag: "wx" }); // como Supabase: no pisa
+  await writeFile(`${destino}.tipo`, contentType);
+}
+
+export type InfoArchivo = { tamano: number; tipo: string };
+
+/** Tamaño y tipo reales del archivo ya subido, o null si no existe. */
+export async function infoArchivo(bucket: string, storagePath: string): Promise<InfoArchivo | null> {
+  if (usaStorageLocal()) {
+    try {
+      const destino = rutaLocal(bucket, storagePath);
+      const { size } = await stat(destino);
+      const tipo = await readFile(`${destino}.tipo`, "utf8").catch(() => "");
+      return { tamano: size, tipo };
+    } catch {
+      return null;
+    }
+  }
+  const { data, error } = await getStorageClient().storage.from(bucket).info(storagePath);
+  if (error || !data) return null;
+  return { tamano: data.size ?? 0, tipo: data.contentType ?? "" };
+}
+
+/** Borra un archivo (se usa para descartar una subida que no pasó la validación). */
+export async function eliminarArchivo(bucket: string, storagePath: string): Promise<void> {
+  if (usaStorageLocal()) {
+    const destino = rutaLocal(bucket, storagePath);
+    await rm(destino, { force: true });
+    await rm(`${destino}.tipo`, { force: true });
+    return;
+  }
+  const { error } = await getStorageClient().storage.from(bucket).remove([storagePath]);
+  if (error) console.error("[storage] Error al borrar:", error.message);
 }

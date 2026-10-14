@@ -15,10 +15,18 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
+const { mockInfoArchivo, mockEliminarArchivo } = vi.hoisted(() => ({
+  mockInfoArchivo: vi.fn(),
+  mockEliminarArchivo: vi.fn(),
+}));
 vi.mock("@/lib/admin/storage", () => ({
   buildStoragePath: (scope: string, id: string, filename: string) => `${scope}/${id}/${filename}`,
   uploadDocument: mockUploadDocument,
   BUCKET_MOVARA: "documentos-movara",
+  BUCKET_PEDIDOS: "documentos-pedidos",
+  crearUrlSubida: vi.fn(),
+  infoArchivo: mockInfoArchivo,
+  eliminarArchivo: mockEliminarArchivo,
 }));
 
 import { POST } from "../route";
@@ -109,6 +117,37 @@ describe("POST /api/admin/envios/[id]/documentos", () => {
         subidoPor: SESSION.email,
       },
     });
+  });
+
+  it("201 — archivo de más de 4,5 MB subido directo: verifica en Storage y lo registra", async () => {
+    mockCreate.mockResolvedValueOnce({ id: "doc2" });
+    mockInfoArchivo.mockResolvedValueOnce({ tamano: 15 * 1024 * 1024, tipo: "application/pdf" });
+    const res = await POST(
+      makeFormRequest({ fileSubido: JSON.stringify({ path: "envios/e1/uuid-plano.pdf", nombre: "plano.pdf" }), seccion: "05_embarque" }),
+      { params: Promise.resolve({ id: "e1" }) }
+    );
+    expect(res.status).toBe(201);
+    expect(mockUploadDocument).not.toHaveBeenCalled();
+    expect(mockInfoArchivo).toHaveBeenCalledWith("documentos-movara", "envios/e1/uuid-plano.pdf");
+    expect(mockCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ nombre: "plano.pdf", url: "envios/e1/uuid-plano.pdf", tipo: "application/pdf" }),
+    });
+  });
+
+  it("400 — subida directa de otra entidad o que supera 20 MB (se borra), sin registrar", async () => {
+    const otra = await POST(
+      makeFormRequest({ fileSubido: JSON.stringify({ path: "envios/otro/x.pdf", nombre: "x.pdf" }), seccion: "05_embarque" }),
+      { params: Promise.resolve({ id: "e1" }) }
+    );
+    expect(otra.status).toBe(400);
+    mockInfoArchivo.mockResolvedValueOnce({ tamano: 25 * 1024 * 1024, tipo: "application/pdf" });
+    const grande = await POST(
+      makeFormRequest({ fileSubido: JSON.stringify({ path: "envios/e1/uuid-x.pdf", nombre: "x.pdf" }), seccion: "05_embarque" }),
+      { params: Promise.resolve({ id: "e1" }) }
+    );
+    expect(grande.status).toBe(400);
+    expect(mockEliminarArchivo).toHaveBeenCalledWith("documentos-movara", "envios/e1/uuid-x.pdf");
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it("descripcion vacía/no enviada se guarda como null", async () => {

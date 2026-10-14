@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { periodoEstaCerrado } from "@/lib/cobranza/periodo-cerrado";
 import { leerCostoLogistica } from "@/lib/cobranza/costo-logistica-form";
-import { subirComprobante } from "@/lib/cobranza/comprobante";
+import { archivoDelFormulario } from "@/lib/admin/subidas";
 import { prorratear } from "@/lib/cobranza/logistica";
 
 /** Alta de un costo de logística internacional (por envío). Con
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!leido.ok) {
     return NextResponse.json({ error: leido.error }, { status: leido.status });
   }
-  const { data, comprobante } = leido.value;
+  const { data } = leido.value;
 
   const envio = await db.envio.findUnique({
     where: { id: envioId },
@@ -48,12 +48,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let comprobanteUrl: string | null = null;
-  if (comprobante) {
-    const subida = await subirComprobante(comprobante, "logistica", envioId);
-    if (!subida.ok) return NextResponse.json({ error: subida.error }, { status: subida.status });
-    comprobanteUrl = subida.value;
-  }
+  const comprobante = await archivoDelFormulario(form, "comprobante", "logistica", envioId, "No pudimos subir el comprobante");
+  if (!comprobante.ok) return NextResponse.json({ error: comprobante.error }, { status: comprobante.status });
+  const comprobanteUrl = comprobante.value?.path ?? null;
 
   const costo = await db.costoLogistica.create({
     data: {

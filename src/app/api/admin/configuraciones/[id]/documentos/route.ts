@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/admin/current-user";
-import { validateFile } from "@/lib/admin/file-validation";
-import { buildStoragePath, uploadDocument, BUCKET_PEDIDOS } from "@/lib/admin/storage";
+import { archivoDelFormulario } from "@/lib/admin/subidas";
 import { tipoDocumentoOptions, campoDestinoOptions } from "@/lib/validators/documentos";
 
 export async function POST(
@@ -26,15 +25,11 @@ export async function POST(
     return NextResponse.json({ error: "Formulario inválido" }, { status: 400 });
   }
 
-  const file = form.get("file");
   const tipo = form.get("tipo");
   const nombre = form.get("nombre");
   const notas = form.get("notas");
   const campo = form.get("campo");
 
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Falta el archivo" }, { status: 400 });
-  }
   if (typeof tipo !== "string" || !tipoDocumentoOptions.includes(tipo as (typeof tipoDocumentoOptions)[number])) {
     return NextResponse.json({ error: "Tipo de documento inválido" }, { status: 400 });
   }
@@ -42,27 +37,21 @@ export async function POST(
     return NextResponse.json({ error: "Campo de destino inválido" }, { status: 400 });
   }
 
-  const validation = validateFile({ size: file.size, type: file.type });
-  if (!validation.valid) {
-    return NextResponse.json({ error: validation.error }, { status: 400 });
+  const archivo = await archivoDelFormulario(form, "file", "pedidos", pedidoId);
+  if (!archivo.ok) {
+    return NextResponse.json({ error: archivo.error }, { status: archivo.status });
   }
-
-  const path = buildStoragePath("pedidos", pedidoId, file.name);
-  const bytes = await file.arrayBuffer();
-
-  try {
-    await uploadDocument(BUCKET_PEDIDOS, path, bytes, file.type);
-  } catch (err) {
-    console.error("[documentos]", err);
-    return NextResponse.json({ error: "No pudimos subir el archivo" }, { status: 500 });
+  if (!archivo.value) {
+    return NextResponse.json({ error: "Falta el archivo" }, { status: 400 });
   }
+  const { path } = archivo.value;
 
   const [documento] = await db.$transaction([
     db.documentoPedido.create({
       data: {
         pedidoId,
         tipo,
-        nombre: typeof nombre === "string" && nombre.trim() ? nombre.trim() : file.name,
+        nombre: typeof nombre === "string" && nombre.trim() ? nombre.trim() : archivo.value.nombre,
         url: path,
         notas: typeof notas === "string" && notas.trim() ? notas.trim() : null,
         subidoPor: session.email,

@@ -200,6 +200,7 @@ export default async function UnidadDetailPage({
         </h2>
         <DocumentosPorSeccion
           uploadUrl={`/api/admin/unidades/${id}/documentos`}
+          subida={{ destino: "unidades", entidadId: id }}
           secciones={SECCIONES_UNIDAD}
           documentos={documentosUnidadConUrl}
         />

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/admin/current-user";
-import { validateFileMovara } from "@/lib/admin/file-validation";
-import { buildStoragePath, uploadDocument, BUCKET_MOVARA } from "@/lib/admin/storage";
+import { archivoDelFormulario } from "@/lib/admin/subidas";
 import { registrarMovimientoSchema } from "@/lib/validators/cobranza";
 import { estadoCuota } from "@/lib/cobranza/calc";
 import { periodoEstaCerrado } from "@/lib/cobranza/periodo-cerrado";
@@ -30,7 +29,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const cuotaIdRaw = form.get("cuotaId");
   const modalidad = form.get("modalidad");
   const notas = form.get("notas");
-  const file = form.get("comprobante");
 
   const parsed = registrarMovimientoSchema.safeParse({
     fecha: typeof fecha === "string" ? fecha : "",
@@ -61,22 +59,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
   }
 
-  let comprobanteUrl: string | null = null;
-  if (file instanceof File && file.size > 0) {
-    const validation = validateFileMovara({ size: file.size, type: file.type });
-    if (!validation.valid) {
-      return NextResponse.json({ error: validation.error }, { status: 400 });
-    }
-    const path = buildStoragePath("cobranza", acuerdoId, file.name);
-    const bytes = await file.arrayBuffer();
-    try {
-      await uploadDocument(BUCKET_MOVARA, path, bytes, file.type);
-    } catch (err) {
-      console.error("[cobranza/movimientos]", err);
-      return NextResponse.json({ error: "No pudimos subir el comprobante" }, { status: 500 });
-    }
-    comprobanteUrl = path;
+  const comprobante = await archivoDelFormulario(form, "comprobante", "cobranza", acuerdoId, "No pudimos subir el comprobante");
+  if (!comprobante.ok) {
+    return NextResponse.json({ error: comprobante.error }, { status: comprobante.status });
   }
+  const comprobanteUrl = comprobante.value?.path ?? null;
 
   const movimiento = await db.movimiento.create({
     data: {

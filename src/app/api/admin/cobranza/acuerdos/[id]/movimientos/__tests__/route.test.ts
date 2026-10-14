@@ -34,10 +34,18 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
+const { mockInfoArchivo, mockEliminarArchivo } = vi.hoisted(() => ({
+  mockInfoArchivo: vi.fn(),
+  mockEliminarArchivo: vi.fn(),
+}));
 vi.mock("@/lib/admin/storage", () => ({
   buildStoragePath: (scope: string, id: string, filename: string) => `${scope}/${id}/${filename}`,
   uploadDocument: mockUploadDocument,
   BUCKET_MOVARA: "documentos-movara",
+  BUCKET_PEDIDOS: "documentos-pedidos",
+  crearUrlSubida: vi.fn(),
+  infoArchivo: mockInfoArchivo,
+  eliminarArchivo: mockEliminarArchivo,
 }));
 
 import { POST } from "../route";
