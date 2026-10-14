@@ -14,7 +14,7 @@ export default function PaginaLegal({ doc, otro }: { doc: DocumentoLegal; otro: 
       <Navbar />
       <main className="bg-white pt-28 pb-24 px-4 sm:px-6">
         <article className="mx-auto max-w-[70ch]">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-3">Legal</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#D4B36A] mb-3">Legal</p>
           <h1 className="text-3xl sm:text-4xl font-bold text-[#2F2F2F] leading-tight">{doc.titulo}</h1>
           <p className="mt-2 text-sm text-stone-500">Última actualización: {doc.actualizado}</p>
           <p className="mt-6 text-[15px] text-stone-700 leading-relaxed">
@@ -26,7 +26,7 @@ export default function PaginaLegal({ doc, otro }: { doc: DocumentoLegal; otro: 
             <ol className="space-y-1.5 text-sm">
               {doc.secciones.map((s) => (
                 <li key={s.id}>
-                  <a href={`#${s.id}`} className="text-[#2F2F2F] hover:text-[#BF9A52] underline-offset-2 hover:underline">
+                  <a href={`#${s.id}`} className="text-[#2F2F2F] hover:text-[#BF9D52] underline-offset-2 hover:underline">
                     {s.titulo}
                   </a>
                 </li>
@@ -44,7 +44,7 @@ export default function PaginaLegal({ doc, otro }: { doc: DocumentoLegal; otro: 
                       <TextoConCampos texto={b.texto} />
                     </p>
                   ) : (
-                    <ul key={i} className="list-disc pl-5 space-y-2 marker:text-[#D4B06A]">
+                    <ul key={i} className="list-disc pl-5 space-y-2 marker:text-[#D4B36A]">
                       {b.items.map((item, j) => (
                         <li key={j}>
                           <TextoConCampos texto={item} />
@@ -59,7 +59,7 @@ export default function PaginaLegal({ doc, otro }: { doc: DocumentoLegal; otro: 
 
           <p className="mt-12 pt-6 border-t border-stone-100 text-sm text-stone-500">
             Ver también:{" "}
-            <Link href={otro.href} className="text-[#BF9A52] hover:underline font-medium">
+            <Link href={otro.href} className="text-[#BF9D52] hover:underline font-medium">
               {otro.label}
             </Link>
           </p>

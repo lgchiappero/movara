@@ -64,7 +64,7 @@ export default function DocumentUploadField({
             href={currentUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-[#D4B06A] font-bold hover:underline"
+            className="text-xs text-[#D4B36A] font-bold hover:underline"
           >
             Ver archivo actual
           </a>

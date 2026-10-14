@@ -46,7 +46,7 @@ export default function ComoFunciona({ content }: { content?: ComoFuncionaConten
     <section id="proceso" className="py-32 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <Reveal className="text-center mb-20">
-          <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-4 block">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B36A] mb-4 block">
             ¿Cómo tener tu MOVARA?
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-[#2F2F2F] leading-tight">{titulo}</h2>
@@ -62,7 +62,7 @@ export default function ComoFunciona({ content }: { content?: ComoFuncionaConten
             whileInView={{ scaleX: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 1.2, ease: "easeInOut" }}
-            className="hidden lg:block absolute top-8 left-[12.5%] right-[12.5%] h-px bg-[#D4B06A]/40 origin-left"
+            className="hidden lg:block absolute top-8 left-[12.5%] right-[12.5%] h-px bg-[#D4B36A]/40 origin-left"
           />
           {pasos.map((paso, i) => {
             const Icono = ICONOS[i % ICONOS.length];
@@ -77,15 +77,15 @@ export default function ComoFunciona({ content }: { content?: ComoFuncionaConten
                     whileInView={{ scaleY: 1 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, delay: 0.2 + i * 0.12, ease: "easeInOut" }}
-                    className="lg:hidden absolute left-8 top-16 -bottom-12 w-px bg-[#D4B06A]/40 origin-top"
+                    className="lg:hidden absolute left-8 top-16 -bottom-12 w-px bg-[#D4B36A]/40 origin-top"
                   />
                 )}
                 <Reveal delay={i * 0.12} className="flex gap-6 lg:flex-col lg:items-center lg:text-center lg:gap-0">
-                  <div className="relative z-10 shrink-0 w-16 h-16 rounded-full bg-white border border-[#D4B06A]/50 flex items-center justify-center text-[#2F2F2F]">
+                  <div className="relative z-10 shrink-0 w-16 h-16 rounded-full bg-white border border-[#D4B36A]/50 flex items-center justify-center text-[#2F2F2F]">
                     <Icono />
                   </div>
                   <div className="lg:mt-6">
-                    <span className="block text-5xl lg:text-6xl font-bold text-[#D4B06A] leading-none mb-3 select-none">
+                    <span className="block text-5xl lg:text-6xl font-bold text-[#D4B36A] leading-none mb-3 select-none">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <h3 className="font-bold text-[#2F2F2F] text-lg mb-2 leading-snug">{paso.titulo}</h3>
@@ -105,7 +105,7 @@ export default function ComoFunciona({ content }: { content?: ComoFuncionaConten
             <div key={s.unidad} className="px-2 text-center">
               <p className="text-[#2F2F2F] font-bold leading-none">
                 <CountUp to={s.valor} className="text-4xl sm:text-6xl tabular-nums" />
-                <span className="ml-1.5 text-sm sm:text-lg font-semibold text-[#D4B06A]">{s.unidad}</span>
+                <span className="ml-1.5 text-sm sm:text-lg font-semibold text-[#D4B36A]">{s.unidad}</span>
               </p>
               <p className="mt-3 text-xs sm:text-sm text-stone-500">{s.label}</p>
             </div>

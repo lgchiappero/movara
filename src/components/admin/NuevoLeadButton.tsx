@@ -92,7 +92,7 @@ export default function NuevoLeadButton({ vendedores }: { vendedores: Vendedor[]
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="px-5 py-3 bg-[#D4B06A] hover:bg-[#c19f5a] text-[#1a1a1a] font-bold text-sm rounded-xl transition-colors whitespace-nowrap"
+        className="px-5 py-3 bg-[#D4B36A] hover:bg-[#c1a25a] text-[#1a1a1a] font-bold text-sm rounded-xl transition-colors whitespace-nowrap"
       >
         + Nuevo lead
       </button>

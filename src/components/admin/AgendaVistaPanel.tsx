@@ -42,7 +42,7 @@ const DIAS_SEMANA_LARGO = [
 ];
 
 const ESTADO_CLASSES: Record<string, string> = {
-  confirmada: "bg-[#D4B06A]/20 text-[#8a6a2e]",
+  confirmada: "bg-[#D4B36A]/20 text-[#8a6d2e]",
   cancelada: "bg-stone-200 text-stone-500",
   completada: "bg-emerald-100 text-emerald-700",
 };
@@ -202,7 +202,7 @@ export default function AgendaVistaPanel({
                         type="button"
                         onClick={() => setSeleccionadaId(c.id)}
                         className={`w-full text-left text-[10px] px-1 py-0.5 rounded truncate ${ESTADO_CLASSES[c.estado] ?? "bg-stone-100 text-stone-500"} ${
-                          c.id === citaIdInicial ? "ring-2 ring-[#D4B06A]" : ""
+                          c.id === citaIdInicial ? "ring-2 ring-[#D4B36A]" : ""
                         }`}
                         title={`${c.horario} — ${c.nombre}${c.recordatorioNoEnviado ? " — Recordatorio no enviado" : ""}`}
                       >
@@ -234,7 +234,7 @@ export default function AgendaVistaPanel({
                   key={c.id}
                   onClick={() => setSeleccionadaId(c.id)}
                   className={`border-b border-[#F0F0F0] last:border-0 cursor-pointer hover:bg-stone-50 ${
-                    c.id === citaIdInicial ? "bg-[#D4B06A]/10" : ""
+                    c.id === citaIdInicial ? "bg-[#D4B36A]/10" : ""
                   }`}
                 >
                   <td className="px-4 py-3 text-stone-600 capitalize">{fechaConDiaYHora(c.fechaKey, c.horario)}</td>
@@ -269,7 +269,7 @@ export default function AgendaVistaPanel({
       )}
 
       {seleccionada && (
-        <div className="bg-white rounded-2xl border border-[#D4B06A] p-5 space-y-3">
+        <div className="bg-white rounded-2xl border border-[#D4B36A] p-5 space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
               Detalle de la visita

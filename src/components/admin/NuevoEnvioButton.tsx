@@ -32,7 +32,7 @@ export default function NuevoEnvioButton() {
         type="button"
         disabled={busy}
         onClick={crear}
-        className="px-5 py-3 bg-[#D4B06A] hover:bg-[#c19f5a] disabled:opacity-50 text-[#1a1a1a] font-bold text-sm rounded-xl transition-colors"
+        className="px-5 py-3 bg-[#D4B36A] hover:bg-[#c1a25a] disabled:opacity-50 text-[#1a1a1a] font-bold text-sm rounded-xl transition-colors"
       >
         {busy ? "Creando..." : "+ Nuevo envío"}
       </button>

@@ -21,7 +21,7 @@ async function sendNotificationEmail(clienteNombre: string, modelo: string, nume
 <body style="margin:0;padding:20px;background:#f4f4f4;font-family:Arial,sans-serif;">
   <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
     <div style="background:#2F2F2F;padding:20px 24px;">
-    <p style="margin:0;color:#D4B06A;font-size:18px;font-weight:bold;">📦 Nueva consulta — ${numeroConsulta}</p>
+    <p style="margin:0;color:#D4B36A;font-size:18px;font-weight:bold;">📦 Nueva consulta — ${numeroConsulta}</p>
     </div>
     <div style="padding:24px;">
     <p style="color:#555;line-height:1.6;">${escapeHtml(clienteNombre)} completó el configurador para un módulo ${modelo}. Vela en el panel: /admin/configuraciones</p>

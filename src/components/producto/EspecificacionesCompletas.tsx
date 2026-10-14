@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, Plus } from "lucide-react";
 import { PRODUCTO_SECCIONES, type ProductoGrupo, type ProductoResultado } from "@/data/producto";
 
-const DORADO = "#D4B06A";
+const DORADO = "#D4B36A";
 
 export default function EspecificacionesCompletas({
   className = "",
@@ -35,13 +35,13 @@ export default function EspecificacionesCompletas({
     ? {
         wrapper: "bg-[#1C1C1C] divide-y divide-white/10",
         button: "hover:bg-white/[0.03]",
-        numero: "text-[#D4B06A]",
+        numero: "text-[#D4B36A]",
         titulo: "text-white",
-        plusIdle: "border-[#D4B06A]/30 text-[#D4B06A]",
-        plusOpen: "bg-[#D4B06A] border-[#D4B06A] text-[#1C1C1C]",
+        plusIdle: "border-[#D4B36A]/30 text-[#D4B36A]",
+        plusOpen: "bg-[#D4B36A] border-[#D4B36A] text-[#1C1C1C]",
         descripcion: "text-stone-400",
         beneficio: "text-stone-200",
-        check: "text-[#D4B06A]",
+        check: "text-[#D4B36A]",
         divider: "border-white/10",
         grupoWrapper: "border-white/10",
         grupoButton: "hover:bg-white/[0.03]",

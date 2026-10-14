@@ -59,7 +59,7 @@ export default function SearchableSelect({
           setQuery("");
         }}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]"
+        className="w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]"
       />
       {open && (
         <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-[#E5E5E5] rounded-lg shadow-lg">
@@ -77,7 +77,7 @@ export default function SearchableSelect({
                   setQuery("");
                 }}
                 className={`w-full text-left px-3 py-2 text-sm hover:bg-stone-50 ${
-                  o.value === value ? "bg-[#D4B06A]/10 font-bold text-[#2F2F2F]" : "text-stone-700"
+                  o.value === value ? "bg-[#D4B36A]/10 font-bold text-[#2F2F2F]" : "text-stone-700"
                 }`}
               >
                 {o.label}

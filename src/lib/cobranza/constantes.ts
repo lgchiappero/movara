@@ -129,7 +129,7 @@ export const ESTADO_ACUERDO_LABELS: Record<EstadoAcuerdo, string> = {
 
 export const ESTADO_ACUERDO_COLORS: Record<EstadoAcuerdo, string> = {
   pendiente: "bg-stone-100 text-stone-600",
-  parcial: "bg-[#D4B06A]/20 text-[#8a6a2e]",
+  parcial: "bg-[#D4B36A]/20 text-[#8a6d2e]",
   saldado: "bg-emerald-100 text-emerald-700",
   vencido: "bg-red-100 text-red-700",
 };

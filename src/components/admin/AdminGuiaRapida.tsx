@@ -58,7 +58,7 @@ export default function AdminGuiaRapida() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Abrir guía rápida"
-        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-[#D4B06A] text-white text-xl font-bold shadow-lg hover:bg-[#c19f5a] transition-colors flex items-center justify-center"
+        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-[#D4B36A] text-white text-xl font-bold shadow-lg hover:bg-[#c1a25a] transition-colors flex items-center justify-center"
       >
         ?
       </button>
@@ -86,7 +86,7 @@ export default function AdminGuiaRapida() {
             <div className="p-5 space-y-6">
               {SECCIONES.map((seccion) => (
                 <div key={seccion.titulo}>
-                  <h3 className="text-xs font-bold uppercase tracking-wide text-[#D4B06A] mb-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-[#D4B36A] mb-2">
                     {seccion.titulo}
                   </h3>
                   <ul className="space-y-1.5">

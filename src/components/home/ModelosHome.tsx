@@ -34,7 +34,7 @@ export default function ModelosHome({
           transition={{ duration: 0.6 }}
           className="text-center mb-14"
         >
-          <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-4 block">Catálogo</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B36A] mb-4 block">Catálogo</span>
           <h2 className="font-playfair font-medium text-3xl sm:text-4xl text-white mb-5">{titulo}</h2>
           <p className="text-stone-300 text-lg font-medium max-w-2xl mx-auto leading-relaxed">{subtitulo}</p>
         </motion.div>
@@ -51,7 +51,7 @@ export default function ModelosHome({
         <div className="text-center mt-12">
           <Link
             href="/modelos"
-            className="inline-flex items-center px-6 py-3 rounded-xl border border-[#D4B06A]/60 text-[#D4B06A] text-sm font-semibold hover:bg-[#D4B06A]/10 hover:border-[#D4B06A] transition-colors"
+            className="inline-flex items-center px-6 py-3 rounded-xl border border-[#D4B36A]/60 text-[#D4B36A] text-sm font-semibold hover:bg-[#D4B36A]/10 hover:border-[#D4B36A] transition-colors"
           >
             {ctaCatalogo}
           </Link>

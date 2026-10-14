@@ -176,7 +176,7 @@ export default function PipelineDetailPanel({
                 type="button"
                 disabled={converting}
                 onClick={convertir}
-                className="w-full py-2.5 bg-[#D4B06A] hover:bg-[#c19f5a] disabled:opacity-60 text-[#1a1a1a] font-bold text-sm rounded-xl transition-colors"
+                className="w-full py-2.5 bg-[#D4B36A] hover:bg-[#c1a25a] disabled:opacity-60 text-[#1a1a1a] font-bold text-sm rounded-xl transition-colors"
               >
                 {converting ? "Convirtiendo..." : "Convertir a cliente"}
               </button>

@@ -28,13 +28,13 @@ describe("ModelosHome", () => {
   it("sección oscura con eyebrow, título en Playfair, las cards y el link al catálogo", () => {
     const { container } = render(<ModelosHome modelos={MODELOS} />);
     expect(container.querySelector("section#modelos")).toHaveClass("bg-[#1A1A1A]");
-    expect(screen.getByText("Catálogo")).toHaveClass("uppercase", "text-[#D4B06A]");
+    expect(screen.getByText("Catálogo")).toHaveClass("uppercase", "text-[#D4B36A]");
     expect(screen.getByRole("heading", { level: 2, name: "Nuestros modelos" })).toHaveClass("font-playfair");
     expect(screen.getByRole("link", { name: /MOVARA Flex/ })).toHaveAttribute("href", "/modelos/flex");
     expect(screen.getByRole("link", { name: /MOVARA Duplex/ })).toHaveAttribute("href", "/modelos/movara-duplex-76m2");
     const catalogo = screen.getByRole("link", { name: "Ver catálogo completo" });
     expect(catalogo).toHaveAttribute("href", "/modelos");
-    expect(catalogo.className).toContain("border-[#D4B06A]");
+    expect(catalogo.className).toContain("border-[#D4B36A]");
   });
 
   it("usa los textos de Sanity si están cargados y tolera modelos null", () => {

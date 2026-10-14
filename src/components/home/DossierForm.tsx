@@ -100,16 +100,16 @@ const TOTAL_STEPS = 3;
 // ─── Style helpers ────────────────────────────────────────────────────────────
 
 const baseInput = "w-full bg-white/5 border text-white placeholder-stone-600 rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors";
-const selectCls = "w-full bg-[#2F2F2F] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#D4B06A]/50 transition-colors appearance-none";
+const selectCls = "w-full bg-[#2F2F2F] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#D4B36A]/50 transition-colors appearance-none";
 
 function inputCls(errors: FieldErrors, key: ValidatableField) {
   const err = errors[key];
-  if (err === undefined) return `${baseInput} border-white/10 focus:border-[#D4B06A]/50`;
+  if (err === undefined) return `${baseInput} border-white/10 focus:border-[#D4B36A]/50`;
   if (err) return `${baseInput} border-red-500/70 focus:border-red-500`;
   return `${baseInput} border-green-500/50 focus:border-green-500`;
 }
 
-const plainInputCls = `${baseInput} border-white/10 focus:border-[#D4B06A]/50`;
+const plainInputCls = `${baseInput} border-white/10 focus:border-[#D4B36A]/50`;
 
 // ─── WhatsApp icon ────────────────────────────────────────────────────────────
 
@@ -133,7 +133,7 @@ function TrustRow({ className = "" }: { className?: string }) {
     <div className={`flex flex-wrap items-center gap-x-5 gap-y-2 ${className}`}>
       {items.map(({ icon: Icon, label }) => (
         <span key={label} className="inline-flex items-center gap-1.5 text-stone-500 text-[11px] font-medium">
-          <Icon size={13} className="text-[#D4B06A]/70 shrink-0" />
+          <Icon size={13} className="text-[#D4B36A]/70 shrink-0" />
           {label}
         </span>
       ))}
@@ -281,7 +281,7 @@ export default function DossierForm({
           transition={{ duration: 0.6 }}
           className="max-w-2xl mx-auto text-center mb-12"
         >
-          <span className="text-[#D4B06A] text-xs font-semibold uppercase tracking-widest mb-4 block">
+          <span className="text-[#D4B36A] text-xs font-semibold uppercase tracking-widest mb-4 block">
             Carpeta de proyecto
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-4">
@@ -299,10 +299,10 @@ export default function DossierForm({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="max-w-2xl mx-auto mb-10 bg-gradient-to-b from-[#D4B06A]/10 to-transparent border border-[#D4B06A]/25 rounded-3xl p-8 sm:p-10 text-center"
+          className="max-w-2xl mx-auto mb-10 bg-gradient-to-b from-[#D4B36A]/10 to-transparent border border-[#D4B36A]/25 rounded-3xl p-8 sm:p-10 text-center"
         >
-          <div className="w-14 h-14 rounded-full bg-[#D4B06A]/15 flex items-center justify-center mx-auto mb-5">
-            <Phone size={22} className="text-[#D4B06A]" strokeWidth={2} />
+          <div className="w-14 h-14 rounded-full bg-[#D4B36A]/15 flex items-center justify-center mx-auto mb-5">
+            <Phone size={22} className="text-[#D4B36A]" strokeWidth={2} />
           </div>
           <h3 className="text-white font-bold text-2xl mb-2">Hablá con un asesor ahora</h3>
           <p className="text-stone-300 text-sm max-w-sm mx-auto mb-7 leading-relaxed">
@@ -312,7 +312,7 @@ export default function DossierForm({
             href={getWhatsAppUrl(waMsgAsesor, waNumber)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2.5 px-9 py-4 bg-[#D4B06A] hover:bg-[#BF9A52] text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-2xl hover:shadow-[#D4B06A]/20 hover:-translate-y-0.5 text-sm tracking-wide"
+            className="inline-flex items-center gap-2.5 px-9 py-4 bg-[#D4B36A] hover:bg-[#BF9D52] text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-2xl hover:shadow-[#D4B36A]/20 hover:-translate-y-0.5 text-sm tracking-wide"
           >
             <WhatsAppIcon className="w-4 h-4" />
             Hablar con un asesor
@@ -339,8 +339,8 @@ export default function DossierForm({
                 animate={{ opacity: 1 }}
                 className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 text-center"
               >
-                <div className="w-12 h-12 rounded-full bg-[#D4B06A]/15 flex items-center justify-center mx-auto mb-5">
-                  <span className="text-[#D4B06A] text-xl">✓</span>
+                <div className="w-12 h-12 rounded-full bg-[#D4B36A]/15 flex items-center justify-center mx-auto mb-5">
+                  <span className="text-[#D4B36A] text-xl">✓</span>
                 </div>
                 <h3 className="text-white font-bold text-lg mb-2">
                   {sentVia === "llamada" ? "¡Listo, te llamamos!" : "¡Consulta recibida!"}
@@ -385,7 +385,7 @@ export default function DossierForm({
                 <ul className="space-y-2.5 mb-6">
                   {(content?.items?.length ? content.items : DEFAULT_ITEMS).map((item) => (
                     <li key={item} className="flex items-start gap-2.5 text-stone-400 text-xs leading-snug">
-                      <span className="mt-0.5 w-4 h-4 rounded-full bg-[#D4B06A]/15 flex items-center justify-center text-[#D4B06A] text-[9px] font-bold shrink-0">✓</span>
+                      <span className="mt-0.5 w-4 h-4 rounded-full bg-[#D4B36A]/15 flex items-center justify-center text-[#D4B36A] text-[9px] font-bold shrink-0">✓</span>
                       {item}
                     </li>
                   ))}
@@ -400,7 +400,7 @@ export default function DossierForm({
                   </div>
                   <div className="flex gap-1.5">
                     {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((i) => (
-                      <div key={i} className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i <= step ? "bg-[#D4B06A]" : "bg-white/10"}`} />
+                      <div key={i} className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i <= step ? "bg-[#D4B36A]" : "bg-white/10"}`} />
                     ))}
                   </div>
                 </div>
@@ -613,7 +613,7 @@ export default function DossierForm({
                         type="button"
                         onClick={handleQuickCall}
                         disabled={status === "sending"}
-                        className="text-stone-500 hover:text-[#D4B06A] text-xs underline underline-offset-2 transition-colors disabled:opacity-50"
+                        className="text-stone-500 hover:text-[#D4B36A] text-xs underline underline-offset-2 transition-colors disabled:opacity-50"
                       >
                         Prefiero que me llamen, sin completar el resto
                       </button>

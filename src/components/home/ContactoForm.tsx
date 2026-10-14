@@ -69,7 +69,7 @@ export default function ContactoForm({
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           {/* Copy */}
           <div>
-            <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-3 block">
+            <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B36A] mb-3 block">
               Asesoramiento privado
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-4">
@@ -219,7 +219,7 @@ export default function ContactoForm({
                 <button
                   type="submit"
                   disabled={status === "sending"}
-                  className="w-full py-3.5 bg-[#D4B06A] hover:bg-[#BF9A52] disabled:opacity-50 disabled:cursor-not-allowed text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-[#D4B06A]/25 text-sm tracking-wide"
+                  className="w-full py-3.5 bg-[#D4B36A] hover:bg-[#BF9D52] disabled:opacity-50 disabled:cursor-not-allowed text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-[#D4B36A]/25 text-sm tracking-wide"
                 >
                   {status === "sending" ? "Enviando…" : (content?.textoCTA ?? "Solicitar asesoramiento privado")}
                 </button>

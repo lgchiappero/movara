@@ -37,7 +37,7 @@ export default async function AdminRecibosPage() {
         </div>
         <Link
           href="/admin/recibos/nuevo"
-          className="shrink-0 px-3 py-1.5 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
+          className="shrink-0 px-3 py-1.5 bg-[#D4B36A] hover:bg-[#c1a257] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
         >
           Nuevo recibo
         </Link>

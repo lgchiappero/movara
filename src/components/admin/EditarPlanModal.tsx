@@ -6,7 +6,7 @@ import { sumaImportes } from "@/lib/cobranza/calc";
 import type { AcuerdoConDetalle } from "@/lib/cobranza/types";
 
 const inputClass =
-  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A] disabled:bg-stone-50";
+  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A] disabled:bg-stone-50";
 const labelClass = "text-xs font-medium text-stone-500";
 const EPSILON = 0.01;
 
@@ -221,7 +221,7 @@ export default function EditarPlanModal({
               type="button"
               disabled={busy}
               onClick={guardar}
-              className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] disabled:opacity-50 text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
+              className="px-4 py-2 bg-[#D4B36A] hover:bg-[#c1a257] disabled:opacity-50 text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
             >
               {busy ? "Guardando…" : "Guardar cambios"}
             </button>

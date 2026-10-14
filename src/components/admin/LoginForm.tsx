@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { adminLoginSchema } from "@/lib/validators/admin-login";
 
 const inputClass =
-  "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
+  "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -73,7 +73,7 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full py-3 bg-[#D4B06A] hover:bg-[#c19f5a] disabled:opacity-60 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
+        className="w-full py-3 bg-[#D4B36A] hover:bg-[#c1a25a] disabled:opacity-60 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
       >
         {submitting ? "Ingresando..." : "Ingresar"}
       </button>

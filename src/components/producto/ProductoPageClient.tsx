@@ -21,7 +21,7 @@ export default function ProductoPageClient() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-4"
+            className="text-xs font-semibold uppercase tracking-widest text-[#D4B36A] mb-4"
           >
             Ficha técnica
           </motion.p>
@@ -59,7 +59,7 @@ export default function ProductoPageClient() {
           className="py-12 border-t border-white/10"
         >
           <div className="flex items-start gap-5">
-            <span className="shrink-0 w-12 h-12 rounded-xl bg-[#D4B06A]/10 border border-[#D4B06A]/30 flex items-center justify-center text-[#D4B06A] font-bold text-sm">
+            <span className="shrink-0 w-12 h-12 rounded-xl bg-[#D4B36A]/10 border border-[#D4B36A]/30 flex items-center justify-center text-[#D4B36A] font-bold text-sm">
               10
             </span>
             <div className="flex-1 min-w-0">
@@ -74,7 +74,7 @@ export default function ProductoPageClient() {
                     className="flex items-center justify-between gap-4 py-3.5 px-4 border border-white/10 rounded-xl"
                   >
                     <span className="text-sm text-stone-200">{e.texto}</span>
-                    <span className="text-sm font-bold text-[#D4B06A] whitespace-nowrap">{e.precio}</span>
+                    <span className="text-sm font-bold text-[#D4B36A] whitespace-nowrap">{e.precio}</span>
                   </div>
                 ))}
               </div>
@@ -100,7 +100,7 @@ export default function ProductoPageClient() {
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/configurador"
-              className="px-8 py-3.5 bg-[#D4B06A] hover:bg-[#BF9A52] text-[#1C1C1C] font-bold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-[#D4B06A]/25 hover:-translate-y-0.5"
+              className="px-8 py-3.5 bg-[#D4B36A] hover:bg-[#BF9D52] text-[#1C1C1C] font-bold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-[#D4B36A]/25 hover:-translate-y-0.5"
             >
               Configurar mi MOVARA
             </Link>

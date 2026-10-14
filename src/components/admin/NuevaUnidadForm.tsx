@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MODELOS_UNIDAD } from "@/lib/envios/constantes";
 
 const inputClass =
-  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
+  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
 
 type Cliente = { id: string; nombre: string };
 type Envio = { id: string; numeroPI: string | null };
@@ -54,7 +54,7 @@ export default function NuevaUnidadForm({ clientes, envios }: { clientes: Client
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="px-5 py-3 bg-[#D4B06A] hover:bg-[#c19f5a] text-[#1a1a1a] font-bold text-sm rounded-xl transition-colors"
+        className="px-5 py-3 bg-[#D4B36A] hover:bg-[#c1a25a] text-[#1a1a1a] font-bold text-sm rounded-xl transition-colors"
       >
         + Nueva unidad
       </button>
@@ -129,7 +129,7 @@ export default function NuevaUnidadForm({ clientes, envios }: { clientes: Client
           type="button"
           disabled={busy || !clienteId}
           onClick={crear}
-          className="px-5 py-2.5 bg-[#D4B06A] hover:bg-[#c19f5a] disabled:opacity-50 text-[#1a1a1a] font-bold text-sm rounded-xl transition-colors"
+          className="px-5 py-2.5 bg-[#D4B36A] hover:bg-[#c1a25a] disabled:opacity-50 text-[#1a1a1a] font-bold text-sm rounded-xl transition-colors"
         >
           {busy ? "Creando..." : "Crear unidad"}
         </button>

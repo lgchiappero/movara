@@ -52,7 +52,7 @@ function buildAdminHtml(lead: LeadData, receivedAt: string) {
 <body style="margin:0;padding:20px;background:#f4f4f4;font-family:Arial,sans-serif;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
     <div style="background:#2F2F2F;padding:20px 24px;">
-      <p style="margin:0;color:#D4B06A;font-size:18px;font-weight:bold;">🏠 Nuevo lead MOVARA</p>
+      <p style="margin:0;color:#D4B36A;font-size:18px;font-weight:bold;">🏠 Nuevo lead MOVARA</p>
     </div>
     <div style="padding:24px;">
       <table style="width:100%;border-collapse:collapse;font-size:14px;">
@@ -84,7 +84,7 @@ function buildClientHtml(lead: LeadData) {
 <body style="margin:0;padding:20px;background:#f4f4f4;font-family:Arial,sans-serif;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
     <div style="background:#2F2F2F;padding:20px 24px;">
-      <p style="margin:0;color:#D4B06A;font-size:18px;font-weight:bold;">MOVARA — Espacios Modulares</p>
+      <p style="margin:0;color:#D4B36A;font-size:18px;font-weight:bold;">MOVARA — Espacios Modulares</p>
     </div>
     <div style="padding:24px;">
       <p style="font-size:16px;color:#222;">Hola ${escapeHtml(nombre)},</p>
@@ -97,7 +97,7 @@ function buildClientHtml(lead: LeadData) {
           <td style="padding:8px 0;color:#222">${escapeHtml(value)}</td>
         </tr>`).join("")}
       </table>
-      ${lead.mensaje ? `<div style="margin-top:16px;padding:12px;background:#f9f5ee;border-left:4px solid #D4B06A;border-radius:4px;font-size:13px;color:#555;white-space:pre-wrap">${escapeHtml(lead.mensaje)}</div>` : ""}
+      ${lead.mensaje ? `<div style="margin-top:16px;padding:12px;background:#f9f5ee;border-left:4px solid #D4B36A;border-radius:4px;font-size:13px;color:#555;white-space:pre-wrap">${escapeHtml(lead.mensaje)}</div>` : ""}
       <p style="color:#888;font-size:13px;margin-top:24px;">Ante cualquier duda podés responder este email.</p>
       <p style="color:#888;font-size:13px;">— El equipo MOVARA</p>
     </div>

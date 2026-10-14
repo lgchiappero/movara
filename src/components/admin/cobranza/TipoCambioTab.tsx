@@ -5,7 +5,7 @@ import { useToast } from "@/components/admin/Toast";
 import type { TipoCambioRow } from "@/lib/cobranza/types";
 
 const inputClass =
-  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
+  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
 
 function hoyISODate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -78,7 +78,7 @@ export default function TipoCambioTab({
         <button
           type="button"
           onClick={() => setAbierto((v) => !v)}
-          className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors whitespace-nowrap"
+          className="px-4 py-2 bg-[#D4B36A] hover:bg-[#c1a257] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors whitespace-nowrap"
         >
           Cargar cotización del día
         </button>

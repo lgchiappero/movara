@@ -1,6 +1,6 @@
 import { StyleSheet } from "@react-pdf/renderer";
 
-export const GOLD = "#D4B06A";
+export const GOLD = "#D4B36A";
 export const DARK = "#2F2F2F";
 
 export const pedidoPdfStyles = StyleSheet.create({

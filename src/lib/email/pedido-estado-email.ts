@@ -21,7 +21,7 @@ export function linkSeguimiento(token: string): string {
 
 const MENSAJES: Partial<Record<EstadoPedido, (data: EstadoEmailData) => string>> = {
   confirmado: (data) =>
-    `Tu pedido${data.numeroPedido ? ` ${data.numeroPedido}` : ""} está confirmado. Seguilo en <a href="${linkSeguimiento(data.tokenSeguimiento)}" style="color:#D4B06A;">este link</a> (es personal, no lo compartas).`,
+    `Tu pedido${data.numeroPedido ? ` ${data.numeroPedido}` : ""} está confirmado. Seguilo en <a href="${linkSeguimiento(data.tokenSeguimiento)}" style="color:#D4B36A;">este link</a> (es personal, no lo compartas).`,
   en_produccion: (data) =>
     `Tu MOVARA está en producción. Fecha estimada de despacho: ${fechaEs(data.fechaDespacho)}`,
   en_transito: (data) =>
@@ -54,7 +54,7 @@ export function buildEstadoEmail(
 <body style="margin:0;padding:20px;background:#f4f4f4;font-family:Arial,sans-serif;">
   <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
     <div style="background:#2F2F2F;padding:20px 24px;">
-      <p style="margin:0;color:#D4B06A;font-size:18px;font-weight:bold;">MOVARA</p>
+      <p style="margin:0;color:#D4B36A;font-size:18px;font-weight:bold;">MOVARA</p>
     </div>
     <div style="padding:24px;">
       <p style="margin:0 0 12px;color:#222;font-size:15px;">Hola ${data.clienteNombre},</p>

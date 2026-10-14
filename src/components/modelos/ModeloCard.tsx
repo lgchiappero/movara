@@ -61,7 +61,7 @@ export default function ModeloCard({
     <div
       data-modelo-card
       className={`group h-full flex flex-col rounded-2xl border border-white/10 bg-[#1E1E1E] overflow-hidden transition-colors duration-300 ${
-        proximamente ? "" : "hover:border-[#D4B06A]/40"
+        proximamente ? "" : "hover:border-[#D4B36A]/40"
       }`}
     >
       <div className="relative aspect-[4/3] bg-[#141414] overflow-hidden">
@@ -89,12 +89,12 @@ export default function ModeloCard({
       </div>
 
       <div className="p-6 sm:p-8 flex flex-col flex-1">
-        <span aria-hidden="true" className="block w-8 h-px bg-[#D4B06A] mb-4" />
+        <span aria-hidden="true" className="block w-8 h-px bg-[#D4B36A] mb-4" />
         <h3 className="font-playfair font-medium text-2xl sm:text-3xl text-white leading-tight">{nombre}</h3>
         {tamanos && <p className="mt-2 text-xs tracking-widest text-stone-500">{tamanos}</p>}
         {modelo.tagline && <p className="mt-3 text-sm text-stone-400 leading-relaxed">{modelo.tagline}</p>}
         {!proximamente && (
-          <span className="mt-auto pt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#D4B06A]">
+          <span className="mt-auto pt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#D4B36A]">
             {ctaLabel}
             <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">
               →
@@ -113,7 +113,7 @@ export default function ModeloCard({
     );
   }
   return (
-    <Link href={hrefModelo(modelo.slug)} className="block h-full rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#D4B06A]">
+    <Link href={hrefModelo(modelo.slug)} className="block h-full rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#D4B36A]">
       {card}
     </Link>
   );

@@ -38,7 +38,7 @@ function layout(preheader: string, bodyHtml: string): string {
 <body style="margin:0;padding:20px;background:#f4f4f4;font-family:Arial,sans-serif;">
   <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
     <div style="background:#2F2F2F;padding:20px 24px;">
-      <p style="margin:0;color:#D4B06A;font-size:18px;font-weight:bold;">${preheader}</p>
+      <p style="margin:0;color:#D4B36A;font-size:18px;font-weight:bold;">${preheader}</p>
     </div>
     <div style="padding:24px;">
       ${bodyHtml}
@@ -57,11 +57,11 @@ export function buildConfirmacionClienteEmail(cita: CitaEmailData): { subject: s
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:16px;">
       <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px 0;color:#888;width:110px">Fecha</td><td style="padding:8px 0;color:#222;font-weight:600">${fechaEs(cita.fecha)}</td></tr>
       <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px 0;color:#888">Horario</td><td style="padding:8px 0;color:#222;font-weight:600">${cita.horario} hs</td></tr>
-      <tr><td style="padding:8px 0;color:#888">Dónde</td><td style="padding:8px 0;color:#222">${SHOWROOM_DIRECCION}<br><a href="${SHOWROOM_MAPS_URL}" style="color:#D4B06A;font-size:13px;">Cómo llegar (Google Maps)</a></td></tr>
+      <tr><td style="padding:8px 0;color:#888">Dónde</td><td style="padding:8px 0;color:#222">${SHOWROOM_DIRECCION}<br><a href="${SHOWROOM_MAPS_URL}" style="color:#D4B36A;font-size:13px;">Cómo llegar (Google Maps)</a></td></tr>
     </table>
     <p style="margin:0 0 16px;color:#555;font-size:14px;line-height:1.6;">Te pedimos llegar 5 minutos antes de la hora agendada.</p>
-    <div style="padding:14px 16px;background:#f9f5ee;border-left:4px solid #D4B06A;border-radius:4px;font-size:13px;color:#555;line-height:1.6;">
-      Si no podés asistir, cancelá tu turno en <a href="${cancelUrl(cita.id)}" style="color:#D4B06A;">movara.com.ar/agendar/cancelar/${cita.id}</a> o avisanos por WhatsApp al ${SHOWROOM_WHATSAPP}. Es importante porque hay otras personas esperando ese turno.
+    <div style="padding:14px 16px;background:#f9f5ee;border-left:4px solid #D4B36A;border-radius:4px;font-size:13px;color:#555;line-height:1.6;">
+      Si no podés asistir, cancelá tu turno en <a href="${cancelUrl(cita.id)}" style="color:#D4B36A;">movara.com.ar/agendar/cancelar/${cita.id}</a> o avisanos por WhatsApp al ${SHOWROOM_WHATSAPP}. Es importante porque hay otras personas esperando ese turno.
     </div>
     <p style="margin:20px 0 0;color:#888;font-size:13px;">— El equipo MOVARA</p>
     `
@@ -108,11 +108,11 @@ export function buildRecordatorioEmail(cita: CitaEmailData): { subject: string; 
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:16px;">
       <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px 0;color:#888;width:110px">Fecha</td><td style="padding:8px 0;color:#222;font-weight:600">${fechaEs(cita.fecha)}</td></tr>
       <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px 0;color:#888">Horario</td><td style="padding:8px 0;color:#222;font-weight:600">${cita.horario} hs</td></tr>
-      <tr><td style="padding:8px 0;color:#888">Dónde</td><td style="padding:8px 0;color:#222">${SHOWROOM_DIRECCION}<br><a href="${SHOWROOM_MAPS_URL}" style="color:#D4B06A;font-size:13px;">Cómo llegar (Google Maps)</a></td></tr>
+      <tr><td style="padding:8px 0;color:#888">Dónde</td><td style="padding:8px 0;color:#222">${SHOWROOM_DIRECCION}<br><a href="${SHOWROOM_MAPS_URL}" style="color:#D4B36A;font-size:13px;">Cómo llegar (Google Maps)</a></td></tr>
     </table>
     <p style="margin:0 0 16px;color:#555;font-size:14px;line-height:1.6;">Te pedimos llegar 5 minutos antes de la hora agendada.</p>
-    <div style="padding:14px 16px;background:#f9f5ee;border-left:4px solid #D4B06A;border-radius:4px;font-size:13px;color:#555;line-height:1.6;">
-      Si no podés asistir, cancelá tu turno en <a href="${cancelUrl(cita.id)}" style="color:#D4B06A;">movara.com.ar/agendar/cancelar/${cita.id}</a> o avisanos por WhatsApp al ${SHOWROOM_WHATSAPP}.
+    <div style="padding:14px 16px;background:#f9f5ee;border-left:4px solid #D4B36A;border-radius:4px;font-size:13px;color:#555;line-height:1.6;">
+      Si no podés asistir, cancelá tu turno en <a href="${cancelUrl(cita.id)}" style="color:#D4B36A;">movara.com.ar/agendar/cancelar/${cita.id}</a> o avisanos por WhatsApp al ${SHOWROOM_WHATSAPP}.
     </div>
     <p style="margin:20px 0 0;color:#888;font-size:13px;">— El equipo MOVARA</p>
     `
@@ -127,7 +127,7 @@ export function buildCancelacionClienteEmail(cita: CitaEmailData): { subject: st
     `
     <p style="margin:0 0 12px;color:#222;font-size:15px;">Hola ${cita.nombre},</p>
     <p style="margin:0 0 ${motivo ? "12px" : "0"};color:#555;font-size:15px;line-height:1.6;">Confirmamos que cancelaste tu visita del ${fechaEs(cita.fecha)} a las ${cita.horario} hs. Cuando quieras, podés agendar un nuevo turno en movara.com.ar/agendar.</p>
-    ${motivo ? `<div style="padding:12px 16px;background:#f9f5ee;border-left:4px solid #D4B06A;border-radius:4px;font-size:13px;color:#555;">Motivo: ${motivo}</div>` : ""}
+    ${motivo ? `<div style="padding:12px 16px;background:#f9f5ee;border-left:4px solid #D4B36A;border-radius:4px;font-size:13px;color:#555;">Motivo: ${motivo}</div>` : ""}
     <p style="margin:20px 0 0;color:#888;font-size:13px;">— El equipo MOVARA</p>
     `
   );

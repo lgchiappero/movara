@@ -31,7 +31,7 @@ export default async function CatalogPage() {
     <div className="bg-[#1A1A1A] min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-24">
         <header className="text-center mb-14">
-          <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-4 block">Catálogo completo</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B36A] mb-4 block">Catálogo completo</span>
           <h1 className="font-playfair font-medium text-4xl lg:text-5xl text-white">Nuestros modelos</h1>
           <p className="mt-5 text-stone-300 text-lg font-medium max-w-2xl mx-auto leading-relaxed">
             Todos los modelos son personalizables en distribución, terminaciones y colores. Entregamos en toda la

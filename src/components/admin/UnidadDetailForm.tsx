@@ -74,7 +74,7 @@ function EstadoTimeline({ estado }: { estado: string }) {
             <div className="flex flex-col items-center gap-1">
               <div
                 className={`w-3 h-3 rounded-full ${
-                  esActual ? "bg-[#D4B06A] ring-2 ring-[#D4B06A]/30" : estaCompleto ? "bg-sage-500" : "bg-stone-200"
+                  esActual ? "bg-[#D4B36A] ring-2 ring-[#D4B36A]/30" : estaCompleto ? "bg-sage-500" : "bg-stone-200"
                 }`}
               />
               <span

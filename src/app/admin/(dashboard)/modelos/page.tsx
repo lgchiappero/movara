@@ -2,7 +2,7 @@ export default function AdminModelosPage() {
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-[#D4B06A] text-xs font-bold uppercase tracking-widest mb-1">
+        <p className="text-[#D4B36A] text-xs font-bold uppercase tracking-widest mb-1">
           Panel MOVARA
         </p>
         <h1 className="text-2xl font-bold text-[#1a1a1a]">Modelos</h1>

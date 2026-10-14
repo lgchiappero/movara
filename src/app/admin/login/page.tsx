@@ -13,7 +13,7 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
           <Image src="/Logo.jpeg" alt="MOVARA" width={56} height={56} className="rounded-xl mb-4" />
-          <p className="text-[#D4B06A] text-xs font-bold uppercase tracking-widest">Panel MOVARA</p>
+          <p className="text-[#D4B36A] text-xs font-bold uppercase tracking-widest">Panel MOVARA</p>
           <h1 className="text-xl font-bold text-white mt-1">Ingresar</h1>
         </div>
 

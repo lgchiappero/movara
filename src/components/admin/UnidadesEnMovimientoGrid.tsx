@@ -70,7 +70,7 @@ export default function UnidadesEnMovimientoGrid({
             aria-selected={tab === "activas"}
             onClick={() => setTab("activas")}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
-              tab === "activas" ? "bg-[#D4B06A] text-[#2F2F2F]" : "bg-stone-100 text-stone-500 hover:bg-stone-200"
+              tab === "activas" ? "bg-[#D4B36A] text-[#2F2F2F]" : "bg-stone-100 text-stone-500 hover:bg-stone-200"
             }`}
           >
             Activas ({activas.length})
@@ -81,7 +81,7 @@ export default function UnidadesEnMovimientoGrid({
             aria-selected={tab === "entregadas"}
             onClick={() => setTab("entregadas")}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
-              tab === "entregadas" ? "bg-[#D4B06A] text-[#2F2F2F]" : "bg-stone-100 text-stone-500 hover:bg-stone-200"
+              tab === "entregadas" ? "bg-[#D4B36A] text-[#2F2F2F]" : "bg-stone-100 text-stone-500 hover:bg-stone-200"
             }`}
           >
             Entregadas ({entregadas.length})
@@ -92,7 +92,7 @@ export default function UnidadesEnMovimientoGrid({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar por cliente, N° unidad o N° PI..."
-          className="w-full sm:w-72 px-3 py-2 rounded-lg border border-[#E5E5E5] text-sm focus:outline-none focus:border-[#D4B06A]"
+          className="w-full sm:w-72 px-3 py-2 rounded-lg border border-[#E5E5E5] text-sm focus:outline-none focus:border-[#D4B36A]"
         />
       </div>
 

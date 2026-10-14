@@ -83,8 +83,8 @@ export default function Preventa({ content }: { content?: PreventaContent | null
           <div className="grid sm:grid-cols-3 gap-4 mb-10 text-left">
             {(content?.beneficios?.length ? content.beneficios : DEFAULT_BENEFICIOS).map((b) => (
               <div key={b._key ?? b.titulo} className="bg-white/5 rounded-xl p-6 border border-white/10 text-left">
-                <div className="w-6 h-6 rounded-full bg-[#D4B06A]/20 flex items-center justify-center mb-4">
-                  <span className="text-[#D4B06A] text-xs font-bold">✓</span>
+                <div className="w-6 h-6 rounded-full bg-[#D4B36A]/20 flex items-center justify-center mb-4">
+                  <span className="text-[#D4B36A] text-xs font-bold">✓</span>
                 </div>
                 <p className="text-white text-sm font-semibold mb-1.5">{b.titulo}</p>
                 <p className="text-stone-500 text-xs leading-relaxed">{b.descripcion}</p>
@@ -101,9 +101,9 @@ export default function Preventa({ content }: { content?: PreventaContent | null
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.07 }}
-                className="bg-[#2F2F2F] border border-[#D4B06A]/20 rounded-2xl p-5 text-left hover:border-[#D4B06A]/40 hover:bg-[#353535] transition-all duration-200"
+                className="bg-[#2F2F2F] border border-[#D4B36A]/20 rounded-2xl p-5 text-left hover:border-[#D4B36A]/40 hover:bg-[#353535] transition-all duration-200"
               >
-                <Icon size={48} className="text-[#D4B06A] mb-4" strokeWidth={1.25} />
+                <Icon size={48} className="text-[#D4B36A] mb-4" strokeWidth={1.25} />
                 <p className="text-white font-bold text-sm mb-1 leading-snug">{titulo}</p>
                 <p className="text-stone-500 text-xs leading-relaxed">{descripcion}</p>
               </motion.div>
@@ -112,7 +112,7 @@ export default function Preventa({ content }: { content?: PreventaContent | null
 
           <a
             href="#dossier"
-            className="inline-flex items-center gap-2 px-9 py-4 bg-[#D4B06A] hover:bg-[#BF9A52] text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-2xl hover:shadow-[#D4B06A]/20 hover:-translate-y-0.5 text-sm tracking-wide"
+            className="inline-flex items-center gap-2 px-9 py-4 bg-[#D4B36A] hover:bg-[#BF9D52] text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-2xl hover:shadow-[#D4B36A]/20 hover:-translate-y-0.5 text-sm tracking-wide"
           >
             {content?.textoCierre ?? "Quiero mi precio de lanzamiento"}
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

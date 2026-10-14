@@ -6,7 +6,7 @@ import ResumenCierre from "@/components/admin/cobranza/ResumenCierre";
 import type { CierreRow } from "@/lib/cobranza/types";
 
 const inputClass =
-  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
+  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
 
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -78,7 +78,7 @@ export default function CierresTab({
           <button
             type="button"
             onClick={() => setAbierto((v) => !v)}
-            className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
+            className="px-4 py-2 bg-[#D4B36A] hover:bg-[#c1a257] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
           >
             Cerrar mes
           </button>

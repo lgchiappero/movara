@@ -73,7 +73,7 @@ function FaqTablaComparativa({ tabla }: { tabla: FaqTabla }) {
                 <th
                   key={i}
                   className={`text-left font-semibold px-3.5 py-2.5 ${
-                    esMovara ? "bg-[#D4B06A] text-[#1C1C1C]" : "bg-stone-50 text-stone-600"
+                    esMovara ? "bg-[#D4B36A] text-[#1C1C1C]" : "bg-stone-50 text-stone-600"
                   }`}
                 >
                   {col || " "}
@@ -91,7 +91,7 @@ function FaqTablaComparativa({ tabla }: { tabla: FaqTabla }) {
                   <td
                     key={ci}
                     className={`px-3.5 py-2.5 align-top leading-relaxed border-t border-stone-100 ${
-                      esMovara ? "bg-[#D4B06A]/10 text-[#2F2F2F] font-medium" : "text-stone-500"
+                      esMovara ? "bg-[#D4B36A]/10 text-[#2F2F2F] font-medium" : "text-stone-500"
                     }`}
                   >
                     {celda}

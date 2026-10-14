@@ -51,7 +51,7 @@ const CITA_ESTADO_LABELS: Record<string, string> = {
 };
 
 const CITA_ESTADO_COLORS: Record<string, string> = {
-  confirmada: "bg-[#D4B06A]/20 text-[#8a6a2e]",
+  confirmada: "bg-[#D4B36A]/20 text-[#8a6d2e]",
   cancelada: "bg-stone-200 text-stone-500",
   completada: "bg-emerald-100 text-emerald-700",
 };
@@ -349,7 +349,7 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-[#D4B06A] text-xs font-bold uppercase tracking-widest mb-1">Panel MOVARA</p>
+        <p className="text-[#D4B36A] text-xs font-bold uppercase tracking-widest mb-1">Panel MOVARA</p>
         <h1 className="text-2xl font-bold text-[#1a1a1a]">Dashboard</h1>
       </div>
 
@@ -573,7 +573,7 @@ export default async function AdminDashboardPage() {
             ))}
           </ul>
         )}
-        <Link href="/admin/pipeline" className="inline-block mt-4 text-sm text-[#D4B06A] font-bold hover:underline">
+        <Link href="/admin/pipeline" className="inline-block mt-4 text-sm text-[#D4B36A] font-bold hover:underline">
           Ver pipeline completo →
         </Link>
       </div>
@@ -744,7 +744,7 @@ export default async function AdminDashboardPage() {
           <Link
             key={item.href}
             href={item.href}
-            className="bg-white rounded-2xl border border-[#E5E5E5] p-5 text-center hover:border-[#D4B06A] transition-colors"
+            className="bg-white rounded-2xl border border-[#E5E5E5] p-5 text-center hover:border-[#D4B36A] transition-colors"
           >
             <span className="text-2xl" aria-hidden>
               {item.icon}

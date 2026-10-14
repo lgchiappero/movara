@@ -51,7 +51,7 @@ export default function NuevaCategoria({ content }: { content?: NuevaCategoriaCo
           transition={{ duration: 0.6 }}
           className="text-center mb-20"
         >
-          <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-5 block">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B36A] mb-5 block">
             Una nueva categoría
           </span>
           <h2 className="text-4xl sm:text-5xl font-bold text-[#2F2F2F] leading-tight max-w-3xl mx-auto">
@@ -69,10 +69,10 @@ export default function NuevaCategoria({ content }: { content?: NuevaCategoriaCo
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.12 }}
               className={`rounded-2xl p-8 lg:p-10 border-2 ${
-                item.destacado ? "bg-[#2F2F2F] border-[#D4B06A]" : "bg-white border-stone-100"
+                item.destacado ? "bg-[#2F2F2F] border-[#D4B36A]" : "bg-white border-stone-100"
               }`}
             >
-              <div className={`w-8 h-px mb-8 ${item.destacado ? "bg-[#D4B06A]" : "bg-stone-200"}`} />
+              <div className={`w-8 h-px mb-8 ${item.destacado ? "bg-[#D4B36A]" : "bg-stone-200"}`} />
               <h3
                 className={`font-bold text-lg mb-5 leading-snug ${
                   item.destacado

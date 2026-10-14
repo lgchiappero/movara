@@ -20,7 +20,7 @@ export default async function AdminUsuariosPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <p className="text-[#D4B06A] text-xs font-bold uppercase tracking-widest mb-1">
+        <p className="text-[#D4B36A] text-xs font-bold uppercase tracking-widest mb-1">
           Panel MOVARA
         </p>
         <h1 className="text-2xl font-bold text-[#1a1a1a]">Usuarios</h1>

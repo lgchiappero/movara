@@ -64,11 +64,11 @@ describe("DolorConvencional", () => {
     const cards = screen.getAllByRole("article");
     expect(cards).toHaveLength(6);
     cards.forEach((card, i) => {
-      expect(within(card).getByText(String(i + 1).padStart(2, "0"))).toHaveClass("text-[#D4B06A]");
+      expect(within(card).getByText(String(i + 1).padStart(2, "0"))).toHaveClass("text-[#D4B36A]");
       expect(card.className).toContain("hover:scale-[1.02]");
     });
     const sep = screen.getByText("MOVARA existe para que esto no te pase a vos.");
-    expect(sep).toHaveClass("font-playfair", "italic", "text-[#D4B06A]");
+    expect(sep).toHaveClass("font-playfair", "italic", "text-[#D4B36A]");
   });
 
   it("las descripciones se limitan a 2 líneas", () => {

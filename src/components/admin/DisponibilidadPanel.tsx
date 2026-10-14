@@ -59,7 +59,7 @@ function estadoVisualDia(
 
 const ESTILO_DIA: Record<EstadoVisual, string> = {
   pasado: "bg-stone-50 text-stone-300 cursor-not-allowed",
-  "con-citas": "bg-[#D4B06A] text-[#2F2F2F] hover:bg-[#c19f5a]",
+  "con-citas": "bg-[#D4B36A] text-[#2F2F2F] hover:bg-[#c1a25a]",
   "sin-citas": "bg-[#e6f7f1] text-[#2F2F2F] hover:bg-[#d3f0e6]",
   domingo: "bg-[#f7f7f7] text-stone-300 hover:bg-stone-100",
   deshabilitado: "bg-[#e5e5e5] text-stone-400 hover:bg-stone-300",
@@ -98,7 +98,7 @@ function MesGrid({
           type="button"
           disabled={habilitando}
           onClick={() => onHabilitarMes(anio, mesIdx0 + 1)}
-          className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-[#D4B06A] hover:bg-[#c19f5a] disabled:opacity-60 text-[#2F2F2F] transition-colors"
+          className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-[#D4B36A] hover:bg-[#c1a25a] disabled:opacity-60 text-[#2F2F2F] transition-colors"
         >
           {habilitando && (
             <span className="w-3 h-3 border-2 border-[#2F2F2F]/40 border-t-[#2F2F2F] rounded-full animate-spin" />
@@ -146,7 +146,7 @@ function MesGrid({
       </div>
 
       <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-[10px] text-stone-500">
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#D4B06A] inline-block" /> Con citas</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#D4B36A] inline-block" /> Con citas</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#e6f7f1] inline-block" /> Habilitado</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#e5e5e5] inline-block" /> Deshabilitado</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#f7f7f7] border border-stone-200 inline-block" /> Domingo</span>
@@ -377,7 +377,7 @@ export default function DisponibilidadPanel({
                   <button
                     type="button"
                     onClick={() => abrirDia(d.fechaKey)}
-                    className="text-[#D4B06A] font-medium text-xs hover:underline"
+                    className="text-[#D4B36A] font-medium text-xs hover:underline"
                   >
                     Editar
                   </button>
@@ -398,7 +398,7 @@ export default function DisponibilidadPanel({
       {diaEditando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setDiaEditando(null)}>
           <div
-            className="bg-white rounded-2xl border border-[#D4B06A] p-5 space-y-4 w-full max-w-sm"
+            className="bg-white rounded-2xl border border-[#D4B36A] p-5 space-y-4 w-full max-w-sm"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -431,7 +431,7 @@ export default function DisponibilidadPanel({
                     <label
                       key={h}
                       className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium border cursor-pointer ${
-                        activo ? "border-[#D4B06A] bg-[#D4B06A]/10 text-[#8a6a2e]" : "border-[#E5E5E5] text-stone-500"
+                        activo ? "border-[#D4B36A] bg-[#D4B36A]/10 text-[#8a6d2e]" : "border-[#E5E5E5] text-stone-500"
                       }`}
                     >
                       <input
@@ -461,7 +461,7 @@ export default function DisponibilidadPanel({
                 type="button"
                 disabled={busyDia}
                 onClick={() => guardarDia(diaEditando, habilitadaEdit, habilitadaEdit ? Array.from(horariosEdit) : [])}
-                className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f5a] disabled:opacity-50 text-[#2F2F2F] font-bold text-xs rounded-xl transition-colors"
+                className="px-4 py-2 bg-[#D4B36A] hover:bg-[#c1a25a] disabled:opacity-50 text-[#2F2F2F] font-bold text-xs rounded-xl transition-colors"
               >
                 {busyDia ? "Guardando…" : "Guardar"}
               </button>

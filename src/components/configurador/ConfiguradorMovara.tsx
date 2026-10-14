@@ -1580,7 +1580,7 @@ function Chip({ icon, text }: { icon: string; text: string }) {
 }
 
 function ModuleIcon({ size, selected }: { size: ModeloKey; selected: boolean }) {
-  const color = selected ? "#BF9A52" : "#a8a29e";
+  const color = selected ? "#BF9D52" : "#a8a29e";
   const widths: Record<ModeloKey, number> = { "10ft": 28, "20ft": 44, "40ft": 60 };
   const w = widths[size];
   return (

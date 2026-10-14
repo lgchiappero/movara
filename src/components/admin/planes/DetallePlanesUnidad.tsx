@@ -96,7 +96,7 @@ export default function DetallePlanesUnidad({
         <button
           type="button"
           onClick={() => acciones.abrirNuevoPlan(fila.unidad.id)}
-          className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
+          className="px-4 py-2 bg-[#D4B36A] hover:bg-[#c1a257] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
         >
           {TEXTOS_TIPO[tipo].nuevoPlan}
         </button>
@@ -110,7 +110,7 @@ export default function DetallePlanesUnidad({
         <button
           type="button"
           onClick={() => acciones.abrirNuevoPlan(fila.unidad.id)}
-          className="px-4 py-2 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
+          className="px-4 py-2 bg-[#D4B36A] hover:bg-[#c1a257] text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
         >
           {TEXTOS_TIPO.pago.nuevoPlan}
         </button>
@@ -212,7 +212,7 @@ export function PlanDePago({
       </div>
       <div>
         <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
-          <div className={`h-full ${saldado ? "bg-emerald-500" : "bg-[#D4B06A]"}`} style={{ width: `${porcentaje}%` }} />
+          <div className={`h-full ${saldado ? "bg-emerald-500" : "bg-[#D4B36A]"}`} style={{ width: `${porcentaje}%` }} />
         </div>
         <div className="flex items-center justify-between mt-1">
           <p className="text-xs text-stone-500">

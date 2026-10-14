@@ -194,7 +194,7 @@ export default function CobranzaPanel({
             <button
               type="button"
               onClick={() => desdePersonalizado && hastaPersonalizado && cambiarPeriodo("personalizado", desdePersonalizado, hastaPersonalizado)}
-              className="px-3 py-1.5 bg-[#D4B06A] text-[#2F2F2F] font-bold text-xs rounded-lg"
+              className="px-3 py-1.5 bg-[#D4B36A] text-[#2F2F2F] font-bold text-xs rounded-lg"
             >
               Aplicar
             </button>
@@ -317,7 +317,7 @@ function TarjetaMetrica({ label, href, children }: { label: string; href?: strin
   );
   const clase = "block bg-white rounded-2xl border border-[#E5E5E5] p-5";
   return href ? (
-    <Link href={href} className={`${clase} hover:border-[#D4B06A] transition-colors`}>
+    <Link href={href} className={`${clase} hover:border-[#D4B36A] transition-colors`}>
       {contenido}
     </Link>
   ) : (

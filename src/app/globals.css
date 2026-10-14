@@ -10,17 +10,17 @@
   --color-sage-50:  #FAFAF7;
   --color-sage-100: #F2F2F2;
   --color-sage-200: #EDE0CA;
-  --color-sage-300: #E0CC9E;
-  --color-sage-400: #CEBA82;
-  --color-sage-500: #D4B06A;
-  --color-sage-600: #BF9A52;
-  --color-sage-700: #9A7A3C;
-  --color-sage-800: #715A2D;
+  --color-sage-300: #E0CE9E;
+  --color-sage-400: #CEBC82;
+  --color-sage-500: #D4B36A;
+  --color-sage-600: #BF9D52;
+  --color-sage-700: #9A7D3C;
+  --color-sage-800: #715C2D;
   --color-sage-900: #483A1D;
   --color-sage-950: #2F2F2F;
 
   /* Named brand tokens */
-  --color-brand-primary: #D4B06A;
+  --color-brand-primary: #D4B36A;
   --color-brand-dark:    #2F2F2F;
   --color-brand-light:   #F2F2F2;
 }

@@ -101,7 +101,7 @@ export default function PipelineBoard({
               <tr
                 key={lead.id}
                 className={`border-b border-[#F0F0F0] last:border-0 hover:bg-stone-50 cursor-pointer ${
-                  lead.id === highlightLeadId ? "bg-[#D4B06A]/10" : ""
+                  lead.id === highlightLeadId ? "bg-[#D4B36A]/10" : ""
                 }`}
                 onClick={() => setSelectedId(lead.id)}
               >

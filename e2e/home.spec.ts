@@ -58,7 +58,7 @@ test.describe("Home con 'reducir movimiento'", () => {
     await expect(page.getByText("Scroll", { exact: true })).toBeVisible();
     // Tras hidratar, React vuelve a renderizar con la preferencia real y
     // quita la línea (en dev la hidratación puede tardar varios segundos).
-    await expect(page.locator('span[class*="via-[#D4B06A]"]')).toHaveCount(0, { timeout: 30_000 });
+    await expect(page.locator('span[class*="via-[#D4B36A]"]')).toHaveCount(0, { timeout: 30_000 });
     expect(errores.filter((e) => /hydrat/i.test(e))).toEqual([]);
   });
 });

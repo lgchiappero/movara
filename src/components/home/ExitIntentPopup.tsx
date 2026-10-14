@@ -155,7 +155,7 @@ export default function ExitIntentPopup() {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md rounded-2xl border border-[#D4B06A]/40 bg-[#2F2F2F] shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-md rounded-2xl border border-[#D4B36A]/40 bg-[#2F2F2F] shadow-2xl overflow-hidden">
         {/* Close button */}
         <button
           onClick={close}
@@ -171,8 +171,8 @@ export default function ExitIntentPopup() {
           {status === "sent" ? (
             // Success state
             <div className="text-center py-4">
-              <div className="w-14 h-14 rounded-full bg-[#D4B06A]/15 border border-[#D4B06A]/30 flex items-center justify-center mx-auto mb-5">
-                <svg className="w-7 h-7 text-[#D4B06A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-14 h-14 rounded-full bg-[#D4B36A]/15 border border-[#D4B36A]/30 flex items-center justify-center mx-auto mb-5">
+                <svg className="w-7 h-7 text-[#D4B36A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
@@ -182,7 +182,7 @@ export default function ExitIntentPopup() {
               </p>
               <button
                 onClick={close}
-                className="w-full py-3 rounded-xl font-semibold text-sm text-[#2F2F2F] bg-[#D4B06A] hover:bg-[#C9A35D] transition-colors"
+                className="w-full py-3 rounded-xl font-semibold text-sm text-[#2F2F2F] bg-[#D4B36A] hover:bg-[#C9A65D] transition-colors"
               >
                 Cerrar
               </button>
@@ -204,7 +204,7 @@ export default function ExitIntentPopup() {
                       fontFamily: "var(--font-montserrat)",
                       fontWeight: 700,
                       fontSize: "1.4rem",
-                      color: "#D4B06A",
+                      color: "#D4B36A",
                       lineHeight: 1,
                       letterSpacing: "-0.01em",
                     }}
@@ -216,7 +216,7 @@ export default function ExitIntentPopup() {
                       fontFamily: "var(--font-montserrat)",
                       fontWeight: 400,
                       fontSize: "0.5rem",
-                      color: "#D4B06A",
+                      color: "#D4B36A",
                       letterSpacing: "0.3em",
                       textTransform: "uppercase",
                       lineHeight: 1,
@@ -231,7 +231,7 @@ export default function ExitIntentPopup() {
               <h2 className="text-white text-2xl font-bold mb-2 leading-tight">
                 Antes de irte…
               </h2>
-              <p className="text-[#D4B06A] font-semibold text-sm mb-3">
+              <p className="text-[#D4B36A] font-semibold text-sm mb-3">
                 Recibí nuestras últimas novedades y catálogo completo
               </p>
               <p className="text-stone-400 text-sm leading-relaxed mb-6">
@@ -254,7 +254,7 @@ export default function ExitIntentPopup() {
                         ? "border-red-500/60 focus:border-red-400"
                         : emailOk
                         ? "border-green-500/60 focus:border-green-400"
-                        : "border-white/15 focus:border-[#D4B06A]/50",
+                        : "border-white/15 focus:border-[#D4B36A]/50",
                     ].join(" ")}
                   />
                   {touched && !emailOk && (
@@ -265,7 +265,7 @@ export default function ExitIntentPopup() {
                 <button
                   type="submit"
                   disabled={!emailOk || status === "sending"}
-                  className="w-full py-3 rounded-xl font-semibold text-sm text-[#2F2F2F] bg-[#D4B06A] hover:bg-[#C9A35D] transition-colors disabled:opacity-40 disabled:cursor-not-allowed mb-3"
+                  className="w-full py-3 rounded-xl font-semibold text-sm text-[#2F2F2F] bg-[#D4B36A] hover:bg-[#C9A65D] transition-colors disabled:opacity-40 disabled:cursor-not-allowed mb-3"
                 >
                   {status === "sending" ? "Enviando…" : "Quiero recibirlo"}
                 </button>

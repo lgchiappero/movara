@@ -111,7 +111,7 @@ function Tarjeta({ label, href, children }: { label: string; href?: string; chil
   );
   const clase = "block bg-white rounded-2xl border border-[#E5E5E5] p-5";
   return href ? (
-    <Link href={href} className={`${clase} hover:border-[#D4B06A] transition-colors`}>
+    <Link href={href} className={`${clase} hover:border-[#D4B36A] transition-colors`}>
       {contenido}
     </Link>
   ) : (

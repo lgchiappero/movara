@@ -67,7 +67,7 @@ export default async function ReciboDetallePage({
         {confirmado && (
           <a
             href={`/api/admin/recibos/${recibo.id}/pdf`}
-            className="shrink-0 px-3 py-1.5 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg"
+            className="shrink-0 px-3 py-1.5 bg-[#D4B36A] hover:bg-[#c1a257] text-[#2F2F2F] font-bold text-sm rounded-lg"
           >
             Descargar PDF
           </a>

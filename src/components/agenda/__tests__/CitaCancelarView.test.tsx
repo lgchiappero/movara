@@ -16,7 +16,7 @@ describe("CitaCancelarView", () => {
     expect(link).toHaveAttribute("href", "https://maps.app.goo.gl/3q8E5RUDq5bGNZLS6");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
-    expect(link).toHaveClass("text-[13px]", "text-[#D4B06A]");
+    expect(link).toHaveClass("text-[13px]", "text-[#D4B36A]");
   });
 
   it("el botón queda deshabilitado hasta ingresar un email válido", async () => {

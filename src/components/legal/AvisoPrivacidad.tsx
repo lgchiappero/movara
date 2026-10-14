@@ -15,7 +15,7 @@ export default function AvisoPrivacidad({
   return (
     <p className={`text-xs ${color} ${className}`}>
       {accion} aceptás la{" "}
-      <Link href="/privacidad" target="_blank" className="underline underline-offset-2 hover:text-[#D4B06A]">
+      <Link href="/privacidad" target="_blank" className="underline underline-offset-2 hover:text-[#D4B36A]">
         Política de Privacidad
       </Link>
       .

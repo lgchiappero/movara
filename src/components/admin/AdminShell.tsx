@@ -28,7 +28,7 @@ function NavLinks({ navItems, pathname, onNavigate }: { navItems: AdminNavItem[]
             href={item.href}
             onClick={onNavigate}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              active ? "bg-[#D4B06A] text-[#1a1a1a]" : "text-stone-300 hover:bg-white/10"
+              active ? "bg-[#D4B36A] text-[#1a1a1a]" : "text-stone-300 hover:bg-white/10"
             }`}
           >
             <span aria-hidden>{item.icon}</span>

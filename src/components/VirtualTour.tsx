@@ -5,7 +5,7 @@ import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Compass, Maximize2, X } from "lucide-react";
 
-const DORADO = "#D4B06A";
+const DORADO = "#D4B36A";
 
 type TourRoom = {
   id: string;

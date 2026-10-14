@@ -11,7 +11,7 @@ import { estadoGeneralEnvio } from "@/lib/envios/estado-general";
 export const dynamic = "force-dynamic";
 
 const inputClass =
-  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
+  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
 
 function fechaWhere(desde?: string, hasta?: string): Prisma.DateTimeFilter | undefined {
   if (!desde && !hasta) return undefined;
@@ -91,7 +91,7 @@ export default async function AdminBuscarPage({
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <p className="text-[#D4B06A] text-xs font-bold uppercase tracking-widest mb-1">Panel MOVARA</p>
+        <p className="text-[#D4B36A] text-xs font-bold uppercase tracking-widest mb-1">Panel MOVARA</p>
         <h1 className="text-2xl font-bold text-[#1a1a1a]">Búsqueda global</h1>
         <p className="text-sm text-stone-500 mt-1">
           Buscá por cliente, número de unidad (MOV-UNIDAD-...), PI, contenedor o BL.

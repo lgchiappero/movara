@@ -37,7 +37,7 @@ export default function WhatsAppStickyBar({
   const mostrarCupos = typeof total === "number" && typeof reservadas === "number" && total > 0;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-40 px-3 py-3 sm:px-6 bg-[#1A1A1A]/97 backdrop-blur border-t border-[#D4B06A]/15">
+    <div className="fixed bottom-0 inset-x-0 z-40 px-3 py-3 sm:px-6 bg-[#1A1A1A]/97 backdrop-blur border-t border-[#D4B36A]/15">
       <div className="max-w-5xl mx-auto flex items-center gap-3 sm:gap-6">
         {mostrarCupos && (
           <div className="shrink-0">
@@ -48,7 +48,7 @@ export default function WhatsAppStickyBar({
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 sm:flex-initial sm:ml-auto flex items-center justify-center gap-2 sm:gap-2.5 py-3.5 sm:py-3 px-4 sm:px-8 bg-[#D4B06A] hover:bg-[#BF9A52] text-[#1A1A1A] font-bold text-[13px] sm:text-sm rounded-xl transition-all duration-200 whitespace-nowrap"
+          className="flex-1 sm:flex-initial sm:ml-auto flex items-center justify-center gap-2 sm:gap-2.5 py-3.5 sm:py-3 px-4 sm:px-8 bg-[#D4B36A] hover:bg-[#BF9D52] text-[#1A1A1A] font-bold text-[13px] sm:text-sm rounded-xl transition-all duration-200 whitespace-nowrap"
         >
           <WhatsAppIcon className="w-[18px] h-[18px]" />
           {label}

@@ -99,7 +99,7 @@ export default function DolorConvencional({ content }: { content?: DolorContent 
                   style={{
                     backgroundColor: "#2F2F2F",
                     backgroundImage: [
-                      `radial-gradient(ellipse at ${v.luz}, rgba(212,176,106,0.10) 0%, transparent 55%)`,
+                      `radial-gradient(ellipse at ${v.luz}, rgba(212,179,106,0.10) 0%, transparent 55%)`,
                       `linear-gradient(${v.angulo}deg, #3A3A3A 0%, #2F2F2F 45%, #222222 100%)`,
                     ].join(", "),
                   }}
@@ -108,7 +108,7 @@ export default function DolorConvencional({ content }: { content?: DolorContent 
                   <div
                     className="absolute inset-0 opacity-[0.06]"
                     style={{
-                      backgroundImage: "radial-gradient(circle, #D4B06A 1px, transparent 1px)",
+                      backgroundImage: "radial-gradient(circle, #D4B36A 1px, transparent 1px)",
                       backgroundSize: "28px 28px",
                       backgroundPosition: v.trama,
                     }}
@@ -118,7 +118,7 @@ export default function DolorConvencional({ content }: { content?: DolorContent 
                   <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/[0.06]" />
 
                   {/* Número grande dorado en la esquina superior izquierda */}
-                  <span className="absolute top-5 left-6 text-5xl lg:text-6xl font-bold text-[#D4B06A] leading-none select-none">
+                  <span className="absolute top-5 left-6 text-5xl lg:text-6xl font-bold text-[#D4B36A] leading-none select-none">
                     {numero}
                   </span>
 
@@ -145,11 +145,11 @@ export default function DolorConvencional({ content }: { content?: DolorContent 
           transition={{ duration: 0.6 }}
           className="flex items-center gap-6 mb-10"
         >
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent to-[#D4B06A]/40" />
-          <p className="font-playfair italic text-[#D4B06A] text-xl sm:text-2xl text-center shrink-0 px-2">
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent to-[#D4B36A]/40" />
+          <p className="font-playfair italic text-[#D4B36A] text-xl sm:text-2xl text-center shrink-0 px-2">
             {separador}
           </p>
-          <div className="flex-1 h-px bg-gradient-to-l from-transparent to-[#D4B06A]/40" />
+          <div className="flex-1 h-px bg-gradient-to-l from-transparent to-[#D4B36A]/40" />
         </motion.div>
 
         {/* Quote */}
@@ -158,11 +158,11 @@ export default function DolorConvencional({ content }: { content?: DolorContent 
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.55 }}
-          className="border-l-4 border-[#D4B06A] pl-6 mb-10"
+          className="border-l-4 border-[#D4B36A] pl-6 mb-10"
         >
           <p className="text-xl sm:text-2xl font-bold text-[#2F2F2F] leading-snug">
             &ldquo;No estamos compitiendo con la construcción tradicional.{" "}
-            <span className="text-[#D4B06A]">Estamos reemplazándola.&rdquo;</span>
+            <span className="text-[#D4B36A]">Estamos reemplazándola.&rdquo;</span>
           </p>
         </motion.div>
 
@@ -176,7 +176,7 @@ export default function DolorConvencional({ content }: { content?: DolorContent 
         >
           <button
             onClick={scrollToCategoria}
-            className="inline-flex items-center gap-2 text-[#D4B06A] font-semibold text-sm hover:text-[#BF9A52] transition-colors"
+            className="inline-flex items-center gap-2 text-[#D4B36A] font-semibold text-sm hover:text-[#BF9D52] transition-colors"
           >
             Así lo resolvemos
             <span className="text-xs">→</span>

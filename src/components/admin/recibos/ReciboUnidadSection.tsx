@@ -37,7 +37,7 @@ export default function ReciboUnidadSection({ unidadId, recibo }: { unidadId: st
           <p className="text-stone-500">Todavía no hay un recibo vigente para esta unidad.</p>
           <Link
             href={`/admin/recibos/nuevo?unidad=${unidadId}`}
-            className="shrink-0 px-3 py-1.5 bg-[#D4B06A] hover:bg-[#c19f57] text-[#2F2F2F] font-bold text-sm rounded-lg"
+            className="shrink-0 px-3 py-1.5 bg-[#D4B36A] hover:bg-[#c1a257] text-[#2F2F2F] font-bold text-sm rounded-lg"
           >
             Crear recibo
           </Link>

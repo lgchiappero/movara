@@ -16,7 +16,7 @@ import ComoLlegarLink from "./ComoLlegarLink";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 
 const inputClass =
-  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B06A]";
+  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
 const labelClass = "text-sm font-medium text-[#2F2F2F]";
 
 function inputClassFor(error: string | null, isTouched: boolean): string {
@@ -229,7 +229,7 @@ export default function AgendaBooking() {
         )}
         <Link
           href="/"
-          className="inline-block mt-6 px-6 py-3 bg-[#D4B06A] hover:bg-[#c19f5a] text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
+          className="inline-block mt-6 px-6 py-3 bg-[#D4B36A] hover:bg-[#c1a25a] text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
         >
           Volver al inicio
         </Link>
@@ -298,9 +298,9 @@ export default function AgendaBooking() {
             let clases: string;
             let title: string | undefined;
             if (seleccionado) {
-              clases = "border-2 border-[#D4B06A] bg-[#D4B06A]/20 text-[#2F2F2F] font-bold";
+              clases = "border-2 border-[#D4B36A] bg-[#D4B36A]/20 text-[#2F2F2F] font-bold";
             } else if (disponible) {
-              clases = "bg-[#D4B06A] text-[#2F2F2F] hover:bg-[#c19f5a] cursor-pointer";
+              clases = "bg-[#D4B36A] text-[#2F2F2F] hover:bg-[#c1a25a] cursor-pointer";
             } else if (completo) {
               clases = "bg-stone-300 text-stone-500 cursor-not-allowed";
               title = "Sin turnos disponibles";
@@ -316,7 +316,7 @@ export default function AgendaBooking() {
                 onClick={() => seleccionarDia(key)}
                 title={title}
                 className={`aspect-square rounded-lg text-sm font-medium transition-colors ${clases} ${
-                  esHoy && !seleccionado ? "ring-1 ring-[#D4B06A]" : ""
+                  esHoy && !seleccionado ? "ring-1 ring-[#D4B36A]" : ""
                 }`}
               >
                 {dia}
@@ -352,7 +352,7 @@ export default function AgendaBooking() {
                       seleccionado
                         ? "bg-[#2F2F2F] text-white"
                         : disponible
-                          ? "border border-[#D4B06A] text-[#8a6a2e] hover:bg-[#D4B06A] hover:text-[#2F2F2F]"
+                          ? "border border-[#D4B36A] text-[#8a6d2e] hover:bg-[#D4B36A] hover:text-[#2F2F2F]"
                           : "bg-stone-100 text-stone-300 cursor-not-allowed"
                     }`}
                   >
@@ -472,7 +472,7 @@ export default function AgendaBooking() {
               type="button"
               disabled={enviando}
               onClick={() => confirmarVisita()}
-              className="w-full py-3 bg-[#D4B06A] hover:bg-[#c19f5a] disabled:opacity-50 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
+              className="w-full py-3 bg-[#D4B36A] hover:bg-[#c1a25a] disabled:opacity-50 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
             >
               {enviando ? "Confirmando..." : "Confirmar visita"}
             </button>

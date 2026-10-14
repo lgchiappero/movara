@@ -112,7 +112,7 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B06A] mb-4 block">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B36A] mb-4 block">
             {badgeSeccion}
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-5">{titulo}</h2>
@@ -131,13 +131,13 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.45, delay: i * 0.07 }}
-                className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-[#D4B06A]/30 hover:bg-white/[0.07] transition-all duration-200"
+                className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-[#D4B36A]/30 hover:bg-white/[0.07] transition-all duration-200"
               >
                 {/* Icon + badge row */}
                 <div className="flex items-start justify-between mb-5">
-                  <Icon size={36} className="text-[#D4B06A]" strokeWidth={1.5} />
+                  <Icon size={36} className="text-[#D4B36A]" strokeWidth={1.5} />
                   {b.badge && (
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4B06A] bg-[#D4B06A]/10 border border-[#D4B06A]/20 px-2.5 py-1 rounded-full whitespace-nowrap">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4B36A] bg-[#D4B36A]/10 border border-[#D4B36A]/20 px-2.5 py-1 rounded-full whitespace-nowrap">
                       {b.badge}
                     </span>
                   )}
@@ -160,7 +160,7 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
           transition={{ duration: 0.6 }}
           className="text-center mb-14"
         >
-          <div className="inline-block border border-[#D4B06A]/20 rounded-2xl px-8 py-5 bg-[#D4B06A]/5">
+          <div className="inline-block border border-[#D4B36A]/20 rounded-2xl px-8 py-5 bg-[#D4B36A]/5">
             <p className="text-stone-200 text-base font-medium leading-relaxed max-w-2xl">
               {textoCierre}
             </p>
@@ -173,12 +173,12 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-white/5 border border-[#D4B06A]/20 rounded-3xl overflow-hidden"
+          className="bg-white/5 border border-[#D4B36A]/20 rounded-3xl overflow-hidden"
         >
           {/* Header */}
           <div className="p-8 pb-6">
             <div className="flex items-center gap-3 mb-4">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#D4B06A]/10 border border-[#D4B06A]/30 text-[#D4B06A] text-xs font-bold uppercase tracking-widest">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#D4B36A]/10 border border-[#D4B36A]/30 text-[#D4B36A] text-xs font-bold uppercase tracking-widest">
                 📍 {showroomChip}
               </span>
             </div>
@@ -224,7 +224,7 @@ export default function PruebaSocial({ content }: { content?: PruebaSocialConten
             </p>
             <a
               href="/agendar"
-              className="w-full sm:w-auto flex-shrink-0 text-center px-6 py-3 bg-[#D4B06A] hover:bg-[#BF9A52] text-[#1A1A1A] font-bold text-sm rounded-xl transition-colors"
+              className="w-full sm:w-auto flex-shrink-0 text-center px-6 py-3 bg-[#D4B36A] hover:bg-[#BF9D52] text-[#1A1A1A] font-bold text-sm rounded-xl transition-colors"
             >
               Agendar tu visita
             </a>

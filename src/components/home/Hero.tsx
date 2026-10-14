@@ -81,9 +81,9 @@ export default function Hero({
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-[#D4B06A]/25 bg-black/25 backdrop-blur-sm text-[#D4B06A]/90 text-[11px] sm:text-xs font-semibold tracking-widest uppercase mb-4 sm:mb-6"
+            className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-[#D4B36A]/25 bg-black/25 backdrop-blur-sm text-[#D4B36A]/90 text-[11px] sm:text-xs font-semibold tracking-widest uppercase mb-4 sm:mb-6"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#D4B06A] shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D4B36A] shrink-0" />
             {c.badgePreventa}
           </motion.div>
 
@@ -96,7 +96,7 @@ export default function Hero({
           >
             {c.titulo}
             <br />
-            <span className="text-[#D4B06A]">{c.tituloDestacado}</span>
+            <span className="text-[#D4B36A]">{c.tituloDestacado}</span>
           </motion.h1>
 
           {/* Subtitle */}
@@ -121,7 +121,7 @@ export default function Hero({
               href={waHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto min-h-[48px] flex items-center justify-center px-9 py-3 sm:py-4 bg-[#D4B06A] hover:bg-[#BF9A52] text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-2xl hover:shadow-[#D4B06A]/30 hover:-translate-y-0.5 text-sm tracking-wide"
+              className="w-full sm:w-auto min-h-[48px] flex items-center justify-center px-9 py-3 sm:py-4 bg-[#D4B36A] hover:bg-[#BF9D52] text-[#1A1A1A] font-bold rounded-xl transition-all duration-200 hover:shadow-2xl hover:shadow-[#D4B36A]/30 hover:-translate-y-0.5 text-sm tracking-wide"
             >
               {c.ctaPrimario}
             </a>
@@ -150,7 +150,7 @@ export default function Hero({
         <div className="relative w-px h-14 bg-white/20 overflow-hidden">
           {!reduce && (
             <motion.span
-              className="absolute left-0 top-0 w-px h-1/2 bg-gradient-to-b from-transparent via-[#D4B06A] to-transparent"
+              className="absolute left-0 top-0 w-px h-1/2 bg-gradient-to-b from-transparent via-[#D4B36A] to-transparent"
               animate={{ y: ["-100%", "200%"] }}
               transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.3 }}
             />
