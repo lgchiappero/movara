@@ -116,13 +116,11 @@ test.describe("Upload de documentos en /admin/unidades", () => {
      * refresh. Mockeado, el éxito se ve en la UI como: botón vuelve a
      * "Subir archivo", sin mensaje de error y con el input limpio. */
     async function expectUploadOk(seccion: typeof seccionCliente, filename: string) {
-      if (!capturados) {
-        await expect(seccion.getByText(filename)).toBeVisible({ timeout: 15000 });
-        return;
-      }
-      await expect(seccion.getByRole("button", { name: "Subir archivo" })).toBeEnabled({ timeout: 15000 });
+      // El componente de subida avisa "Archivo subido" y vuelve a cero.
+      await expect(seccion.getByRole("status")).toHaveText("Archivo subido", { timeout: 15000 });
+      await expect(seccion.getByRole("button", { name: `Quitar ${filename}` })).toHaveCount(0);
       await expect(seccion.locator("p.text-red-600")).toHaveCount(0);
-      await expect(seccion.locator('input[type="file"]')).toHaveValue("");
+      if (!capturados) await expect(seccion.getByText(filename, { exact: true })).toBeVisible();
     }
   });
 });
@@ -155,7 +153,8 @@ test.describe("Subida de archivos de más de 4,5 MB (subida directa a Storage)",
     await seccion.locator('input[type="file"]').setInputFiles({ name: "plano-grande.pdf", mimeType: "application/pdf", buffer: grande });
     await seccion.getByRole("button", { name: "Subir archivo" }).click();
 
-    await expect(seccion.getByText("plano-grande.pdf")).toBeVisible({ timeout: 30000 });
+    await expect(seccion.getByRole("status")).toHaveText("Archivo subido", { timeout: 30000 });
+    await expect(seccion.getByText("plano-grande.pdf", { exact: true })).toBeVisible();
     await expect(seccion.locator("p.text-red-600")).toHaveCount(0);
     // Firma, PUT directo al storage y registro (sin el archivo en el formulario).
     expect(pedidos).toEqual(
@@ -183,5 +182,63 @@ test.describe("Subida de archivos de más de 4,5 MB (subida directa a Storage)",
       failOnStatusCode: false,
     });
     expect(res.status()).toBe(401);
+  });
+});
+
+test.describe("Componente de subida (FileUpload)", () => {
+  test.skip(STORAGE_REAL, "Sube contra el storage local");
+
+  test("elegir, ver nombre completo, quitar, rechazar uno pesado, arrastrar y subir de verdad", async ({ page }) => {
+    await loginAsAdmin(page);
+    const suffix = Date.now();
+    const cliente = await (
+      await page.request.post("/api/admin/clientes", {
+        data: { nombre: `Cliente E2E FileUpload ${suffix}`, dni: null, cuit: null, domicilio: null, email: null, telefono: null, notas: null },
+      })
+    ).json();
+    const unidad = await (await page.request.post("/api/admin/unidades", { data: { clienteId: cliente.id } })).json();
+    await page.goto(`/admin/unidades/${unidad.id}`);
+
+    const seccion = page
+      .getByRole("heading", { name: "01 — Cliente" })
+      .locator("xpath=ancestor::div[contains(@class,'bg-white')][1]");
+    const input = seccion.locator('input[type="file"]');
+
+    // El input nativo no se ve: en su lugar hay un botón y la zona para arrastrar.
+    const caja = await input.boundingBox();
+    expect(caja === null || (caja.width <= 1 && caja.height <= 1)).toBe(true);
+    await expect(seccion.getByRole("button", { name: "Seleccionar archivo" })).toBeVisible();
+    await expect(seccion.getByText("o arrastralo acá")).toBeVisible();
+    await expect(seccion.getByText("PDF, JPG, PNG, Excel o Word · hasta 20 MB")).toBeVisible();
+
+    // Muy pesado: error claro y no aparece el botón de subir.
+    await input.setInputFiles({ name: "planos.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(21 * 1024 * 1024, 32) });
+    await expect(seccion.getByRole("alert")).toHaveText("El archivo pesa 21 MB. El máximo es 20 MB.");
+    await expect(seccion.getByRole("button", { name: "Subir archivo" })).toHaveCount(0);
+
+    // Elegir: tarjeta con el nombre completo y el tamaño; Quitar lo saca.
+    const largo = "Contrato de compraventa MOVARA Flex 38 - Juan Pérez - firmado por ambas partes.pdf";
+    await input.setInputFiles({ name: largo, mimeType: "application/pdf", buffer: PDF_BYTES });
+    await expect(seccion.getByText(largo, { exact: true })).toBeVisible();
+    await expect(seccion.getByRole("alert")).toHaveCount(0);
+    await seccion.getByRole("button", { name: `Quitar ${largo}` }).click();
+    await expect(seccion.getByText(largo, { exact: true })).toHaveCount(0);
+
+    // Arrastrar y soltar sobre la zona.
+    const dt = await page.evaluateHandle((bytes) => {
+      const t = new DataTransfer();
+      t.items.add(new File([new Uint8Array(bytes)], "arrastrado.pdf", { type: "application/pdf" }));
+      return t;
+    }, [...PDF_BYTES]);
+    await seccion.getByTestId("zona-subida").dispatchEvent("drop", { dataTransfer: dt });
+    await expect(seccion.getByText("arrastrado.pdf", { exact: true })).toBeVisible();
+
+    // Subida real: progreso, "Archivo subido", el campo vuelve a cero y el documento queda listado.
+    await seccion.getByRole("button", { name: "Subir archivo" }).click();
+    await expect(seccion.getByRole("status")).toHaveText("Archivo subido", { timeout: 15000 });
+    await expect(seccion.getByRole("button", { name: "Seleccionar archivo" })).toBeVisible();
+    await expect(seccion.getByRole("button", { name: "Quitar arrastrado.pdf" })).toHaveCount(0);
+    await expect(seccion.getByText("arrastrado.pdf", { exact: true })).toBeVisible();
+    await expect(seccion.getByRole("link", { name: "Ver" })).toBeVisible();
   });
 });

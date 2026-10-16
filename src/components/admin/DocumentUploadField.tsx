@@ -1,8 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { TipoDocumento, CampoDestino } from "@/lib/validators/documentos";
-import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
+import { enviarFormularioConArchivos, mensajeDeError } from "@/lib/admin/subida-cliente";
+import { TIPOS_PEDIDOS } from "@/lib/admin/tipos-archivo";
+import FileUpload from "@/components/admin/ui/FileUpload";
+import { useSubidaArchivos } from "@/components/admin/ui/useSubidaArchivos";
 
 export default function DocumentUploadField({
   pedidoId,
@@ -21,66 +24,70 @@ export default function DocumentUploadField({
   currentUrl: string | null;
   onUploaded: () => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
+  const archivo = useSubidaArchivos();
   const [error, setError] = useState<string | null>(null);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  async function subir() {
+    const file = archivo.archivos[0];
     if (!file) return;
     setError(null);
-    setUploading(true);
-
+    archivo.empezar();
+    let ok = false;
     try {
       const form = new FormData();
-      await adjuntarArchivo(form, "file", file, "pedidos", pedidoId);
       form.append("tipo", tipo);
       if (campo) form.append("campo", campo);
-
-      const res = await fetch(`/api/admin/configuraciones/${pedidoId}/documentos`, {
-        method: "POST",
-        body: form,
+      const res = await enviarFormularioConArchivos({
+        url: `/api/admin/configuraciones/${pedidoId}/documentos`,
+        form,
+        archivos: [{ campo: "file", file }],
+        destino: "pedidos",
+        entidadId: pedidoId,
+        alProgresar: archivo.alProgresar,
       });
-      const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "No pudimos subir el archivo.");
+        setError(res.json.error ?? "No pudimos subir el archivo.");
         return;
       }
+      ok = true;
       onUploaded();
     } catch (err) {
       setError(mensajeDeError(err, "No pudimos subir el archivo. Probá de nuevo."));
     } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
+      archivo.terminar(ok);
     }
   }
 
   return (
-    <div className="space-y-1.5">
-      <span className="text-xs font-medium text-stone-500">{label}</span>
-      <div className="flex items-center gap-3 flex-wrap">
-        {currentUrl && (
-          <a
-            href={currentUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-[#D4B36A] font-bold hover:underline"
-          >
-            Ver archivo actual
-          </a>
-        )}
-        <label className="text-xs px-3 py-1.5 border border-[#E5E5E5] rounded-lg text-stone-600 hover:bg-stone-50 cursor-pointer transition-colors">
-          {uploading ? "Subiendo..." : currentUrl ? "Reemplazar" : "Subir archivo"}
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.xlsx"
-            className="hidden"
-            disabled={uploading}
-            onChange={handleFileChange}
-          />
-        </label>
-      </div>
+    <div className="space-y-2">
+      <FileUpload
+        label={label}
+        tipos={TIPOS_PEDIDOS}
+        compacto
+        {...archivo.campo}
+        extra={
+          currentUrl ? (
+            <a
+              href={currentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-sage-600 font-bold hover:underline"
+            >
+              Ver archivo actual
+            </a>
+          ) : null
+        }
+      />
+      {archivo.archivos.length > 0 && (
+        <button
+          type="button"
+          onClick={subir}
+          disabled={archivo.subiendo}
+          className="w-full px-4 py-2 bg-sage-500 hover:bg-sage-600 disabled:opacity-60 text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors"
+        >
+          {archivo.subiendo ? "Subiendo…" : currentUrl ? "Reemplazar archivo" : "Subir archivo"}
+        </button>
+      )}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );

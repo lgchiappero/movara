@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
+import { enviarFormularioConArchivos, mensajeDeError } from "@/lib/admin/subida-cliente";
+import { TIPOS_MOVARA } from "@/lib/admin/tipos-archivo";
+import FileUpload from "@/components/admin/ui/FileUpload";
+import { useSubidaArchivos } from "@/components/admin/ui/useSubidaArchivos";
 import { MODALIDAD_OPTIONS, MODALIDAD_LABELS } from "@/lib/cobranza/constantes";
 import { useToast } from "@/components/admin/Toast";
 import { cuotasSaldables, etiquetaCuota } from "@/lib/cobranza/cuotas-saldables";
@@ -28,7 +31,7 @@ export default function RegistrarMovimientoModal({
   const [importe, setImporte] = useState("");
   const [cuotaId, setCuotaId] = useState("");
   const [modalidad, setModalidad] = useState<(typeof MODALIDAD_OPTIONS)[number]>("transferencia");
-  const [comprobante, setComprobante] = useState<File | null>(null);
+  const comprobante = useSubidaArchivos();
   const [notas, setNotas] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -64,13 +67,17 @@ export default function RegistrarMovimientoModal({
       if (cuotaId) form.set("cuotaId", cuotaId);
       form.set("modalidad", modalidad);
       if (notas.trim()) form.set("notas", notas.trim());
-      if (comprobante) await adjuntarArchivo(form, "comprobante", comprobante, "cobranza", acuerdo.id);
-
-      const res = await fetch(`/api/admin/cobranza/acuerdos/${acuerdo.id}/movimientos`, {
-        method: "POST",
-        body: form,
+      if (comprobante.archivos.length) comprobante.empezar();
+      const res = await enviarFormularioConArchivos({
+        url: `/api/admin/cobranza/acuerdos/${acuerdo.id}/movimientos`,
+        form,
+        archivos: comprobante.archivos.map((file) => ({ campo: "comprobante", file })),
+        destino: "cobranza",
+        entidadId: acuerdo.id,
+        alProgresar: comprobante.alProgresar,
       });
-      const json = await res.json();
+      const json = res.json;
+      comprobante.terminar(res.ok);
       if (!res.ok) {
         setError(json.error ?? `No pudimos registrar el ${nombreAccion}.`);
         showError(json.error ?? `No pudimos registrar el ${nombreAccion}.`);
@@ -79,6 +86,7 @@ export default function RegistrarMovimientoModal({
       showSuccess(`${acuerdo.tipo === "cobro" ? "Pago recibido" : "Pago realizado"} registrado`);
       onSaved();
     } catch (err) {
+      comprobante.terminar(false);
       const mensaje = mensajeDeError(err, `No pudimos registrar el ${nombreAccion}. Probá de nuevo.`);
       setError(mensaje);
       showError(mensaje);
@@ -155,15 +163,7 @@ export default function RegistrarMovimientoModal({
             </select>
           </label>
 
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-stone-500">Comprobante (opcional)</span>
-            <input
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.xlsx,.docx"
-              onChange={(e) => setComprobante(e.target.files?.[0] ?? null)}
-              className="w-full text-sm text-stone-600"
-            />
-          </label>
+          <FileUpload label="Comprobante (opcional)" tipos={TIPOS_MOVARA} {...comprobante.campo} />
 
           <label className="block space-y-1">
             <span className="text-xs font-medium text-stone-500">Notas</span>

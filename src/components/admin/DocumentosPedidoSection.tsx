@@ -1,8 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
+import { enviarFormularioConArchivos, mensajeDeError } from "@/lib/admin/subida-cliente";
+import { TIPOS_PEDIDOS } from "@/lib/admin/tipos-archivo";
+import FileUpload from "@/components/admin/ui/FileUpload";
+import { useSubidaArchivos } from "@/components/admin/ui/useSubidaArchivos";
 import EliminarDocumentoButton from "@/components/admin/EliminarDocumentoButton";
 import { tipoDocumentoOptions, tipoDocumentoLabels, type TipoDocumento } from "@/lib/validators/documentos";
 
@@ -30,47 +33,47 @@ export default function DocumentosPedidoSection({
   puedeEliminar?: boolean;
 }) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const archivo = useSubidaArchivos();
   const [tipo, setTipo] = useState<TipoDocumento>("otro");
   const [nombre, setNombre] = useState("");
   const [notas, setNotas] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
-    const file = inputRef.current?.files?.[0];
+    const file = archivo.archivos[0];
     if (!file) {
       setError("Elegí un archivo primero.");
       return;
     }
     setError(null);
-    setUploading(true);
-
+    archivo.empezar();
+    let ok = false;
     try {
       const form = new FormData();
-      await adjuntarArchivo(form, "file", file, "pedidos", pedidoId);
       form.append("tipo", tipo);
       if (nombre.trim()) form.append("nombre", nombre.trim());
       if (notas.trim()) form.append("notas", notas.trim());
-
-      const res = await fetch(`/api/admin/configuraciones/${pedidoId}/documentos`, {
-        method: "POST",
-        body: form,
+      const res = await enviarFormularioConArchivos({
+        url: `/api/admin/configuraciones/${pedidoId}/documentos`,
+        form,
+        archivos: [{ campo: "file", file }],
+        destino: "pedidos",
+        entidadId: pedidoId,
+        alProgresar: archivo.alProgresar,
       });
-      const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "No pudimos subir el documento.");
+        setError(res.json.error ?? "No pudimos subir el documento.");
         return;
       }
+      ok = true;
       setNombre("");
       setNotas("");
-      if (inputRef.current) inputRef.current.value = "";
       router.refresh();
     } catch (err) {
       setError(mensajeDeError(err, "No pudimos subir el documento. Probá de nuevo."));
     } finally {
-      setUploading(false);
+      archivo.terminar(ok);
     }
   }
 
@@ -162,21 +165,14 @@ export default function DocumentosPedidoSection({
           <span className="text-xs font-medium text-stone-500">Notas (opcional)</span>
           <input className={inputClass} value={notas} onChange={(e) => setNotas(e.target.value)} />
         </label>
-        <div className="flex items-center gap-3">
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.xlsx"
-            className="text-sm"
-          />
-          <button
-            type="submit"
-            disabled={uploading}
-            className="px-4 py-2 bg-sage-500 hover:bg-sage-600 disabled:opacity-60 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
-          >
-            {uploading ? "Subiendo..." : "Subir documento"}
-          </button>
-        </div>
+        <FileUpload label="Archivo" tipos={TIPOS_PEDIDOS} {...archivo.campo} />
+        <button
+          type="submit"
+          disabled={archivo.subiendo || archivo.archivos.length === 0}
+          className="w-full sm:w-auto px-4 py-2 bg-sage-500 hover:bg-sage-600 disabled:opacity-60 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
+        >
+          {archivo.subiendo ? "Subiendo…" : "Subir documento"}
+        </button>
         {error && <p className="text-xs text-red-600">{error}</p>}
       </form>
     </div>

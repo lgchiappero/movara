@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
+import { enviarFormularioConArchivos, mensajeDeError } from "@/lib/admin/subida-cliente";
+import { TIPOS_MOVARA } from "@/lib/admin/tipos-archivo";
+import FileUpload from "@/components/admin/ui/FileUpload";
+import { useSubidaArchivos } from "@/components/admin/ui/useSubidaArchivos";
 import { MODALIDAD_OPTIONS, MODALIDAD_LABELS } from "@/lib/cobranza/constantes";
 import { useToast } from "@/components/admin/Toast";
 import type { AcuerdoConDetalle, MovimientoDetalle } from "@/lib/cobranza/types";
@@ -29,7 +32,7 @@ export default function EditarMovimientoModal({
   const [modalidad, setModalidad] = useState<(typeof MODALIDAD_OPTIONS)[number]>(
     movimiento.modalidad as (typeof MODALIDAD_OPTIONS)[number]
   );
-  const [comprobante, setComprobante] = useState<File | null>(null);
+  const comprobante = useSubidaArchivos();
   const [notas, setNotas] = useState(movimiento.notas ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -59,13 +62,18 @@ export default function EditarMovimientoModal({
       if (cuotaId) form.set("cuotaId", cuotaId);
       form.set("modalidad", modalidad);
       if (notas.trim()) form.set("notas", notas.trim());
-      if (comprobante) await adjuntarArchivo(form, "comprobante", comprobante, "cobranza", acuerdo.id);
-
-      const res = await fetch(`/api/admin/cobranza/acuerdos/${acuerdo.id}/movimientos/${movimiento.id}`, {
+      if (comprobante.archivos.length) comprobante.empezar();
+      const res = await enviarFormularioConArchivos({
+        url: `/api/admin/cobranza/acuerdos/${acuerdo.id}/movimientos/${movimiento.id}`,
         method: "PATCH",
-        body: form,
+        form,
+        archivos: comprobante.archivos.map((file) => ({ campo: "comprobante", file })),
+        destino: "cobranza",
+        entidadId: acuerdo.id,
+        alProgresar: comprobante.alProgresar,
       });
-      const json = await res.json();
+      const json = res.json;
+      comprobante.terminar(res.ok);
       if (!res.ok) {
         setError(json.error ?? `No pudimos guardar el ${nombreAccion}.`);
         showError(json.error ?? `No pudimos guardar el ${nombreAccion}.`);
@@ -74,6 +82,7 @@ export default function EditarMovimientoModal({
       showSuccess("Guardado");
       onSaved();
     } catch (err) {
+      comprobante.terminar(false);
       const mensaje = mensajeDeError(err, `No pudimos guardar el ${nombreAccion}. Probá de nuevo.`);
       setError(mensaje);
       showError(mensaje);
@@ -150,27 +159,23 @@ export default function EditarMovimientoModal({
             </select>
           </label>
 
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-stone-500">
-              Comprobante {movimiento.comprobanteUrl ? "(reemplazar)" : "(opcional)"}
-            </span>
-            {movimiento.comprobanteSignedUrl && !comprobante && (
-              <a
-                href={movimiento.comprobanteSignedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-xs text-sage-600 hover:text-sage-700 font-medium mb-1"
-              >
-                Ver comprobante actual
-              </a>
-            )}
-            <input
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.xlsx,.docx"
-              onChange={(e) => setComprobante(e.target.files?.[0] ?? null)}
-              className="w-full text-sm text-stone-600"
-            />
-          </label>
+          <FileUpload
+            label={`Comprobante ${movimiento.comprobanteUrl ? "(reemplazar)" : "(opcional)"}`}
+            tipos={TIPOS_MOVARA}
+            {...comprobante.campo}
+            extra={
+              movimiento.comprobanteSignedUrl && comprobante.archivos.length === 0 ? (
+                <a
+                  href={movimiento.comprobanteSignedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-sage-600 hover:text-sage-700 font-medium"
+                >
+                  Ver comprobante actual
+                </a>
+              ) : null
+            }
+          />
 
           <label className="block space-y-1">
             <span className="text-xs font-medium text-stone-500">Notas</span>

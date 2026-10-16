@@ -9,6 +9,10 @@ import { ToastProvider } from "@/components/admin/Toast";
 import CostosLogisticaSection from "./CostosLogisticaSection";
 import type { CostoLogisticaRow } from "@/lib/cobranza/logistica";
 
+vi.mock("@/lib/admin/subida-cliente", async (original) =>
+  (await import("@/test/subida-por-fetch")).subidaPorFetch(original)
+);
+
 const base: CostoLogisticaRow = {
   id: "c1",
   envioId: "e1",

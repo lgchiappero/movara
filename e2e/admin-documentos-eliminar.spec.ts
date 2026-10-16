@@ -24,7 +24,8 @@ async function subirPdf(page: Page, card: Locator, nombre: string, uploadPath: s
     card.getByRole("button", { name: "Subir archivo" }).click(),
   ]);
   expect(res.status()).toBe(201);
-  await expect(card.getByText(nombre)).toBeVisible({ timeout: 15000 });
+  await expect(card.getByRole("status")).toHaveText("Archivo subido", { timeout: 15000 });
+  await expect(card.getByText(nombre, { exact: true })).toBeVisible();
   return (await res.json()).path;
 }
 

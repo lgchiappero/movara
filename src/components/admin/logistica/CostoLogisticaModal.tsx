@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
+import { enviarFormularioConArchivos, mensajeDeError } from "@/lib/admin/subida-cliente";
+import { TIPOS_MOVARA } from "@/lib/admin/tipos-archivo";
+import FileUpload from "@/components/admin/ui/FileUpload";
+import { useSubidaArchivos } from "@/components/admin/ui/useSubidaArchivos";
 import {
   CONCEPTO_LOGISTICA_OPTIONS,
   CONCEPTO_LOGISTICA_LABELS,
@@ -54,7 +57,7 @@ export default function CostoLogisticaModal({
   const [importe, setImporte] = useState(costo ? String(costo.importe) : "");
   const [fecha, setFecha] = useState(costo ? costo.fecha.slice(0, 10) : hoyISODate());
   const [estado, setEstado] = useState<"pagado" | "pendiente">(costo?.estado === "pendiente" ? "pendiente" : "pagado");
-  const [comprobante, setComprobante] = useState<File | null>(null);
+  const comprobante = useSubidaArchivos();
   const [notas, setNotas] = useState(costo?.notas ?? "");
   const [prorratearCosto, setProrratearCosto] = useState(costo?.prorrateado ?? false);
   const [error, setError] = useState<string | null>(null);
@@ -88,15 +91,19 @@ export default function CostoLogisticaModal({
       form.set("estado", estado);
       form.set("notas", notas.trim());
       form.set("prorratear", String(prorratearCosto));
-      if (estado === "pagado" && comprobante) {
-        await adjuntarArchivo(form, "comprobante", comprobante, "logistica", costo?.envioId ?? envioId);
-      }
-
-      const res = await fetch(costo ? `/api/admin/logistica/${costo.id}` : "/api/admin/logistica", {
+      const archivos = estado === "pagado" ? comprobante.archivos.map((file) => ({ campo: "comprobante", file })) : [];
+      if (archivos.length) comprobante.empezar();
+      const res = await enviarFormularioConArchivos({
+        url: costo ? `/api/admin/logistica/${costo.id}` : "/api/admin/logistica",
         method: costo ? "PATCH" : "POST",
-        body: form,
+        form,
+        archivos,
+        destino: "logistica",
+        entidadId: costo?.envioId ?? envioId,
+        alProgresar: comprobante.alProgresar,
       });
-      const json = await res.json().catch(() => ({}));
+      const json = res.json;
+      comprobante.terminar(res.ok);
       if (!res.ok) {
         const mensaje = json.error ?? "No pudimos guardar el costo.";
         setError(mensaje);
@@ -106,6 +113,7 @@ export default function CostoLogisticaModal({
       showSuccess(costo ? "Costo actualizado" : "Costo de logística registrado");
       onSaved();
     } catch (err) {
+      comprobante.terminar(false);
       const mensaje = mensajeDeError(err, "No pudimos guardar el costo. Probá de nuevo.");
       setError(mensaje);
       showError(mensaje);
@@ -210,15 +218,11 @@ export default function CostoLogisticaModal({
           </fieldset>
 
           {estado === "pagado" && (
-            <label className="block space-y-1">
-              <span className={labelClass}>Comprobante {costo?.comprobanteUrl ? "(reemplazar)" : "(opcional)"}</span>
-              <input
-                type="file"
-                accept="application/pdf,image/*"
-                onChange={(e) => setComprobante(e.target.files?.[0] ?? null)}
-                className="w-full text-sm"
-              />
-            </label>
+            <FileUpload
+              label={`Comprobante ${costo?.comprobanteUrl ? "(reemplazar)" : "(opcional)"}`}
+              tipos={TIPOS_MOVARA}
+              {...comprobante.campo}
+            />
           )}
 
           <label className="flex items-start gap-2 rounded-xl border border-[#E5E5E5] p-3 cursor-pointer">

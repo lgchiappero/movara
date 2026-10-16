@@ -9,6 +9,10 @@ import { ToastProvider } from "@/components/admin/Toast";
 import { useAccionesPlanes, type AccionesPlanes } from "./useAccionesPlanes";
 import type { AcuerdoConDetalle } from "@/lib/cobranza/types";
 
+vi.mock("@/lib/admin/subida-cliente", async (original) =>
+  (await import("@/test/subida-por-fetch")).subidaPorFetch(original)
+);
+
 const PAGO = {
   id: "m1",
   fecha: "2026-09-05T00:00:00.000Z",

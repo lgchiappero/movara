@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+vi.mock("@/lib/admin/subida-cliente", async (original) =>
+  (await import("@/test/subida-por-fetch")).subidaPorFetch(original)
+);
 import { ToastProvider } from "@/components/admin/Toast";
 import CostoLogisticaModal from "./CostoLogisticaModal";
 import type { CostoLogisticaRow } from "@/lib/cobranza/logistica";

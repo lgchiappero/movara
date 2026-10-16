@@ -1,8 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { adjuntarArchivo, mensajeDeError } from "@/lib/admin/subida-cliente";
+import { enviarFormularioConArchivos, mensajeDeError } from "@/lib/admin/subida-cliente";
+import { TIPOS_MOVARA } from "@/lib/admin/tipos-archivo";
+import FileUpload from "@/components/admin/ui/FileUpload";
+import { useSubidaArchivos } from "@/components/admin/ui/useSubidaArchivos";
 import type { SeccionInfo } from "@/lib/envios/constantes";
 import EliminarDocumentoButton from "@/components/admin/EliminarDocumentoButton";
 
@@ -62,39 +65,43 @@ function SeccionCard({
   puedeEliminar: boolean;
 }) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const archivo = useSubidaArchivos();
   const [descripcion, setDescripcion] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
-    const file = inputRef.current?.files?.[0];
+    const file = archivo.archivos[0];
     if (!file) {
       setError("Elegí un archivo primero.");
       return;
     }
     setError(null);
-    setUploading(true);
+    archivo.empezar();
+    let ok = false;
     try {
       const form = new FormData();
-      await adjuntarArchivo(form, "file", file, subida.destino, subida.entidadId);
       form.append("seccion", seccion.key);
       if (descripcion.trim()) form.append("descripcion", descripcion.trim());
-
-      const res = await fetch(uploadUrl, { method: "POST", body: form });
-      const json = await res.json();
+      const res = await enviarFormularioConArchivos({
+        url: uploadUrl,
+        form,
+        archivos: [{ campo: "file", file }],
+        destino: subida.destino,
+        entidadId: subida.entidadId,
+        alProgresar: archivo.alProgresar,
+      });
       if (!res.ok) {
-        setError(json.error ?? "No pudimos subir el documento.");
+        setError(res.json.error ?? "No pudimos subir el documento.");
         return;
       }
+      ok = true;
       setDescripcion("");
-      if (inputRef.current) inputRef.current.value = "";
       router.refresh();
     } catch (err) {
       setError(mensajeDeError(err, "No pudimos subir el documento. Probá de nuevo."));
     } finally {
-      setUploading(false);
+      archivo.terminar(ok);
     }
   }
 
@@ -113,7 +120,7 @@ function SeccionCard({
               className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-[#F5F5F5] last:border-0"
             >
               <div className="min-w-0">
-                <p className="font-medium text-[#2F2F2F] truncate">{d.nombre}</p>
+                <p className="font-medium text-[#2F2F2F] break-words [overflow-wrap:anywhere]">{d.nombre}</p>
                 <p className="text-xs text-stone-400">
                   {new Date(d.createdAt).toLocaleDateString("es-AR")} · {d.subidoPor}
                   {d.descripcion ? ` · ${d.descripcion}` : ""}
@@ -141,28 +148,29 @@ function SeccionCard({
         </div>
       )}
 
-      <form onSubmit={handleUpload} className="flex flex-col sm:flex-row gap-2 sm:items-center pt-1">
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".pdf,.jpg,.jpeg,.png,.xlsx,.docx"
-          className="text-xs flex-1 min-w-0"
-        />
-        {seccion.permiteDescripcion && (
-          <input
-            className="text-xs rounded-lg border border-[#E5E5E5] px-2 py-1.5 flex-1 min-w-0"
-            placeholder="Descripción (opcional)"
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-          />
+      <form onSubmit={handleUpload} className="space-y-2 pt-1">
+        <FileUpload label="Agregar documento" tipos={TIPOS_MOVARA} compacto {...archivo.campo} />
+        {archivo.archivos.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            {seccion.permiteDescripcion && (
+              <input
+                className="text-sm rounded-lg border border-[#E5E5E5] px-3 py-2 flex-1 min-w-0"
+                placeholder="Descripción (opcional)"
+                aria-label="Descripción (opcional)"
+                value={descripcion}
+                disabled={archivo.subiendo}
+                onChange={(e) => setDescripcion(e.target.value)}
+              />
+            )}
+            <button
+              type="submit"
+              disabled={archivo.subiendo}
+              className="px-4 py-2 bg-sage-500 hover:bg-sage-600 disabled:opacity-60 text-[#2F2F2F] font-bold text-sm rounded-lg transition-colors whitespace-nowrap"
+            >
+              {archivo.subiendo ? "Subiendo…" : "Subir archivo"}
+            </button>
+          </div>
         )}
-        <button
-          type="submit"
-          disabled={uploading}
-          className="px-3 py-1.5 bg-sage-500 hover:bg-sage-600 disabled:opacity-60 text-[#2F2F2F] font-bold text-xs rounded-lg transition-colors whitespace-nowrap"
-        >
-          {uploading ? "Subiendo..." : "Subir archivo"}
-        </button>
       </form>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
