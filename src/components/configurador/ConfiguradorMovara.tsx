@@ -62,7 +62,7 @@ export type PreciosConfig = {
   preciosExtras?: { nombre?: string | null; precio?: number | null }[] | null;
 };
 
-const DEFAULT_PRECIO_BASE_M2 = 650;
+const DEFAULT_PRECIO_BASE_M2 = 680;
 const DEFAULT_PRECIO_ADICIONAL = 500;
 
 // ─────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ const LABELS_LAVA: Record<TipoLavarropas, string> = {
   externo: "espacio externo con desagüe",
 };
 
-function calcularPrecio({
+export function calcularPrecio({
   modelo,
   materiales,
   precios,

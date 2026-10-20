@@ -159,7 +159,7 @@ export const siteConfigType = defineType({
       title: 'Precio base por m² (USD)',
       type: 'number',
       description: 'El precio base de cada modelo se calcula como m² × este valor.',
-      initialValue: 650,
+      initialValue: 680,
       validation: (Rule) => Rule.positive(),
       group: 'precios',
     }),
