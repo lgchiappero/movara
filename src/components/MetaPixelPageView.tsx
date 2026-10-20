@@ -4,16 +4,18 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { trackPageView } from "@/lib/meta-pixel";
 
+/** PageView en cada navegación del lado del cliente. El de la carga inicial
+ * lo manda el script del píxel (layout.tsx), así que se mide solo cuando la
+ * ruta cambia respecto de la última medida — comparar rutas y no "primer
+ * render" evita un PageView doble cuando React corre el efecto dos veces
+ * (StrictMode en desarrollo). */
 export function MetaPixelPageView() {
   const pathname = usePathname();
-  const isFirst = useRef(true);
+  const ultimaMedida = useRef(pathname);
 
   useEffect(() => {
-    // Skip first render — the pixel init script already fires PageView on load.
-    if (isFirst.current) {
-      isFirst.current = false;
-      return;
-    }
+    if (ultimaMedida.current === pathname) return;
+    ultimaMedida.current = pathname;
     trackPageView();
   }, [pathname]);
 

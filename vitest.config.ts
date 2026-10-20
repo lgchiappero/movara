@@ -19,6 +19,7 @@ export default defineConfig({
         "src/data/**/*.ts",
         "src/components/modelos/**/*.tsx",
         "src/components/home/ModelosHome.tsx",
+        "src/components/MetaPixelPageView.tsx",
         "src/components/detail/**/*.tsx",
         "src/components/home/Hero.tsx",
         "src/components/home/DolorConvencional.tsx",
