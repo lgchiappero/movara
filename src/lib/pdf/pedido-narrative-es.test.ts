@@ -40,6 +40,12 @@ describe("buildPedidoNarrativeEs — pedidos cargados a mano desde el admin", ()
     expect(group.bullets.some((b) => b.includes("Blanco liso con detalles dorados"))).toBe(true);
   });
 
+  it("muestra una mesada retirada del catálogo con su nombre (pedidos viejos)", () => {
+    const items = buildPedidoNarrativeEs({ ...base, materiales: { mesada: "negro" } });
+    const group = findGroup(items, "Cocina");
+    expect(group.bullets).toContain("Mesada: Negro (opción discontinuada)");
+  });
+
   it("sigue mostrando el label del catálogo cuando el id sí matchea", () => {
     const items = buildPedidoNarrativeEs({ ...base, materiales: { exterior: "blanco" } });
     const group = findGroup(items, "Apariencia exterior");

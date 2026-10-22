@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { buildPedidoNarrativeEs } from "@/lib/pdf/pedido-narrative-es";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
-import { MATERIAL_CATEGORY_GROUPS, findMaterialOption } from "@/data/material-catalog";
+import { MATERIAL_CATEGORY_GROUPS, findMaterialOption, getStoredMaterialLabel } from "@/data/material-catalog";
 import { estadoPedidoLabels, type EstadoPedido } from "@/lib/pedido/estado-pedido";
 import { getSignedUrl, BUCKET_PEDIDOS } from "@/lib/admin/storage";
 import GestionPedidoPanel from "@/components/admin/GestionPedidoPanel";
@@ -245,9 +245,13 @@ function MaterialesConImagenes({ materiales }: { materiales: Record<string, stri
         const cards = group.selectors.flatMap((selector) => {
           if (seenKeys.has(selector.key)) return [];
           seenKeys.add(selector.key);
-          const found = findMaterialOption(selector.key, materiales[selector.key] ?? null);
-          if (!found) return [];
-          return [{ key: selector.key, ...found }];
+          const raw = materiales[selector.key] ?? null;
+          const found = findMaterialOption(selector.key, raw);
+          if (found) return [{ key: selector.key, img: found.option.img, label: found.option.label, imageFit: found.selector.imageFit }];
+          // Opción retirada del catálogo o texto libre del admin: sin foto,
+          // pero se muestra igual para que el pedido no pierda el dato.
+          const label = getStoredMaterialLabel(selector.key, raw);
+          return label ? [{ key: selector.key, img: undefined, label, imageFit: undefined }] : [];
         });
 
         if (cards.length === 0) return null;
@@ -260,17 +264,17 @@ function MaterialesConImagenes({ materiales }: { materiales: Record<string, stri
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {cards.map((card) => (
                 <div key={card.key} className="rounded-xl border border-[#E5E5E5] overflow-hidden">
-                  {card.option.img && (
+                  {card.img && (
                     <div className="relative w-full aspect-square bg-stone-50">
                       <Image
-                        src={card.option.img}
-                        alt={card.option.label}
+                        src={card.img}
+                        alt={card.label}
                         fill
-                        className={card.selector.imageFit === "contain" ? "object-contain" : "object-cover"}
+                        className={card.imageFit === "contain" ? "object-contain" : "object-cover"}
                       />
                     </div>
                   )}
-                  <p className="text-xs text-stone-600 px-2 py-1.5 truncate">{card.option.label}</p>
+                  <p className="text-xs text-stone-600 px-2 py-1.5 truncate" title={card.label}>{card.label}</p>
                 </div>
               ))}
             </div>

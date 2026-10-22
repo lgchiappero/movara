@@ -1,7 +1,7 @@
 import { getModeloKey, REGIONAL_MODELS } from "@/data/regional-models";
 import { findUpgrade } from "@/data/configurador-catalog";
 import { findAdminExtraLabel } from "@/data/admin-extras";
-import { MATERIAL_CATEGORY_GROUPS, findMaterialOption } from "@/data/material-catalog";
+import { MATERIAL_CATEGORY_GROUPS, getStoredMaterialLabel } from "@/data/material-catalog";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { labelOrFallback, SIN_ESPECIFICAR } from "@/lib/pdf/pedido-record";
 import {
@@ -55,13 +55,10 @@ export function buildPedidoNarrativeEs(data: PedidoRecord): NarrativeItem[] {
     for (const selector of group.selectors) {
       if (seenKeys.has(selector.key)) continue;
       seenKeys.add(selector.key);
-      const raw = materiales[selector.key] ?? null;
-      const found = findMaterialOption(selector.key, raw);
       const nombreCampo = SELECTOR_LABELS_ES[selector.key] ?? selector.key;
-      // `raw` puede ser un id de catálogo (configurador público) o texto
-      // libre cargado a mano por el admin — mostramos el texto tal cual
-      // cuando no matchea ningún id conocido.
-      const valor = found ? found.option.label : raw ? raw : "no incluye";
+      // El valor guardado puede ser un id de catálogo (configurador público),
+      // un id de una opción retirada o texto libre cargado a mano por el admin.
+      const valor = getStoredMaterialLabel(selector.key, materiales[selector.key] ?? null) ?? "no incluye";
       bullets.push(`${nombreCampo}: ${valor}`);
     }
     return { type: "group", title: group.title, bullets };

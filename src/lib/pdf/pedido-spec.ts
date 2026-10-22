@@ -1,7 +1,7 @@
 import { getModeloKey, REGIONAL_MODELS } from "@/data/regional-models";
 import { findUpgrade } from "@/data/configurador-catalog";
 import { findAdminExtraLabel } from "@/data/admin-extras";
-import { MATERIAL_CATEGORY_GROUPS, findMaterialOption } from "@/data/material-catalog";
+import { MATERIAL_CATEGORY_GROUPS, getStoredMaterialLabel } from "@/data/material-catalog";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { labelOrFallback, SIN_ESPECIFICAR } from "@/lib/pdf/pedido-record";
 import {
@@ -58,11 +58,9 @@ export function buildSupplierSpecItems(data: PedidoRecord): SupplierSpecItem[] {
     for (const selector of group.selectors) {
       if (seenKeys.has(selector.key)) continue;
       seenKeys.add(selector.key);
-      const raw = materiales[selector.key] ?? null;
-      const found = findMaterialOption(selector.key, raw);
       rows.push({
         label: SELECTOR_LABELS_EN[selector.key] ?? selector.key,
-        value: found ? found.option.label : raw ? raw : "Not included",
+        value: getStoredMaterialLabel(selector.key, materiales[selector.key] ?? null) ?? "Not included",
       });
     }
     return { type: "group", title: group.title, rows };

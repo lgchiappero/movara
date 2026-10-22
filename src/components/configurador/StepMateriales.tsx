@@ -155,7 +155,7 @@ function MaterialCard({
       {/* Estado de selección: solo acá — nunca sobre la imagen. */}
       <div className="px-2 py-2 transition-colors duration-200" style={{ backgroundColor: selected ? textBg : "#ffffff" }}>
         {selected && <StatusBadge isPremium={isPremium} />}
-        <p className={`text-xs font-semibold leading-snug truncate ${selected ? "text-stone-900" : "text-stone-600"}`}>{option.label}</p>
+        <p className={`text-xs font-semibold leading-snug line-clamp-2 ${selected ? "text-stone-900" : "text-stone-600"}`}>{option.label}</p>
       </div>
     </button>
   );

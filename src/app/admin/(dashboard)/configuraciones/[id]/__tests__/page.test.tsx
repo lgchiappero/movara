@@ -195,6 +195,16 @@ describe("ConfiguracionDetailPage", () => {
     expect(screen.getByText(primeraOpcion.label)).toBeInTheDocument();
   });
 
+  it("MaterialesConImagenes muestra igual una mesada retirada del catálogo y el texto libre del admin", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      ...CONFIG_BASE,
+      materiales: { mesada: "negro-absoluto", piso: "Porcelanato a definir" },
+    });
+    render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+    expect(screen.getAllByText("Negro absoluto (opción discontinuada)").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Porcelanato a definir").length).toBeGreaterThan(0);
+  });
+
   it("pasa los vendedores activos a GestionPedidoPanel (query filtra rol vendedor + activo)", async () => {
     mockFindUnique.mockResolvedValueOnce(CONFIG_BASE);
     render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));

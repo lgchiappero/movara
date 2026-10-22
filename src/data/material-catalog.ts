@@ -194,16 +194,11 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
         key: "mesada",
         label: "Mesada — sin costo",
         options: [
-          { id: "negro", img: `${DIR}/cocina/cocina-mesada-negro.jpg`, color: "#1a1a1a", label: "Negro" },
-          { id: "blanco-marmol", img: `${DIR}/cocina/cocina-mesada-blanco-marmol.jpg`, color: "#f5f5f0", label: "Blanco mármol" },
-          { id: "gris", img: `${DIR}/cocina/cocina-mesada-gris.jpg`, color: "#808080", label: "Gris" },
-          { id: "blanco", img: `${DIR}/cocina/cocina-mesada-blanco.jpg`, color: "#ffffff", label: "Blanco", border: true },
-          { id: "dorado", img: `${DIR}/cocina/cocina-mesada-dorado.jpg`, color: "#c8a96e", label: "Dorado/Ocre" },
-          { id: "blanco-marmol-venas-grises", img: `${DIR}/cocina/cocina-mesada-blanco-marmol-venas-grises.jpg`, color: "#eceae6", border: true, label: "Blanco mármol con venas grises" },
-          { id: "negro-absoluto", img: `${DIR}/cocina/cocina-mesada-negro-absoluto.jpg`, color: "#0a0a0a", label: "Negro absoluto" },
-          { id: "gris-cemento", img: `${DIR}/cocina/cocina-mesada-gris-cemento.jpg`, color: "#9a968d", label: "Gris cemento" },
-          { id: "beige-arena", img: `${DIR}/cocina/cocina-mesada-beige-arena.jpg`, color: "#d8c9a8", label: "Beige arena" },
-          { id: "verde-agua", img: `${DIR}/cocina/cocina-mesada-verde-agua.jpg`, color: "#93bdaf", label: "Verde agua" },
+          { id: "granito-claro", img: `${DIR}/cocina/cocina-mesada-granito-claro.jpg`, color: "#d9d6cf", label: "Granito claro", border: true },
+          { id: "blanco", img: `${DIR}/cocina/cocina-mesada-blanco.jpg`, color: "#f4f3ef", label: "Blanco", border: true },
+          { id: "marmol-blanco-vetas-doradas", img: `${DIR}/cocina/cocina-mesada-marmol-vetas-doradas.jpg`, color: "#efece6", label: "Mármol blanco vetas doradas", border: true },
+          { id: "marmol-blanco-vetas-grises", img: `${DIR}/cocina/cocina-mesada-marmol-vetas-grises.jpg`, color: "#e9eaec", label: "Mármol blanco vetas grises", border: true },
+          { id: "negro-vetas-doradas", img: `${DIR}/cocina/cocina-mesada-negro-vetas-doradas.jpg`, color: "#1f1e1c", label: "Negro vetas doradas" },
         ],
       },
       {
@@ -297,4 +292,34 @@ export function findMaterialOption(key: string, id: string | null): { option: Ma
 
 export function getMaterialLabel(key: string, id: string | null): string {
   return findMaterialOption(key, id)?.option.label ?? "(no seleccionado)";
+}
+
+// Opciones que el configurador ofreció alguna vez y ya no existen. Los
+// pedidos guardados conservan esos ids en `materiales`: no se ofrecen más
+// (findMaterialOption no las encuentra, así que tampoco suman precio), pero
+// se siguen mostrando con su nombre en el admin y en los PDFs.
+const RETIRED_MATERIAL_LABELS: Record<string, Record<string, string>> = {
+  mesada: {
+    negro: "Negro",
+    "blanco-marmol": "Blanco mármol",
+    gris: "Gris",
+    dorado: "Dorado/Ocre",
+    "blanco-marmol-venas-grises": "Blanco mármol con venas grises",
+    "negro-absoluto": "Negro absoluto",
+    "gris-cemento": "Gris cemento",
+    "beige-arena": "Beige arena",
+    "verde-agua": "Verde agua",
+  },
+};
+
+/** Texto para mostrar un valor guardado en `materiales`: label del catálogo,
+ *  label de una opción retirada (marcada como discontinuada), o el texto
+ *  libre cargado a mano por el admin tal cual. null si no hay valor. */
+export function getStoredMaterialLabel(key: string, raw: string | null): string | null {
+  if (!raw) return null;
+  const found = findMaterialOption(key, raw);
+  if (found) return found.option.label;
+  const retired = RETIRED_MATERIAL_LABELS[key]?.[raw];
+  if (retired) return `${retired} (opción discontinuada)`;
+  return raw;
 }

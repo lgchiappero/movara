@@ -4,6 +4,7 @@ import {
   getDefaultMateriales,
   findMaterialOption,
   getMaterialLabel,
+  getStoredMaterialLabel,
 } from "@/data/material-catalog";
 
 describe("getDefaultMateriales", () => {
@@ -69,5 +70,43 @@ describe("getMaterialLabel", () => {
   it("retorna el fallback cuando el id no existe", () => {
     const sel = MATERIAL_CATEGORY_GROUPS[0].selectors[0];
     expect(getMaterialLabel(sel.key, "id-inexistente")).toBe("(no seleccionado)");
+  });
+});
+
+describe("mesada", () => {
+  it("ofrece solo las 5 mesadas reales del proveedor", () => {
+    const sel = MATERIAL_CATEGORY_GROUPS.flatMap((c) => c.selectors).filter((s) => s.key === "mesada");
+    expect(sel.flatMap((s) => s.options.map((o) => o.label))).toEqual([
+      "Granito claro",
+      "Blanco",
+      "Mármol blanco vetas doradas",
+      "Mármol blanco vetas grises",
+      "Negro vetas doradas",
+    ]);
+  });
+
+  it("una mesada retirada ya no se ofrece (no se encuentra en el catálogo)", () => {
+    expect(findMaterialOption("mesada", "negro-absoluto")).toBeNull();
+  });
+});
+
+describe("getStoredMaterialLabel", () => {
+  it("retorna null si no hay valor guardado", () => {
+    expect(getStoredMaterialLabel("mesada", null)).toBeNull();
+    expect(getStoredMaterialLabel("mesada", "")).toBeNull();
+  });
+
+  it("retorna el label del catálogo para un id vigente", () => {
+    expect(getStoredMaterialLabel("mesada", "granito-claro")).toBe("Granito claro");
+  });
+
+  it("muestra una opción retirada con su nombre, marcada como discontinuada", () => {
+    expect(getStoredMaterialLabel("mesada", "negro")).toBe("Negro (opción discontinuada)");
+    expect(getStoredMaterialLabel("mesada", "verde-agua")).toBe("Verde agua (opción discontinuada)");
+  });
+
+  it("muestra el texto libre del admin tal cual", () => {
+    expect(getStoredMaterialLabel("mesada", "Granito gris")).toBe("Granito gris");
+    expect(getStoredMaterialLabel("key-sin-retiradas", "algo")).toBe("algo");
   });
 });
