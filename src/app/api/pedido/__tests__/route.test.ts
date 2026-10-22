@@ -100,6 +100,39 @@ describe("POST /api/pedido", () => {
     delete process.env.RESEND_API_KEY;
   });
 
+  it("guarda las notas de configuración (recortadas) y null si vienen vacías", async () => {
+    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
+    await POST(req({ ...BASE, notasConfiguracion: "  Necesito rampa  " }, "10.0.0.20"));
+    expect(mockCreate.mock.calls[0][0].data.notasConfiguracion).toBe("Necesito rampa");
+    await POST(req({ ...BASE, notasConfiguracion: "   " }, "10.0.0.21"));
+    expect(mockCreate.mock.calls[1][0].data.notasConfiguracion).toBeNull();
+    await POST(req(BASE, "10.0.0.22"));
+    expect(mockCreate.mock.calls[2][0].data.notasConfiguracion).toBeNull();
+  });
+
+  it("400 si las notas superan los 1000 caracteres", async () => {
+    const res = await POST(req({ ...BASE, notasConfiguracion: "a".repeat(1001) }, "10.0.0.23"));
+    expect(res.status).toBe(400);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("el aviso por email lista el balcón como A cotizar y las notas escapadas", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
+    await POST(
+      req(
+        { ...BASE, materiales: { balcon: "frontal", techoBalcon: "completo" }, notasConfiguracion: "<img src=x onerror=alert(1)>" },
+        "10.0.0.24"
+      )
+    );
+    const html: string = mockSend.mock.calls[0][0].html;
+    expect(html).toContain("Balcón frontal — <strong");
+    expect(html).toContain("Sobretecho completo: balcón y toda la unidad — <strong");
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+    expect(html).not.toContain("<img");
+    delete process.env.RESEND_API_KEY;
+  });
+
   it("500 si falla la base", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     mockCreate.mockRejectedValue(new Error("db"));

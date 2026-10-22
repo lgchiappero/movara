@@ -18,7 +18,7 @@ vi.mock("@/lib/meta-pixel", () => ({
 
 import ConfiguradorMovara from "../ConfiguradorMovara";
 
-// Cada caso recorre los 6 pasos del configurador con animaciones reales.
+// Cada caso recorre los pasos del configurador con animaciones reales.
 vi.setConfig({ testTimeout: 15_000 });
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -49,8 +49,6 @@ async function completarHastaEnviar(user: ReturnType<typeof userEvent.setup>) {
   await user.selectOptions(document.querySelector("#cfg-provincia")!, "Buenos Aires");
   await user.click(siguiente());
   await user.click(await screen.findByRole("button", { name: "2 hab." }));
-  await user.click(siguiente());
-  await screen.findByRole("heading", { name: "Mejoras para tu MOVARA" });
   await user.click(siguiente());
   await user.type(await screen.findByPlaceholderText("Ej: Juan García"), "Juan García");
   await user.type(screen.getByPlaceholderText("Ej: +54 9 11 1234-5678"), "+5491112345678");

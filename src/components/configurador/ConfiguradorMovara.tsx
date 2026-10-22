@@ -5,25 +5,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { REGIONAL_MODELS, PROVINCIA_A_MODELO, PROVINCIAS_AR, getModeloKey } from "@/data/regional-models";
-import {
-  MOVARA_MODELS,
-  FINALIDADES,
-  UNIVERSAL_UPGRADES,
-  UPGRADES_BY_REGION,
-  type ModeloKey,
-  type FinalidadKey,
-  type Upgrade,
-} from "@/data/configurador-catalog";
+import { MOVARA_MODELS, FINALIDADES, type ModeloKey, type FinalidadKey } from "@/data/configurador-catalog";
+import { BALCON_LATERAL_MODELOS, getOpcionesAConsultar } from "@/data/material-catalog";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { trackContact, trackInitiateCheckout, trackLead } from "@/lib/meta-pixel";
 import {
   MaterialesSection,
+  SelectorBlock,
+  MATERIAL_CATEGORY_GROUPS,
   getDefaultMateriales,
   getMaterialLabel,
   findMaterialOption,
   type MaterialesSeleccion,
 } from "./StepMateriales";
-import { PrecioPanel, type PrecioResumen } from "./PrecioPanel";
+import { PrecioPanel, AConsultar, type PrecioResumen } from "./PrecioPanel";
 import {
   validateField,
   particularSchema,
@@ -33,6 +28,8 @@ import {
   telefonoSchema,
   emailSchema,
   localidadSchema,
+  notasConfiguracionSchema,
+  NOTAS_CONFIGURACION_MAX,
   sanitizarLinea,
   normalizarTelefono,
   sanitizarMensaje,
@@ -119,7 +116,7 @@ export function calcularPrecio({
   });
 
   const total = base + adicionales.reduce((sum, a) => sum + a.precio, 0);
-  return { base, adicionales, total };
+  return { base, adicionales, total, aConsultar: getOpcionesAConsultar(materiales) };
 }
 
 function buildWAMessage(params: {
@@ -133,7 +130,6 @@ function buildWAMessage(params: {
   incluyeBano: boolean;
   tipoAgua: TipoAgua;
   lavarropas: TipoLavarropas;
-  upgradesSeleccionados: string[];
   regionalKey: string;
   tipoCliente: TipoCliente;
   nombre: string;
@@ -160,10 +156,6 @@ function buildWAMessage(params: {
   const lavaTxt = LABELS_LAVA[params.lavarropas];
 
   const regional = REGIONAL_MODELS[params.regionalKey];
-  const allUpgrades = [...UNIVERSAL_UPGRADES, ...(UPGRADES_BY_REGION[params.regionalKey] ?? [])];
-  const selectedUpgradeNames = params.upgradesSeleccionados
-    .map((k) => allUpgrades.find((u) => u.key === k)?.nombre)
-    .filter(Boolean);
 
   const materialesLines = [
     `- Exterior: ${getMaterialLabel("exterior", params.materiales.exterior)}`,
@@ -181,6 +173,7 @@ function buildWAMessage(params: {
     return found?.selector.priceName ? [`${found.selector.priceName}: ${found.option.label}`] : [];
   });
   const premiumLine = premiumNames.length ? premiumNames.join(", ") : "Ninguna";
+  const aCotizar = getOpcionesAConsultar(params.materiales).map((o) => o.nombre);
 
   const msg =
     `Hola MOVARA! 👋\n\n` +
@@ -192,11 +185,10 @@ function buildWAMessage(params: {
     `🎯 Uso: ${f.label}\n` +
     `📍 Ubicación: ${loc || "(no especificada)"}\n` +
     `🏠 Configuración: ${params.habitaciones} hab., ${cocinaTxt}, ${banoTxt}, ${lavaTxt}\n` +
-    (selectedUpgradeNames.length
-      ? `⚙️ Mejoras a cotizar: ${selectedUpgradeNames.join(", ")}\n`
-      : `⚙️ Zona climática: ${regional?.region ?? params.regionalKey}\n`) +
+    `⚙️ Zona climática: ${regional?.region ?? params.regionalKey}\n` +
     `\n🎨 Materiales elegidos:\n${materialesLines}\n\n` +
     `⭐ Opciones premium a cotizar:\n${premiumLine}\n\n` +
+    (aCotizar.length ? `🏗️ Para cotizar en el presupuesto:\n${aCotizar.join(", ")}\n\n` : "") +
     `Quedo a la espera de su presupuesto. Gracias!`;
 
   return sanitizarMensaje(msg, 2200);
@@ -206,7 +198,8 @@ function buildWAMessage(params: {
 // Main component
 // ─────────────────────────────────────────────────────────
 
-const STEP_LABELS = ["Modelo", "Finalidad", "Ubicación", "Configuración", "Mejoras", "Datos", "Resultado"] as const;
+const STEP_LABELS = ["Modelo", "Finalidad", "Ubicación", "Configuración", "Datos", "Resultado"] as const;
+const TOTAL_PASOS = STEP_LABELS.length;
 const VALID_MODELO_KEYS = new Set(MOVARA_MODELS.map((m) => m.key));
 
 const subscribeNoop = () => () => {};
@@ -236,7 +229,7 @@ export default function ConfiguradorMovara({
     },
     paso3: {
       title: data?.paso3?.title ?? "¿Dónde lo instalás?",
-      subtitle: data?.paso3?.subtitle ?? "Cada zona del país tiene requerimientos técnicos distintos. Los calculamos automáticamente.",
+      subtitle: data?.paso3?.subtitle ?? "Contanos dónde lo vas a instalar para coordinar el traslado hasta tu terreno.",
       localidadLabel: data?.paso3?.localidadLabel ?? "Localidad",
       provinciaLabel: data?.paso3?.provinciaLabel ?? "Provincia",
     },
@@ -247,8 +240,8 @@ export default function ConfiguradorMovara({
     },
   };
 
-  // Paso 1–6
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
+  // Pasos 1–5 (el 6, Resultado, es showResult)
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [slideDir, setSlideDir] = useState<1 | -1>(1);
   const [modelo, setModelo] = useState<ModeloKey | null>(null);
 
@@ -277,6 +270,8 @@ export default function ConfiguradorMovara({
   const [tipoAgua, setTipoAgua] = useState<TipoAgua>("calefon-electrico");
   const [lavarropas, setLavarropas] = useState<TipoLavarropas>("sin");
   const [materiales, setMateriales] = useState<MaterialesSeleccion>(() => getDefaultMateriales());
+  const [notas, setNotas] = useState("");
+  const notasError = validateField(notasConfiguracionSchema, notas);
 
   function selectMaterial(key: string, id: string, nullable?: boolean) {
     setMateriales((prev) => ({ ...prev, [key]: nullable && prev[key] === id ? null : id }));
@@ -285,9 +280,6 @@ export default function ConfiguradorMovara({
   const priceFor = (priceName: string) => resolvePremiumPrice(priceName, precios);
 
   // Paso 5
-  const [upgradesSeleccionados, setUpgradesSeleccionados] = useState<Set<string>>(new Set());
-
-  // Paso 6
   const [tipoCliente, setTipoCliente] = useState<TipoCliente>("particular");
   const [nombre, setNombre] = useState("");
   const [razonSocial, setRazonSocial] = useState("");
@@ -320,7 +312,7 @@ export default function ConfiguradorMovara({
     [modelo, materiales, precios]
   );
 
-  const step6Valid =
+  const datosValidos =
     tipoCliente === "particular"
       ? particularSchema.safeParse({ nombre: nombre.trim(), telefono, email: email.trim() }).success
       : empresaSchema.safeParse({ razonSocial: razonSocial.trim(), nombreContacto: nombreContacto.trim(), telefono, email: email.trim() }).success;
@@ -329,9 +321,8 @@ export default function ConfiguradorMovara({
     (step === 1 && modelo !== null) ||
     (step === 2 && finalidad !== null) ||
     (step === 3 && provincia !== "" && localidadValida) ||
-    step === 4 ||
-    step === 5 ||
-    (step === 6 && step6Valid);
+    (step === 4 && !notasError) ||
+    (step === 5 && datosValidos);
 
   async function submitPedido() {
     setEnviandoPedido(true);
@@ -359,7 +350,7 @@ export default function ConfiguradorMovara({
           tipoAgua,
           lavarropas,
           materiales,
-          upgrades: Array.from(upgradesSeleccionados),
+          notasConfiguracion: notas,
           precioEstimado: precioResumen.total,
         }),
       });
@@ -385,9 +376,9 @@ export default function ConfiguradorMovara({
       inicioMedido.current = true;
       trackInitiateCheckout(modeloSeleccionado.nombre);
     }
-    if (step < 6) {
+    if (step < 5) {
       setSlideDir(1);
-      setStep((s) => (s + 1) as 2 | 3 | 4 | 5 | 6);
+      setStep((s) => (s + 1) as 2 | 3 | 4 | 5);
     } else {
       const msg = buildWAMessage({
         modelo: modelo!,
@@ -400,7 +391,6 @@ export default function ConfiguradorMovara({
         incluyeBano,
         tipoAgua,
         lavarropas,
-        upgradesSeleccionados: Array.from(upgradesSeleccionados),
         regionalKey,
         tipoCliente,
         nombre,
@@ -423,7 +413,7 @@ export default function ConfiguradorMovara({
       setShowResult(false);
     } else if (step > 1) {
       setSlideDir(-1);
-      setStep((s) => (s - 1) as 1 | 2 | 3 | 4 | 5 | 6);
+      setStep((s) => (s - 1) as 1 | 2 | 3 | 4 | 5);
     }
   }
 
@@ -432,19 +422,29 @@ export default function ConfiguradorMovara({
     window.open(getWhatsAppUrl(waMessage), "_blank", "noopener,noreferrer");
   }
 
-  function toggleUpgrade(key: string) {
-    setUpgradesSeleccionados((prev) => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
+  // El balcón lateral es solo para BALCON_LATERAL_MODELOS: si cambia a un
+  // modelo que no lo admite, el balcón (y su techo) vuelven a "No".
+  function elegirModelo(key: ModeloKey) {
+    setModelo(key);
+    if (!BALCON_LATERAL_MODELOS.includes(key)) {
+      setMateriales((prev) => (prev.balcon === "lateral" ? { ...prev, balcon: null, techoBalcon: null } : prev));
+    }
+  }
+
+  // Sin balcón no hay techo; al elegir uno, arranca con sobretecho solo en el balcón.
+  function elegirBalcon(id: string | null) {
+    setMateriales((prev) => ({
+      ...prev,
+      balcon: id,
+      techoBalcon: id ? (prev.techoBalcon ?? "solo-balcon") : null,
+    }));
   }
 
   if (showResult) {
     return (
       <main className="min-h-screen bg-stone-50 pt-16">
         <div className="bg-[#2F2F2F] px-4 sm:px-6 pt-14 pb-10 text-center">
-          <span className="text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Paso 7 de 7 — Tu configuración</span>
+          <span className="text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Paso {TOTAL_PASOS} de {TOTAL_PASOS} — Tu configuración</span>
           <h1 className="text-3xl font-bold text-white mt-2">{cms.resultado.title}</h1>
           <p className="text-stone-400 mt-2 text-sm">Revisá el mensaje y enviánoslo por WhatsApp para arrancar.</p>
         </div>
@@ -462,8 +462,7 @@ export default function ConfiguradorMovara({
               incluyeBano={incluyeBano}
               tipoAgua={tipoAgua}
               lavarropas={lavarropas}
-              upgradesSeleccionados={Array.from(upgradesSeleccionados)}
-              regionalKey={regionalKey}
+              aConsultar={precioResumen.aConsultar}
               waMessage={waMessage}
               setWaMessage={setWaMessage}
               onBack={goBack}
@@ -489,14 +488,14 @@ export default function ConfiguradorMovara({
       <div className="bg-[#2F2F2F] px-4 sm:px-6 pt-14 pb-10 text-center">
         <span className="text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Configurador</span>
         <h1 className="text-3xl sm:text-4xl font-bold text-white mt-2 tracking-tight">Diseñá tu MOVARA</h1>
-        <p className="text-stone-400 mt-2 text-sm">7 pasos para encontrar el módulo ideal y recibir un presupuesto por WhatsApp.</p>
+        <p className="text-stone-400 mt-2 text-sm">{TOTAL_PASOS} pasos para encontrar el módulo ideal y recibir un presupuesto por WhatsApp.</p>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 pb-28 sm:pb-10">
         {/* Progress */}
         <div className="mb-10">
           <div className="flex gap-1.5 mb-3">
-            {([1, 2, 3, 4, 5, 6, 7] as const).map((n) => (
+            {STEP_LABELS.map((_, i) => i + 1).map((n) => (
               <div key={n} className="flex-1 h-1.5 rounded-full bg-stone-200 overflow-hidden">
                 <div className="h-full rounded-full bg-sage-500 transition-all duration-500" style={{ width: n <= step ? "100%" : "0%" }} />
               </div>
@@ -521,26 +520,11 @@ export default function ConfiguradorMovara({
             exit={{ opacity: 0, x: slideDir * -30 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
-            {step === 1 && <StepModelo modelo={modelo} onSelect={setModelo} title={cms.paso1.title} subtitle={cms.paso1.subtitle} taglines={cms.paso1.taglines} modeloImagenes={modeloImagenes} />}
+            {step === 1 && <StepModelo modelo={modelo} onSelect={elegirModelo} title={cms.paso1.title} subtitle={cms.paso1.subtitle} taglines={cms.paso1.taglines} modeloImagenes={modeloImagenes} />}
             {step === 2 && <StepFinalidad finalidad={finalidad} onSelect={setFinalidad} title={cms.paso2.title} subtitle={cms.paso2.subtitle} descs={cms.paso2.descs} />}
-            {step === 3 && <StepUbicacion localidad={localidad} setLocalidad={setLocalidad} provincia={provincia} setProvincia={setProvincia} regional={regional} title={cms.paso3.title} subtitle={cms.paso3.subtitle} localidadLabel={cms.paso3.localidadLabel} provinciaLabel={cms.paso3.provinciaLabel} />}
-            {step === 4 && <StepConfiguracion modelo={modelo} habitaciones={habitaciones} setHabitaciones={setHabitaciones} maxHab={maxHab} incluyeCocina={incluyeCocina} setIncluyeCocina={setIncluyeCocina} tipoCocina={tipoCocina} setTipoCocina={setTipoCocina} incluyeBano={incluyeBano} setIncluyeBano={setIncluyeBano} tipoAgua={tipoAgua} setTipoAgua={setTipoAgua} lavarropas={lavarropas} setLavarropas={setLavarropas} materiales={materiales} onSelectMaterial={selectMaterial} priceFor={priceFor} />}
-            {step === 5 && (
-              <StepMejoras
-                regionalKey={regionalKey}
-                regional={regional}
-                modelo={modelo}
-                upgradesSeleccionados={upgradesSeleccionados}
-                onToggle={toggleUpgrade}
-                habitaciones={habitaciones}
-                incluyeCocina={incluyeCocina}
-                tipoCocina={tipoCocina}
-                incluyeBano={incluyeBano}
-                tipoAgua={tipoAgua}
-                lavarropas={lavarropas}
-              />
-            )}
-            {step === 6 && <StepDatos tipoCliente={tipoCliente} setTipoCliente={setTipoCliente} nombre={nombre} setNombre={setNombre} razonSocial={razonSocial} setRazonSocial={setRazonSocial} nombreContacto={nombreContacto} setNombreContacto={setNombreContacto} telefono={telefono} setTelefono={setTelefono} email={email} setEmail={setEmail} />}
+            {step === 3 && <StepUbicacion localidad={localidad} setLocalidad={setLocalidad} provincia={provincia} setProvincia={setProvincia} title={cms.paso3.title} subtitle={cms.paso3.subtitle} localidadLabel={cms.paso3.localidadLabel} provinciaLabel={cms.paso3.provinciaLabel} />}
+            {step === 4 && <StepConfiguracion modelo={modelo} habitaciones={habitaciones} setHabitaciones={setHabitaciones} maxHab={maxHab} incluyeCocina={incluyeCocina} setIncluyeCocina={setIncluyeCocina} tipoCocina={tipoCocina} setTipoCocina={setTipoCocina} incluyeBano={incluyeBano} setIncluyeBano={setIncluyeBano} tipoAgua={tipoAgua} setTipoAgua={setTipoAgua} lavarropas={lavarropas} setLavarropas={setLavarropas} materiales={materiales} onSelectMaterial={selectMaterial} onSelectBalcon={elegirBalcon} priceFor={priceFor} notas={notas} setNotas={setNotas} notasError={notasError} />}
+            {step === 5 && <StepDatos tipoCliente={tipoCliente} setTipoCliente={setTipoCliente} nombre={nombre} setNombre={setNombre} razonSocial={razonSocial} setRazonSocial={setRazonSocial} nombreContacto={nombreContacto} setNombreContacto={setNombreContacto} telefono={telefono} setTelefono={setTelefono} email={email} setEmail={setEmail} />}
           </motion.div>
         </AnimatePresence>
 
@@ -561,7 +545,7 @@ export default function ConfiguradorMovara({
             disabled={!canNext}
             className="flex items-center gap-2 px-8 py-3 bg-sage-500 hover:bg-sage-600 disabled:opacity-35 disabled:cursor-not-allowed text-white text-sm font-bold rounded-full transition-all duration-200 hover:shadow-lg hover:shadow-sage-500/25 hover:-translate-y-px"
           >
-            {step === 6 ? "Ver mi configuración" : "Siguiente"}
+            {step === 5 ? "Ver mi configuración" : "Siguiente"}
             <ChevronRightIcon />
           </button>
         </div>
@@ -681,7 +665,7 @@ function StepModelo({ modelo, onSelect, title, subtitle, taglines, modeloImagene
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 1 de 7</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 1 de {TOTAL_PASOS}</p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
       <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
       <div className="space-y-4">
@@ -737,7 +721,7 @@ function StepFinalidad({ finalidad, onSelect, title, subtitle, descs }: {
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 2 de 7</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 2 de {TOTAL_PASOS}</p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
       <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -774,12 +758,11 @@ export function mensajeErrorPedido(json: unknown): string {
   return typeof body.error === "string" ? body.error : "Error desconocido. Probá de nuevo.";
 }
 
-function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, regional, title, subtitle, localidadLabel, provinciaLabel }: {
+function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, title, subtitle, localidadLabel, provinciaLabel }: {
   localidad: string;
   setLocalidad: (v: string) => void;
   provincia: string;
   setProvincia: (v: string) => void;
-  regional: (typeof REGIONAL_MODELS)[string] | null;
   title: string;
   subtitle: string;
   localidadLabel: string;
@@ -806,7 +789,7 @@ function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, regio
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 3 de 7</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 3 de {TOTAL_PASOS}</p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
       <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
       <div className="space-y-5">
@@ -839,27 +822,6 @@ function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, regio
             {PROVINCIAS_AR.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
-        <AnimatePresence initial={false}>
-          {regional && (
-            <motion.div key={regional.key} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.2 }} className="rounded-xl border border-sage-200 bg-sage-50 p-4">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl shrink-0">{regional.icon}</span>
-                <div>
-                  <p className="text-sm font-semibold text-stone-800">Zona climática: {regional.region}</p>
-                  <p className="text-xs text-stone-500 mt-0.5 leading-relaxed">{regional.tagline}</p>
-                  <div className="mt-2 space-y-1">
-                    {regional.extras.slice(0, 3).map((extra) => (
-                      <div key={extra} className="flex items-center gap-1.5 text-xs text-stone-600">
-                        <span className="w-3.5 h-3.5 rounded-full bg-sage-200 text-sage-700 flex items-center justify-center text-[9px] font-bold shrink-0">✓</span>
-                        {extra}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );
@@ -899,7 +861,7 @@ function Field({ label, children }: { label: React.ReactNode; children: React.Re
   );
 }
 
-function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incluyeCocina, setIncluyeCocina, tipoCocina, setTipoCocina, incluyeBano, setIncluyeBano, tipoAgua, setTipoAgua, lavarropas, setLavarropas, materiales, onSelectMaterial, priceFor }: {
+function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incluyeCocina, setIncluyeCocina, tipoCocina, setTipoCocina, incluyeBano, setIncluyeBano, tipoAgua, setTipoAgua, lavarropas, setLavarropas, materiales, onSelectMaterial, onSelectBalcon, priceFor, notas, setNotas, notasError }: {
   modelo: ModeloKey | null;
   habitaciones: 1 | 2 | 3;
   setHabitaciones: (v: 1 | 2 | 3) => void;
@@ -916,7 +878,11 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
   setLavarropas: (v: TipoLavarropas) => void;
   materiales: MaterialesSeleccion;
   onSelectMaterial: (key: string, id: string, nullable?: boolean) => void;
+  onSelectBalcon: (id: string | null) => void;
   priceFor: (priceName: string) => number;
+  notas: string;
+  setNotas: (v: string) => void;
+  notasError: string | null;
 }) {
   // Este paso es el más largo del configurador — sin este reset, el scroll
   // arrastrado desde el paso anterior puede dejar al usuario a mitad o al
@@ -933,11 +899,20 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
     incluyeCocina ? `cocina con ${tipoCocina === "electrico" ? "anafe eléctrico" : "preparación gas"}` : "sin cocina",
     incluyeBano ? `baño con ${LABELS_AGUA[tipoAgua]}` : "sin baño",
     LABELS_LAVA[lavarropas],
+    materiales.balcon ? `balcón ${materiales.balcon}` : null,
   ].filter(Boolean).join(", ");
+
+  const lateralDisponible = !modelo || BALCON_LATERAL_MODELOS.includes(modelo);
+  const balconOpts = [
+    { value: "no", label: "No" },
+    { value: "frontal", label: "Frontal" },
+    ...(lateralDisponible ? [{ value: "lateral", label: "Lateral" }] : []),
+  ];
+  const techoSelector = MATERIAL_CATEGORY_GROUPS.flatMap((g) => g.selectors).find((sel) => sel.key === "techoBalcon")!;
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 4 de 7</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 4 de {TOTAL_PASOS}</p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">Configurá tu espacio</h2>
       <p className="text-stone-500 text-sm mb-6">Personalizá el interior de tu módulo según tus necesidades.</p>
 
@@ -987,6 +962,24 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
           </Field>
         </Section>
 
+        <Section title="Balcón">
+          <Field label="¿Querés balcón?">
+            <ToggleGroup value={materiales.balcon ?? "no"} onChange={(v) => onSelectBalcon(v === "no" ? null : v)} options={balconOpts} />
+            <p className="text-xs text-stone-400 mt-1.5">
+              Precio a consultar: lo cotizamos en tu presupuesto.
+              {!lateralDisponible && " El balcón lateral está disponible para Flex 38 y Flex 77."}
+            </p>
+          </Field>
+          {materiales.balcon && (
+            <SelectorBlock
+              selector={{ ...techoSelector, label: "Techo" }}
+              selectedId={materiales.techoBalcon ?? null}
+              onSelect={(id) => onSelectMaterial("techoBalcon", id)}
+              priceFor={priceFor}
+            />
+          )}
+        </Section>
+
         {/* Live preview */}
         <div className="bg-sage-50 border border-sage-200 rounded-xl p-4">
           <p className="text-[10px] font-bold uppercase tracking-widest text-sage-600 mb-1">Vista previa</p>
@@ -994,264 +987,35 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
         </div>
 
         <MaterialesSection seleccion={materiales} onSelect={onSelectMaterial} priceFor={priceFor} />
-      </div>
-    </div>
-  );
-}
 
-// ─────────────────────────────────────────────────────────
-// Step 5 — Mejoras por región (rediseñado)
-// ─────────────────────────────────────────────────────────
-
-function IncludeItem({ label, description }: { label: string; description?: string }) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
-        <CheckIcon className="w-3 h-3 text-emerald-600" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-stone-800 leading-snug">{label}</p>
-        {description && (
-          <p className="text-xs text-stone-500 mt-0.5 leading-relaxed">{description}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function UpgradeCard({ upgrade, selected, onToggle }: {
-  upgrade: Upgrade;
-  selected: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div
-      className={`rounded-2xl border-2 transition-all duration-200 overflow-hidden ${
-        selected
-          ? "border-sage-500 shadow-sm shadow-sage-500/10 bg-sage-50/40"
-          : "border-[#E5E5E5] bg-white hover:border-sage-300"
-      }`}
-    >
-      <button type="button" onClick={onToggle} className="w-full text-left p-5 cursor-pointer">
-        <div className="flex items-start gap-4">
-          <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl transition-colors ${
-              selected ? "bg-sage-100" : "bg-stone-100"
-            }`}
-          >
-            {upgrade.icon}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className={`text-sm font-bold mb-1.5 ${selected ? "text-sage-800" : "text-stone-800"}`}>
-              {upgrade.nombre}
-            </p>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase tracking-wide rounded-full">
-                Costo adicional
-              </span>
-              {upgrade.recomendado && (
-                <span className="px-2 py-0.5 bg-sage-500 text-white text-[10px] font-bold uppercase tracking-wide rounded-full">
-                  Recomendado para tu zona
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-stone-500 leading-relaxed">{upgrade.descripcion}</p>
-          </div>
-          <div
-            className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-all mt-0.5 ${
-              selected ? "bg-sage-500 border-sage-500" : "border-stone-300 bg-white"
-            }`}
-          >
-            {selected && <CheckIcon className="w-3 h-3 text-white" />}
-          </div>
-        </div>
-      </button>
-      <div className="px-5 pb-5">
-        <PhotoCarousel slides={2} />
-      </div>
-    </div>
-  );
-}
-
-function StepMejoras({
-  regionalKey,
-  regional,
-  modelo,
-  upgradesSeleccionados,
-  onToggle,
-  habitaciones,
-  incluyeCocina,
-  tipoCocina,
-  incluyeBano,
-  tipoAgua,
-  lavarropas,
-}: {
-  regionalKey: string;
-  regional: (typeof REGIONAL_MODELS)[string] | null;
-  modelo: ModeloKey | null;
-  upgradesSeleccionados: Set<string>;
-  onToggle: (key: string) => void;
-  habitaciones: number;
-  incluyeCocina: boolean;
-  tipoCocina: TipoCocina;
-  incluyeBano: boolean;
-  tipoAgua: TipoAgua;
-  lavarropas: TipoLavarropas;
-}) {
-  const regionalUpgrades = UPGRADES_BY_REGION[regionalKey] ?? [];
-  const universalFiltered = UNIVERSAL_UPGRADES.filter(
-    (u) => !u.soloModelos || (modelo && u.soloModelos.includes(modelo))
-  );
-
-  const balconDelantero = upgradesSeleccionados.has("balcon-delantero");
-  const balconLateral = upgradesSeleccionados.has("balcon-lateral");
-
-  return (
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 5 de 7</p>
-      <h2 className="text-2xl font-bold text-stone-900 mb-1">Mejoras para tu MOVARA</h2>
-      <p className="text-stone-500 text-sm mb-6">
-        Revisá lo que ya incluye tu módulo y sumá las mejoras opcionales que necesites.
-      </p>
-
-      {/* ── Sección 1: Tu MOVARA incluye ─────────────────── */}
-      <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-5">
-        <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-4">
-          Tu MOVARA incluye
-        </p>
-
-        {/* Estructura estándar */}
-        <div className="space-y-3.5">
-          <IncludeItem
-            label="Estructura steel Q235B"
-            description="Resistencia y durabilidad industrial"
+        <div>
+          <label htmlFor="cfg-notas" className="block text-sm font-semibold text-stone-700 mb-1.5">
+            ¿Algo más que necesitemos saber? <span className="font-normal text-stone-400">(opcional)</span>
+          </label>
+          <textarea
+            id="cfg-notas"
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+            rows={4}
+            maxLength={NOTAS_CONFIGURACION_MAX}
+            aria-describedby="cfg-notas-contador"
+            placeholder="Contanos cualquier necesidad puntual: accesibilidad, orientación del terreno, uso específico…"
+            className={`w-full px-4 py-3 rounded-xl border-2 outline-none text-stone-900 text-sm placeholder:text-stone-400 transition-all bg-white resize-y ${notasError ? "border-red-300 focus:border-red-400" : "border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20"}`}
           />
-          <IncludeItem
-            label="Lana de roca 75mm"
-            description="Aislación térmica y acústica superior — R: 2.1 m²K/W, absorción acústica 0.70-0.75"
-          />
-          <IncludeItem
-            label="Aberturas de aluminio con DVH (doble vidriado hermético) y RPT (rotura de puente térmico)"
-            description="52% menos pérdida de calor vs vidrio simple — reduce ruido 30-50 dB"
-          />
-          <IncludeItem label="Mosquiteros en todas las aberturas" />
-          <IncludeItem label="Sistema eléctrico certificado CE" />
-        </div>
-
-        {/* Divisor interno */}
-        <div className="my-4 border-t border-emerald-200" />
-        <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-3">
-          Según tu configuración
-        </p>
-
-        {/* Items de la configuración del cliente */}
-        <div className="space-y-3.5">
-          <IncludeItem
-            label={`${habitaciones} habitación${habitaciones > 1 ? "es" : ""}`}
-          />
-          {incluyeCocina && (
-            <IncludeItem
-              label={`Cocina con ${tipoCocina === "electrico" ? "anafe eléctrico" : "preparación para gas"}`}
-            />
-          )}
-          {incluyeBano && (
-            <IncludeItem
-              label={`Baño completo con ${LABELS_AGUA[tipoAgua]}`}
-            />
-          )}
-          {lavarropas !== "sin" && (
-            <IncludeItem
-              label={
-                lavarropas === "bano"
-                  ? "Espacio para lavarropas en baño"
-                  : lavarropas === "cocina"
-                  ? "Espacio para lavarropas en cocina"
-                  : "Espacio para lavarropas externo con desagüe"
-              }
-            />
-          )}
-          {balconDelantero && (
-            <IncludeItem
-              label="Balcón delantero"
-              description="Amplía el espacio exterior habitable"
-            />
-          )}
-          {balconLateral && (
-            <IncludeItem
-              label="Balcón lateral"
-              description="Espacio exterior de acceso lateral"
-            />
-          )}
-        </div>
-      </div>
-
-      {/* ── Separador visual ──────────────────────────────── */}
-      <div className="my-6 rounded-xl bg-amber-50 border border-amber-100 p-4 text-center">
-        <p className="text-sm font-semibold text-amber-900">
-          ¿Querés potenciar tu MOVARA?
-        </p>
-        <p className="text-xs text-amber-700 mt-1">
-          Las siguientes mejoras tienen un costo adicional al estándar.
-        </p>
-      </div>
-
-      {/* ── Sección 2: Mejoras opcionales ────────────────── */}
-      <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-3">
-          Mejoras opcionales
-        </p>
-
-        {/* Universal upgrades */}
-        <div className="space-y-3">
-          {universalFiltered.map((upgrade) => (
-            <UpgradeCard
-              key={upgrade.key}
-              upgrade={upgrade}
-              selected={upgradesSeleccionados.has(upgrade.key)}
-              onToggle={() => onToggle(upgrade.key)}
-            />
-          ))}
-        </div>
-
-        {/* Regional upgrades */}
-        {regional && regionalUpgrades.length > 0 && (
-          <div className="mt-6">
-            <div className="flex items-center gap-2 mb-3">
-              <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
-                Específicas para tu zona
-              </p>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-sage-50 border border-sage-200 rounded-full">
-                <span className="text-sm">{regional.icon}</span>
-                <span className="text-xs font-semibold text-sage-700">{regional.region}</span>
-              </div>
-            </div>
-            <div className="space-y-3">
-              {regionalUpgrades.map((upgrade) => (
-                <UpgradeCard
-                  key={upgrade.key}
-                  upgrade={upgrade}
-                  selected={upgradesSeleccionados.has(upgrade.key)}
-                  onToggle={() => onToggle(upgrade.key)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {!regional && (
-          <div className="mt-4 bg-stone-50 border border-stone-200 rounded-xl p-4 text-center">
-            <p className="text-stone-400 text-sm">
-              Completá tu provincia en el paso anterior para ver también las mejoras específicas de tu zona climática.
+          <div className="flex justify-between gap-3 mt-1">
+            <FieldError msg={notasError} />
+            <p id="cfg-notas-contador" className="ml-auto text-xs text-stone-400 tabular-nums">
+              {notas.length}/{NOTAS_CONFIGURACION_MAX}
             </p>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────
-// Step 6 — Tus datos
+// Step 5 — Tus datos
 // ─────────────────────────────────────────────────────────
 
 const INPUT_BASE =
@@ -1316,7 +1080,7 @@ export function StepDatos({
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 6 de 7</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 5 de {TOTAL_PASOS}</p>
       <h2 className="text-2xl font-bold text-stone-900 mb-1">Tus datos</h2>
       <p className="text-stone-500 text-sm mb-6">Completá tus datos para que podamos preparar tu presupuesto personalizado.</p>
 
@@ -1446,7 +1210,7 @@ export function StepDatos({
 // Result screen — Paso 7
 // ─────────────────────────────────────────────────────────
 
-function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habitaciones, incluyeCocina, tipoCocina, incluyeBano, tipoAgua, lavarropas, upgradesSeleccionados, regionalKey, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText, numeroConsulta, tokenSeguimiento, enviandoPedido, errorPedido, onRetry }: {
+function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habitaciones, incluyeCocina, tipoCocina, incluyeBano, tipoAgua, lavarropas, aConsultar, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText, numeroConsulta, tokenSeguimiento, enviandoPedido, errorPedido, onRetry }: {
   modelo: ModeloKey;
   finalidad: FinalidadKey;
   localidad: string;
@@ -1458,8 +1222,7 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habit
   incluyeBano: boolean;
   tipoAgua: TipoAgua;
   lavarropas: TipoLavarropas;
-  upgradesSeleccionados: string[];
-  regionalKey: string;
+  aConsultar: PrecioResumen["aConsultar"];
   waMessage: string;
   setWaMessage: (v: string) => void;
   onBack: () => void;
@@ -1475,8 +1238,6 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habit
   const m = MOVARA_MODELS.find((x) => x.key === modelo)!;
   const f = FINALIDADES.find((x) => x.key === finalidad)!;
   const loc = [localidad.trim(), provincia].filter(Boolean).join(", ");
-  const allUpgrades = [...UNIVERSAL_UPGRADES, ...(UPGRADES_BY_REGION[regionalKey] ?? [])];
-  const selectedUpgrades = upgradesSeleccionados.map((k) => allUpgrades.find((u) => u.key === k)).filter(Boolean) as Upgrade[];
 
   return (
     <div className="space-y-6">
@@ -1530,21 +1291,6 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habit
         </div>
       </div>
 
-      {/* Selected upgrades */}
-      {selectedUpgrades.length > 0 && (
-        <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-3">Mejoras seleccionadas</p>
-          <div className="space-y-2">
-            {selectedUpgrades.map((u) => (
-              <div key={u.key} className="flex items-center gap-3 text-sm">
-                <span>{u.icon}</span>
-                <span className="text-stone-800 font-medium">{u.nombre}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Price */}
       <div className="bg-[#2F2F2F] rounded-2xl p-6 text-center">
         <p className="text-xs uppercase tracking-widest text-stone-500 mb-2">Presupuesto</p>
@@ -1552,6 +1298,7 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habit
         <p className="text-xs text-stone-500 mt-2">
           Incluye fabricación, transporte e instalación estándar — te lo enviamos por WhatsApp
         </p>
+        <AConsultar items={aConsultar} className="mt-4 pt-4 border-t border-white/10 space-y-1 text-xs text-sage-300" />
       </div>
 
       {/* WA message editor */}

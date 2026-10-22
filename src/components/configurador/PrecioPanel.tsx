@@ -9,7 +9,21 @@ export type PrecioResumen = {
   base: number;
   adicionales: PrecioAdicional[];
   total: number;
+  /** Opciones sin precio de lista elegidas: no suman al total, se cotizan aparte. */
+  aConsultar: { key: string; nombre: string }[];
 };
+
+/** "+ Balcón frontal: lo cotizamos en tu presupuesto", debajo del precio estimado. */
+export function AConsultar({ items, color, className }: { items: PrecioResumen["aConsultar"]; color?: string; className: string }) {
+  if (items.length === 0) return null;
+  return (
+    <ul className={`font-semibold ${className}`} style={color ? { color } : undefined}>
+      {items.map((o) => (
+        <li key={o.key}>+ {o.nombre}: lo cotizamos en tu presupuesto</li>
+      ))}
+    </ul>
+  );
+}
 
 const COLOR_SIN_ADICIONALES = { text: "#2d9e75", bg: "#e6f7f1" };
 const COLOR_CON_ADICIONALES = { text: "#854F0B", bg: "#faeeda" };
@@ -90,6 +104,7 @@ export function PrecioPanel({ resumen, modeloLabel }: { resumen: PrecioResumen; 
                   Precio estimado:{" "}
                   <span className="text-2xl font-extrabold tabular-nums">{formatUSD(displayTotal)}</span>
                 </p>
+                <AConsultar items={resumen.aConsultar} color={colors.text} className="mt-1 space-y-0.5 text-xs" />
               </div>
               <button
                 type="button"
@@ -133,6 +148,7 @@ export function PrecioPanel({ resumen, modeloLabel }: { resumen: PrecioResumen; 
                 <p className="text-[11px] font-semibold transition-colors duration-500" style={{ color: colors.text }}>
                   Precio estimado: <span className="text-lg font-extrabold tabular-nums">{formatUSD(displayTotal)}</span>
                 </p>
+                <AConsultar items={resumen.aConsultar} color={colors.text} className="text-[10px] leading-tight" />
               </div>
               <span className="shrink-0 text-[11px] font-bold underline underline-offset-2 decoration-1 transition-colors duration-500" style={{ color: colors.text }}>
                 {open ? "Ocultar" : "Ver detalle"}

@@ -1,20 +1,32 @@
 import { describe, it, expect } from "vitest";
-import { findUpgrade, UNIVERSAL_UPGRADES, UPGRADES_BY_REGION } from "@/data/configurador-catalog";
+import { getStoredUpgradeLabel, UPGRADES_ANTERIORES_KEYS } from "@/data/configurador-catalog";
 
-describe("findUpgrade", () => {
-  it("encuentra un upgrade universal aunque la región no tenga upgrades propios", () => {
-    const universal = UNIVERSAL_UPGRADES[0];
-    expect(UPGRADES_BY_REGION["region-que-no-existe"]).toBeUndefined();
-    expect(findUpgrade("region-que-no-existe", universal.key)).toEqual(universal);
+describe("getStoredUpgradeLabel (pedidos con mejoras del paso que ya no existe)", () => {
+  it("los balcones viejos se muestran como configuración anterior", () => {
+    expect(getStoredUpgradeLabel("balcon-delantero")).toBe("Balcón delantero (configuración anterior)");
+    expect(getStoredUpgradeLabel("balcon-lateral")).toBe("Balcón lateral (configuración anterior)");
   });
 
-  it("encuentra un upgrade específico de una región real", () => {
-    const [regionKey, upgrades] = Object.entries(UPGRADES_BY_REGION)[0];
-    const regional = upgrades[0];
-    expect(findUpgrade(regionKey, regional.key)).toEqual(regional);
+  it.each([
+    ["panel-100", "Panel lana de roca 100mm (opción discontinuada)"],
+    ["triple-vidrio", "Triple vidrio (TDH) (opción discontinuada)"],
+    ["kit-solar", "Kit solar básico (opción discontinuada)"],
+    ["vmc", "VMC — Ventilación mecánica (opción discontinuada)"],
+    ["pu120", "Panel PU 120mm (opción discontinuada)"],
+  ])("las mejoras universales y regionales se muestran como discontinuadas: %s", (key, label) => {
+    expect(getStoredUpgradeLabel(key)).toBe(label);
   });
 
-  it("devuelve undefined si el key no existe en ningún lado", () => {
-    expect(findUpgrade("region-que-no-existe", "key-que-no-existe")).toBeUndefined();
+  it("los extras cargados por el admin conservan su nombre", () => {
+    expect(getStoredUpgradeLabel("banera")).toBe("Bañera");
+  });
+
+  it("un key desconocido se muestra tal cual, sin perder el dato", () => {
+    expect(getStoredUpgradeLabel("algo-raro")).toBe("algo-raro");
+  });
+
+  it("cubre los 5 universales y las 25 regionales del configurador viejo", () => {
+    expect(UPGRADES_ANTERIORES_KEYS).toHaveLength(30);
+    expect(new Set(UPGRADES_ANTERIORES_KEYS).size).toBe(30);
   });
 });

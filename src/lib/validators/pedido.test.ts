@@ -104,4 +104,14 @@ describe("pedidoSchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("notasConfiguracion: opcional, se recorta, vacío es null y tope de 1000 caracteres", () => {
+    const parse = (notasConfiguracion?: string | null) => pedidoSchema.safeParse({ ...valid, notasConfiguracion });
+    expect(parse().data?.notasConfiguracion).toBeNull();
+    expect(parse(null).data?.notasConfiguracion).toBeNull();
+    expect(parse("   ").data?.notasConfiguracion).toBeNull();
+    expect(parse("  rampa  ").data?.notasConfiguracion).toBe("rampa");
+    expect(parse("a".repeat(1000)).success).toBe(true);
+    expect(parse("a".repeat(1001)).success).toBe(false);
+  });
 });

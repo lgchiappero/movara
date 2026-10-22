@@ -6,7 +6,12 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { buildPedidoNarrativeEs } from "@/lib/pdf/pedido-narrative-es";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
-import { MATERIAL_CATEGORY_GROUPS, findMaterialOption, getStoredMaterialLabel } from "@/data/material-catalog";
+import {
+  MATERIAL_CATEGORY_GROUPS,
+  findMaterialOption,
+  getStoredMaterialLabel,
+  getMaterialesAnteriores,
+} from "@/data/material-catalog";
 import { estadoPedidoLabels, type EstadoPedido } from "@/lib/pedido/estado-pedido";
 import { getSignedUrl, BUCKET_PEDIDOS } from "@/lib/admin/storage";
 import GestionPedidoPanel from "@/components/admin/GestionPedidoPanel";
@@ -238,6 +243,7 @@ function NarrativeView({ data }: { data: PedidoRecord }) {
 }
 
 function MaterialesConImagenes({ materiales }: { materiales: Record<string, string | null> }) {
+  const anteriores = getMaterialesAnteriores(materiales);
   return (
     <div className="space-y-6">
       {MATERIAL_CATEGORY_GROUPS.map((group) => {
@@ -247,11 +253,12 @@ function MaterialesConImagenes({ materiales }: { materiales: Record<string, stri
           seenKeys.add(selector.key);
           const raw = materiales[selector.key] ?? null;
           const found = findMaterialOption(selector.key, raw);
-          if (found) return [{ key: selector.key, img: found.option.img, label: found.option.label, imageFit: found.selector.imageFit }];
+          const aCotizar = !!selector.aConsultar;
+          if (found) return [{ key: selector.key, img: found.option.img, label: found.option.label, imageFit: found.selector.imageFit, aCotizar }];
           // Opción retirada del catálogo o texto libre del admin: sin foto,
           // pero se muestra igual para que el pedido no pierda el dato.
           const label = getStoredMaterialLabel(selector.key, raw);
-          return label ? [{ key: selector.key, img: undefined, label, imageFit: undefined }] : [];
+          return label ? [{ key: selector.key, img: undefined, label, imageFit: undefined, aCotizar }] : [];
         });
 
         if (cards.length === 0) return null;
@@ -275,12 +282,29 @@ function MaterialesConImagenes({ materiales }: { materiales: Record<string, stri
                     </div>
                   )}
                   <p className="text-xs text-stone-600 px-2 py-1.5 truncate" title={card.label}>{card.label}</p>
+                  {card.aCotizar && (
+                    <p className="mx-2 mb-2 inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#faeeda] text-[#854F0B]">
+                      A cotizar
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         );
       })}
+      {anteriores.length > 0 && (
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-2">Configuración anterior</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {anteriores.map((m) => (
+              <div key={m.key} className="rounded-xl border border-[#E5E5E5] px-2 py-1.5">
+                <p className="text-xs text-stone-600" title={m.label}>{m.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

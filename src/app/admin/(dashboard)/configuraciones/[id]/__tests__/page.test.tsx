@@ -205,6 +205,17 @@ describe("ConfiguracionDetailPage", () => {
     expect(screen.getAllByText("Porcelanato a definir").length).toBeGreaterThan(0);
   });
 
+  it("MaterialesConImagenes marca el balcón y el techo como A cotizar y muestra la galería de un pedido viejo", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      ...CONFIG_BASE,
+      materiales: { balcon: "frontal", techoBalcon: "solo-balcon", galeria: "galeria-01" },
+    });
+    render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+    expect(screen.getByText("Balcón frontal")).toBeInTheDocument();
+    expect(screen.getAllByText("A cotizar", { selector: "p" })).toHaveLength(2);
+    expect(screen.getAllByText("Galería con sobretecho (configuración anterior)").length).toBeGreaterThan(0);
+  });
+
   it("pasa los vendedores activos a GestionPedidoPanel (query filtra rol vendedor + activo)", async () => {
     mockFindUnique.mockResolvedValueOnce(CONFIG_BASE);
     render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));

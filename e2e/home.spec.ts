@@ -23,7 +23,7 @@ test.describe("Home page", () => {
 
     await ctaLink.click();
     await expect(page).toHaveURL(/\/configurador/);
-    await expect(page.getByText("Paso 1 de 7")).toBeVisible();
+    await expect(page.getByText("Paso 1 de 6")).toBeVisible();
   });
 
   test("Test 3: sección de modelos es visible", async ({ page }) => {

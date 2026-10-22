@@ -7,8 +7,10 @@ import { modeloLabelsEs } from "@/lib/pdf/pedido-labels-es";
 import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
 import { generateNumeroConsulta } from "@/lib/pedido/numero-consulta";
 import { resumenError } from "@/lib/log-seguro";
+import { getOpcionesAConsultar } from "@/data/material-catalog";
+import { detalleConsultaHtml } from "@/lib/email/nueva-consulta";
 
-async function sendNotificationEmail(clienteNombre: string, modelo: string, numeroConsulta: string) {
+async function sendNotificationEmail(clienteNombre: string, modelo: string, numeroConsulta: string, detalle: string) {
   const contactEmail = process.env.CONTACT_EMAIL || "lucianogchiappero@gmail.com";
 
   const resultado = await enviarEmail({
@@ -25,6 +27,7 @@ async function sendNotificationEmail(clienteNombre: string, modelo: string, nume
     </div>
     <div style="padding:24px;">
     <p style="color:#555;line-height:1.6;">${escapeHtml(clienteNombre)} completó el configurador para un módulo ${modelo}. Vela en el panel: /admin/configuraciones</p>
+    ${detalle}
     </div>
   </div>
 </body>
@@ -74,6 +77,7 @@ export async function POST(req: NextRequest) {
           lavarropas: data.lavarropas,
           materiales: data.materiales,
           upgrades: data.upgrades,
+          notasConfiguracion: data.notasConfiguracion,
           precioEstimado: data.precioEstimado,
           numeroConsulta: numero,
         },
@@ -82,7 +86,13 @@ export async function POST(req: NextRequest) {
       return { numeroConsulta: numero, tokenSeguimiento: creado.tokenSeguimiento };
     });
 
-    await sendNotificationEmail(data.clienteNombre, modeloLabelsEs[data.modelo], numeroConsulta);
+    const aCotizar = getOpcionesAConsultar(data.materiales).map((o) => o.nombre);
+    await sendNotificationEmail(
+      data.clienteNombre,
+      modeloLabelsEs[data.modelo],
+      numeroConsulta,
+      detalleConsultaHtml(aCotizar, data.notasConfiguracion)
+    );
 
     return NextResponse.json({ ok: true, numeroConsulta, tokenSeguimiento });
   } catch (err) {

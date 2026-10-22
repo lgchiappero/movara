@@ -255,7 +255,7 @@ export const modeloType = defineType({
       title: 'Extras disponibles (lista simple, sin precio)',
       type: 'array',
       group: 'especificaciones',
-      description: 'Ej: Color exterior, Tipo de piso, Kit solar.',
+      description: 'Ej: Color exterior, Tipo de piso, Bañera.',
       of: [defineArrayMember({ type: 'string' })],
     }),
     defineField({

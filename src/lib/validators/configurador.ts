@@ -41,6 +41,16 @@ export const localidadSchema = z
     "Solo letras, espacios, tildes, guiones y puntos"
   );
 
+export const NOTAS_CONFIGURACION_MAX = 1000;
+
+/** "¿Algo más que necesitemos saber?" del paso Configurá tu espacio: opcional,
+ * texto libre. Vacío (o solo espacios) se guarda como null. */
+export const notasConfiguracionSchema = z
+  .string()
+  .trim()
+  .max(NOTAS_CONFIGURACION_MAX, `Máximo ${NOTAS_CONFIGURACION_MAX} caracteres`)
+  .transform((v) => v || null);
+
 // ─── Composite schemas ────────────────────────────────────
 
 export const particularSchema = z.object({

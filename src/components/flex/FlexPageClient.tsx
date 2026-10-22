@@ -52,8 +52,6 @@ const EXTRAS_DEFAULT = [
   "Balcón o galería exterior",
   "Sobretecho",
   "Material labrado exterior",
-  "Nivel de aislación según zona climática",
-  "Kit solar",
 ];
 
 export default function FlexPageClient({

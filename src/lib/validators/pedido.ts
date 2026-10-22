@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { telefonoSchema, emailSchema, localidadSchema } from "@/lib/validators/configurador";
+import { telefonoSchema, emailSchema, localidadSchema, notasConfiguracionSchema } from "@/lib/validators/configurador";
 
 // ─── Enums ─────────────────────────────────────────────────
 // Reflejan las claves reales del configurador visual
@@ -58,7 +58,10 @@ export const pedidoSchema = z.object({
   lavarropas: z.enum(lavarropasOptions),
 
   materiales: z.record(z.string(), z.string().nullable()),
+  // El configurador ya no ofrece mejoras: queda para pedidos de clientes con
+  // la versión anterior de la página abierta.
   upgrades: z.array(z.string()).default([]),
+  notasConfiguracion: notasConfiguracionSchema.nullish().transform((v) => v ?? null),
 
   precioEstimado: z.number().nonnegative().optional(),
 });

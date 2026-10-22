@@ -10,8 +10,10 @@
 // base elegida antes, y viceversa — son alternativas del mismo componente
 // físico. Cuando `priceName` está definido, esa franja tiene costo adicional
 // (se resuelve contra `siteConfig.preciosExtras` en Sanity, con fallback a
-// `precioAdicionalDefault`). `nullable` permite deseleccionar (para extras
-// opcionales que no reemplazan nada, como bañera o galería).
+// `precioAdicionalDefault`). `aConsultar` marca extras sin precio de lista
+// (balcón, techo, muro cortina): no suman al precio estimado y figuran "A
+// cotizar" en el admin, los PDFs y el email. `nullable` permite deseleccionar
+// (para extras opcionales que no reemplazan nada, como bañera o balcón).
 
 export type MaterialOption = {
   id: string;
@@ -20,6 +22,8 @@ export type MaterialOption = {
   color?: string;
   /** Borde sutil — para colores claros que se pierden contra el fondo blanco. */
   border?: boolean;
+  /** Texto bajo el nombre — para opciones sin foto propia. */
+  descripcion?: string;
 };
 
 export type MaterialSelector = {
@@ -33,6 +37,9 @@ export type MaterialSelector = {
    *  para mostrarlo (badge, desglose, WhatsApp) como para buscar el precio
    *  cargado en Sanity (`preciosExtras[].nombre`). */
   priceName?: string;
+  /** Sin precio de lista: no suma al precio estimado y se cotiza aparte
+   *  ("Precio a consultar" en el configurador, "A cotizar" internamente). */
+  aConsultar?: boolean;
   /** "contain" para objetos verticales (puertas, ventanas): se ve la pieza
    *  completa, sin recortar. Default "cover" — para fotos de ambientes o
    *  exteriores completos, donde sí conviene llenar el recuadro. */
@@ -50,6 +57,8 @@ export type MaterialCategoryGroup = {
 export type MaterialesSeleccion = Record<string, string | null>;
 
 const DIR = "/configurador";
+
+export const BALCON_GROUP_KEY = "balcon-group";
 
 const EXTERIOR_PREMIUM = [
   ["01-gris-lineas", "Gris con líneas"],
@@ -250,21 +259,67 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
     selectors: [
       {
         key: "muroVidrio",
-        label: "Muro cortina de vidrio — costo adicional",
+        label: "Muro cortina de vidrio — precio a consultar",
         nullable: true,
-        priceName: "Muro cortina",
-        options: [{ id: "vidrio-01", img: `${DIR}/balcon%20solo.png`, label: "Muro cortina de vidrio" }],
+        aConsultar: true,
+        // Sin foto propia todavía: la card muestra nombre y descripción.
+        options: [
+          {
+            id: "vidrio-01",
+            label: "Muro cortina de vidrio",
+            descripcion: "Pared de vidrio en lugar de un panel ciego. La definimos con vos en el presupuesto.",
+          },
+        ],
+      },
+    ],
+  },
+  // Se elige en su propia sección de "Configurá tu espacio" (no en la grilla
+  // de materiales): el techo solo aparece si hay balcón, y el lateral solo
+  // para BALCON_LATERAL_MODELOS.
+  {
+    key: BALCON_GROUP_KEY,
+    title: "Balcón",
+    selectors: [
+      {
+        key: "balcon",
+        label: "Balcón",
+        nullable: true,
+        aConsultar: true,
+        options: [
+          { id: "frontal", label: "Balcón frontal" },
+          { id: "lateral", label: "Balcón lateral" },
+        ],
       },
       {
-        key: "galeria",
-        label: "Galería con sobretecho — costo adicional",
+        key: "techoBalcon",
+        label: "Techo del balcón",
         nullable: true,
-        priceName: "Galería con sobretecho",
-        options: [{ id: "galeria-01", img: `${DIR}/balcon%20con%20techocompleto.png`, label: "Galería con sobretecho" }],
+        aConsultar: true,
+        options: [
+          { id: "solo-balcon", img: `${DIR}/balcon%20solo.png`, label: "Sobretecho solo en el balcón" },
+          { id: "completo", img: `${DIR}/balcon%20con%20techocompleto.png`, label: "Sobretecho completo: balcón y toda la unidad" },
+        ],
       },
     ],
   },
 ];
+
+/** Modelos que admiten balcón lateral (superficie mayor a 18 m²). */
+export const BALCON_LATERAL_MODELOS: readonly string[] = ["20ft", "40ft"];
+
+/** Opciones "a consultar" elegidas, en orden de catálogo: no suman al precio
+ *  estimado y se cotizan aparte. */
+export function getOpcionesAConsultar(materiales: MaterialesSeleccion): { key: string; nombre: string }[] {
+  return MATERIAL_CATEGORY_GROUPS.flatMap((g) => g.selectors).flatMap((sel) => {
+    if (!sel.aConsultar) return [];
+    const found = findMaterialOption(sel.key, materiales[sel.key] ?? null);
+    return found ? [{ key: sel.key, nombre: found.option.label }] : [];
+  });
+}
+
+export function esSelectorAConsultar(key: string): boolean {
+  return MATERIAL_CATEGORY_GROUPS.some((g) => g.selectors.some((s) => s.key === key && s.aConsultar));
+}
 
 export function getDefaultMateriales(): MaterialesSeleccion {
   const result: MaterialesSeleccion = {};
@@ -311,6 +366,23 @@ const RETIRED_MATERIAL_LABELS: Record<string, Record<string, string>> = {
     "verde-agua": "Verde agua",
   },
 };
+
+// Selectores que el configurador ya no tiene, pero que quedaron guardados en
+// pedidos viejos. La galería con sobretecho pasó a ser el techo de la sección
+// Balcón: no está discontinuada, cambió cómo se elige.
+const SELECTORES_ANTERIORES: Record<string, { nombre: string; opciones: Record<string, string> }> = {
+  galeria: { nombre: "Galería", opciones: { "galeria-01": "Galería con sobretecho" } },
+};
+
+/** Valores guardados en selectores que ya no existen (ej. `galeria`), para
+ *  que el admin y los PDFs los sigan mostrando. */
+export function getMaterialesAnteriores(materiales: MaterialesSeleccion): { key: string; nombre: string; label: string }[] {
+  return Object.entries(SELECTORES_ANTERIORES).flatMap(([key, sel]) => {
+    const raw = materiales[key];
+    if (!raw) return [];
+    return [{ key, nombre: sel.nombre, label: `${sel.opciones[raw] ?? raw} (configuración anterior)` }];
+  });
+}
 
 /** Texto para mostrar un valor guardado en `materiales`: label del catálogo,
  *  label de una opción retirada (marcada como discontinuada), o el texto

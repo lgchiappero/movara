@@ -1,7 +1,11 @@
 import { getModeloKey, REGIONAL_MODELS } from "@/data/regional-models";
-import { findUpgrade } from "@/data/configurador-catalog";
-import { findAdminExtraLabel } from "@/data/admin-extras";
-import { MATERIAL_CATEGORY_GROUPS, getStoredMaterialLabel } from "@/data/material-catalog";
+import { getStoredUpgradeLabel } from "@/data/configurador-catalog";
+import {
+  MATERIAL_CATEGORY_GROUPS,
+  getStoredMaterialLabel,
+  esSelectorAConsultar,
+  getMaterialesAnteriores,
+} from "@/data/material-catalog";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { labelOrFallback, SIN_ESPECIFICAR } from "@/lib/pdf/pedido-record";
 import {
@@ -27,8 +31,12 @@ const SELECTOR_LABELS_EN: Record<string, string> = {
   puertaPrincipal: "Main door",
   ventanas: "Windows",
   muroVidrio: "Glass curtain wall",
-  galeria: "Covered gallery",
+  balcon: "Balcony",
+  techoBalcon: "Balcony roof",
 };
+
+/** Extras sin precio de lista: MOVARA los presupuesta aparte. */
+const TO_QUOTE = "To quote (A cotizar)";
 
 const MODEL_CODES_LOOSE = MODEL_CODES as Record<string, string>;
 const TBD = "To be defined";
@@ -47,10 +55,7 @@ export function buildSupplierSpecItems(data: PedidoRecord): SupplierSpecItem[] {
   const regional = REGIONAL_MODELS[regionalKey];
   const materiales = data.materiales ?? {};
 
-  const upgradeRows = (data.upgrades ?? [])
-    .map((key) => findUpgrade(regionalKey, key)?.nombre ?? findAdminExtraLabel(key))
-    .filter((n): n is string => Boolean(n))
-    .map((nombre) => ({ label: "Upgrade", value: nombre }));
+  const upgradeRows = (data.upgrades ?? []).map((key) => ({ label: "Upgrade", value: getStoredUpgradeLabel(key) }));
 
   const materialGroups: SupplierSpecGroup[] = MATERIAL_CATEGORY_GROUPS.map((group) => {
     const seenKeys = new Set<string>();
@@ -58,13 +63,18 @@ export function buildSupplierSpecItems(data: PedidoRecord): SupplierSpecItem[] {
     for (const selector of group.selectors) {
       if (seenKeys.has(selector.key)) continue;
       seenKeys.add(selector.key);
+      const valor = getStoredMaterialLabel(selector.key, materiales[selector.key] ?? null);
+      const toQuote = valor && esSelectorAConsultar(selector.key) ? ` — ${TO_QUOTE}` : "";
       rows.push({
         label: SELECTOR_LABELS_EN[selector.key] ?? selector.key,
-        value: getStoredMaterialLabel(selector.key, materiales[selector.key] ?? null) ?? "Not included",
+        value: valor ? `${valor}${toQuote}` : "Not included",
       });
     }
     return { type: "group", title: group.title, rows };
   });
+  // Selectores que ya no existen (ej. la galería): se agregan al final.
+  const anteriores = getMaterialesAnteriores(materiales).map((m) => ({ label: m.nombre, value: m.label }));
+  if (anteriores.length) materialGroups.push({ type: "group", title: "Previous configuration", rows: anteriores });
 
   const modeloCode = data.modelo ? (MODEL_CODES_LOOSE[data.modelo] ?? TBD) : TBD;
 
@@ -100,6 +110,10 @@ export function buildSupplierSpecItems(data: PedidoRecord): SupplierSpecItem[] {
     ...materialGroups,
     ...(upgradeRows.length
       ? [{ type: "group" as const, title: "UPGRADES TO QUOTE", rows: upgradeRows }]
+      : []),
+    // Texto libre del cliente, en castellano tal como lo escribió.
+    ...(data.notasConfiguracion
+      ? [{ type: "line" as const, label: "CLIENT NOTES (ES)", value: data.notasConfiguracion }]
       : []),
   ];
 }

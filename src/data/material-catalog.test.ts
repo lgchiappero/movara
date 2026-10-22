@@ -5,6 +5,9 @@ import {
   findMaterialOption,
   getMaterialLabel,
   getStoredMaterialLabel,
+  getOpcionesAConsultar,
+  esSelectorAConsultar,
+  getMaterialesAnteriores,
 } from "@/data/material-catalog";
 
 describe("getDefaultMateriales", () => {
@@ -108,5 +111,54 @@ describe("getStoredMaterialLabel", () => {
   it("muestra el texto libre del admin tal cual", () => {
     expect(getStoredMaterialLabel("mesada", "Granito gris")).toBe("Granito gris");
     expect(getStoredMaterialLabel("key-sin-retiradas", "algo")).toBe("algo");
+  });
+});
+
+describe("opciones a consultar (balcón, techo, muro cortina)", () => {
+  it("no tienen precio de lista y son las únicas a consultar", () => {
+    const aConsultar = MATERIAL_CATEGORY_GROUPS.flatMap((g) => g.selectors).filter((s) => s.aConsultar);
+    expect(aConsultar.map((s) => s.key)).toEqual(["muroVidrio", "balcon", "techoBalcon"]);
+    expect(aConsultar.every((s) => !s.priceName && s.nullable)).toBe(true);
+    expect(esSelectorAConsultar("balcon")).toBe(true);
+    expect(esSelectorAConsultar("piso")).toBe(false);
+  });
+
+  it("el configurador arranca sin balcón, sin techo y sin muro cortina", () => {
+    const d = getDefaultMateriales();
+    expect([d.balcon, d.techoBalcon, d.muroVidrio]).toEqual([null, null, null]);
+  });
+
+  it("el techo usa las dos fotos del balcón y el muro cortina no tiene foto", () => {
+    expect(findMaterialOption("techoBalcon", "solo-balcon")?.option.img).toContain("balcon%20solo.png");
+    expect(findMaterialOption("techoBalcon", "completo")?.option.img).toContain("balcon%20con%20techocompleto.png");
+    const muro = findMaterialOption("muroVidrio", "vidrio-01")?.option;
+    expect(muro?.img).toBeUndefined();
+    expect(muro?.descripcion).toBeTruthy();
+  });
+
+  it("ya no existe la galería con sobretecho como opción del configurador", () => {
+    expect(findMaterialOption("galeria", "galeria-01")).toBeNull();
+  });
+
+  it("getOpcionesAConsultar devuelve lo elegido en orden de catálogo e ignora valores inválidos", () => {
+    expect(getOpcionesAConsultar({ techoBalcon: "completo", balcon: "frontal", muroVidrio: null, piso: "x" })).toEqual([
+      { key: "balcon", nombre: "Balcón frontal" },
+      { key: "techoBalcon", nombre: "Sobretecho completo: balcón y toda la unidad" },
+    ]);
+    expect(getOpcionesAConsultar({ balcon: "no-existe" })).toEqual([]);
+  });
+});
+
+describe("getMaterialesAnteriores (pedidos con la galería vieja)", () => {
+  it("muestra la galería como configuración anterior", () => {
+    expect(getMaterialesAnteriores({ galeria: "galeria-01" })).toEqual([
+      { key: "galeria", nombre: "Galería", label: "Galería con sobretecho (configuración anterior)" },
+    ]);
+  });
+
+  it("texto libre en galería se muestra tal cual, y nada si no hay valor", () => {
+    expect(getMaterialesAnteriores({ galeria: "Galería de madera" })[0].label).toBe("Galería de madera (configuración anterior)");
+    expect(getMaterialesAnteriores({ galeria: null })).toEqual([]);
+    expect(getMaterialesAnteriores({})).toEqual([]);
   });
 });

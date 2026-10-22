@@ -19,6 +19,16 @@ export async function PATCH(
   const data = parsed.data;
 
   try {
+    // El form solo edita los materiales de texto libre: el resto de lo que
+    // eligió el cliente (balcón, techo, muro cortina, extras con costo...) se
+    // conserva tal cual.
+    const actual = await db.configuracionPedido.findUnique({ where: { id }, select: { materiales: true } });
+    if (!actual) return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+    const materialesActuales =
+      actual.materiales && typeof actual.materiales === "object" && !Array.isArray(actual.materiales)
+        ? (actual.materiales as Record<string, unknown>)
+        : {};
+
     const config = await db.configuracionPedido.update({
       where: { id },
       data: {
@@ -32,7 +42,7 @@ export async function PATCH(
         incluyeBano: data.incluyeBano,
         tipoAgua: data.tipoAgua,
         lavarropas: data.lavarropas,
-        materiales: data.materiales,
+        materiales: { ...materialesActuales, ...data.materiales },
         upgrades: data.upgrades,
         notasConfiguracion: data.notasConfiguracion,
       },

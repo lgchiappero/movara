@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
-import { MOVARA_MODELS, FINALIDADES } from "@/data/configurador-catalog";
+import { MOVARA_MODELS, FINALIDADES, getStoredUpgradeLabel } from "@/data/configurador-catalog";
 import { ADMIN_EXTRAS } from "@/data/admin-extras";
 import {
   tipoCocinaOptions,
@@ -57,8 +57,13 @@ type Espacio = {
   notasConfiguracion: string | null;
 };
 
+const ADMIN_EXTRA_KEYS = new Set<string>(ADMIN_EXTRAS.map((e) => e.key));
+
 export default function ConfiguracionEspacioForm({ id, initial }: { id: string; initial: Espacio }) {
   const router = useRouter();
+  // Mejoras de pedidos viejos del configurador: no se pueden tildar, se
+  // muestran y se reenvían tal cual al guardar.
+  const upgradesAnteriores = (initial.upgrades ?? []).filter((k) => !ADMIN_EXTRA_KEYS.has(k));
   const [form, setForm] = useState({
     modelo: initial.modelo ?? "",
     finalidad: initial.finalidad ?? "",
@@ -332,6 +337,18 @@ export default function ConfiguracionEspacioForm({ id, initial }: { id: string; 
             </label>
           ))}
         </div>
+        {upgradesAnteriores.length > 0 && (
+          <div className="space-y-1.5">
+            <p className={labelClass}>Elegidas en el configurador anterior</p>
+            <div className="flex flex-wrap gap-1.5">
+              {upgradesAnteriores.map((k) => (
+                <span key={k} className="px-2.5 py-1 rounded-full bg-stone-100 text-xs text-stone-600">
+                  {getStoredUpgradeLabel(k)}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
         <label className="block space-y-1.5">
           <span className={labelClass}>Notas adicionales del cliente</span>
           <textarea

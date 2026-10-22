@@ -183,8 +183,6 @@ export const siteConfigType = defineType({
         { nombre: 'Piso SPC', precio: 500 },
         { nombre: 'Bañera', precio: 500 },
         { nombre: 'Cocina ampliada', precio: 500 },
-        { nombre: 'Muro cortina', precio: 500 },
-        { nombre: 'Galería con sobretecho', precio: 500 },
         { nombre: 'Inodoro inteligente', precio: 500 },
       ],
       of: [

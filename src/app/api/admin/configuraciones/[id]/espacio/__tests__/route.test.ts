@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockUpdate } = vi.hoisted(() => ({ mockUpdate: vi.fn() }));
-vi.mock("@/lib/db", () => ({ db: { configuracionPedido: { update: mockUpdate } } }));
+const { mockUpdate, mockFindUnique } = vi.hoisted(() => ({ mockUpdate: vi.fn(), mockFindUnique: vi.fn() }));
+vi.mock("@/lib/db", () => ({ db: { configuracionPedido: { update: mockUpdate, findUnique: mockFindUnique } } }));
 
 import { PATCH } from "../route";
 import { NextRequest } from "next/server";
@@ -42,7 +42,10 @@ const VALID = {
 };
 
 describe("PATCH /api/admin/configuraciones/[id]/espacio", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFindUnique.mockResolvedValue({ materiales: {} });
+  });
 
   it("actualiza la configuración de espacio y devuelve 200", async () => {
     mockUpdate.mockResolvedValueOnce({ id: "p1", ...VALID });
@@ -82,5 +85,52 @@ describe("PATCH /api/admin/configuraciones/[id]/espacio", () => {
     mockUpdate.mockRejectedValueOnce(new Error("db down"));
     const res = await PATCH(makeRequest(VALID), { params: Promise.resolve({ id: "p1" }) });
     expect(res.status).toBe(500);
+  });
+
+  it("conserva los materiales que el form no edita (balcón, techo, muro cortina) y pisa los de texto", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      materiales: { balcon: "frontal", techoBalcon: "completo", muroVidrio: "vidrio-01", galeria: "galeria-01", piso: "viejo" },
+    });
+    mockUpdate.mockResolvedValueOnce({ id: "p1" });
+    const res = await PATCH(
+      makeRequest({ ...VALID, materiales: { ...MATERIALES_VACIOS, piso: "Piso nuevo" } }),
+      { params: Promise.resolve({ id: "p1" }) }
+    );
+    expect(res.status).toBe(200);
+    expect(mockUpdate.mock.calls[0][0].data.materiales).toEqual({
+      ...MATERIALES_VACIOS,
+      balcon: "frontal",
+      techoBalcon: "completo",
+      muroVidrio: "vidrio-01",
+      galeria: "galeria-01",
+      piso: "Piso nuevo",
+    });
+  });
+
+  it("si los materiales guardados no son un objeto, guarda solo los del form", async () => {
+    mockFindUnique.mockResolvedValueOnce({ materiales: null });
+    mockUpdate.mockResolvedValueOnce({ id: "p1" });
+    await PATCH(makeRequest(VALID), { params: Promise.resolve({ id: "p1" }) });
+    expect(mockUpdate.mock.calls[0][0].data.materiales).toEqual(MATERIALES_VACIOS);
+  });
+
+  it("404 si el pedido no existe", async () => {
+    mockFindUnique.mockResolvedValueOnce(null);
+    const res = await PATCH(makeRequest(VALID), { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(404);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("acepta las mejoras de pedidos viejos del configurador (no da 400 al guardar)", async () => {
+    mockUpdate.mockResolvedValueOnce({ id: "p1" });
+    const upgrades = ["banera", "balcon-delantero", "kit-solar", "vmc"];
+    const res = await PATCH(makeRequest({ ...VALID, upgrades }), { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(200);
+    expect(mockUpdate.mock.calls[0][0].data.upgrades).toEqual(upgrades);
+  });
+
+  it("400 con un key de mejora inventado", async () => {
+    const res = await PATCH(makeRequest({ ...VALID, upgrades: ["no-existe"] }), { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(400);
   });
 });

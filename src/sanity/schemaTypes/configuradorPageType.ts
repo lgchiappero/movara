@@ -130,7 +130,7 @@ export const configuradorPageType = defineType({
           type: 'text',
           rows: 2,
           initialValue:
-            'Cada zona del país tiene requerimientos técnicos distintos. Los calculamos automáticamente.',
+            'Contanos dónde lo vas a instalar para coordinar el traslado hasta tu terreno.',
         }),
         defineField({
           name: 'localidadLabel',

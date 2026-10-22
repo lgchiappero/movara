@@ -7,6 +7,7 @@ import {
   lavarropasOptions,
 } from "@/lib/validators/pedido";
 import { ADMIN_EXTRAS } from "@/data/admin-extras";
+import { UPGRADES_ANTERIORES_KEYS } from "@/data/configurador-catalog";
 
 const stringOrNull = z.union([z.string(), z.null()]).transform((v) => (v === "" ? null : v));
 
@@ -23,7 +24,9 @@ export const materialesTextoKeys = [
   "ventanas",
 ] as const;
 
-const adminExtraKeys = ADMIN_EXTRAS.map((e) => e.key) as [string, ...string[]];
+// Extras que el admin tilda, más las mejoras de pedidos viejos del
+// configurador: el form las reenvía tal cual al guardar y no se pueden perder.
+const upgradeKeysValidos = [...ADMIN_EXTRAS.map((e) => e.key), ...UPGRADES_ANTERIORES_KEYS] as [string, ...string[]];
 
 // z.record con una key schema de tipo enum exige las 8 keys presentes
 // (record "exhaustivo") — como el form siempre las manda todas, pero
@@ -48,7 +51,7 @@ export const configuracionEspacioSchema = z.object({
   tipoAgua: z.union([z.enum(tipoAguaOptions), z.null()]),
   lavarropas: z.union([z.enum(lavarropasOptions), z.null()]),
   materiales: materialesTextoSchema,
-  upgrades: z.array(z.enum(adminExtraKeys)),
+  upgrades: z.array(z.enum(upgradeKeysValidos)),
   notasConfiguracion: stringOrNull,
 });
 

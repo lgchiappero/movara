@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import {
   MATERIAL_CATEGORY_GROUPS,
+  BALCON_GROUP_KEY,
   getDefaultMateriales,
   findMaterialOption,
   getMaterialLabel,
@@ -95,13 +96,13 @@ function StatusBadge({ isPremium }: { isPremium: boolean }) {
 
 /** Badge de precio sobre la imagen — solo en cards premium. Siempre muestra el
  * precio, esté o no seleccionada; el estado "Agregado" vive en el área de texto. */
-function ImagePriceBadge({ amount }: { amount: number }) {
+function ImagePriceBadge({ amount }: { amount: number | "a-consultar" }) {
   return (
     <span
       className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold shadow whitespace-nowrap"
       style={{ backgroundColor: "#faeeda", color: "#854F0B" }}
     >
-      {`+ USD ${amount}`}
+      {amount === "a-consultar" ? "Precio a consultar" : `+ USD ${amount}`}
     </span>
   );
 }
@@ -117,8 +118,8 @@ function MaterialCard({
   option: MaterialOption;
   selected: boolean;
   onSelect: () => void;
-  /** Si está definida, esta card tiene costo adicional. */
-  priceAmount?: number;
+  /** Si está definida, esta card tiene costo adicional (o se cotiza aparte). */
+  priceAmount?: number | "a-consultar";
   imageFit?: "cover" | "contain";
   imageBg?: string;
 }) {
@@ -136,7 +137,17 @@ function MaterialCard({
       }`}
       style={selected ? { borderColor: accent } : undefined}
     >
-      {/* Imagen — nunca lleva overlay ni tinte, se ve siempre limpia. */}
+      {/* Imagen — nunca lleva overlay ni tinte, se ve siempre limpia. Sin
+          foto ni color propio (ej. muro cortina) la card es solo texto. */}
+      {!option.img && !option.color ? (
+        isPremium && (
+          <div className="px-2 pt-2">
+            <span className="inline-block px-1.5 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap" style={{ backgroundColor: "#faeeda", color: "#854F0B" }}>
+              {priceAmount === "a-consultar" ? "Precio a consultar" : `+ USD ${priceAmount}`}
+            </span>
+          </div>
+        )
+      ) : (
       <div className="relative w-full aspect-[4/3]" style={{ backgroundColor: imageBg ?? "#f5f5f4" }}>
         {option.img ? (
           <MaterialImage
@@ -152,16 +163,18 @@ function MaterialCard({
         ) : null}
         {isPremium && <ImagePriceBadge amount={priceAmount!} />}
       </div>
+      )}
       {/* Estado de selección: solo acá — nunca sobre la imagen. */}
       <div className="px-2 py-2 transition-colors duration-200" style={{ backgroundColor: selected ? textBg : "#ffffff" }}>
         {selected && <StatusBadge isPremium={isPremium} />}
-        <p className={`text-xs font-semibold leading-snug line-clamp-2 ${selected ? "text-stone-900" : "text-stone-600"}`}>{option.label}</p>
+        <p className={`text-xs font-semibold leading-snug line-clamp-3 ${selected ? "text-stone-900" : "text-stone-600"}`}>{option.label}</p>
+        {option.descripcion && <p className="mt-1 text-[11px] leading-snug text-stone-500">{option.descripcion}</p>}
       </div>
     </button>
   );
 }
 
-function SelectorBlock({
+export function SelectorBlock({
   selector,
   selectedId,
   onSelect,
@@ -172,7 +185,7 @@ function SelectorBlock({
   onSelect: (id: string) => void;
   priceFor: (priceName: string) => number;
 }) {
-  const amount = selector.priceName ? priceFor(selector.priceName) : undefined;
+  const amount = selector.aConsultar ? ("a-consultar" as const) : selector.priceName ? priceFor(selector.priceName) : undefined;
   return (
     <div>
       <p className="text-xs font-bold text-stone-500 uppercase tracking-wide mb-2">{selector.label}</p>
@@ -209,8 +222,9 @@ function CategoryGroupBlock({
       <h4 className="text-base font-bold text-stone-900 mb-4">{category.title}</h4>
       <div className="space-y-5">
         {category.selectors.map((sel, i) => {
-          const prevPriced = i > 0 && !!category.selectors[i - 1].priceName;
-          const divider = !!sel.priceName && !prevPriced;
+          const conCosto = (x: MaterialSelector) => !!x.priceName || !!x.aConsultar;
+          const prevPriced = i > 0 && conCosto(category.selectors[i - 1]);
+          const divider = conCosto(sel) && !prevPriced;
           return (
             <div key={`${sel.key}-${i}`}>
               {divider && <div className="mb-5 border-t border-dashed border-stone-300" />}
@@ -243,11 +257,12 @@ export function MaterialesSection({
         <h3 className="text-xl font-bold text-stone-900">Elegí los materiales de tu MOVARA</h3>
         <p className="text-stone-500 text-sm mt-1">
           Fotos de referencia — el color y la textura final pueden variar levemente según el lote de fabricación. Las opciones marcadas con
-          &quot;+ USD&quot; suman ese monto al precio estimado.
+          &quot;+ USD&quot; suman ese monto al precio estimado; las de &quot;Precio a consultar&quot; las cotizamos en tu presupuesto.
         </p>
       </div>
       <div className="space-y-8">
-        {MATERIAL_CATEGORY_GROUPS.map((cat) => (
+        {/* El balcón tiene su propia sección en "Configurá tu espacio". */}
+        {MATERIAL_CATEGORY_GROUPS.filter((cat) => cat.key !== BALCON_GROUP_KEY).map((cat) => (
           <div key={cat.key} className="pb-8 border-b border-stone-200 last:border-b-0 last:pb-0">
             <CategoryGroupBlock category={cat} seleccion={seleccion} onSelect={onSelect} priceFor={priceFor} />
           </div>

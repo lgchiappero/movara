@@ -150,5 +150,4 @@ export const PRODUCTO_EXTRAS: ProductoExtra[] = [
   { texto: "Piso SPC 4mm en lugar de PVC", precio: "+USD 240" },
   { texto: "Panel de fachada metálico tallado", precio: "+USD 500" },
   { texto: "Pre-instalación lavarropas", precio: "Consultar" },
-  { texto: "Kit solar completo", precio: "Consultar" },
 ];
