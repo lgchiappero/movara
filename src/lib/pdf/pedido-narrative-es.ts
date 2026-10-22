@@ -1,4 +1,3 @@
-import { getModeloKey, REGIONAL_MODELS } from "@/data/regional-models";
 import { getStoredUpgradeLabel } from "@/data/configurador-catalog";
 import {
   MATERIAL_CATEGORY_GROUPS,
@@ -43,8 +42,6 @@ export type NarrativeGroup = { type: "group"; title: string; bullets: string[]; 
 export type NarrativeItem = NarrativeLine | NarrativeGroup;
 
 export function buildPedidoNarrativeEs(data: PedidoRecord): NarrativeItem[] {
-  const regionalKey = getModeloKey(data.provincia ?? "", data.localidad ?? undefined);
-  const regional = REGIONAL_MODELS[regionalKey];
   const materiales = data.materiales ?? {};
 
   const cocinaTxt = data.incluyeCocina
@@ -83,7 +80,6 @@ export function buildPedidoNarrativeEs(data: PedidoRecord): NarrativeItem[] {
       label: "Ubicación",
       value: [data.localidad, data.provincia].filter(Boolean).join(", ") || SIN_ESPECIFICAR,
     },
-    { type: "line", label: "Zona", value: regional?.region ?? regionalKey },
     {
       type: "group",
       title: "Configuración del espacio",

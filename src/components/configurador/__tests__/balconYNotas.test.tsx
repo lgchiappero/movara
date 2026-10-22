@@ -151,6 +151,12 @@ describe("Configurador — notas y envío", () => {
     const mensaje = (screen.getByRole("textbox") as HTMLTextAreaElement).value;
     expect(mensaje).toContain("Para cotizar en el presupuesto:\nBalcón frontal, Sobretecho solo en el balcón");
     expect(mensaje).not.toContain("Mejoras a cotizar");
+    expect(mensaje).not.toContain("Zona climática");
+    expect(screen.queryByText("Llanura Pampeana")).toBeNull();
+    expect(
+      screen.getByText("Precio estimado de la unidad terminada, llave en mano. El traslado hasta tu terreno se cotiza según tu ubicación.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/transporte e instalación/)).toBeNull();
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);

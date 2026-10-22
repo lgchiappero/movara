@@ -34,4 +34,10 @@ describe("PRODUCTO_EXTRAS", () => {
       expect(e.precio.length).toBeGreaterThan(0);
     }
   });
+
+  it("la terraza cubierta y la galería se cotizan aparte, sin precio fijo", () => {
+    const precio = (t: string) => PRODUCTO_EXTRAS.find((e) => e.texto.startsWith(t))?.precio;
+    expect(precio("Terraza cubierta")).toBe("Consultar");
+    expect(precio("Galería perimetral")).toBe("Consultar");
+  });
 });

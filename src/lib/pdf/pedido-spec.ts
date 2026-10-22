@@ -1,4 +1,3 @@
-import { getModeloKey, REGIONAL_MODELS } from "@/data/regional-models";
 import { getStoredUpgradeLabel } from "@/data/configurador-catalog";
 import {
   MATERIAL_CATEGORY_GROUPS,
@@ -51,8 +50,6 @@ export type SupplierSpecGroup = {
 export type SupplierSpecItem = SupplierSpecLine | SupplierSpecGroup;
 
 export function buildSupplierSpecItems(data: PedidoRecord): SupplierSpecItem[] {
-  const regionalKey = getModeloKey(data.provincia ?? "", data.localidad ?? undefined);
-  const regional = REGIONAL_MODELS[regionalKey];
   const materiales = data.materiales ?? {};
 
   const upgradeRows = (data.upgrades ?? []).map((key) => ({ label: "Upgrade", value: getStoredUpgradeLabel(key) }));
@@ -90,7 +87,6 @@ export function buildSupplierSpecItems(data: PedidoRecord): SupplierSpecItem[] {
       label: "LOCATION",
       value: [data.localidad, data.provincia].filter(Boolean).join(", ") || SIN_ESPECIFICAR,
     },
-    { type: "line", label: "REGION", value: regional?.region ?? regionalKey },
     {
       type: "group",
       title: "LAYOUT",

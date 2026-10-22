@@ -142,7 +142,7 @@ export type ProductoExtra = {
 };
 
 export const PRODUCTO_EXTRAS: ProductoExtra[] = [
-  { texto: "Terraza cubierta 2m con tarima, barandas y techo", precio: "+USD 1.600" },
+  { texto: "Terraza cubierta 2m con tarima, barandas y techo", precio: "Consultar" },
   { texto: "Galería perimetral con techo", precio: "Consultar" },
   { texto: "Techo a dos aguas", precio: "Consultar" },
   { texto: "Pared de vidrio (muro cortina)", precio: "Consultar" },

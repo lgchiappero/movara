@@ -1,10 +1,8 @@
 // Extras/mejoras de la sección "Configuración del espacio" en el detalle de
-// pedido admin — independientes del catálogo de upgrades del configurador
-// público (UNIVERSAL_UPGRADES/UPGRADES_BY_REGION en configurador-catalog.ts,
-// que depende de región y no cubre estos ítems). Se guardan como strings
-// sueltos en ConfiguracionPedido.upgrades junto a los keys que sí vienen del
-// configurador — ver findAdminExtraLabel() para el fallback usado al
-// renderizar narrativa/PDF cuando un key no está en el catálogo público.
+// pedido admin. El configurador público ya no ofrece mejoras; los keys que
+// guardaba se conservan en UPGRADES_ANTERIORES_KEYS (configurador-catalog.ts).
+// Se guardan como strings sueltos en ConfiguracionPedido.upgrades — ver
+// getStoredUpgradeLabel() para cómo se muestran en la ficha y los PDFs.
 export const ADMIN_EXTRAS = [
   { key: "paneles-premium", label: "Paneles premium" },
   { key: "piso-spc", label: "Piso SPC" },

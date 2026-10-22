@@ -197,6 +197,10 @@ test.describe("Configurador — balcón a consultar y notas (6 pasos)", () => {
     // Paso 6: resultado
     await expect(page.getByText("Paso 6 de 6 — Tu configuración")).toBeVisible();
     await expect(page.getByText("+ Sobretecho completo: balcón y toda la unidad: lo cotizamos en tu presupuesto")).toBeVisible();
+    await expect(page.getByText(/El traslado hasta tu terreno se cotiza según tu ubicación/)).toBeVisible();
+    await expect(page.getByText(/transporte e instalación/)).toHaveCount(0);
+    await expect(page.getByText("Llanura Pampeana")).toHaveCount(0);
+    await expect(page.getByRole("textbox").first()).not.toHaveValue(/Zona climática/);
     const registro = page.getByText(/Tu consulta fue registrada con el código/);
     await expect(registro).toBeVisible({ timeout: 20_000 });
     const numeroConsulta = (await registro.locator("span").textContent())!.trim();

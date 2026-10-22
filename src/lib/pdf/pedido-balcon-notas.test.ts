@@ -74,6 +74,17 @@ describe("PDF del cliente — balcón y opciones a cotizar", () => {
   });
 });
 
+describe("PDFs sin zona climática", () => {
+  it("el PDF del cliente no tiene la línea Zona y el del proveedor no tiene REGION", () => {
+    const es = buildPedidoNarrativeEs(base);
+    const en = buildSupplierSpecItems(base);
+    expect(es.some((i) => i.type === "line" && i.label === "Zona")).toBe(false);
+    expect(en.some((i) => i.type === "line" && i.label === "REGION")).toBe(false);
+    expect(es).toContainEqual({ type: "line", label: "Ubicación", value: "Sunchales, Santa Fe" });
+    expect(en).toContainEqual({ type: "line", label: "LOCATION", value: "Sunchales, Santa Fe" });
+  });
+});
+
 describe("PDF del proveedor — balcón, notas y pedidos viejos", () => {
   it("el balcón figura como To quote (A cotizar)", () => {
     const items = buildSupplierSpecItems({ ...base, materiales: { balcon: "frontal", techoBalcon: "solo-balcon" } });

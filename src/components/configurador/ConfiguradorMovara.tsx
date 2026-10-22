@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef, useSyncExternalStore } from "reac
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { REGIONAL_MODELS, PROVINCIA_A_MODELO, PROVINCIAS_AR, getModeloKey } from "@/data/regional-models";
+import { PROVINCIAS_AR } from "@/data/provincias";
 import { MOVARA_MODELS, FINALIDADES, type ModeloKey, type FinalidadKey } from "@/data/configurador-catalog";
 import { BALCON_LATERAL_MODELOS, getOpcionesAConsultar } from "@/data/material-catalog";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
@@ -130,7 +130,6 @@ function buildWAMessage(params: {
   incluyeBano: boolean;
   tipoAgua: TipoAgua;
   lavarropas: TipoLavarropas;
-  regionalKey: string;
   tipoCliente: TipoCliente;
   nombre: string;
   razonSocial: string;
@@ -154,8 +153,6 @@ function buildWAMessage(params: {
     : "sin cocina";
   const banoTxt = params.incluyeBano ? `baño con ${LABELS_AGUA[params.tipoAgua]}` : "sin baño";
   const lavaTxt = LABELS_LAVA[params.lavarropas];
-
-  const regional = REGIONAL_MODELS[params.regionalKey];
 
   const materialesLines = [
     `- Exterior: ${getMaterialLabel("exterior", params.materiales.exterior)}`,
@@ -185,7 +182,6 @@ function buildWAMessage(params: {
     `🎯 Uso: ${f.label}\n` +
     `📍 Ubicación: ${loc || "(no especificada)"}\n` +
     `🏠 Configuración: ${params.habitaciones} hab., ${cocinaTxt}, ${banoTxt}, ${lavaTxt}\n` +
-    `⚙️ Zona climática: ${regional?.region ?? params.regionalKey}\n` +
     `\n🎨 Materiales elegidos:\n${materialesLines}\n\n` +
     `⭐ Opciones premium a cotizar:\n${premiumLine}\n\n` +
     (aCotizar.length ? `🏗️ Para cotizar en el presupuesto:\n${aCotizar.join(", ")}\n\n` : "") +
@@ -304,9 +300,6 @@ export default function ConfiguradorMovara({
   const maxHab = modeloSeleccionado?.maxHab ?? 3;
   const modeloLabel = modeloSeleccionado ? `${modeloSeleccionado.nombre}m²` : null;
 
-  const regionalKey = getModeloKey(provincia, localidad);
-  const regional = REGIONAL_MODELS[regionalKey] ?? null;
-
   const precioResumen = useMemo(
     () => calcularPrecio({ modelo, materiales, precios }),
     [modelo, materiales, precios]
@@ -391,7 +384,6 @@ export default function ConfiguradorMovara({
         incluyeBano,
         tipoAgua,
         lavarropas,
-        regionalKey,
         tipoCliente,
         nombre,
         razonSocial,
@@ -455,7 +447,6 @@ export default function ConfiguradorMovara({
               finalidad={finalidad!}
               localidad={localidad}
               provincia={provincia}
-              regional={regional}
               habitaciones={habitaciones}
               incluyeCocina={incluyeCocina}
               tipoCocina={tipoCocina}
@@ -1210,12 +1201,11 @@ export function StepDatos({
 // Result screen — Paso 7
 // ─────────────────────────────────────────────────────────
 
-function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habitaciones, incluyeCocina, tipoCocina, incluyeBano, tipoAgua, lavarropas, aConsultar, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText, numeroConsulta, tokenSeguimiento, enviandoPedido, errorPedido, onRetry }: {
+function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, incluyeCocina, tipoCocina, incluyeBano, tipoAgua, lavarropas, aConsultar, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText, numeroConsulta, tokenSeguimiento, enviandoPedido, errorPedido, onRetry }: {
   modelo: ModeloKey;
   finalidad: FinalidadKey;
   localidad: string;
   provincia: string;
-  regional: (typeof REGIONAL_MODELS)[string] | null;
   habitaciones: number;
   incluyeCocina: boolean;
   tipoCocina: TipoCocina;
@@ -1276,7 +1266,6 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habit
         <Chip icon="📦" text={`${m.nombre} — ${m.superficie}m²`} />
         <Chip icon={f.emoji} text={f.label} />
         {loc && <Chip icon="📍" text={loc} />}
-        {regional && <Chip icon={regional.icon} text={regional.region} />}
       </div>
 
       {/* Configuration summary */}
@@ -1296,7 +1285,7 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, regional, habit
         <p className="text-xs uppercase tracking-widest text-stone-500 mb-2">Presupuesto</p>
         <p className="text-xl font-bold text-white leading-snug">El precio depende de tu configuración</p>
         <p className="text-xs text-stone-500 mt-2">
-          Incluye fabricación, transporte e instalación estándar — te lo enviamos por WhatsApp
+          Precio estimado de la unidad terminada, llave en mano. El traslado hasta tu terreno se cotiza según tu ubicación.
         </p>
         <AConsultar items={aConsultar} className="mt-4 pt-4 border-t border-white/10 space-y-1 text-xs text-sage-300" />
       </div>
