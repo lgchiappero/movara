@@ -7,8 +7,8 @@ import { client } from "@/sanity/lib/client";
 import { MODELO_BY_SLUG_QUERY, MODELO_SLUGS_QUERY, FLEX_MODELO_SLUG } from "@/sanity/lib/queries";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import ImageGallery from "@/components/detail/ImageGallery";
+import TrackViewContent from "@/components/detail/TrackViewContent";
 import FloorPlan from "@/components/detail/FloorPlan";
-import ConsultarButton from "@/components/detail/ConsultarButton";
 import VirtualTour from "@/components/VirtualTour";
 import EspecificacionesEstandar from "@/components/EspecificacionesEstandar";
 
@@ -104,6 +104,7 @@ export default async function ModelDetailPage({ params }: Props) {
       </div>
 
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
+        <TrackViewContent modelo={model.name} />
         {/* Top grid: gallery + info */}
         <div className="grid lg:grid-cols-5 gap-10 lg:gap-14">
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 import { enviarLead, mensajeWhatsAppConsulta } from "@/lib/leads/enviar-lead";
+import { trackLead } from "@/lib/meta-pixel";
 import LeadNoGuardado from "./LeadNoGuardado";
 
 const PROVINCIAS = [
@@ -49,6 +50,7 @@ export default function ContactoForm({
     setStatus("sending");
     const resultado = await enviarLead({ ...form, formulario: "contacto" });
     if (resultado === "ok") {
+      trackLead("contacto", { provincia: form.provincia });
       localStorage.setItem("movara_exit_popup_submitted", "true");
       window.dispatchEvent(new Event("movara:form:submitted"));
       setStatus("sent");

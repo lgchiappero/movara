@@ -1,50 +1,57 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// El píxel de Meta se carga con next/script strategy="afterInteractive"
-// (src/app/layout.tsx): no bloquea el primer pintado, pero corre apenas la
-// página es interactiva, así que el PageView se mide aunque la visita dure
-// un segundo. Para no mandar eventos reales a Meta desde los tests, el
-// script de fbevents.js se reemplaza por uno vacío: los eventos quedan en
-// la cola de fbq, que es lo que fbevents.js procesa al cargar.
+// El píxel de Meta mide solo visitas reales en producción (movara.com.ar,
+// VERCEL_ENV=production, sin navegador automatizado) y en rutas públicas: ver
+// src/lib/meta-pixel.ts. Los e2e corren en localhost con Playwright, así que
+// acá el píxel no se tiene que cargar nunca, ni en páginas públicas ni en las
+// excluidas, ni siquiera al disparar eventos (configurador, WhatsApp).
+// El caso "sí carga en producción" está cubierto por los tests unitarios.
 
-const PIXEL_ID = "996322016615557";
+const pedidosAlPixel: string[] = [];
 
-async function colaDelPixel(page: Page): Promise<unknown[][]> {
-  return page.evaluate(() => {
-    const fbq = (window as unknown as { fbq?: { queue?: unknown[][] } }).fbq;
-    return (fbq?.queue ?? []).map((args) => Array.from(args as ArrayLike<unknown>));
+test.beforeEach(async ({ page }) => {
+  pedidosAlPixel.length = 0;
+  // Si algo se escapara, que no llegue a Meta: se corta y se registra.
+  await page.route(/connect\.facebook\.net|facebook\.com\/tr/, (route) => {
+    pedidosAlPixel.push(route.request().url());
+    return route.abort();
+  });
+});
+
+async function sinPixel(page: Page) {
+  // Margen para que corran los efectos del cliente (donde se cargaría).
+  await page.waitForLoadState("networkidle");
+  expect(await page.evaluate(() => typeof (window as unknown as { fbq?: unknown }).fbq)).toBe("undefined");
+  expect(pedidosAlPixel).toEqual([]);
+}
+
+for (const ruta of ["/", "/modelos", "/configurador", "/agendar", "/faq"]) {
+  test(`página pública ${ruta}: fuera de producción no carga el píxel`, async ({ page }) => {
+    await page.goto(ruta);
+    await sinPixel(page);
   });
 }
 
-const pageViews = (cola: unknown[][]) => cola.filter((a) => a[0] === "track" && a[1] === "PageView").length;
+for (const ruta of ["/admin", "/mi-pedido", "/recibo/token-inexistente", "/agendar/cancelar/id-inexistente"]) {
+  test(`ruta excluida ${ruta}: no carga el píxel`, async ({ page }) => {
+    await page.goto(ruta);
+    await sinPixel(page);
+  });
+}
 
-test.beforeEach(async ({ page }) => {
-  await page.route("https://connect.facebook.net/**", (route) =>
-    route.fulfill({ status: 200, contentType: "application/javascript", body: "" })
-  );
-});
-
-test("al cargar la página se inicializa el píxel y se registra un PageView", async ({ page }) => {
-  const pedidoScript = page.waitForRequest("https://connect.facebook.net/en_US/fbevents.js");
-  await page.goto("/");
-  await pedidoScript;
-  await expect.poll(async () => pageViews(await colaDelPixel(page))).toBe(1);
-  const cola = await colaDelPixel(page);
-  expect(cola[0]).toEqual(["init", PIXEL_ID]);
-});
-
-test("el script del píxel está en afterInteractive: no es un <script> del HTML inicial", async ({ request }) => {
-  // beforeInteractive o un <script> en el <head> lo pondrían en el HTML del
-  // servidor; afterInteractive lo inyecta Next en el cliente.
+test("el HTML no trae el píxel ni el <noscript> de Meta", async ({ request }) => {
   const html = await (await request.get("/")).text();
-  expect(html).not.toMatch(/<script[^>]*id="meta-pixel"/);
-  expect(html).toContain(`facebook.com/tr?id=${PIXEL_ID}&amp;ev=PageView&amp;noscript=1`);
+  expect(html).not.toContain("connect.facebook.net");
+  expect(html).not.toContain("facebook.com/tr");
 });
 
-test("navegar a otra página dentro del sitio registra otro PageView", async ({ page }) => {
+test("navegar y tocar WhatsApp no carga el píxel", async ({ page, context }) => {
   await page.goto("/");
-  await expect.poll(async () => pageViews(await colaDelPixel(page))).toBe(1);
   await page.getByRole("link", { name: /Ver modelos/ }).first().click();
   await expect(page).toHaveURL(/\/modelos$/);
-  await expect.poll(async () => pageViews(await colaDelPixel(page))).toBe(2);
+  // Los links de WhatsApp abren una pestaña nueva: se cierra sin cargarla.
+  context.on("page", (p) => void p.close());
+  const wa = page.locator('a[href*="wa.me"]').first();
+  await wa.click();
+  await sinPixel(page);
 });

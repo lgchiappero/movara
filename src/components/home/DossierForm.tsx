@@ -6,6 +6,7 @@ import { ShieldCheck, FileCheck, Lock, ArrowLeft, ArrowRight, Phone } from "luci
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 import { enviarLead, mensajeWhatsAppConsulta } from "@/lib/leads/enviar-lead";
+import { trackLead } from "@/lib/meta-pixel";
 import LeadNoGuardado from "./LeadNoGuardado";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -224,6 +225,7 @@ export default function DossierForm({
       return;
     }
 
+    trackLead("dossier", { provincia: form.provincia });
     setSentVia("form");
     setStatus("sent");
   };
@@ -253,6 +255,7 @@ export default function DossierForm({
       return;
     }
 
+    trackLead("dossier-llamada", { provincia: form.provincia });
     setSentVia("llamada");
     setStatus("sent");
   };

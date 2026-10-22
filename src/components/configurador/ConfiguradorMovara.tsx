@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useState, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
@@ -15,6 +15,7 @@ import {
   type Upgrade,
 } from "@/data/configurador-catalog";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
+import { trackContact, trackInitiateCheckout, trackLead } from "@/lib/meta-pixel";
 import {
   MaterialesSection,
   getDefaultMateriales,
@@ -306,6 +307,8 @@ export default function ConfiguradorMovara({
   const localidadValida = !validateField(localidadSchema, localidad.trim());
 
   const modeloSeleccionado = modelo ? MOVARA_MODELS.find((m) => m.key === modelo)! : null;
+  // InitiateCheckout una sola vez por visita, aunque vuelva al paso 1.
+  const inicioMedido = useRef(false);
   const maxHab = modeloSeleccionado?.maxHab ?? 3;
   const modeloLabel = modeloSeleccionado ? `${modeloSeleccionado.nombre}m²` : null;
 
@@ -367,6 +370,7 @@ export default function ConfiguradorMovara({
         setErrorPedido(mensajeErrorPedido(json));
         return;
       }
+      trackLead("configurador", { modelo: modeloSeleccionado?.nombre, finalidad, provincia });
       setNumeroConsulta(json?.numeroConsulta ?? null);
       setTokenSeguimiento(json?.tokenSeguimiento ?? null);
     } catch {
@@ -377,6 +381,10 @@ export default function ConfiguradorMovara({
   }
 
   function goNext() {
+    if (step === 1 && !inicioMedido.current && modeloSeleccionado) {
+      inicioMedido.current = true;
+      trackInitiateCheckout(modeloSeleccionado.nombre);
+    }
     if (step < 6) {
       setSlideDir(1);
       setStep((s) => (s + 1) as 2 | 3 | 4 | 5 | 6);
@@ -420,6 +428,7 @@ export default function ConfiguradorMovara({
   }
 
   function handleSendWA() {
+    trackContact(window.location.pathname);
     window.open(getWhatsAppUrl(waMessage), "_blank", "noopener,noreferrer");
   }
 

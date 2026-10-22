@@ -14,6 +14,7 @@ import {
 import { SHOWROOM_DIRECCION } from "@/lib/agenda/showroom";
 import ComoLlegarLink from "./ComoLlegarLink";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
+import { trackSchedule } from "@/lib/meta-pixel";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
@@ -191,6 +192,7 @@ export default function AgendaBooking() {
         }
         return;
       }
+      trackSchedule();
       setCitaId(json.id);
       setPaso("confirmado");
     } catch {

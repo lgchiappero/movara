@@ -10,7 +10,6 @@ import ComoFunciona from "@/components/home/ComoFunciona";
 import PruebaSocial from "@/components/home/PruebaSocial";
 import FAQ from "@/components/home/FAQ";
 import ContactoForm from "@/components/home/ContactoForm";
-import ConfiguradorRegional from "@/components/configurador/ConfiguradorRegional";
 import Footer from "@/components/home/Footer";
 import Reveal from "@/components/motion/Reveal";
 import { client } from "@/sanity/lib/client";
@@ -43,7 +42,6 @@ export default async function HomePage() {
   return (
     <>
       <Navbar />
-      <ConfiguradorRegional waNumber={waNumber} />
       <main>
         <Hero waNumber={waNumber} content={homePage?.hero} />
         <ModelosHome content={homePage?.modelosHome} modelos={modelos} />

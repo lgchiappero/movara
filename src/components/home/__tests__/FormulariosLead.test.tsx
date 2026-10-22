@@ -15,6 +15,9 @@ vi.stubGlobal(
   }
 );
 
+const trackLead = vi.fn();
+vi.mock("@/lib/meta-pixel", () => ({ trackLead: (...args: unknown[]) => trackLead(...args) }));
+
 import ContactoForm from "../ContactoForm";
 import DossierForm from "../DossierForm";
 
@@ -37,6 +40,7 @@ function crearStorage() {
 }
 
 beforeEach(() => {
+  trackLead.mockClear();
   fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
   vi.stubGlobal("localStorage", crearStorage());
@@ -74,6 +78,7 @@ describe("ContactoForm", () => {
     expect(href).toContain("Quiero un Flex");
     expect(screen.queryByText("¡Mensaje recibido!")).not.toBeInTheDocument();
     expect(localStorage.getItem("movara_exit_popup_submitted")).toBeNull();
+    expect(trackLead).not.toHaveBeenCalled();
   });
 
   it("otro error: mensaje genérico, sin el aviso de 503", async () => {
@@ -81,6 +86,7 @@ describe("ContactoForm", () => {
     await completarYEnviar();
     expect(await screen.findByText("Hubo un error. Intentá de nuevo o escribinos por WhatsApp.")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(trackLead).not.toHaveBeenCalled();
   });
 
   it("201: confirma el envío", async () => {
@@ -88,6 +94,8 @@ describe("ContactoForm", () => {
     await completarYEnviar();
     expect(await screen.findByText("¡Mensaje recibido!")).toBeInTheDocument();
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ nombre: "Ana", formulario: "contacto" });
+    // Lead una sola vez, sin datos personales.
+    expect(trackLead.mock.calls).toEqual([["contacto", { provincia: "" }]]);
   });
 });
 
@@ -122,6 +130,7 @@ describe("DossierForm", () => {
     expect(screen.queryByText("¡Consulta recibida!")).not.toBeInTheDocument();
     // Puede reintentar: el botón sigue ahí.
     expect(screen.getByRole("button", { name: "Quiero mi precio de lanzamiento" })).toBeEnabled();
+    expect(trackLead).not.toHaveBeenCalled();
   });
 
   it("503 en 'Prefiero que me llamen': mismo aviso, sin '¡Listo, te llamamos!'", async () => {
@@ -131,6 +140,7 @@ describe("DossierForm", () => {
     await vi.waitFor(enlaceWhatsAppDelAviso);
     expect(screen.queryByText("¡Listo, te llamamos!")).not.toBeInTheDocument();
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).formulario).toBe("dossier-llamada");
+    expect(trackLead).not.toHaveBeenCalled();
   });
 
   it("otro error (o sin conexión): mensaje genérico", async () => {
@@ -139,6 +149,7 @@ describe("DossierForm", () => {
     await user.click(screen.getByRole("button", { name: "Quiero mi precio de lanzamiento" }));
     expect(await screen.findByText("Hubo un error. Intentá de nuevo o escribinos por WhatsApp.")).toBeInTheDocument();
     expect(screen.queryByText("¡Consulta recibida!")).not.toBeInTheDocument();
+    expect(trackLead).not.toHaveBeenCalled();
   });
 
   it("201: '¡Consulta recibida!' y '¡Listo, te llamamos!' solo si la API respondió OK", async () => {
@@ -147,11 +158,16 @@ describe("DossierForm", () => {
     await user.click(screen.getByRole("button", { name: "Quiero mi precio de lanzamiento" }));
     expect(await screen.findByText("¡Consulta recibida!")).toBeInTheDocument();
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ formulario: "dossier", dni: "30123456" });
+    expect(trackLead.mock.calls).toEqual([["dossier", { provincia: "Santa Fe" }]]);
 
     await user.click(screen.getByRole("button", { name: "Hacer otra consulta" }));
     const ctx = await llegarAlPasoDesdeReset(user);
     await ctx.click(screen.getByRole("button", { name: /Prefiero que me llamen/ }));
     expect(await screen.findByText("¡Listo, te llamamos!")).toBeInTheDocument();
+    expect(trackLead.mock.calls).toEqual([
+      ["dossier", { provincia: "Santa Fe" }],
+      ["dossier-llamada", { provincia: "Santa Fe" }],
+    ]);
   });
 });
 
