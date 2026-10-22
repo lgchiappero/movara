@@ -1,4 +1,5 @@
 import { defineField, defineType, defineArrayMember } from 'sanity'
+import { QUIENES_SOMOS_DEFAULTS as D } from '../../data/quienes-somos'
 
 export const quienesSomosType = defineType({
   name: 'quienesSomos',
@@ -21,15 +22,14 @@ export const quienesSomosType = defineType({
           name: 'title',
           title: 'Título',
           type: 'string',
-          initialValue: 'Construimos hogares, no solo estructuras.',
+          initialValue: D.hero.title,
         }),
         defineField({
           name: 'subtitle',
           title: 'Subtítulo',
           type: 'text',
           rows: 3,
-          initialValue:
-            'Somos un equipo apasionado por la arquitectura modular y el acceso a la vivienda digna. Más de 8 años transformando terrenos vacíos en hogares.',
+          initialValue: D.hero.subtitle,
         }),
         defineField({
           name: 'backgroundImage',
@@ -52,12 +52,47 @@ export const quienesSomosType = defineType({
           name: 'title',
           title: 'Título de la sección',
           type: 'string',
-          initialValue: 'Nuestra historia',
+          initialValue: D.historia.title,
         }),
         defineField({
           name: 'content',
           title: 'Contenido (texto enriquecido con imágenes)',
           type: 'blockContent',
+          initialValue: D.historia.content,
+        }),
+      ],
+    }),
+
+    // ── Presencia (entre Historia y Misión/Visión) ──────────
+    defineField({
+      name: 'presencia',
+      title: 'Presencia',
+      type: 'object',
+      group: 'contenido',
+      fields: [
+        defineField({
+          name: 'title',
+          title: 'Título de la sección',
+          type: 'string',
+          initialValue: D.presencia.title,
+        }),
+        defineField({
+          name: 'bloques',
+          title: 'Bloques',
+          type: 'array',
+          description: 'Tres bloques: en columnas en desktop, apilados en el celular.',
+          validation: (rule) => rule.max(3),
+          initialValue: D.presencia.bloques,
+          of: [
+            defineArrayMember({
+              type: 'object',
+              fields: [
+                defineField({ name: 'subtitulo', title: 'Subtítulo', type: 'string' }),
+                defineField({ name: 'texto', title: 'Texto', type: 'text', rows: 5 }),
+              ],
+              preview: { select: { title: 'subtitulo', subtitle: 'texto' } },
+            }),
+          ],
         }),
       ],
     }),
@@ -73,13 +108,14 @@ export const quienesSomosType = defineType({
           name: 'title',
           title: 'Título',
           type: 'string',
-          initialValue: 'Misión',
+          initialValue: D.mision.title,
         }),
         defineField({
           name: 'text',
           title: 'Texto',
           type: 'text',
           rows: 4,
+          initialValue: D.mision.text,
         }),
       ],
     }),
@@ -95,13 +131,14 @@ export const quienesSomosType = defineType({
           name: 'title',
           title: 'Título',
           type: 'string',
-          initialValue: 'Visión',
+          initialValue: D.vision.title,
         }),
         defineField({
           name: 'text',
           title: 'Texto',
           type: 'text',
           rows: 4,
+          initialValue: D.vision.text,
         }),
       ],
     }),
@@ -112,6 +149,7 @@ export const quienesSomosType = defineType({
       title: 'Valores',
       type: 'array',
       group: 'equipo',
+      initialValue: D.valores,
       of: [
         defineArrayMember({
           type: 'object',
@@ -138,6 +176,7 @@ export const quienesSomosType = defineType({
       title: 'Equipo',
       type: 'array',
       group: 'equipo',
+      description: 'Oculto: esta sección no se muestra en el sitio aunque tenga datos.',
       of: [
         defineArrayMember({
           type: 'object',

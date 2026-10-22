@@ -229,16 +229,10 @@ export const QUIENES_SOMOS_QUERY = groq`
       backgroundImage { asset->{ _id, url }, hotspot, crop },
     },
     historia { title, content },
+    presencia { title, bloques[] { _key, subtitulo, texto } },
     mision { title, text },
     vision { title, text },
     valores[] { _key, icon, title, description },
-    equipo[] {
-      _key,
-      name,
-      role,
-      bio,
-      photo,
-    },
   }
 `
 
