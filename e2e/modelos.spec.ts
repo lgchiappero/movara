@@ -55,3 +55,15 @@ test.describe("Cards de modelos", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 });
+
+test.describe("Página de modelo — qué incluye el precio", () => {
+  test("no da por incluido el traslado y aclara qué va aparte", async ({ page }) => {
+    await page.goto("/modelos/familiar-65");
+    const aside = page.locator("aside");
+    await expect(aside.getByText("Incluido en el precio")).toBeVisible();
+    await expect(aside.getByText("Unidad terminada, llave en mano")).toBeVisible();
+    await expect(aside.getByText("No incluye", { exact: true })).toBeVisible();
+    await expect(aside.getByText("Traslado hasta tu terreno (se cotiza según tu ubicación)")).toBeVisible();
+    await expect(aside.getByText(/Transporte hasta tu terreno|Instalación y nivelación|Planos aprobados/)).toHaveCount(0);
+  });
+});

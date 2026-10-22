@@ -9,7 +9,7 @@ import path from "path";
  * interno o el transporte están incluidos (los paga el cliente según el
  * contrato). */
 const CLAIMS =
-  /fabricaci[oó]n argentina|hech[oa] en argentina|industria (nacional|argentina)|producci[oó]n nacional|fabricaci[oó]n nacional|fabricad[ao]s? en argentina|made in argentina|fabricamos|casas entregadas|a[nñ]os de experiencia|m[aá]s de 8 a[nñ]os|kit solar|(?<!\d)8 a[nñ]os|log[ií]stica[^."]{0,30}inclu[ií]d|(flete|transporte)[^."]{0,20}inclu[ií]d|incluye (el )?(transporte|flete)/i;
+  /fabricaci[oó]n argentina|hech[oa] en argentina|industria (nacional|argentina)|producci[oó]n nacional|fabricaci[oó]n nacional|fabricad[ao]s? en argentina|made in argentina|fabricamos|casas entregadas|a[nñ]os de experiencia|m[aá]s de 8 a[nñ]os|kit solar|(?<!\d)8 a[nñ]os|log[ií]stica[^."]{0,30}inclu[ií]d|(flete|transporte)[^."]{0,20}inclu[ií]d|incluye (el )?(transporte|flete)|incluyen? fabricaci[oó]n, transporte|transporte hasta tu terreno/i;
 
 function archivos(dir: string): string[] {
   return readdirSync(dir).flatMap((n) => {
@@ -45,7 +45,7 @@ describe("claims prohibidos (producción nacional, 'fabricamos', casas entregada
     expect(CLAIMS.test("Kit solar completo")).toBe(true);
   });
 
-  it.each(["transporte incluido", "Flete incluido", "incluye transporte", "Incluye el flete"])("bloquea %s", (texto) => {
+  it.each(["transporte incluido", "Flete incluido", "incluye transporte", "Incluye el flete", "Todos incluyen fabricación, transporte e instalación.", "Transporte hasta tu terreno"])("bloquea %s", (texto) => {
     expect(CLAIMS.test(texto)).toBe(true);
   });
 

@@ -22,7 +22,7 @@ export const modelosPageType = defineType({
           type: 'text',
           rows: 2,
           initialValue:
-            'Cada modelo está diseñado para adaptarse a tu proyecto y región. Todos incluyen fabricación, transporte e instalación.',
+            'Cada modelo está diseñado para adaptarse a tu proyecto y región. El traslado hasta tu terreno se cotiza según tu ubicación.',
         }),
       ],
     }),

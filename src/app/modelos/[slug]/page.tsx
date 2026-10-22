@@ -11,6 +11,7 @@ import TrackViewContent from "@/components/detail/TrackViewContent";
 import FloorPlan from "@/components/detail/FloorPlan";
 import VirtualTour from "@/components/VirtualTour";
 import EspecificacionesEstandar from "@/components/EspecificacionesEstandar";
+import { PRECIO_INCLUYE, PRECIO_NO_INCLUYE } from "@/data/precio-incluye";
 
 const FINALIDAD_LABELS: Record<string, string> = {
   inversor: "💰 Inversión / Renta",
@@ -280,16 +281,16 @@ export default async function ModelDetailPage({ params }: Props) {
           <aside className="space-y-6">
             <div className="bg-stone-50 border border-stone-100 rounded-2xl p-6 space-y-4">
               <h3 className="font-bold text-stone-900">Incluido en el precio</h3>
-              {[
-                "Fabricación en planta controlada",
-                "Transporte hasta tu terreno",
-                "Instalación y nivelación",
-                "Conexiones de servicios",
-                "Planos aprobados",
-                "Garantía escrita",
-              ].map((item) => (
+              {PRECIO_INCLUYE.map((item) => (
                 <div key={item} className="flex items-center gap-2.5 text-sm text-stone-600">
                   <CheckIcon className="w-4 h-4 text-green-500 shrink-0" />
+                  {item}
+                </div>
+              ))}
+              <h3 className="font-bold text-stone-900 pt-2">No incluye</h3>
+              {PRECIO_NO_INCLUYE.map((item) => (
+                <div key={item} className="flex items-center gap-2.5 text-sm text-stone-500">
+                  <span aria-hidden className="w-4 text-center text-stone-400 shrink-0">–</span>
                   {item}
                 </div>
               ))}
