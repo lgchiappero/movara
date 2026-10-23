@@ -5,9 +5,12 @@ import { groq } from 'next-sanity'
 // poder ordenarse junto al resto vía el campo "order".
 export const FLEX_MODELO_SLUG = 'movara-flex'
 
-// Sitemap: modelos activos con página propia (los "Próximamente" no la tienen).
+// Modelos con página propia en /modelos/[slug]: activos y no "Próximamente".
+// Lo comparten el sitemap y la página, así no hay URLs fuera del sitemap.
+const MODELO_CON_PAGINA = `_type == "modelo" && activo != false && proximamente != true && defined(slug.current)`
+
 export const MODELOS_SITEMAP_QUERY = groq`
-  *[_type == "modelo" && activo != false && proximamente != true && defined(slug.current)] | order(order asc, _createdAt asc) {
+  *[${MODELO_CON_PAGINA}] | order(order asc, _createdAt asc) {
     "slug": slug.current,
     "actualizado": _updatedAt
   }
@@ -29,7 +32,7 @@ export const MODELOS_CARD_QUERY = groq`
 `
 
 export const MODELO_BY_SLUG_QUERY = groq`
-  *[_type == "modelo" && slug.current == $slug][0] {
+  *[${MODELO_CON_PAGINA} && slug.current == $slug][0] {
     _id,
     "slug": slug.current,
     name,
@@ -237,7 +240,7 @@ export const QUIENES_SOMOS_QUERY = groq`
 `
 
 export const MODELO_SLUGS_QUERY = groq`
-  *[_type == "modelo"] { "slug": slug.current }
+  *[${MODELO_CON_PAGINA}] { "slug": slug.current }
 `
 
 // Misma forma de salida que antes (hero.title/ctaPrimario, galeria,

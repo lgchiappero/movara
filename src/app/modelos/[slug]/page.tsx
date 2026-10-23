@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { MODELS, getModel, type ProductModel } from "@/data/models";
+import type { ProductModel } from "@/data/models";
 import { client } from "@/sanity/lib/client";
 import { MODELO_BY_SLUG_QUERY, MODELO_SLUGS_QUERY, FLEX_MODELO_SLUG } from "@/sanity/lib/queries";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
@@ -27,27 +27,21 @@ export const revalidate = 3600;
 
 type Props = { params: Promise<{ slug: string }> };
 
-async function getModeloBySlug(slug: string): Promise<ProductModel | undefined> {
-  try {
-    const data = await client.fetch<ProductModel | null>(MODELO_BY_SLUG_QUERY, { slug });
-    if (data) return data;
-  } catch {
-    // Sanity unavailable
-  }
-  return getModel(slug);
+// Solo modelos activos de Sanity. Si Sanity falla, el error sube: con ISR
+// se sigue sirviendo la última versión buena en vez de cachear un 404.
+async function getModeloBySlug(slug: string): Promise<ProductModel | null> {
+  return client.fetch<ProductModel | null>(MODELO_BY_SLUG_QUERY, { slug });
 }
 
 export async function generateStaticParams() {
   try {
     const slugs = await client.fetch<{ slug: string }[]>(MODELO_SLUGS_QUERY);
-    const all = new Set([...MODELS.map((m) => m.slug), ...slugs.map((s) => s.slug)]);
     // MOVARA Flex tiene su propia página dedicada en /modelos/flex (ver
     // redirect más abajo) — no generar también /modelos/movara-flex como
     // una segunda URL en paralelo para el mismo modelo.
-    all.delete(FLEX_MODELO_SLUG);
-    return [...all].map((slug) => ({ slug }));
+    return slugs.filter((s) => s.slug !== FLEX_MODELO_SLUG).map((s) => ({ slug: s.slug }));
   } catch {
-    return MODELS.map((m) => ({ slug: m.slug }));
+    return [];
   }
 }
 

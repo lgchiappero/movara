@@ -58,7 +58,7 @@ test.describe("Cards de modelos", () => {
 
 test.describe("Página de modelo — qué incluye el precio", () => {
   test("no da por incluido el traslado y aclara qué va aparte", async ({ page }) => {
-    await page.goto("/modelos/familiar-65");
+    await page.goto("/modelos/movara-duplex-76m2");
     const aside = page.locator("aside");
     await expect(aside.getByText("Incluido en el precio")).toBeVisible();
     await expect(aside.getByText("Unidad terminada, llave en mano")).toBeVisible();
@@ -68,9 +68,23 @@ test.describe("Página de modelo — qué incluye el precio", () => {
   });
 
   test("el contacto del lateral es el WhatsApp real, no un número de relleno", async ({ page }) => {
-    await page.goto("/modelos/familiar-65");
+    await page.goto("/modelos/movara-duplex-76m2");
     const contacto = page.locator("aside").getByRole("link", { name: "+54 9 3493 667214" });
     await expect(contacto).toHaveAttribute("href", /^https:\/\/wa\.me\/\d+\?text=/);
     await expect(page.locator("aside").getByText("0000-0000")).toHaveCount(0);
+  });
+});
+
+test.describe("Página de modelo — solo modelos activos de Sanity", () => {
+  for (const slug of ["familiar-65", "studio-35", "premium-95"]) {
+    test(`/modelos/${slug} (modelo de prueba viejo) devuelve 404`, async ({ request }) => {
+      const res = await request.get(`/modelos/${slug}`);
+      expect(res.status()).toBe(404);
+    });
+  }
+
+  test("el Duplex de Sanity responde 200", async ({ request }) => {
+    const res = await request.get("/modelos/movara-duplex-76m2");
+    expect(res.status()).toBe(200);
   });
 });
