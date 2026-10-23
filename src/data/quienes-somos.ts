@@ -1,4 +1,4 @@
-/** Textos por defecto de /quienes-somos. Los usa la página cuando un campo del
+/** Textos por defecto de /nosotros. Los usa la página cuando un campo del
  * documento quienesSomos de Sanity está vacío, y el schema como initialValue,
  * así el Studio arranca con el mismo contenido que se ve en el sitio. */
 

@@ -3,7 +3,7 @@ import { QUIENES_SOMOS_DEFAULTS as D } from '../../data/quienes-somos'
 
 export const quienesSomosType = defineType({
   name: 'quienesSomos',
-  title: 'Quiénes somos',
+  title: 'Nosotros',
   type: 'document',
   groups: [
     { name: 'hero', title: 'Hero' },
@@ -205,7 +205,7 @@ export const quienesSomosType = defineType({
   ],
   preview: {
     prepare() {
-      return { title: 'Quiénes somos' }
+      return { title: 'Nosotros' }
     },
   },
 })

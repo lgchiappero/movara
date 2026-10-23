@@ -11,7 +11,7 @@ import Footer from "@/components/home/Footer";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Quiénes somos — MOVARA",
+  title: "Nosotros — MOVARA",
   description:
     "MOVARA nace en Sunchales para repensar la forma de habitar: casas modulares de diseño, llave en mano, con entrega en toda la Argentina.",
 };
@@ -52,7 +52,7 @@ export default async function QuienesSomosPage() {
           )}
           <div className="relative max-w-4xl mx-auto text-center">
             <span className="inline-block text-sage-400 text-sm font-semibold uppercase tracking-widest mb-5">
-              Quiénes somos
+              Nosotros
             </span>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.1] tracking-tight">
               {hero.title}

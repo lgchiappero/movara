@@ -9,7 +9,7 @@ export const PAGINAS_PUBLICAS = [
   "/configurador",
   "/agendar",
   "/faq",
-  "/quienes-somos",
+  "/nosotros",
   "/producto",
   "/privacidad",
   "/terminos",

@@ -59,6 +59,12 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "img.youtube.com" },
     ],
   },
+  async redirects() {
+    return [
+      // La página "Quiénes somos" pasó a /nosotros: 308 para no perder links viejos.
+      { source: "/quienes-somos", destination: "/nosotros", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

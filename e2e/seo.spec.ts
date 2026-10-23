@@ -16,7 +16,7 @@ test.describe("SEO — robots.txt y sitemap.xml", () => {
     expect(res.status()).toBe(200);
     const xml = await res.text();
     const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
-    for (const ruta of ["/", "/modelos", "/configurador", "/agendar", "/faq", "/quienes-somos", "/producto", "/privacidad", "/terminos"]) {
+    for (const ruta of ["/", "/modelos", "/configurador", "/agendar", "/faq", "/nosotros", "/producto", "/privacidad", "/terminos"]) {
       expect(locs).toContain(ruta);
     }
     expect(locs.some((r) => /^\/(admin|studio|api|recibo|mi-pedido|agendar\/cancelar)/.test(r))).toBe(false);

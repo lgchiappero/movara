@@ -53,12 +53,12 @@ export const structure: StructureResolver = (S) =>
         ),
 
       S.listItem()
-        .title('Quiénes somos')
+        .title('Nosotros')
         .child(
           S.document()
             .schemaType('quienesSomos')
             .documentId('quienesSomos')
-            .title('Quiénes somos'),
+            .title('Nosotros'),
         ),
 
       S.listItem()

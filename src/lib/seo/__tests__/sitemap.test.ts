@@ -24,7 +24,7 @@ describe("construirSitemap", () => {
       `${BASE}/configurador`,
       `${BASE}/agendar`,
       `${BASE}/faq`,
-      `${BASE}/quienes-somos`,
+      `${BASE}/nosotros`,
       `${BASE}/producto`,
       `${BASE}/privacidad`,
       `${BASE}/terminos`,

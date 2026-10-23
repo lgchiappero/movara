@@ -28,7 +28,7 @@ type ResolvedConfig = {
 const FALLBACK_NAV_LINKS = [
   { label: "Modelos", url: "/modelos" },
   { label: "Configurador", url: "/configurador" },
-  { label: "Quiénes somos", url: "/quienes-somos" },
+  { label: "Nosotros", url: "/nosotros" },
   { label: "Cómo funciona", url: "/#proceso" },
   { label: "Preguntas frecuentes", url: "/faq" },
 ];
