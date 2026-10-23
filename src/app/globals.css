@@ -26,7 +26,9 @@
 }
 
 html {
-  scroll-padding-top: 4rem; /* compensar navbar fijo de 64px en todos los anchor links */
+  /* Header fijo de 65px (64 + borde) más aire, para los saltos a #ancla que
+     no pasan por src/lib/scroll.ts (sin JS, o el salto inicial del navegador). */
+  scroll-padding-top: 5rem;
 }
 
 /* En @layer base para que las utilidades (ej. font-playfair) puedan pisarla. */
@@ -49,7 +51,9 @@ html {
 .animate-float    { animation: float 3.5s ease-in-out infinite; }
 .animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
 
-html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
 
 @keyframes marquee {
   from { transform: translateX(0); }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import LinkInterno from "@/components/ui/LinkInterno";
 
 const NAV_LINKS = [
   { label: "Modelos", href: "/modelos" },
@@ -23,14 +24,28 @@ export default function Navbar() {
 
   return (
     <header
+      data-header-fijo
       className={`fixed top-0 left-0 right-0 z-50 bg-white transition-shadow duration-300 ${
         scrolled ? "shadow-sm border-b border-stone-100" : "border-b border-stone-100"
       }`}
     >
       <nav className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <Image src="/icono.png" alt="" height={48} width={48} className="h-8 w-auto sm:h-12 object-contain" />
+        <LinkInterno href="/" aria-label="MOVARA, ir al inicio" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5 sm:gap-3">
+          {/* icono.png trae mucho margen transparente (el cubo ocupa el 55% del
+              ancho): se recorta por CSS para que el cubo tenga la altura del
+              texto y quede centrado con él. */}
+          <span data-logo-icono className="relative block h-9 sm:h-11 aspect-[737/883] overflow-hidden shrink-0">
+            <Image
+              src="/icono.png"
+              alt=""
+              width={1339}
+              height={1175}
+              sizes="80px"
+              priority
+              className="absolute max-w-none w-[181.68%] h-auto left-[-40.84%] top-[-12.8%]"
+            />
+          </span>
           <div className="flex flex-col leading-none gap-[3px]">
             <span style={{ fontFamily: "var(--font-montserrat)", fontWeight: 700, color: "#D4B36A", lineHeight: 1, letterSpacing: "-0.01em" }} className="text-2xl sm:text-[2.25rem]">
               MOVARA
@@ -39,18 +54,18 @@ export default function Navbar() {
               Espacios Modulares
             </span>
           </div>
-        </Link>
+        </LinkInterno>
 
         {/* Desktop nav */}
         <ul className="hidden md:flex items-center gap-7">
           {NAV_LINKS.map(({ label, href }) => (
             <li key={label}>
-              <Link
+              <LinkInterno
                 href={href}
                 className="text-sm font-medium text-[#2F2F2F] hover:text-sage-500 transition-colors"
               >
                 {label}
-              </Link>
+              </LinkInterno>
             </li>
           ))}
           <li>
@@ -87,14 +102,14 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden bg-white border-t border-stone-100 px-6 py-5 space-y-1">
           {NAV_LINKS.map(({ label, href }) => (
-            <Link
+            <LinkInterno
               key={label}
               href={href}
               onClick={() => setMenuOpen(false)}
               className="block py-2.5 text-[#2F2F2F] font-medium hover:text-sage-500 transition-colors"
             >
               {label}
-            </Link>
+            </LinkInterno>
           ))}
           <Link
             href="/agendar"

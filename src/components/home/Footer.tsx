@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import LinkInterno from "@/components/ui/LinkInterno";
 import { client } from "@/sanity/lib/client";
 import { SITE_CONFIG_QUERY } from "@/sanity/lib/queries";
 
@@ -90,7 +91,7 @@ export default async function Footer() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link href="/" className="inline-flex items-center gap-2.5 mb-5">
+            <LinkInterno href="/" className="inline-flex items-center gap-2.5 mb-5">
               <Image src="/icono.png" alt="" height={48} width={48} className="h-12 w-auto object-contain" />
               <div className="flex flex-col leading-none gap-[3px]">
                 <span style={{ fontFamily: "var(--font-montserrat)", fontWeight: 700, fontSize: "2.25rem", color: "#D4B36A", lineHeight: 1, letterSpacing: "-0.01em" }}>
@@ -100,7 +101,7 @@ export default async function Footer() {
                   Espacios Modulares
                 </span>
               </div>
-            </Link>
+            </LinkInterno>
             <p className="text-sm leading-relaxed text-stone-500 max-w-xs">
               {config.footerDescription}
             </p>
@@ -126,12 +127,12 @@ export default async function Footer() {
             <ul className="space-y-3">
               {config.footerNavLinks.map(({ label, url }) => (
                 <li key={url}>
-                  <Link
+                  <LinkInterno
                     href={url}
                     className="text-sm text-stone-500 hover:text-stone-300 transition-colors"
                   >
                     {label}
-                  </Link>
+                  </LinkInterno>
                 </li>
               ))}
             </ul>

@@ -145,11 +145,13 @@ export default function DolorConvencional({ content }: { content?: DolorContent 
           transition={{ duration: 0.6 }}
           className="flex items-center gap-6 mb-10"
         >
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent to-[#D4B36A]/40" />
-          <p className="font-playfair italic text-[#D4B36A] text-xl sm:text-2xl text-center shrink-0 px-2">
+          <div className="flex-1 min-w-6 h-px bg-gradient-to-r from-transparent to-[#D4B36A]/40" />
+          {/* En el celular la frase tiene que poder cortarse en dos líneas: con
+              shrink-0 era más ancha que la pantalla y la página se corría de costado. */}
+          <p className="font-playfair italic text-[#D4B36A] text-xl sm:text-2xl text-center min-w-0 sm:shrink-0 px-2">
             {separador}
           </p>
-          <div className="flex-1 h-px bg-gradient-to-l from-transparent to-[#D4B36A]/40" />
+          <div className="flex-1 min-w-6 h-px bg-gradient-to-l from-transparent to-[#D4B36A]/40" />
         </motion.div>
 
         {/* Quote */}

@@ -132,6 +132,7 @@ export function PrecioPanel({ resumen, modeloLabel }: { resumen: PrecioResumen; 
       {/* Mobile — barra fija abajo */}
       <motion.div
         style={{ scale, backgroundColor: colors.bg }}
+        data-barra-inferior
         className="sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-black/5 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-[0_-4px_16px_rgba(0,0,0,0.08)] transition-colors duration-500"
       >
         {!modeloLabel ? (

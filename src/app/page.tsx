@@ -12,6 +12,7 @@ import FAQ from "@/components/home/FAQ";
 import ContactoForm from "@/components/home/ContactoForm";
 import Footer from "@/components/home/Footer";
 import Reveal from "@/components/motion/Reveal";
+import HomeHashScroll from "@/components/home/HomeHashScroll";
 import { client } from "@/sanity/lib/client";
 import { SITE_CONFIG_QUERY, HOME_PAGE_QUERY, MODELOS_CARD_QUERY, FAQ_PAGE_QUERY } from "@/sanity/lib/queries";
 import type { FaqCategory } from "@/data/faq";
@@ -42,6 +43,7 @@ export default async function HomePage() {
   return (
     <>
       <Navbar />
+      <HomeHashScroll />
       <main>
         <Hero waNumber={waNumber} content={homePage?.hero} />
         <ModelosHome content={homePage?.modelosHome} modelos={modelos} />

@@ -37,7 +37,7 @@ export default function WhatsAppStickyBar({
   const mostrarCupos = typeof total === "number" && typeof reservadas === "number" && total > 0;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-40 px-3 py-3 sm:px-6 bg-[#1A1A1A]/97 backdrop-blur border-t border-[#D4B36A]/15">
+    <div data-barra-inferior className="fixed bottom-0 inset-x-0 z-40 px-3 py-3 sm:px-6 bg-[#1A1A1A]/97 backdrop-blur border-t border-[#D4B36A]/15">
       <div className="max-w-5xl mx-auto flex items-center gap-3 sm:gap-6">
         {mostrarCupos && (
           <div className="shrink-0">
