@@ -66,4 +66,11 @@ test.describe("Página de modelo — qué incluye el precio", () => {
     await expect(aside.getByText("Traslado hasta tu terreno (se cotiza según tu ubicación)")).toBeVisible();
     await expect(aside.getByText(/Transporte hasta tu terreno|Instalación y nivelación|Planos aprobados/)).toHaveCount(0);
   });
+
+  test("el contacto del lateral es el WhatsApp real, no un número de relleno", async ({ page }) => {
+    await page.goto("/modelos/familiar-65");
+    const contacto = page.locator("aside").getByRole("link", { name: "+54 9 3493 667214" });
+    await expect(contacto).toHaveAttribute("href", /^https:\/\/wa\.me\/\d+\?text=/);
+    await expect(page.locator("aside").getByText("0000-0000")).toHaveCount(0);
+  });
 });

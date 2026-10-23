@@ -6,6 +6,7 @@ import { MODELS, getModel, type ProductModel } from "@/data/models";
 import { client } from "@/sanity/lib/client";
 import { MODELO_BY_SLUG_QUERY, MODELO_SLUGS_QUERY, FLEX_MODELO_SLUG } from "@/sanity/lib/queries";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
+import { WHATSAPP_MOVARA_VISIBLE } from "@/lib/recibos/constantes";
 import ImageGallery from "@/components/detail/ImageGallery";
 import TrackViewContent from "@/components/detail/TrackViewContent";
 import FloorPlan from "@/components/detail/FloorPlan";
@@ -302,11 +303,13 @@ export default async function ModelDetailPage({ params }: Props) {
                 Hablá con uno de nuestros asesores y te orientamos sin compromiso.
               </p>
               <a
-                href="tel:+5491100000000"
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center gap-2 mt-4 text-sage-400 font-semibold text-sm hover:text-sage-300"
               >
                 <PhoneIcon className="w-4 h-4" />
-                +54 9 11 0000-0000
+                {WHATSAPP_MOVARA_VISIBLE}
               </a>
             </div>
           </aside>
