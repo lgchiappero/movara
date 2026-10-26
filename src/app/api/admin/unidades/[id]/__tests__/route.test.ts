@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockFindUnique, mockUpdate, mockDelete, mockCountAcuerdo, mockCountDocumento, mockGetAdminUser, mockReciboFindFirst, mockReciboDeleteMany } = vi.hoisted(() => ({
+const { mockFindUnique, mockUpdate, mockDelete, mockCountAcuerdo, mockCountDocumento, mockGetAdminUser, mockReciboFindFirst, mockReciboDeleteMany, mockRecalcular } = vi.hoisted(() => ({
   mockReciboFindFirst: vi.fn().mockResolvedValue(null),
   mockReciboDeleteMany: vi.fn(),
   mockFindUnique: vi.fn(),
@@ -9,15 +9,21 @@ const { mockFindUnique, mockUpdate, mockDelete, mockCountAcuerdo, mockCountDocum
   mockCountAcuerdo: vi.fn(),
   mockCountDocumento: vi.fn(),
   mockGetAdminUser: vi.fn(),
+  mockRecalcular: vi.fn(),
 }));
+vi.mock("@/lib/clientes/servicio", () => ({ recalcularClientes: mockRecalcular }));
 vi.mock("@/lib/db", () => ({
   db: {
     unidad: { findUnique: mockFindUnique, update: mockUpdate, delete: mockDelete },
     acuerdoPago: { count: mockCountAcuerdo },
     documentoUnidad: { count: mockCountDocumento },
     reciboConformidad: { findFirst: mockReciboFindFirst, deleteMany: mockReciboDeleteMany },
-    // El DELETE borra recibos y unidad en una transacción por lotes.
-    $transaction: (ops: Promise<unknown>[]) => Promise.all(ops),
+    // PATCH y DELETE usan una transacción interactiva con el mismo mock.
+    $transaction: (fn: (tx: unknown) => unknown) =>
+      fn({
+        unidad: { findUnique: mockFindUnique, update: mockUpdate, delete: mockDelete },
+        reciboConformidad: { deleteMany: mockReciboDeleteMany },
+      }),
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -82,7 +88,23 @@ describe("GET /api/admin/unidades/[id]", () => {
 });
 
 describe("PATCH /api/admin/unidades/[id]", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFindUnique.mockResolvedValue({ clienteId: "cli1" });
+  });
+
+  it("si la unidad cambia de cliente recalcula el estado de los dos", async () => {
+    mockFindUnique.mockResolvedValueOnce({ clienteId: "cli0" });
+    mockUpdate.mockResolvedValueOnce({ id: "u1", ...VALID });
+    await PATCH(makeRequest(VALID), { params: Promise.resolve({ id: "u1" }) });
+    expect(mockRecalcular).toHaveBeenCalledWith(expect.anything(), ["cli0", "cli1"]);
+  });
+
+  it("si sigue con el mismo cliente no recalcula", async () => {
+    mockUpdate.mockResolvedValueOnce({ id: "u1", ...VALID });
+    await PATCH(makeRequest(VALID), { params: Promise.resolve({ id: "u1" }) });
+    expect(mockRecalcular).not.toHaveBeenCalled();
+  });
 
   it("actualiza la unidad y devuelve 200", async () => {
     mockUpdate.mockResolvedValueOnce({ id: "u1", ...VALID });
@@ -208,9 +230,10 @@ describe("DELETE /api/admin/unidades/[id]", () => {
     mockDelete.mockResolvedValueOnce({ id: "u1" });
     const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "u1" }) });
     expect(res.status).toBe(200);
-    expect(mockDelete).toHaveBeenCalledWith({ where: { id: "u1" } });
+    expect(mockDelete).toHaveBeenCalledWith({ where: { id: "u1" }, select: { clienteId: true } });
     // Los recibos pendientes/anulados se borran junto con la unidad.
     expect(mockReciboDeleteMany).toHaveBeenCalledWith({ where: { unidadId: "u1" } });
+    expect(mockRecalcular).toHaveBeenCalledWith(expect.anything(), [undefined]);
   });
 
   it("400 si tiene un Recibo en Conformidad confirmado", async () => {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { modeloLabelsEs } from "@/lib/pdf/pedido-labels-es";
 import type { PedidoInput } from "@/lib/validators/pedido";
+import { ESTADO_PEDIDO_CANCELADO } from "@/lib/pedido/estado-pedido";
 
 // Solo el token secreto del link de seguimiento da acceso: los números de
 // consulta/pedido son correlativos y se podían recorrer para ver pedidos
@@ -38,7 +39,8 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  if (!config) {
+  // Un pedido cancelado no se muestra: mismo mensaje que un link inválido.
+  if (!config || config.estadoPedido === ESTADO_PEDIDO_CANCELADO) {
     return NextResponse.json({ error: LINK_INVALIDO }, { status: 404 });
   }
 

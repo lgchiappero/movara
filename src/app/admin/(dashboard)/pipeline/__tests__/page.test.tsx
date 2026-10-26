@@ -108,6 +108,17 @@ describe("AdminPipelinePage", () => {
     );
   });
 
+  it("filtra por origen web válido, lo conserva en los tabs e ignora uno inválido", async () => {
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({ origenVisita: "meta_ads" }) }));
+    expect(mockFindManyLead).toHaveBeenCalledWith(expect.objectContaining({ where: { origenVisita: "meta_ads" } }));
+    expect(screen.getByRole("link", { name: "Ganado" })).toHaveAttribute("href", "/admin/pipeline?etapa=ganado&origenVisita=meta_ads");
+    expect(screen.getByText("Limpiar filtros")).toBeInTheDocument();
+
+    mockFindManyLead.mockClear();
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({ origenVisita: "web" }) }));
+    expect(mockFindManyLead).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));
+  });
+
   it("renderiza los tabs de etapa, marcando 'Todos' activo por defecto", async () => {
     render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
     const todos = screen.getByRole("link", { name: "Todos" });

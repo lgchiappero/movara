@@ -80,6 +80,12 @@ export default defineConfig({
         "src/app/api/admin/**/*.ts",
         "src/lib/agenda/**/*.ts",
         "src/lib/envios/**/*.ts",
+        "src/lib/clientes/**/*.ts",
+        "src/lib/origen-visita/**/*.ts",
+        "src/components/CapturaOrigen.tsx",
+        "src/components/admin/EstadoClienteSelector.tsx",
+        "src/components/admin/CancelarPedidoSection.tsx",
+        "src/components/admin/OrigenVisitaChip.tsx",
       ],
       exclude: [
         "src/**/*.test.{ts,tsx}",

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ETAPA_LABELS, ETAPA_COLORS, ORIGEN_LABELS, ORIGEN_COLORS, type Etapa, type Origen } from "@/lib/leads/constantes";
 import { buildWhatsAppLeadUrl } from "@/lib/leads/calc";
 import PipelineDetailPanel from "@/components/admin/PipelineDetailPanel";
+import OrigenVisitaChip from "@/components/admin/OrigenVisitaChip";
 
 export type LeadPipeline = {
   id: string;
@@ -20,6 +21,8 @@ export type LeadPipeline = {
   contactadoEn: string | null;
   etapa: string;
   origen: string | null;
+  origenVisita: string | null;
+  campana: string | null;
   vendedorId: string | null;
   notasVenta: string | null;
   motivoPerdida: string | null;
@@ -89,6 +92,7 @@ export default function PipelineBoard({
               <th className="px-4 py-3 font-medium">Nombre</th>
               <th className="px-4 py-3 font-medium">Teléfono</th>
               <th className="px-4 py-3 font-medium">Origen</th>
+              <th className="px-4 py-3 font-medium">Origen web</th>
               <th className="px-4 py-3 font-medium">Etapa</th>
               <th className="px-4 py-3 font-medium">Último contacto</th>
               <th className="px-4 py-3 font-medium">Notas</th>
@@ -119,6 +123,9 @@ export default function PipelineBoard({
                   ) : (
                     "—"
                   )}
+                </td>
+                <td className="px-4 py-3">
+                  <OrigenVisitaChip origenVisita={lead.origenVisita} campana={lead.campana} />
                 </td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-bold ${ETAPA_COLORS[lead.etapa as Etapa]}`}>

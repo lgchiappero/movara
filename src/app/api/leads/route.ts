@@ -7,6 +7,8 @@ import { claveIP, consumirRateLimit } from "@/lib/rate-limit-db";
 import { escapeHtml } from "@/lib/email/escape-html";
 import { resumenError } from "@/lib/log-seguro";
 import { MENSAJE_LEAD_NO_GUARDADO } from "@/lib/leads/enviar-lead";
+import { registrarContacto } from "@/lib/clientes/servicio";
+import { origenDelBody } from "@/lib/origen-visita/clasificar";
 
 // Formulario público que dispara emails (incluido uno a la dirección que se
 // ingresa): tope estricto por IP para que no sirva de relay de spam.
@@ -24,6 +26,14 @@ const LeadSchema = z.object({
   // Qué formulario lo envió — solo para el log, no se guarda.
   formulario: z.enum(["contacto", "dossier", "dossier-llamada"]).optional(),
 });
+
+/** Nota que queda en el lead (nuevo o reutilizado) según el formulario. */
+const NOTA_FORMULARIO: Record<string, string> = {
+  contacto: "Consulta desde el formulario de contacto",
+  dossier: "Pidió el dossier",
+  "dossier-llamada": "Pidió el dossier y que lo llamen",
+  web: "Consulta desde la web",
+};
 
 type LeadData = {
   nombre: string;
@@ -180,9 +190,25 @@ export async function POST(req: NextRequest) {
     // Los logs registran solo id, origen y resultado — nunca nombre, DNI,
     // email ni teléfono.
     const origen = parsed.data.formulario ?? "web";
+    // Crea o reutiliza el lead y el cliente ("interesado"). Si eso falla se
+    // guarda el lead solo, como antes: la consulta no se pierde.
     let leadId: string;
     try {
-      leadId = (await db.lead.create({ data })).id;
+      try {
+        leadId = (
+          await db.$transaction((tx) =>
+            registrarContacto(
+              tx,
+              data,
+              { tipo: "formulario", nota: NOTA_FORMULARIO[origen], mensaje: data.mensaje },
+              origenDelBody((body as { origen?: unknown } | null)?.origen)
+            )
+          )
+        ).leadId;
+      } catch (vincularError) {
+        console.error(`[leads] origen=${origen} No se pudo vincular cliente: ${resumenError(vincularError)}`);
+        leadId = (await db.lead.create({ data })).id;
+      }
     } catch (dbError) {
       // Sin registro en la base no se confirma nada al usuario (ni 201 ni
       // email de "recibimos tu consulta"): el formulario le ofrece WhatsApp

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockCreate, mockFindMany, mockSend } = vi.hoisted(() => ({
+const { mockCreate, mockFindMany, mockSend, mockRegistrar } = vi.hoisted(() => ({
+  mockRegistrar: vi.fn().mockResolvedValue({ clienteId: "c1", leadId: "l1" }),
   mockCreate: vi.fn(),
   mockFindMany: vi.fn().mockResolvedValue([]),
   mockSend: vi.fn().mockResolvedValue({ data: { id: "e1" }, error: null }),
@@ -16,6 +17,11 @@ vi.mock("@/lib/db", () => {
   const tx = { configuracionPedido: { create: mockCreate, findMany: mockFindMany } };
   return { db: { $transaction: (fn: (t: typeof tx) => unknown) => fn(tx) } };
 });
+
+vi.mock("@/lib/clientes/servicio", () => ({
+  conSavepoint: (_tx: unknown, _nombre: string, fn: () => Promise<unknown>) => fn(),
+  registrarContacto: mockRegistrar,
+}));
 
 import { POST } from "../route";
 import { NextRequest } from "next/server";
@@ -57,7 +63,42 @@ describe("POST /api/pedido", () => {
     const json = await res.json();
     expect(json.numeroConsulta).toMatch(/^MOV-CONSULTA-\d{4}-001$/);
     expect(json.tokenSeguimiento).toBe("f".repeat(64));
-    expect(mockCreate.mock.calls[0][0].select).toEqual({ tokenSeguimiento: true });
+    expect(mockCreate.mock.calls[0][0].select).toEqual({ id: true, tokenSeguimiento: true });
+  });
+
+  it("crea o reutiliza cliente y lead en la misma transacción, con el origen de la visita", async () => {
+    mockCreate.mockResolvedValue({ id: "p1", tokenSeguimiento: "f".repeat(64) });
+    await POST(
+      req(
+        { ...BASE, tipoCliente: "empresa", razonSocial: "Agro SA", nombreContacto: "Ana García", origen: { gclid: "abc" } },
+        "10.0.0.30"
+      )
+    );
+    const [tx, datos, contexto, origen] = mockRegistrar.mock.calls[0];
+    expect(tx).toHaveProperty("configuracionPedido");
+    expect(datos).toEqual({
+      nombre: "Ana García",
+      email: "ana@example.com",
+      telefono: "+5491155554444",
+      tipoCliente: "empresa",
+      razonSocial: "Agro SA",
+      nombreContacto: "Ana García",
+      provincia: "Buenos Aires",
+      localidad: "La Plata",
+    });
+    expect(contexto).toEqual({ tipo: "pedido", pedidoId: "p1", numeroConsulta: expect.stringMatching(/^MOV-CONSULTA-/) });
+    expect(origen).toMatchObject({ origenVisita: "google_ads" });
+  });
+
+  it("si falla el alta del cliente, el pedido se guarda igual y el error queda en el log sin datos personales", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockCreate.mockResolvedValue({ id: "p1", tokenSeguimiento: "f".repeat(64) });
+    mockRegistrar.mockRejectedValueOnce(Object.assign(new Error("ana@example.com"), { code: "P2002" }));
+    const res = await POST(req(BASE, "10.0.0.31"));
+    expect(res.status).toBe(200);
+    const linea = log.mock.calls.map((c) => c.join(" ")).join("\n");
+    expect(linea).toMatch(/\[pedido\] MOV-CONSULTA-\d{4}-\d{3} No se pudo vincular cliente y lead: Error \(P2002\)/);
+    expect(linea).not.toContain("ana@example.com");
   });
 
   it("400 con el detalle del campo cuando falta la localidad", async () => {

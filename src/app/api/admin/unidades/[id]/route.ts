@@ -5,6 +5,7 @@ import { unidadEditSchema } from "@/lib/validators/unidad";
 import { calcularGarantiaFechaFin } from "@/lib/pedido/garantia";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { isAdmin } from "@/lib/admin/roles";
+import { recalcularClientes } from "@/lib/clientes/servicio";
 
 // Datos mínimos de una unidad para autocompletar formularios (ej: modal
 // "Nuevo cobro" → cliente y precio acordado).
@@ -59,15 +60,23 @@ export async function PATCH(
     : { ...resto, garantiaActivada, garantiaInicio, garantiaFin: calcularGarantiaFechaFin(garantiaInicio) };
 
   try {
-    const unidad = await db.unidad.update({
-      where: { id },
-      data: {
-        ...data,
-        // Json? nullable requiere Prisma.JsonNull explícito para "poner en
-        // NULL" — un `null` de JS a secas ahí es ambiguo para Prisma.
-        configuracion:
-          data.configuracion === null ? Prisma.JsonNull : (data.configuracion as Prisma.InputJsonValue),
-      },
+    const unidad = await db.$transaction(async (tx) => {
+      const anterior = await tx.unidad.findUnique({ where: { id }, select: { clienteId: true } });
+      const actualizada = await tx.unidad.update({
+        where: { id },
+        data: {
+          ...data,
+          // Json? nullable requiere Prisma.JsonNull explícito para "poner en
+          // NULL" — un `null` de JS a secas ahí es ambiguo para Prisma.
+          configuracion:
+            data.configuracion === null ? Prisma.JsonNull : (data.configuracion as Prisma.InputJsonValue),
+        },
+      });
+      // Si la unidad cambió de cliente, cambia el estado de los dos.
+      if (anterior && anterior.clienteId !== actualizada.clienteId) {
+        await recalcularClientes(tx, [anterior.clienteId, actualizada.clienteId]);
+      }
+      return actualizada;
     });
     return NextResponse.json({ ok: true, unidad });
   } catch (err) {
@@ -116,10 +125,11 @@ export async function DELETE(
   try {
     // Los recibos pendientes o anulados no tienen valor sin la unidad: se
     // borran con ella (la FK no permite dejarlos huérfanos).
-    await db.$transaction([
-      db.reciboConformidad.deleteMany({ where: { unidadId: id } }),
-      db.unidad.delete({ where: { id } }),
-    ]);
+    await db.$transaction(async (tx) => {
+      await tx.reciboConformidad.deleteMany({ where: { unidadId: id } });
+      const borrada = await tx.unidad.delete({ where: { id }, select: { clienteId: true } });
+      await recalcularClientes(tx, [borrada.clienteId]);
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[admin/unidades/:id DELETE]", err);

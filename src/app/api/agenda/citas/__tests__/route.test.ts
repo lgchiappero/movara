@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockFindFirst, mockSend, tx } = vi.hoisted(() => ({
+const { mockFindFirst, mockSend, tx, mockRegistrar } = vi.hoisted(() => ({
   mockFindFirst: vi.fn(),
+  mockRegistrar: vi.fn().mockResolvedValue({ clienteId: "c1", leadId: "l1" }),
   mockSend: vi.fn(),
   tx: {
     disponibilidadAgenda: { findUnique: vi.fn() },
@@ -11,11 +12,11 @@ const { mockFindFirst, mockSend, tx } = vi.hoisted(() => ({
 vi.mock("@/lib/db", () => ({
   db: {
     cita: { findFirst: mockFindFirst },
-    lead: { findFirst: vi.fn().mockResolvedValue({ id: "l1" }), create: vi.fn() },
     $transaction: (fn: (t: typeof tx) => unknown) => fn(tx),
   },
 }));
 vi.mock("resend", () => ({ Resend: class { emails = { send: mockSend }; } }));
+vi.mock("@/lib/clientes/servicio", () => ({ registrarContacto: mockRegistrar }));
 
 import { POST } from "../route";
 import { NextRequest } from "next/server";
@@ -78,5 +79,43 @@ describe("POST /api/agenda/citas — emails", () => {
     expect(JSON.stringify(log.mock.calls)).not.toMatch(/victima@example\.com|Atacante|5491100000000/);
     delete process.env.RESEND_API_KEY;
     delete process.env.CONTACT_EMAIL;
+  });
+});
+
+describe("POST /api/agenda/citas — lead y cliente", () => {
+  function agendable() {
+    mockFindFirst.mockResolvedValue(null);
+    tx.disponibilidadAgenda.findUnique.mockResolvedValue({ habilitada: true, horarios: [CITA.horario] });
+    tx.cita.findFirst.mockResolvedValue(null);
+    tx.cita.create.mockImplementation(({ data }) => Promise.resolve({ id: "cita1", razonSocial: null, ...data }));
+    mockSend.mockResolvedValue({ data: { id: "e1" }, error: null });
+  }
+
+  it("crea o reutiliza lead y cliente con la nota de la visita y el origen", async () => {
+    agendable();
+    const res = await POST(
+      req({ ...CITA, tipoCliente: "empresa", razonSocial: "Agro SA", consulta: "Quiero ver el 40", origen: { referrer: "https://www.instagram.com/" } })
+    );
+    expect(res.status).toBe(201);
+    const [, datos, contexto, origen] = mockRegistrar.mock.calls[0];
+    expect(datos).toEqual({
+      nombre: "Atacante",
+      email: "victima@example.com",
+      telefono: "+5491100000000",
+      tipoCliente: "empresa",
+      razonSocial: "Agro SA",
+    });
+    expect(contexto).toMatchObject({ tipo: "formulario", mensaje: "Quiero ver el 40" });
+    expect(contexto.nota).toMatch(new RegExp(`^Agendó visita al showroom para \\d{1,2} de [a-z]+ de \\d{4} a las ${CITA.horario}hs$`));
+    expect(origen).toMatchObject({ origenVisita: "instagram" });
+  });
+
+  it("si falla el alta del lead, la visita igual queda agendada y solo se loguea el tipo de error", async () => {
+    agendable();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockRegistrar.mockRejectedValueOnce(new Error("victima@example.com"));
+    const res = await POST(req(CITA));
+    expect(res.status).toBe(201);
+    expect(log).toHaveBeenCalledWith("[agenda/citas] cita=cita1 No se pudo guardar el lead: Error");
   });
 });

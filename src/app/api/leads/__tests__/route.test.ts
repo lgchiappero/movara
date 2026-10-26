@@ -1,12 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const { mockCreate, mockSend, mockConsumir } = vi.hoisted(() => ({
+const { mockCreate, mockSend, mockConsumir, mockRegistrar } = vi.hoisted(() => ({
   mockCreate: vi.fn().mockResolvedValue({ id: "lead1" }),
+  mockRegistrar: vi.fn(),
   mockSend: vi.fn().mockResolvedValue({ data: { id: "e1" }, error: null }),
   mockConsumir: vi.fn(),
 }));
 
-vi.mock("@/lib/db", () => ({ db: { lead: { create: mockCreate } } }));
+vi.mock("@/lib/db", () => ({
+  db: { lead: { create: mockCreate }, $transaction: (fn: (tx: unknown) => unknown) => fn({ tx: true }) },
+}));
+// registrarContacto (crear o reutilizar lead y cliente) se prueba aparte:
+// acá delega en lead.create para que los tests de los datos guardados sigan
+// mirando un solo mock.
+vi.mock("@/lib/clientes/servicio", () => ({ registrarContacto: mockRegistrar }));
 vi.mock("resend", () => ({
   Resend: class {
     emails = { send: mockSend };
@@ -37,6 +44,7 @@ const LEAD = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockRegistrar.mockImplementation(async (_tx: unknown, data: unknown) => ({ leadId: (await mockCreate({ data })).id }));
   mockConsumir.mockResolvedValue(true);
   process.env.RESEND_API_KEY = "re_test";
   process.env.CONTACT_EMAIL = "contacto@movara.com.ar";
@@ -119,7 +127,8 @@ describe("POST /api/leads", () => {
 
   it("503 si no se pudo guardar en la base: no confirma ni manda emails", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    mockCreate.mockRejectedValueOnce(new Error("db"));
+    // Falla el alta con cliente y también el lead solo.
+    mockCreate.mockRejectedValueOnce(new Error("db")).mockRejectedValueOnce(new Error("db"));
     const res = await POST(req({ ...LEAD, formulario: "contacto" }));
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ error: "No pudimos registrar tu consulta. Escribinos por WhatsApp", code: "lead-no-guardado" });
@@ -166,11 +175,44 @@ describe("POST /api/leads", () => {
     const prismaError = Object.assign(new Error("Invalid `db.lead.create()` invocation: { nombre: 'Ana', dni: '30123456' }"), {
       name: "PrismaClientValidationError",
     });
-    mockCreate.mockRejectedValueOnce(prismaError);
+    mockCreate.mockRejectedValueOnce(prismaError).mockRejectedValueOnce(prismaError);
     await POST(req({ ...LEAD, dni: "30123456" }));
     expect(err).toHaveBeenCalledWith("[leads] origen=web db=error No se pudo guardar el lead: PrismaClientValidationError");
 
     const todo = JSON.stringify([...log.mock.calls, ...err.mock.calls]);
     for (const dato of ["Ana", "Pérez", "30123456", "5491155554444", "ana@example.com", "Santa Fe"]) expect(todo).not.toContain(dato);
+  });
+
+  it("crea o reutiliza lead y cliente con la nota del formulario y el origen de la visita", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await POST(
+      req({
+        ...LEAD,
+        formulario: "dossier",
+        origen: { utm_source: "facebook", utm_medium: "paid", utm_campaign: "otono", landing: "/" },
+      })
+    );
+    const [tx, , contexto, origen] = mockRegistrar.mock.calls[0];
+    expect(tx).toEqual({ tx: true });
+    expect(contexto).toEqual({ tipo: "formulario", nota: "Pidió el dossier", mensaje: LEAD.mensaje });
+    expect(origen).toMatchObject({ origenVisita: "meta_ads", campana: "otono" });
+  });
+
+  it("sin formulario ni origen: nota genérica y origen null", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await POST(req({ ...LEAD, origen: { utm_source: "x".repeat(500) } }));
+    const [, , contexto, origen] = mockRegistrar.mock.calls[0];
+    expect(contexto.nota).toBe("Consulta desde la web");
+    expect(origen).toBeNull();
+  });
+
+  it("si falla el alta con cliente, guarda el lead solo y responde 201", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockRegistrar.mockRejectedValueOnce(Object.assign(new Error("x"), { code: "P2002" }));
+    const res = await POST(req({ ...LEAD, formulario: "contacto" }));
+    expect(res.status).toBe(201);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(err).toHaveBeenCalledWith("[leads] origen=contacto No se pudo vincular cliente: Error (P2002)");
   });
 });

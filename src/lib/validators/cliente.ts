@@ -13,6 +13,12 @@ export const clienteSchema = z.object({
   email: stringOrNull,
   telefono: stringOrNull,
   notas: stringOrNull,
+  // Los completa el alta automática (configurador y formularios); el alta
+  // manual puede no mandarlos.
+  razonSocial: stringOrNull.optional(),
+  nombreContacto: stringOrNull.optional(),
+  provincia: stringOrNull.optional(),
+  localidad: stringOrNull.optional(),
 });
 
 export type ClienteInput = z.infer<typeof clienteSchema>;

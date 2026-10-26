@@ -11,6 +11,8 @@ import {
 } from "@/lib/email/cita-emails";
 import { enviarEmail } from "@/lib/email/enviar";
 import { resumenError } from "@/lib/log-seguro";
+import { registrarContacto } from "@/lib/clientes/servicio";
+import { origenDelBody } from "@/lib/origen-visita/clasificar";
 
 async function enviarEmails(cita: CitaEmailData) {
   const contactEmail = process.env.CONTACT_EMAIL;
@@ -138,24 +140,33 @@ export async function POST(req: NextRequest) {
       });
     });
 
+    // Crea o reutiliza el lead y el cliente ("interesado"). Si falla, la
+    // visita ya quedó agendada: solo se registra el error.
     try {
-      const leadExistente = await db.lead.findFirst({ where: { email: data.email } });
-      if (!leadExistente) {
-        const fechaEs = fecha.toLocaleDateString("es-AR", {
-          timeZone: "UTC",
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
-        await db.lead.create({
-          data: {
+      const fechaEs = fecha.toLocaleDateString("es-AR", {
+        timeZone: "UTC",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      await db.$transaction((tx) =>
+        registrarContacto(
+          tx,
+          {
             nombre: data.nombre,
-            telefono: data.telefono,
             email: data.email,
-            mensaje: `Agendó visita al showroom para ${fechaEs} a las ${data.horario}hs`,
+            telefono: data.telefono,
+            tipoCliente: data.tipoCliente,
+            razonSocial: data.razonSocial || null,
           },
-        });
-      }
+          {
+            tipo: "formulario",
+            nota: `Agendó visita al showroom para ${fechaEs} a las ${data.horario}hs`,
+            mensaje: data.consulta,
+          },
+          origenDelBody((body as { origen?: unknown } | null)?.origen)
+        )
+      );
     } catch (err) {
       console.error(`[agenda/citas] cita=${cita.id} No se pudo guardar el lead: ${resumenError(err)}`);
     }

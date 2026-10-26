@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { leadCreateSchema } from "@/lib/validators/lead";
+import { clavesContacto } from "@/lib/clientes/normalizar";
 
 /** Alta manual de un lead desde el botón "Nuevo lead" de /admin/pipeline —
  * distinto del formulario público (src/app/api/leads/route.ts). Siempre
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
         vendedorId: data.vendedorId,
         valorEstimado: data.valorEstimado,
         etapa: "nuevo",
+        ...clavesContacto(data.email, data.telefono),
       },
       select: { id: true },
     });

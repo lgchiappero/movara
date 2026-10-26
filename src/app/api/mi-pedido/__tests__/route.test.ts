@@ -41,6 +41,14 @@ describe("POST /api/mi-pedido", () => {
     expect(await inexistente.json()).toEqual(malFormado);
   });
 
+  it("un pedido cancelado no se muestra: mismo 404 que un link inválido", async () => {
+    mockFindUnique.mockResolvedValue({ clienteNombre: "Ana", modelo: null, estadoPedido: "cancelado" });
+    const malFormado = await (await POST(req({ token: "x" }))).json();
+    const res = await POST(req({ token: TOKEN }));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual(malFormado);
+  });
+
   it("con token válido busca por token y devuelve el pedido", async () => {
     mockFindUnique.mockResolvedValue({
       numeroConsulta: "MOV-CONSULTA-2026-001",

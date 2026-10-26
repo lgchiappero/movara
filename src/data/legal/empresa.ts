@@ -13,5 +13,7 @@ export const EMPRESA = {
   sitio: "movara.com.ar",
 };
 
-/** Fecha de la última actualización de los dos textos legales. */
+/** Fecha de la última actualización de los Términos. */
 export const LEGAL_ACTUALIZADO = "8 de octubre de 2026";
+/** Fecha de la última actualización de la Política de Privacidad. */
+export const PRIVACIDAD_ACTUALIZADA = "26 de octubre de 2026";

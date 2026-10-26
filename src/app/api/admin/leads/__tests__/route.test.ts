@@ -45,6 +45,8 @@ describe("POST /api/admin/leads", () => {
         vendedorId: null,
         valorEstimado: null,
         etapa: "nuevo",
+        emailNorm: null,
+        telefonoNorm: null,
       },
       select: { id: true },
     });

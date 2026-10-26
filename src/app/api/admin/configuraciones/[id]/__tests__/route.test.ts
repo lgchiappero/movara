@@ -9,7 +9,9 @@ const {
   mockBuildEstadoEmail,
   mockSend,
   mockGetAdminUser,
+  mockRecalcular,
 } = vi.hoisted(() => ({
+  mockRecalcular: vi.fn().mockResolvedValue(undefined),
   mockFindUnique: vi.fn(),
   mockUpdate: vi.fn(),
   mockFindUniqueOrThrow: vi.fn(),
@@ -28,8 +30,11 @@ vi.mock("@/lib/db", () => ({
       findUniqueOrThrow: mockFindUniqueOrThrow,
       delete: mockDelete,
     },
+    $transaction: (fn: (tx: unknown) => unknown) =>
+      fn({ configuracionPedido: { delete: mockDelete } }),
   },
 }));
+vi.mock("@/lib/clientes/servicio", () => ({ recalcularClientes: mockRecalcular }));
 vi.mock("@/lib/pedido/numero-pedido", () => ({ ensureNumeroPedido: mockEnsureNumeroPedido }));
 vi.mock("@/lib/email/pedido-estado-email", () => ({ buildEstadoEmail: mockBuildEstadoEmail }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -266,6 +271,49 @@ describe("PATCH /api/admin/configuraciones/[id]", () => {
     expect(JSON.stringify(log.mock.calls)).not.toContain("juan@x.com");
   });
 
+  it("un cambio de estado recalcula el estado del cliente", async () => {
+    mockUpdate.mockResolvedValueOnce({ ...CONFIG_BASE, estadoPedido: "presupuestado", clienteId: "c1" });
+    await PATCH(makeRequest({ ...BASE, estadoPedido: "presupuestado" }), { params: Promise.resolve({ id: "p1" }) });
+    expect(mockRecalcular).toHaveBeenCalledWith(expect.anything(), ["c1"]);
+  });
+
+  it("si falla el recálculo, el pedido igual se guarda (200) y queda en el log", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mockRecalcular.mockRejectedValueOnce(new Error("db"));
+    mockUpdate.mockResolvedValueOnce({ ...CONFIG_BASE, estadoPedido: "presupuestado", clienteId: "c1" });
+    const res = await PATCH(makeRequest({ ...BASE, estadoPedido: "presupuestado" }), { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(200);
+    expect(console.error).toHaveBeenCalled();
+  });
+
+  it("no se puede cancelar desde acá: 400 y no guarda", async () => {
+    const res = await PATCH(makeRequest({ ...BASE, estadoPedido: "cancelado" }), { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(400);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("un pedido cancelado se puede guardar sin reactivarlo", async () => {
+    mockFindUnique.mockResolvedValueOnce({ estadoPedido: "cancelado", clienteEmail: null, clienteNombre: "Juan" });
+    mockUpdate.mockResolvedValueOnce({ ...CONFIG_BASE, estadoPedido: "cancelado" });
+    const res = await PATCH(makeRequest({ ...BASE, estadoPedido: "cancelado" }), { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(200);
+    expect(mockUpdate.mock.calls[0][0].data).not.toHaveProperty("motivoCancelacion");
+    expect(mockRecalcular).not.toHaveBeenCalled();
+  });
+
+  it("pasar un pedido cancelado a un estado del flujo lo reactiva y borra la cancelación", async () => {
+    mockFindUnique.mockResolvedValueOnce({ estadoPedido: "cancelado", clienteEmail: null, clienteNombre: "Juan" });
+    mockUpdate.mockResolvedValueOnce({ ...CONFIG_BASE, estadoPedido: "consulta", clienteId: "c1" });
+    await PATCH(makeRequest(BASE), { params: Promise.resolve({ id: "p1" }) });
+    expect(mockUpdate.mock.calls[0][0].data).toMatchObject({
+      motivoCancelacion: null,
+      fechaCancelacion: null,
+      canceladoPor: null,
+      estadoAntesDeCancelar: null,
+    });
+    expect(mockRecalcular).toHaveBeenCalledWith(expect.anything(), ["c1"]);
+  });
+
   it("500 si la DB falla", async () => {
     mockUpdate.mockRejectedValueOnce(new Error("db down"));
     const res = await PATCH(makeRequest(BASE), { params: Promise.resolve({ id: "p1" }) });
@@ -297,7 +345,14 @@ describe("DELETE /api/admin/configuraciones/[id]", () => {
     mockDelete.mockResolvedValueOnce({ id: "p1" });
     const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "p1" }) });
     expect(res.status).toBe(200);
-    expect(mockDelete).toHaveBeenCalledWith({ where: { id: "p1" } });
+    expect(mockDelete).toHaveBeenCalledWith({ where: { id: "p1" }, select: { clienteId: true } });
+  });
+
+  it("al borrar recalcula el estado del cliente que tenía el pedido", async () => {
+    mockGetAdminUser.mockResolvedValueOnce({ id: "u1", nombre: "Admin", email: "a@x.com", rol: "admin" });
+    mockDelete.mockResolvedValueOnce({ clienteId: "c1" });
+    await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "p1" }) });
+    expect(mockRecalcular).toHaveBeenCalledWith(expect.anything(), ["c1"]);
   });
 
   it("500 si la DB falla al eliminar", async () => {

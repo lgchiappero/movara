@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockTransaction, mockFindMany, mockCreate } = vi.hoisted(() => ({
+const { mockTransaction, mockFindMany, mockCreate, mockRecalcular } = vi.hoisted(() => ({
+  mockRecalcular: vi.fn(),
   mockTransaction: vi.fn(),
   mockFindMany: vi.fn().mockResolvedValue([]),
   mockCreate: vi.fn(),
@@ -11,6 +12,8 @@ vi.mock("@/lib/db", () => ({
     $transaction: mockTransaction,
   },
 }));
+
+vi.mock("@/lib/clientes/servicio", () => ({ recalcularEstadoCliente: mockRecalcular }));
 
 import { POST } from "../route";
 import { NextRequest } from "next/server";
@@ -40,6 +43,8 @@ describe("POST /api/admin/unidades", () => {
     expect(mockCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({ clienteId: "cli1", envioId: null, modelo: null }),
     });
+    // Con una unidad el cliente pasa a "comprador".
+    expect(mockRecalcular).toHaveBeenCalledWith(expect.anything(), "cli1");
   });
 
   it("400 si el body no es JSON válido", async () => {

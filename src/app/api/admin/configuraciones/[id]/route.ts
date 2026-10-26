@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { estadoPedidoOptions, type EstadoPedido } from "@/lib/pedido/estado-pedido";
+import { estadoPedidoOptions, ESTADO_PEDIDO_CANCELADO, type EstadoPedido } from "@/lib/pedido/estado-pedido";
 import { ensureNumeroPedido } from "@/lib/pedido/numero-pedido";
 import { buildEstadoEmail } from "@/lib/email/pedido-estado-email";
 import { enviarEmail } from "@/lib/email/enviar";
 import { calcularGarantiaFechaFin } from "@/lib/pedido/garantia";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { isAdmin } from "@/lib/admin/roles";
+import { recalcularClientes } from "@/lib/clientes/servicio";
 
 const numberOrNull = z.union([z.number(), z.null()]);
 const stringOrNull = z.union([z.string(), z.null()]).transform((v) => (v === "" ? null : v));
@@ -16,7 +17,9 @@ const dateOrNull = z
   .transform((v) => (v ? new Date(v) : null));
 
 const GestionSchema = z.object({
-  estadoPedido: z.enum(estadoPedidoOptions),
+  // "cancelado" solo se acepta si el pedido ya estaba cancelado (se guardan
+  // otros datos sin reactivarlo); para cancelar está .../cancelar.
+  estadoPedido: z.enum([...estadoPedidoOptions, ESTADO_PEDIDO_CANCELADO]),
   precioFinal: numberOrNull,
   anticipo: numberOrNull,
   numeroFabrica: stringOrNull,
@@ -105,11 +108,21 @@ export async function PATCH(
       where: { id },
       select: { estadoPedido: true, clienteEmail: true, clienteNombre: true },
     });
+    const eraCancelado = previous?.estadoPedido === ESTADO_PEDIDO_CANCELADO;
+    if (data.estadoPedido === ESTADO_PEDIDO_CANCELADO && !eraCancelado) {
+      return NextResponse.json({ error: "Para cancelar el pedido usá \"Cancelar pedido\"" }, { status: 400 });
+    }
+    // Pasar un pedido cancelado a un estado del flujo lo reactiva.
+    const reactivacion =
+      eraCancelado && data.estadoPedido !== ESTADO_PEDIDO_CANCELADO
+        ? { motivoCancelacion: null, fechaCancelacion: null, canceladoPor: null, estadoAntesDeCancelar: null }
+        : {};
 
     let config = await db.configuracionPedido.update({
       where: { id },
       data: {
         ...data,
+        ...reactivacion,
         saldoPendiente,
         costoTotal,
         margenUSD,
@@ -120,6 +133,9 @@ export async function PATCH(
 
     const estadoCambio = previous && previous.estadoPedido !== config.estadoPedido;
     if (estadoCambio) {
+      await recalcularClientes(db, [config.clienteId]).catch((err) =>
+        console.error("[admin/configuraciones/:id PATCH] No se pudo recalcular el estado del cliente", err)
+      );
       if (config.estadoPedido === "confirmado" && !config.numeroPedido) {
         await ensureNumeroPedido(id);
         config = await db.configuracionPedido.findUniqueOrThrow({ where: { id } });
@@ -149,7 +165,10 @@ export async function DELETE(
   }
 
   try {
-    await db.configuracionPedido.delete({ where: { id } });
+    await db.$transaction(async (tx) => {
+      const borrado = await tx.configuracionPedido.delete({ where: { id }, select: { clienteId: true } });
+      await recalcularClientes(tx, [borrado.clienteId]);
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[admin/configuraciones/:id DELETE]", err);

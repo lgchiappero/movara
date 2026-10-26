@@ -6,6 +6,7 @@ import PipelineBoard from "@/components/admin/PipelineBoard";
 import PaginacionLinks from "@/components/admin/PaginacionLinks";
 import NuevoLeadButton from "@/components/admin/NuevoLeadButton";
 import { getAdminUser } from "@/lib/admin/current-user";
+import { ORIGEN_VISITA_OPTIONS, ORIGEN_VISITA_LABELS, esOrigenVisita } from "@/lib/origen-visita/clasificar";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function AdminPipelinePage({
     etapa?: string;
     vendedorId?: string;
     origen?: string;
+    origenVisita?: string;
     desde?: string;
     periodo?: string;
     sinContactar?: string;
@@ -61,6 +63,8 @@ export default async function AdminPipelinePage({
     ? (sp.origen as Origen)
     : undefined;
 
+  const origenVisitaValido = esOrigenVisita(sp.origenVisita) ? sp.origenVisita : undefined;
+
   const now = new Date();
   const hoyParaFiltro = startOfDay(now);
   const inicioMesParaFiltro = startOfMonth(now);
@@ -82,6 +86,7 @@ export default async function AdminPipelinePage({
     ...etapaWhere,
     ...(sp.vendedorId ? { vendedorId: sp.vendedorId } : {}),
     ...(origenValido ? { origen: origenValido } : {}),
+    ...(origenVisitaValido ? { origenVisita: origenVisitaValido } : {}),
     ...fechaWhere,
     ...sinContactarWhere,
   };
@@ -118,6 +123,7 @@ export default async function AdminPipelinePage({
     etapasValidas.length > 0 ||
       sp.vendedorId ||
       origenValido ||
+      origenVisitaValido ||
       sp.desde === "hoy" ||
       sp.periodo === "mes" ||
       sp.sinContactar === "1"
@@ -137,6 +143,7 @@ export default async function AdminPipelinePage({
     if (etapaParam) params.set("etapa", etapaParam);
     if (sp.vendedorId) params.set("vendedorId", sp.vendedorId);
     if (origenValido) params.set("origen", origenValido);
+    if (origenVisitaValido) params.set("origenVisita", origenVisitaValido);
     for (const [k, v] of filtrosDashboard) params.set(k, v);
     if (nuevaPagina > 1) params.set("page", String(nuevaPagina));
     const qs = params.toString();
@@ -168,6 +175,7 @@ export default async function AdminPipelinePage({
           if (tab !== "todos") params.set("etapa", tab);
           if (sp.vendedorId) params.set("vendedorId", sp.vendedorId);
           if (origenValido) params.set("origen", origenValido);
+          if (origenVisitaValido) params.set("origenVisita", origenVisitaValido);
           for (const [k, v] of filtrosDashboard) params.set(k, v);
           const qs = params.toString();
           return (
@@ -221,6 +229,21 @@ export default async function AdminPipelinePage({
             ))}
           </select>
         </label>
+        <label className="block space-y-1">
+          <span className="text-xs font-medium text-stone-500">Origen web</span>
+          <select
+            name="origenVisita"
+            defaultValue={origenVisitaValido ?? ""}
+            className="rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#2F2F2F] bg-white"
+          >
+            <option value="">Todos</option>
+            {ORIGEN_VISITA_OPTIONS.map((o) => (
+              <option key={o} value={o}>
+                {ORIGEN_VISITA_LABELS[o]}
+              </option>
+            ))}
+          </select>
+        </label>
         <button
           type="submit"
           className="px-4 py-2 bg-[#2F2F2F] text-white font-medium text-sm rounded-lg hover:bg-[#1a1a1a] transition-colors"
@@ -254,6 +277,8 @@ export default async function AdminPipelinePage({
             contactadoEn: l.contactadoEn?.toISOString() ?? null,
             etapa: l.etapa,
             origen: l.origen,
+            origenVisita: l.origenVisita,
+            campana: l.campana,
             vendedorId: l.vendedorId,
             notasVenta: l.notasVenta,
             motivoPerdida: l.motivoPerdida,

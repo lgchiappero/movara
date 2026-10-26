@@ -35,6 +35,7 @@ import {
   sanitizarMensaje,
 } from "@/lib/validators/configurador";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
+import { leerOrigen } from "@/lib/origen-visita/navegador";
 
 // ─────────────────────────────────────────────────────────
 // Constants
@@ -345,6 +346,7 @@ export default function ConfiguradorMovara({
           materiales,
           notasConfiguracion: notas,
           precioEstimado: precioResumen.total,
+          origen: leerOrigen(),
         }),
       });
       const json = await res.json().catch(() => null);

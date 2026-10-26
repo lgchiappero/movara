@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
-import { estadoPedidoOptions, estadoPedidoLabels } from "@/lib/pedido/estado-pedido";
+import { estadoPedidoOptions, estadoPedidoLabels, ESTADO_PEDIDO_CANCELADO } from "@/lib/pedido/estado-pedido";
 import DocumentUploadField from "@/components/admin/DocumentUploadField";
 
 const inputClass =
@@ -265,6 +265,11 @@ export default function GestionPedidoPanel({ id, numeroPedido, initial, document
             value={form.estadoPedido}
             onChange={(e) => set("estadoPedido", e.target.value)}
           >
+            {/* Cancelado solo se ve si ya lo está: se cancela con "Cancelar
+                pedido". Elegir otro estado lo reactiva. */}
+            {initial.estadoPedido === ESTADO_PEDIDO_CANCELADO && (
+              <option value={ESTADO_PEDIDO_CANCELADO}>Cancelado</option>
+            )}
             {estadoPedidoOptions.map((opt) => (
               <option key={opt} value={opt}>
                 {estadoPedidoLabels[opt]}

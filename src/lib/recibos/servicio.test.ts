@@ -3,7 +3,7 @@ import type { ReciboConformidad } from "@prisma/client";
 
 const m = vi.hoisted(() => ({
   unidadFindUnique: vi.fn(),
-  unidadUpdate: vi.fn(),
+  unidadUpdate: vi.fn().mockResolvedValue({ clienteId: "c1" }),
   reciboFindFirst: vi.fn(),
   reciboFindUnique: vi.fn(),
   reciboFindUniqueOrThrow: vi.fn(),
@@ -16,7 +16,9 @@ const m = vi.hoisted(() => ({
   download: vi.fn(),
   enviar: vi.fn(),
   render: vi.fn(),
+  recalcular: vi.fn(),
 }));
+vi.mock("@/lib/clientes/servicio", () => ({ recalcularEstadoCliente: m.recalcular }));
 
 vi.mock("@/lib/db", () => {
   const recibo = {
@@ -252,6 +254,7 @@ describe("confirmarRecibo", () => {
 
     expect(m.unidadUpdate).toHaveBeenCalledWith({
       where: { id: "u1" },
+      select: { clienteId: true },
       data: {
         estadoFabricacion: "entregado",
         fechaEntrega: new Date("2026-10-08T00:00:00.000Z"),
@@ -261,6 +264,8 @@ describe("confirmarRecibo", () => {
       },
     });
     if (res.ok) expect(verificarHash(res.recibo)).toBe(true);
+    // El cliente pasa a "entregado" en la misma transacción.
+    expect(m.recalcular).toHaveBeenCalledWith(expect.anything(), "c1");
   });
 
   it("dos confirmaciones simultáneas: la que pierde la carrera recibe 409 y no toca la unidad", async () => {

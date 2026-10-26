@@ -10,6 +10,7 @@ import { construirTextoRecibo, fechaFinGarantia, fechaHoraAR, fechaLargaUTC, tex
 import { calcularHashRecibo } from "./hash";
 import { generateNumeroRecibo } from "./numero-recibo";
 import { enviarEmail, esEmailDePrueba, type ResultadoEmail } from "@/lib/email/enviar";
+import { recalcularEstadoCliente } from "@/lib/clientes/servicio";
 
 type Fallo = { ok: false; status: number; error: string };
 
@@ -181,8 +182,9 @@ export async function confirmarRecibo(
       },
     });
     if (count === 0) return null;
-    await tx.unidad.update({
+    const unidad = await tx.unidad.update({
       where: { id: recibo.unidadId },
+      select: { clienteId: true },
       data: {
         estadoFabricacion: "entregado",
         fechaEntrega: recibo.fechaEntrega,
@@ -191,6 +193,8 @@ export async function confirmarRecibo(
         garantiaFin: fechaFinGarantia(recibo.fechaEntrega),
       },
     });
+    // El cliente pasa a "entregado".
+    await recalcularEstadoCliente(tx, unidad.clienteId);
     return tx.reciboConformidad.findUniqueOrThrow({ where: { id: recibo.id } });
   });
 

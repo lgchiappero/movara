@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { nuevaUnidadSchema } from "@/lib/validators/unidad";
 import { generateNumeroUnidad } from "@/lib/envios/numero-unidad";
+import { recalcularEstadoCliente } from "@/lib/clientes/servicio";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
   try {
     const unidad = await db.$transaction(async (tx) => {
       const numeroUnidad = await generateNumeroUnidad(tx);
-      return tx.unidad.create({
+      const creada = await tx.unidad.create({
         data: {
           numeroUnidad,
           clienteId: data.clienteId,
@@ -27,6 +28,9 @@ export async function POST(req: NextRequest) {
           notas: data.notas ?? null,
         },
       });
+      // Con una unidad, el cliente es "comprador".
+      await recalcularEstadoCliente(tx, data.clienteId);
+      return creada;
     });
 
     return NextResponse.json({ ok: true, id: unidad.id }, { status: 201 });

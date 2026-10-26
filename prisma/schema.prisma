@@ -115,8 +115,22 @@ model Lead {
   clienteId     String? // referencia a Cliente.id una vez convertido — mismo criterio sin FK formal
   valorEstimado Float?
 
+  // ─── Deduplicación y origen de la visita ────────────────────────────
+  // emailNorm / telefonoNorm: ver src/lib/clientes/normalizar.ts. Se buscan
+  // por igualdad (índice) al reutilizar un lead o un cliente.
+  emailNorm     String?
+  telefonoNorm  String?
+  // Origen web capturado en el navegador (utm, fbclid, gclid, referrer). No
+  // reemplaza a `origen`, que es el canal que carga el vendedor a mano.
+  origenVisita  String? // meta_ads | instagram | google | google_ads | directo | otro
+  campana       String? // utm_campaign
+  origenDetalle Json? // { utm_source, utm_medium, utm_campaign, fbclid, gclid, referrer, landing, fecha }
+
   pedidos ConfiguracionPedido[]
 
+  @@index([emailNorm])
+  @@index([telefonoNorm])
+  @@index([clienteId])
   @@map("leads")
 }
 
@@ -126,7 +140,10 @@ model ConfiguracionPedido {
   updatedAt DateTime @updatedAt
 
   leadId          String?
-  lead            Lead?   @relation(fields: [leadId], references: [id])
+  lead            Lead?    @relation(fields: [leadId], references: [id])
+  // Cliente creado o reutilizado al guardar el pedido (src/lib/clientes).
+  clienteId       String?
+  cliente         Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   clienteNombre   String
   clienteEmail    String?
   clienteWhatsapp String?
@@ -162,27 +179,34 @@ model ConfiguracionPedido {
   precioEstimado Float? // snapshot de calcularPrecio() al momento del envío
 
   // ─── Gestión del pedido (post-venta) ──────────────────────
-  numeroConsulta      String? // formato MOV-CONSULTA-{AÑO}-{NRO 3 dígitos}, generado al enviar el configurador
-  numeroPedido        String? // formato MOV-{AÑO}-{NRO 3 dígitos}, generado al confirmar
+  numeroConsulta        String? // formato MOV-CONSULTA-{AÑO}-{NRO 3 dígitos}, generado al enviar el configurador
+  numeroPedido          String? // formato MOV-{AÑO}-{NRO 3 dígitos}, generado al confirmar
   // Token secreto del link de seguimiento (/mi-pedido?t=...). Lo genera la
   // base (2 UUID v4 = 244 bits de azar) en cualquier alta, configurador o
   // manual. Los números de consulta/pedido son correlativos: nunca sirven
   // solos para ver un pedido.
-  tokenSeguimiento    String    @unique @default(dbgenerated("(replace((gen_random_uuid())::text, '-'::text, ''::text) || replace((gen_random_uuid())::text, '-'::text, ''::text))"))
-  estadoPedido        String    @default("consulta") // "consulta" | "presupuestado" | "confirmado" | "en_produccion" | "en_transito" | "en_aduana" | "entregado"
-  precioFinal         Float?
-  anticipo            Float?
-  saldoPendiente      Float?
-  numeroFabrica       String?
-  numeroContenedor    String?
-  numeroBL            String?
-  fechaConfirmacion   DateTime?
-  fechaProduccion     DateTime?
-  fechaDespacho       DateTime?
-  fechaArriboEstimado DateTime?
-  fechaEntrega        DateTime?
-  notasInternas       String?
-  notasCliente        String?
+  tokenSeguimiento      String    @unique @default(dbgenerated("(replace((gen_random_uuid())::text, '-'::text, ''::text) || replace((gen_random_uuid())::text, '-'::text, ''::text))"))
+  estadoPedido          String    @default("consulta") // "consulta" | "presupuestado" | "confirmado" | "en_produccion" | "en_transito" | "en_aduana" | "entregado" | "cancelado"
+  // Cancelación desde el admin. Un pedido cancelado no cuenta para el estado
+  // del cliente ni se muestra en /mi-pedido. estadoAntesDeCancelar permite
+  // reactivarlo en el mismo punto.
+  motivoCancelacion     String?
+  fechaCancelacion      DateTime?
+  canceladoPor          String? // email del AdminUser
+  estadoAntesDeCancelar String?
+  precioFinal           Float?
+  anticipo              Float?
+  saldoPendiente        Float?
+  numeroFabrica         String?
+  numeroContenedor      String?
+  numeroBL              String?
+  fechaConfirmacion     DateTime?
+  fechaProduccion       DateTime?
+  fechaDespacho         DateTime?
+  fechaArriboEstimado   DateTime?
+  fechaEntrega          DateTime?
+  notasInternas         String?
+  notasCliente          String?
 
   // ─── Costos internos (nunca visibles para el cliente) ─────
   costoProveedor   Float?
@@ -230,6 +254,7 @@ model ConfiguracionPedido {
 
   documentos DocumentoPedido[]
 
+  @@index([clienteId])
   @@map("configuraciones_pedido")
 }
 
@@ -315,8 +340,39 @@ model Cliente {
   telefono  String?
   notas     String?
 
-  unidades Unidad[]
+  tipoCliente    String? // "particular" | "empresa"
+  razonSocial    String?
+  nombreContacto String?
+  provincia      String?
+  localidad      String?
 
+  // Mismo criterio que Lead.emailNorm / telefonoNorm.
+  emailNorm    String?
+  telefonoNorm String?
+
+  // ─── Estado comercial (src/lib/clientes/estado.ts) ──────────────────
+  // interesado | pedido_iniciado | presupuestado | comprador | entregado.
+  // Automático: el del pedido más avanzado. Si se cambia a mano queda
+  // estadoManual = true hasta que un pedido lo lleve más adelante o se
+  // vuelva a automático desde la ficha.
+  estado           String    @default("interesado")
+  // El que corresponde por los pedidos, aunque haya uno manual.
+  estadoAutomatico String    @default("interesado")
+  estadoManual     Boolean   @default(false)
+  estadoManualEn   DateTime?
+  estadoManualPor  String? // email del AdminUser
+
+  // Origen de la primera visita (mismo formato que en Lead).
+  origenVisita  String?
+  campana       String?
+  origenDetalle Json?
+
+  unidades Unidad[]
+  pedidos  ConfiguracionPedido[]
+
+  @@index([emailNorm])
+  @@index([telefonoNorm])
+  @@index([estado])
   @@map("clientes")
 }
 

@@ -9,6 +9,8 @@ import { generateNumeroConsulta } from "@/lib/pedido/numero-consulta";
 import { resumenError } from "@/lib/log-seguro";
 import { getOpcionesAConsultar } from "@/data/material-catalog";
 import { detalleConsultaHtml } from "@/lib/email/nueva-consulta";
+import { conSavepoint, registrarContacto } from "@/lib/clientes/servicio";
+import { origenDelBody } from "@/lib/origen-visita/clasificar";
 
 async function sendNotificationEmail(clienteNombre: string, modelo: string, numeroConsulta: string, detalle: string) {
   const contactEmail = process.env.CONTACT_EMAIL || "lucianogchiappero@gmail.com";
@@ -54,6 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     const data = parsed.data;
+    const origen = origenDelBody((body as { origen?: unknown } | null)?.origen);
 
     const { numeroConsulta, tokenSeguimiento } = await db.$transaction(async (tx) => {
       const numero = await generateNumeroConsulta(tx);
@@ -81,8 +84,29 @@ export async function POST(req: NextRequest) {
           precioEstimado: data.precioEstimado,
           numeroConsulta: numero,
         },
-        select: { tokenSeguimiento: true },
+        select: { id: true, tokenSeguimiento: true },
       });
+
+      // Cliente y lead en la misma transacción, pero dentro de un savepoint:
+      // si fallan, el pedido se guarda igual y queda el error en el log.
+      await conSavepoint(tx, "vincular_cliente", () =>
+        registrarContacto(
+          tx,
+          {
+            nombre: data.clienteNombre,
+            email: data.clienteEmail,
+            telefono: data.clienteWhatsapp,
+            tipoCliente: data.tipoCliente,
+            razonSocial: data.razonSocial || null,
+            nombreContacto: data.nombreContacto || null,
+            provincia: data.provincia,
+            localidad: data.localidad,
+          },
+          { tipo: "pedido", pedidoId: creado.id, numeroConsulta: numero },
+          origen
+        )
+      ).catch((err) => console.error(`[pedido] ${numero} No se pudo vincular cliente y lead: ${resumenError(err)}`));
+
       return { numeroConsulta: numero, tokenSeguimiento: creado.tokenSeguimiento };
     });
 

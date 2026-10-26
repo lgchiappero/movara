@@ -34,6 +34,9 @@ vi.mock("next/image", () => ({
 }));
 vi.mock("@/lib/admin/storage", () => ({ getSignedUrl: mockGetSignedUrl, BUCKET_PEDIDOS: "documentos-pedidos" }));
 vi.mock("@/components/admin/GestionPedidoPanel", () => ({ default: () => <div>GestionPedidoPanel</div> }));
+vi.mock("@/components/admin/CancelarPedidoSection", () => ({
+  default: ({ cancelado }: { cancelado: boolean }) => <div>CancelarPedidoSection cancelado={String(cancelado)}</div>,
+}));
 vi.mock("@/components/admin/DocumentosPedidoSection", () => ({
   default: ({ documentos, puedeEliminar }: { documentos: unknown[]; puedeEliminar?: boolean }) => (
     <div>
@@ -137,6 +140,14 @@ describe("ConfiguracionDetailPage", () => {
       "href",
       "/api/admin/configuraciones/p1/pdf"
     );
+  });
+
+  it("enlaza la ficha del cliente si el pedido tiene uno y muestra la sección de cancelación", async () => {
+    mockFindUnique.mockResolvedValueOnce({ ...CONFIG_BASE, clienteId: "c1", estadoPedido: "cancelado", fechaCancelacion: new Date() });
+    render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+    expect(screen.getByRole("link", { name: /ver ficha del cliente/i })).toHaveAttribute("href", "/admin/clientes/c1");
+    expect(screen.getByText("CancelarPedidoSection cancelado=true")).toBeInTheDocument();
+    expect(screen.getByText("Cancelado")).toBeInTheDocument();
   });
 
   it("muestra '—' para WhatsApp/email/número de consulta cuando faltan", async () => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { clienteSchema } from "@/lib/validators/cliente";
+import { clavesContacto } from "@/lib/clientes/normalizar";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
@@ -13,7 +14,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const cliente = await db.cliente.create({ data: parsed.data });
+    const cliente = await db.cliente.create({
+      data: { ...parsed.data, ...clavesContacto(parsed.data.email, parsed.data.telefono) },
+    });
     return NextResponse.json({ ok: true, id: cliente.id }, { status: 201 });
   } catch (err) {
     console.error("[admin/clientes POST]", err);

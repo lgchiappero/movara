@@ -32,7 +32,13 @@ describe("POST /api/admin/clientes", () => {
     const res = await POST(makeRequest(VALID));
     expect(res.status).toBe(201);
     expect((await res.json()).id).toBe("cli1");
-    expect(mockCreate).toHaveBeenCalledWith({ data: VALID });
+    expect(mockCreate).toHaveBeenCalledWith({ data: { ...VALID, emailNorm: null, telefonoNorm: null } });
+  });
+
+  it("guarda las claves de deduplicación del email y el teléfono", async () => {
+    mockCreate.mockResolvedValueOnce({ id: "cli2" });
+    await POST(makeRequest({ ...VALID, email: "Juan@X.com", telefono: "+54 9 11 1234-5678" }));
+    expect(mockCreate.mock.calls[0][0].data).toMatchObject({ emailNorm: "juan@x.com", telefonoNorm: "1112345678" });
   });
 
   it("400 si falta el nombre", async () => {

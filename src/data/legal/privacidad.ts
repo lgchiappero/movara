@@ -1,5 +1,5 @@
 import type { DocumentoLegal } from "@/lib/legal/campos";
-import { EMPRESA, LEGAL_ACTUALIZADO } from "./empresa";
+import { EMPRESA, PRIVACIDAD_ACTUALIZADA } from "./empresa";
 
 const E = EMPRESA;
 
@@ -8,7 +8,7 @@ const E = EMPRESA;
  * un proveedor o una herramienta de medición, hay que actualizarla. */
 export const POLITICA_PRIVACIDAD: DocumentoLegal = {
   titulo: "Política de Privacidad",
-  actualizado: LEGAL_ACTUALIZADO,
+  actualizado: PRIVACIDAD_ACTUALIZADA,
   intro: `En MOVARA cuidamos los datos personales de quienes nos consultan y nos compran. Esta política explica qué datos recolectamos en ${E.sitio}, para qué los usamos, con quién los compartimos, cuánto tiempo los guardamos y cómo podés ejercer tus derechos, conforme a la Ley 25.326 de Protección de los Datos Personales y su normativa complementaria.`,
   secciones: [
     {
@@ -34,6 +34,7 @@ export const POLITICA_PRIVACIDAD: DocumentoLegal = {
             "Configurador: nombre o razón social, persona de contacto, WhatsApp, email, tipo de cliente, provincia, localidad y la configuración del espacio que elegiste, con su precio estimado.",
             "Agenda de visitas al showroom: nombre, email, teléfono, tipo de cliente, razón social (si sos empresa), la consulta que nos dejes y la fecha y el horario elegidos. Para cancelar una visita te pedimos el email con el que agendaste, solo para verificar que seas vos.",
             "Seguimiento de pedido: no te pedimos datos; se accede con el link personal que te enviamos.",
+            "Origen de la visita: cuando llegás al sitio guardamos de dónde venís (los parámetros utm de la campaña o del anuncio, los identificadores de clic de Facebook o Google y la página de la que llegaste) y lo enviamos junto con la consulta, el pedido o la visita que agendes, para saber de dónde llegan las consultas.",
             "Clientes: para ejecutar la compra registramos los datos del contrato (nombre, DNI o CUIT, domicilio, email y teléfono), la dirección de entrega, los pagos y la documentación de la compra y de la entrega.",
             "Recibo en Conformidad de entrega: cuando confirmás la recepción de la unidad desde el link que te enviamos por email, registramos la fecha y hora, la dirección IP, el dispositivo y navegador (user-agent) y un código de integridad del contenido confirmado, como evidencia de la confirmación.",
             "Mensajes por WhatsApp: algunos botones del sitio arman un mensaje con los datos que cargaste y abren WhatsApp; ese mensaje se envía recién cuando vos lo mandás, y se rige además por las políticas de WhatsApp.",
@@ -56,7 +57,7 @@ export const POLITICA_PRIVACIDAD: DocumentoLegal = {
             "Responder tus consultas, enviarte la información o el presupuesto que pediste y coordinar visitas al showroom, con tu consentimiento al enviar cada formulario.",
             "Ejecutar el contrato de compra: gestionar el pedido, los pagos, la logística, la entrega, el Recibo en Conformidad y la garantía.",
             "Enviarte avisos sobre tu pedido o tu visita (confirmaciones, recordatorios, cambios de estado).",
-            "Medir el funcionamiento del sitio y de nuestros anuncios (ver Cookies y Meta Pixel).",
+            "Medir el funcionamiento del sitio y de nuestros anuncios, y saber de qué campaña, red social o buscador llega cada consulta (ver Cookies y Meta Pixel).",
             "Cumplir obligaciones legales y defender nuestros derechos ante un reclamo.",
           ],
         },
@@ -76,7 +77,7 @@ export const POLITICA_PRIVACIDAD: DocumentoLegal = {
         },
         {
           tipo: "p",
-          texto: "Además, el sitio guarda en tu navegador (almacenamiento local) si ya viste o completaste el aviso de salida, para no volver a mostrártelo. Algunas páginas incluyen videos de YouTube (en modo de privacidad mejorada) y un mapa de Google Maps, que pueden usar sus propias cookies cuando los reproducís o interactuás con ellos. El panel interno de MOVARA usa una cookie de sesión solo para el personal autorizado.",
+          texto: "Además, el sitio guarda en tu navegador (almacenamiento local) si ya viste o completaste el aviso de salida, para no volver a mostrártelo, y durante 30 días el origen de tu primera visita (parámetros utm, identificadores de clic y página de la que llegaste), que solo se nos envía si mandás una consulta, un pedido o agendás una visita. Algunas páginas incluyen videos de YouTube (en modo de privacidad mejorada) y un mapa de Google Maps, que pueden usar sus propias cookies cuando los reproducís o interactuás con ellos. El panel interno de MOVARA usa una cookie de sesión solo para el personal autorizado.",
         },
         {
           tipo: "p",

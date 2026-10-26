@@ -1,3 +1,5 @@
+import { leerOrigen } from "@/lib/origen-visita/navegador";
+
 /** Mensaje cuando /api/leads no pudo guardar la consulta (503). Lo usan la
  * ruta y los formularios, que lo muestran junto a un botón de WhatsApp. */
 export const MENSAJE_LEAD_NO_GUARDADO = "No pudimos registrar tu consulta. Escribinos por WhatsApp";
@@ -11,7 +13,7 @@ export async function enviarLead(body: Record<string, unknown>): Promise<Resulta
     const res = await fetch("/api/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, origen: leerOrigen() }),
     });
     if (res.ok) return "ok";
     return res.status === 503 ? "no-guardado" : "error";

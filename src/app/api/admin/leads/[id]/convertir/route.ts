@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { buscarOCrearCliente, recalcularEstadoCliente } from "@/lib/clientes/servicio";
+import { clavesContacto } from "@/lib/clientes/normalizar";
 
 // "Convertir a cliente" — solo disponible una vez que el lead está en
 // etapa "ganado" (se re-valida acá server-side, no solo en el botón del
-// panel lateral). Crea el Cliente, guarda lead.clienteId, y vincula las
-// ConfiguracionPedido existentes de ese email que todavía no tuvieran
-// leadId — ConfiguracionPedido no tiene una FK directa a Cliente, así que
-// "vincular" acá significa completar esa relación Lead↔Pedido que ya
-// existía en el schema.
+// panel lateral). Si el lead ya tiene cliente (lo creó el configurador o un
+// formulario) no se duplica: se responde con ese cliente. Si no, se busca
+// uno con el mismo email o teléfono antes de crear uno nuevo. Después se
+// vinculan al lead y al cliente los pedidos del mismo email sin lead.
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -25,33 +26,43 @@ export async function POST(
     );
   }
   if (lead.clienteId) {
-    return NextResponse.json({ error: "Este lead ya fue convertido a cliente" }, { status: 409 });
+    return NextResponse.json({ ok: true, clienteId: lead.clienteId, yaVinculado: true });
   }
 
   try {
     const cliente = await db.$transaction(async (tx) => {
-      const nuevoCliente = await tx.cliente.create({
-        data: {
-          nombre: [lead.nombre, lead.apellido].filter(Boolean).join(" "),
-          dni: lead.dni,
-          telefono: lead.telefono,
-          email: lead.email,
-        },
+      const c = await buscarOCrearCliente(tx, {
+        nombre: lead.nombre,
+        apellido: lead.apellido,
+        dni: lead.dni,
+        email: lead.email,
+        telefono: lead.telefono,
+        provincia: lead.provincia,
       });
 
-      await tx.lead.update({ where: { id }, data: { clienteId: nuevoCliente.id } });
+      await tx.lead.update({
+        where: { id },
+        data: { clienteId: c.id, ...clavesContacto(lead.email, lead.telefono) },
+      });
 
       if (lead.email) {
         await tx.configuracionPedido.updateMany({
           where: { clienteEmail: lead.email, leadId: null },
           data: { leadId: id },
         });
+        await tx.configuracionPedido.updateMany({
+          where: { clienteEmail: lead.email, clienteId: null },
+          data: { clienteId: c.id },
+        });
       }
-
-      return nuevoCliente;
+      await recalcularEstadoCliente(tx, c.id);
+      return c;
     });
 
-    return NextResponse.json({ ok: true, clienteId: cliente.id }, { status: 201 });
+    return NextResponse.json(
+      { ok: true, clienteId: cliente.id, yaVinculado: !cliente.nuevo },
+      { status: cliente.nuevo ? 201 : 200 }
+    );
   } catch (err) {
     console.error("[admin/leads/:id/convertir POST]", err);
     return NextResponse.json({ error: "Error al convertir el lead" }, { status: 500 });

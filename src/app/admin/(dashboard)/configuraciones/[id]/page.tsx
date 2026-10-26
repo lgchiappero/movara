@@ -12,7 +12,8 @@ import {
   getStoredMaterialLabel,
   getMaterialesAnteriores,
 } from "@/data/material-catalog";
-import { estadoPedidoLabels, type EstadoPedido } from "@/lib/pedido/estado-pedido";
+import { etiquetaEstadoPedido, ESTADO_PEDIDO_CANCELADO } from "@/lib/pedido/estado-pedido";
+import CancelarPedidoSection from "@/components/admin/CancelarPedidoSection";
 import { getSignedUrl, BUCKET_PEDIDOS } from "@/lib/admin/storage";
 import GestionPedidoPanel from "@/components/admin/GestionPedidoPanel";
 import DocumentosPedidoSection, { type DocumentoConUrl } from "@/components/admin/DocumentosPedidoSection";
@@ -78,7 +79,7 @@ export default async function ConfiguracionDetailPage({
       <div className="flex items-center justify-between mt-4 mb-8">
         <div>
           <p className="text-sage-500 text-xs font-bold uppercase tracking-widest mb-1">
-            {estadoPedidoLabels[config.estadoPedido as EstadoPedido] ?? config.estadoPedido}
+            {etiquetaEstadoPedido(config.estadoPedido)}
           </p>
           <h1 className="text-2xl font-bold text-[#2F2F2F]">{config.clienteNombre}</h1>
         </div>
@@ -101,6 +102,16 @@ export default async function ConfiguracionDetailPage({
         <div className="flex justify-between">
           <span className="text-stone-500">Email</span>
           <span className="text-[#2F2F2F] font-medium">{config.clienteEmail || "—"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-stone-500">Cliente</span>
+          {config.clienteId ? (
+            <Link href={`/admin/clientes/${config.clienteId}`} className="text-sage-600 font-bold hover:underline">
+              Ver ficha del cliente →
+            </Link>
+          ) : (
+            <span className="text-[#2F2F2F] font-medium">—</span>
+          )}
         </div>
         <div className="flex justify-between">
           <span className="text-stone-500">Número de consulta</span>
@@ -160,7 +171,18 @@ export default async function ConfiguracionDetailPage({
       </div>
 
       <div className="space-y-6">
+        <CancelarPedidoSection
+          id={id}
+          cancelado={config.estadoPedido === ESTADO_PEDIDO_CANCELADO}
+          motivoCancelacion={config.motivoCancelacion}
+          fechaCancelacion={config.fechaCancelacion?.toISOString() ?? null}
+          canceladoPor={config.canceladoPor}
+          estadoAntesDeCancelar={config.estadoAntesDeCancelar}
+        />
+        {/* key: al cancelar o reactivar se vuelve a montar con el estado nuevo
+            (si no, el formulario guardaría el estado viejo y lo reactivaría). */}
         <GestionPedidoPanel
+          key={config.estadoPedido}
           id={id}
           numeroPedido={config.numeroPedido}
           initial={{

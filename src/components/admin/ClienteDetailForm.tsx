@@ -16,6 +16,10 @@ type Cliente = {
   email: string | null;
   telefono: string | null;
   notas: string | null;
+  razonSocial: string | null;
+  nombreContacto: string | null;
+  provincia: string | null;
+  localidad: string | null;
 };
 
 export default function ClienteDetailForm({ id, initial }: { id: string; initial: Cliente }) {
@@ -28,6 +32,10 @@ export default function ClienteDetailForm({ id, initial }: { id: string; initial
     email: initial.email ?? "",
     telefono: initial.telefono ?? "",
     notas: initial.notas ?? "",
+    razonSocial: initial.razonSocial ?? "",
+    nombreContacto: initial.nombreContacto ?? "",
+    provincia: initial.provincia ?? "",
+    localidad: initial.localidad ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +60,10 @@ export default function ClienteDetailForm({ id, initial }: { id: string; initial
           email: form.email.trim() || null,
           telefono: form.telefono.trim() || null,
           notas: form.notas.trim() || null,
+          razonSocial: form.razonSocial.trim() || null,
+          nombreContacto: form.nombreContacto.trim() || null,
+          provincia: form.provincia.trim() || null,
+          localidad: form.localidad.trim() || null,
         }),
       });
       const json = await res.json().catch(() => null);
@@ -100,6 +112,22 @@ export default function ClienteDetailForm({ id, initial }: { id: string; initial
         <label className="block space-y-1.5">
           <span className={labelClass}>Teléfono</span>
           <input className={inputClass} value={form.telefono} onChange={(e) => set("telefono", e.target.value)} />
+        </label>
+        <label className="block space-y-1.5">
+          <span className={labelClass}>Razón social</span>
+          <input className={inputClass} value={form.razonSocial} onChange={(e) => set("razonSocial", e.target.value)} />
+        </label>
+        <label className="block space-y-1.5">
+          <span className={labelClass}>Persona de contacto</span>
+          <input className={inputClass} value={form.nombreContacto} onChange={(e) => set("nombreContacto", e.target.value)} />
+        </label>
+        <label className="block space-y-1.5">
+          <span className={labelClass}>Provincia</span>
+          <input className={inputClass} value={form.provincia} onChange={(e) => set("provincia", e.target.value)} />
+        </label>
+        <label className="block space-y-1.5">
+          <span className={labelClass}>Localidad</span>
+          <input className={inputClass} value={form.localidad} onChange={(e) => set("localidad", e.target.value)} />
         </label>
         <label className="block space-y-1.5 sm:col-span-2">
           <span className={labelClass}>Notas</span>

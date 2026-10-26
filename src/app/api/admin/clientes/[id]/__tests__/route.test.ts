@@ -1,13 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockUpdate, mockDelete, mockCountUnidad, mockGetAdminUser } = vi.hoisted(() => ({
+const { mockUpdate, mockDelete, mockCountUnidad, mockGetAdminUser, mockLeadUpdateMany } = vi.hoisted(() => ({
   mockUpdate: vi.fn(),
   mockDelete: vi.fn(),
+  mockLeadUpdateMany: vi.fn(),
   mockCountUnidad: vi.fn(),
   mockGetAdminUser: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({
-  db: { cliente: { update: mockUpdate, delete: mockDelete }, unidad: { count: mockCountUnidad } },
+  db: {
+    cliente: { update: mockUpdate, delete: mockDelete },
+    lead: { updateMany: mockLeadUpdateMany },
+    unidad: { count: mockCountUnidad },
+    $transaction: (ops: Promise<unknown>[]) => Promise.all(ops),
+  },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 
@@ -39,7 +45,10 @@ describe("PATCH /api/admin/clientes/[id]", () => {
     mockUpdate.mockResolvedValueOnce({ id: "c1", ...VALID });
     const res = await PATCH(makeRequest(VALID), { params: Promise.resolve({ id: "c1" }) });
     expect(res.status).toBe(200);
-    expect(mockUpdate).toHaveBeenCalledWith({ where: { id: "c1" }, data: VALID });
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: "c1" },
+      data: { ...VALID, emailNorm: null, telefonoNorm: null },
+    });
   });
 
   it("400 si el body no es JSON válido", async () => {
@@ -105,6 +114,8 @@ describe("DELETE /api/admin/clientes/[id]", () => {
     const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "c1" }) });
     expect(res.status).toBe(200);
     expect(mockDelete).toHaveBeenCalledWith({ where: { id: "c1" } });
+    // lead.clienteId no tiene FK: se desvincula en la misma transacción.
+    expect(mockLeadUpdateMany).toHaveBeenCalledWith({ where: { clienteId: "c1" }, data: { clienteId: null } });
   });
 
   it("500 si la DB falla al eliminar", async () => {

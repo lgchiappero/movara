@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { modeloLabelsEs } from "@/lib/pdf/pedido-labels-es";
-import { estadoPedidoLabels, type EstadoPedido } from "@/lib/pedido/estado-pedido";
+import { etiquetaEstadoPedido, type EstadoPedido } from "@/lib/pedido/estado-pedido";
 import type { PedidoInput } from "@/lib/validators/pedido";
 import NuevoPedidoManualForm from "@/components/admin/NuevoPedidoManualForm";
 
 export const dynamic = "force-dynamic";
 
-const ESTADO_CLASSES: Record<EstadoPedido, string> = {
+const ESTADO_CLASSES: Record<EstadoPedido | "cancelado", string> = {
   consulta: "bg-stone-100 text-stone-600",
   presupuestado: "bg-sage-100 text-sage-700",
   confirmado: "bg-emerald-100 text-emerald-700",
@@ -15,6 +15,7 @@ const ESTADO_CLASSES: Record<EstadoPedido, string> = {
   en_transito: "bg-blue-100 text-blue-700",
   en_aduana: "bg-purple-100 text-purple-700",
   entregado: "bg-emerald-200 text-emerald-800",
+  cancelado: "bg-red-50 text-red-600 line-through",
 };
 
 async function getConfiguraciones() {
@@ -92,9 +93,9 @@ export default async function AdminConfiguracionesPage() {
                   </td>
                   <td className="px-5 py-3">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-bold ${ESTADO_CLASSES[c.estadoPedido as EstadoPedido] ?? "bg-stone-100 text-stone-600"}`}
+                      className={`px-2 py-1 rounded-full text-xs font-bold ${ESTADO_CLASSES[c.estadoPedido as EstadoPedido | "cancelado"] ?? "bg-stone-100 text-stone-600"}`}
                     >
-                      {estadoPedidoLabels[c.estadoPedido as EstadoPedido] ?? c.estadoPedido}
+                      {etiquetaEstadoPedido(c.estadoPedido)}
                     </span>
                   </td>
                   <td className="px-5 py-3">

@@ -4,6 +4,7 @@ import "./globals.css";
 import BackToTop from "@/components/ui/BackToTop";
 import WhatsAppStickyBar from "@/components/ui/WhatsAppStickyBar";
 import { MetaPixel } from "@/components/MetaPixel";
+import CapturaOrigen from "@/components/CapturaOrigen";
 import MotionProvider from "@/components/motion/MotionProvider";
 import { SanityLive } from "@/sanity/lib/live";
 import { client } from "@/sanity/lib/client";
@@ -77,6 +78,7 @@ export default async function RootLayout({
     <html lang="es" className={`${montserrat.variable} ${poppins.variable} ${playfair.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-white text-stone-900 pb-24 sm:pb-20">
         <MetaPixel vercelEnv={process.env.VERCEL_ENV} />
+        <CapturaOrigen />
         <MotionProvider>
           {children}
           <WhatsAppStickyBar

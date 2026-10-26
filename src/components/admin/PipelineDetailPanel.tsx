@@ -8,6 +8,7 @@ import { useToast } from "@/components/admin/Toast";
 import EliminarButton from "@/components/admin/EliminarButton";
 import { isAdmin } from "@/lib/admin/roles";
 import type { LeadPipeline, Vendedor } from "@/components/admin/PipelineBoard";
+import OrigenVisitaChip from "@/components/admin/OrigenVisitaChip";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-sage-500";
@@ -94,7 +95,7 @@ export default function PipelineDetailPanel({
         showError(message);
         return;
       }
-      showSuccess("Convertido a cliente");
+      showSuccess(json.yaVinculado ? "Vinculado al cliente existente" : "Convertido a cliente");
       onConverted();
     } catch {
       const message = "No pudimos convertir el lead. Probá de nuevo.";
@@ -146,6 +147,10 @@ export default function PipelineDetailPanel({
                 {new Date(lead.createdAt).toLocaleDateString("es-AR")}
               </span>
             </p>
+            <div className="flex items-start gap-2">
+              <span className="text-stone-500">Origen web: </span>
+              <OrigenVisitaChip origenVisita={lead.origenVisita} campana={lead.campana} />
+            </div>
             {lead.mensaje && (
               <p>
                 <span className="text-stone-500">Mensaje: </span>
@@ -165,7 +170,7 @@ export default function PipelineDetailPanel({
 
           {lead.clienteId ? (
             <div className="bg-sage-50 border border-sage-200 rounded-xl p-4 text-sm">
-              <p className="text-sage-700 font-medium mb-1">Ya convertido a cliente.</p>
+              <p className="text-sage-700 font-medium mb-1">Vinculado a un cliente.</p>
               <Link href={`/admin/clientes/${lead.clienteId}`} className="text-sage-600 font-bold hover:underline">
                 Ver cliente →
               </Link>
