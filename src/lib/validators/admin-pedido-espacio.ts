@@ -4,6 +4,7 @@ import {
   finalidadOptions,
   tipoCocinaOptions,
   tipoAguaOptions,
+  tipoAguaDiscontinuadoOptions,
   lavarropasOptions,
 } from "@/lib/validators/pedido";
 import { ADMIN_EXTRAS } from "@/data/admin-extras";
@@ -48,7 +49,8 @@ export const configuracionEspacioSchema = z.object({
   incluyeCocina: z.boolean(),
   tipoCocina: z.union([z.enum(tipoCocinaOptions), z.null()]),
   incluyeBano: z.boolean(),
-  tipoAgua: z.union([z.enum(tipoAguaOptions), z.null()]),
+  // Pedidos viejos pueden tener termotanque-gas: se guardan sin error.
+  tipoAgua: z.union([z.enum([...tipoAguaOptions, ...tipoAguaDiscontinuadoOptions]), z.null()]),
   lavarropas: z.union([z.enum(lavarropasOptions), z.null()]),
   materiales: materialesTextoSchema,
   upgrades: z.array(z.enum(upgradeKeysValidos)),

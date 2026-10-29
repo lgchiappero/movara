@@ -230,3 +230,63 @@ test.describe("Configurador — balcón a consultar y notas (6 pasos)", () => {
     await expect(cfg.getByRole("button", { name: "Lateral", exact: true })).toHaveCount(0);
   });
 });
+
+test.describe("Configurador — agua caliente sin opción a gas (6 pasos)", () => {
+  test("el calefón eléctrico es un dato fijo y llega así al mensaje y al pedido", async ({ page }) => {
+    const cfg = await abrirConfigurador(page);
+    await llegarAlPaso4(cfg);
+
+    // Paso 4: sin selector de agua caliente, una línea fija debajo del baño
+    await expect(cfg.getByText("Agua caliente", { exact: true })).toHaveCount(0);
+    await expect(cfg.getByText(/termotanque/i)).toHaveCount(0);
+    await expect(cfg.getByText("Calefón eléctrico incluido.")).toBeVisible();
+    await expect(cfg.getByText(/baño con calefón eléctrico/)).toBeVisible();
+    // Cocina "Preparación gas" queda como está (se decide aparte)
+    await expect(cfg.getByRole("button", { name: "Preparación gas" })).toBeVisible();
+
+    await cfg.getByRole("button", { name: "Siguiente" }).click();
+    await expect(cfg.getByText("Paso 5 de 6", { exact: true })).toBeVisible();
+    await cfg.getByPlaceholder("Ej: Juan García").fill("Playwright Calefon");
+    await cfg.getByPlaceholder("Ej: +54 9 11 1234-5678").fill("+5491112345678");
+    await cfg.getByPlaceholder("tu@email.com").fill("calefon@example.com");
+    await cfg.getByRole("button", { name: "Ver mi configuración" }).click();
+
+    // Paso 6: resumen y mensaje de WhatsApp
+    await expect(page.getByText("Paso 6 de 6 — Tu configuración")).toBeVisible();
+    await expect(page.getByText("Calefón eléctrico", { exact: true })).toBeVisible();
+    const msg = await page.locator("textarea").first().inputValue();
+    expect(msg).toContain("baño con calefón eléctrico");
+    expect(msg).not.toMatch(/termotanque|gas/i);
+    const registro = page.getByText(/Tu consulta fue registrada con el código/);
+    await expect(registro).toBeVisible({ timeout: 20_000 });
+    const numeroConsulta = (await registro.locator("span").textContent())!.trim();
+
+    // Admin: el pedido quedó con calefón eléctrico
+    await loginAsAdmin(page);
+    await page.goto("/admin/configuraciones");
+    const href = await page.locator("tr", { hasText: numeroConsulta }).getByRole("link", { name: "Ver detalle" }).getAttribute("href");
+    await page.goto(href!);
+    await expect(page.getByLabel("Tipo de agua caliente")).toHaveValue("calefon-electrico");
+    await expect(page.getByText("Baño: Con baño — calefón eléctrico")).toBeVisible();
+  });
+
+  test("sin baño no se muestra el calefón", async ({ page }) => {
+    const cfg = await abrirConfigurador(page);
+    await llegarAlPaso4(cfg);
+    await cfg.getByText("¿Incluye baño?").locator("..").getByRole("button", { name: "No", exact: true }).click();
+    await expect(cfg.getByText("Calefón eléctrico incluido.")).toHaveCount(0);
+    await expect(cfg.getByText(/sin baño/)).toBeVisible();
+  });
+});
+
+/** Completa los pasos 1–3 con opciones válidas y deja el configurador en el paso 4. */
+async function llegarAlPaso4(cfg: ReturnType<Page["locator"]>) {
+  await cfg.locator("button").filter({ hasText: "MOVARA Flex 38" }).first().click();
+  await cfg.getByRole("button", { name: "Siguiente" }).click();
+  await cfg.getByRole("button", { name: /Inversor/ }).click();
+  await cfg.getByRole("button", { name: "Siguiente" }).click();
+  await cfg.locator("#cfg-localidad").fill("La Plata");
+  await cfg.locator("#cfg-provincia").selectOption("Buenos Aires");
+  await cfg.getByRole("button", { name: "Siguiente" }).click();
+  await expect(cfg.getByText("Paso 4 de 6", { exact: true })).toBeVisible();
+}

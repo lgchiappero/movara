@@ -51,6 +51,11 @@ describe("configuracionEspacioSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("acepta termotanque-gas de un pedido viejo y rechaza otros valores", () => {
+    expect(configuracionEspacioSchema.safeParse({ ...valid, tipoAgua: "termotanque-gas" }).success).toBe(true);
+    expect(configuracionEspacioSchema.safeParse({ ...valid, tipoAgua: "solar" }).success).toBe(false);
+  });
+
   it("rechaza modelo fuera de las opciones válidas", () => {
     expect(configuracionEspacioSchema.safeParse({ ...valid, modelo: "60ft" }).success).toBe(
       false

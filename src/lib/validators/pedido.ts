@@ -15,7 +15,10 @@ export const finalidadOptions = [
   "sector-publico",
 ] as const;
 export const tipoCocinaOptions = ["electrico", "gas"] as const;
-export const tipoAguaOptions = ["calefon-electrico", "termotanque-gas"] as const;
+export const tipoAguaOptions = ["calefon-electrico"] as const;
+// Opciones que el configurador ya no ofrece pero que quedaron guardadas en
+// pedidos viejos: el admin las conserva al guardar y los PDFs las muestran.
+export const tipoAguaDiscontinuadoOptions = ["termotanque-gas"] as const;
 export const lavarropasOptions = ["sin", "bano", "cocina", "externo"] as const;
 export const tipoClienteOptions = ["particular", "empresa"] as const;
 
@@ -54,7 +57,13 @@ export const pedidoSchema = z.object({
   incluyeCocina: z.boolean(),
   tipoCocina: z.enum(tipoCocinaOptions),
   incluyeBano: z.boolean(),
-  tipoAgua: z.enum(tipoAguaOptions),
+  // El calefón eléctrico es el único sistema de agua caliente. Un cliente con
+  // la versión anterior de la página abierta puede mandar termotanque-gas:
+  // se registra la consulta con el calefón en vez de rechazarla.
+  tipoAgua: z.preprocess(
+    (v) => (v === undefined || (tipoAguaDiscontinuadoOptions as readonly unknown[]).includes(v) ? "calefon-electrico" : v),
+    z.enum(tipoAguaOptions)
+  ),
   lavarropas: z.enum(lavarropasOptions),
 
   materiales: z.record(z.string(), z.string().nullable()),
@@ -67,3 +76,4 @@ export const pedidoSchema = z.object({
 });
 
 export type PedidoInput = z.infer<typeof pedidoSchema>;
+export type TipoAguaDiscontinuado = (typeof tipoAguaDiscontinuadoOptions)[number];

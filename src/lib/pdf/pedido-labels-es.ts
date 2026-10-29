@@ -1,4 +1,4 @@
-import type { PedidoInput } from "@/lib/validators/pedido";
+import type { PedidoInput, TipoAguaDiscontinuado } from "@/lib/validators/pedido";
 import { FINALIDADES } from "@/data/configurador-catalog";
 
 // Etiquetas en español — compartidas entre el PDF y el panel admin.
@@ -18,9 +18,10 @@ export const tipoCocinaLabelsEs: Record<PedidoInput["tipoCocina"], string> = {
   gas: "Preparación para gas",
 };
 
-export const tipoAguaLabelsEs: Record<PedidoInput["tipoAgua"], string> = {
+// Incluye la opción discontinuada, para que los pedidos viejos se sigan viendo.
+export const tipoAguaLabelsEs: Record<PedidoInput["tipoAgua"] | TipoAguaDiscontinuado, string> = {
   "calefon-electrico": "Calefón eléctrico",
-  "termotanque-gas": "Espacio para termotanque a gas",
+  "termotanque-gas": "Termotanque a gas (opción discontinuada)",
 };
 
 export const lavarropasLabelsEs: Record<PedidoInput["lavarropas"], string> = {

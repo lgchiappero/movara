@@ -65,6 +65,18 @@ describe("pedidoSchema", () => {
     expect(pedidoSchema.safeParse({ ...valid, tipoAgua: "solar" }).success).toBe(false);
   });
 
+  it("el agua caliente es siempre calefón eléctrico, aunque falte", () => {
+    const sinAgua: Partial<typeof valid> = { ...valid };
+    delete sinAgua.tipoAgua;
+    const result = pedidoSchema.safeParse(sinAgua);
+    expect(result.success && result.data.tipoAgua).toBe("calefon-electrico");
+  });
+
+  it("termotanque-gas de una página vieja se registra como calefón eléctrico", () => {
+    const result = pedidoSchema.safeParse({ ...valid, tipoAgua: "termotanque-gas" });
+    expect(result.success && result.data.tipoAgua).toBe("calefon-electrico");
+  });
+
   it("rechaza lavarropas fuera de las opciones válidas", () => {
     expect(pedidoSchema.safeParse({ ...valid, lavarropas: "patio" }).success).toBe(false);
   });

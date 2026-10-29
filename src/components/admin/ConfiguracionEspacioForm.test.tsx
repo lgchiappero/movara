@@ -48,3 +48,21 @@ describe("ConfiguracionEspacioForm — mejoras de pedidos viejos", () => {
     expect(screen.queryByText("Elegidas en el configurador anterior")).toBeNull();
   });
 });
+
+describe("ConfiguracionEspacioForm — agua caliente", () => {
+  it("un pedido nuevo solo ofrece el calefón eléctrico", () => {
+    render(<ConfiguracionEspacioForm id="p1" initial={{ ...INICIAL, upgrades: [] }} />);
+    const opciones = Array.from(screen.getByLabelText("Tipo de agua caliente").querySelectorAll("option")).map((o) => o.textContent);
+    expect(opciones).toEqual(["Sin definir", "Calefón eléctrico"]);
+  });
+
+  it("un pedido viejo con termotanque a gas lo muestra como discontinuado y lo reenvía al guardar", async () => {
+    render(<ConfiguracionEspacioForm id="p1" initial={{ ...INICIAL, tipoAgua: "termotanque-gas", upgrades: [] }} />);
+    expect(screen.getByLabelText("Tipo de agua caliente")).toHaveValue("termotanque-gas");
+    expect(screen.getByRole("option", { name: "Termotanque a gas (opción discontinuada)" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Guardar configuración" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).tipoAgua).toBe("termotanque-gas");
+  });
+});

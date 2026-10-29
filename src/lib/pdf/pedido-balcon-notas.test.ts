@@ -120,3 +120,21 @@ describe("PDF del proveedor — balcón, notas y pedidos viejos", () => {
     ]);
   });
 });
+
+describe("PDFs — agua caliente", () => {
+  it("calefón eléctrico en el PDF del cliente y en el del proveedor", () => {
+    expect(grupoEs(buildPedidoNarrativeEs(base), "Configuración del espacio").bullets).toContain("Baño: Con baño — calefón eléctrico");
+    expect(grupoEn(buildSupplierSpecItems(base), "LAYOUT").rows).toContainEqual({ label: "Bathroom", value: "Electric water heater" });
+  });
+
+  it("un pedido viejo con termotanque a gas se sigue viendo como opción discontinuada", () => {
+    const viejo = { ...base, tipoAgua: "termotanque-gas" };
+    expect(grupoEs(buildPedidoNarrativeEs(viejo), "Configuración del espacio").bullets).toContain(
+      "Baño: Con baño — termotanque a gas (opción discontinuada)"
+    );
+    expect(grupoEn(buildSupplierSpecItems(viejo), "LAYOUT").rows).toContainEqual({
+      label: "Bathroom",
+      value: "Gas water heater (discontinued option)",
+    });
+  });
+});

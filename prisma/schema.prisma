@@ -160,7 +160,7 @@ model ConfiguracionPedido {
   incluyeCocina Boolean @default(true)
   tipoCocina    String? // "electrico" | "gas"
   incluyeBano   Boolean @default(true)
-  tipoAgua      String? // "calefon-electrico" | "termotanque-gas"
+  tipoAgua      String? // "calefon-electrico" ("termotanque-gas": discontinuado, en pedidos viejos)
   lavarropas    String? // "sin" | "bano" | "cocina" | "externo"
 
   // Selecciones de materiales con foto — Record<selectorKey, optionId|null>,

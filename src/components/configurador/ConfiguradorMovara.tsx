@@ -44,7 +44,6 @@ import { leerOrigen } from "@/lib/origen-visita/navegador";
 export type { ModeloKey };
 
 type TipoCocina = "electrico" | "gas";
-type TipoAgua = "calefon-electrico" | "termotanque-gas";
 type TipoLavarropas = "sin" | "bano" | "cocina" | "externo";
 type TipoCliente = "particular" | "empresa";
 
@@ -78,10 +77,9 @@ function resolvePremiumPrice(priceName: string, precios?: PreciosConfig | null):
   );
 }
 
-const LABELS_AGUA: Record<TipoAgua, string> = {
-  "calefon-electrico": "calefón eléctrico",
-  "termotanque-gas": "espacio termotanque a gas",
-};
+// Único sistema de agua caliente: viene incluido con el baño.
+const TIPO_AGUA = "calefon-electrico";
+const LABEL_AGUA = "calefón eléctrico";
 
 const LABELS_LAVA: Record<TipoLavarropas, string> = {
   sin: "sin espacio para lavarropas",
@@ -129,7 +127,6 @@ function buildWAMessage(params: {
   incluyeCocina: boolean;
   tipoCocina: TipoCocina;
   incluyeBano: boolean;
-  tipoAgua: TipoAgua;
   lavarropas: TipoLavarropas;
   tipoCliente: TipoCliente;
   nombre: string;
@@ -152,7 +149,7 @@ function buildWAMessage(params: {
   const cocinaTxt = params.incluyeCocina
     ? `cocina con ${params.tipoCocina === "electrico" ? "anafe eléctrico" : "preparación gas"}`
     : "sin cocina";
-  const banoTxt = params.incluyeBano ? `baño con ${LABELS_AGUA[params.tipoAgua]}` : "sin baño";
+  const banoTxt = params.incluyeBano ? `baño con ${LABEL_AGUA}` : "sin baño";
   const lavaTxt = LABELS_LAVA[params.lavarropas];
 
   const materialesLines = [
@@ -264,7 +261,6 @@ export default function ConfiguradorMovara({
   const [incluyeCocina, setIncluyeCocina] = useState(true);
   const [tipoCocina, setTipoCocina] = useState<TipoCocina>("electrico");
   const [incluyeBano, setIncluyeBano] = useState(true);
-  const [tipoAgua, setTipoAgua] = useState<TipoAgua>("calefon-electrico");
   const [lavarropas, setLavarropas] = useState<TipoLavarropas>("sin");
   const [materiales, setMateriales] = useState<MaterialesSeleccion>(() => getDefaultMateriales());
   const [notas, setNotas] = useState("");
@@ -341,7 +337,7 @@ export default function ConfiguradorMovara({
           incluyeCocina,
           tipoCocina,
           incluyeBano,
-          tipoAgua,
+          tipoAgua: TIPO_AGUA,
           lavarropas,
           materiales,
           notasConfiguracion: notas,
@@ -384,7 +380,6 @@ export default function ConfiguradorMovara({
         incluyeCocina,
         tipoCocina,
         incluyeBano,
-        tipoAgua,
         lavarropas,
         tipoCliente,
         nombre,
@@ -453,7 +448,6 @@ export default function ConfiguradorMovara({
               incluyeCocina={incluyeCocina}
               tipoCocina={tipoCocina}
               incluyeBano={incluyeBano}
-              tipoAgua={tipoAgua}
               lavarropas={lavarropas}
               aConsultar={precioResumen.aConsultar}
               waMessage={waMessage}
@@ -516,7 +510,7 @@ export default function ConfiguradorMovara({
             {step === 1 && <StepModelo modelo={modelo} onSelect={elegirModelo} title={cms.paso1.title} subtitle={cms.paso1.subtitle} taglines={cms.paso1.taglines} modeloImagenes={modeloImagenes} />}
             {step === 2 && <StepFinalidad finalidad={finalidad} onSelect={setFinalidad} title={cms.paso2.title} subtitle={cms.paso2.subtitle} descs={cms.paso2.descs} />}
             {step === 3 && <StepUbicacion localidad={localidad} setLocalidad={setLocalidad} provincia={provincia} setProvincia={setProvincia} title={cms.paso3.title} subtitle={cms.paso3.subtitle} localidadLabel={cms.paso3.localidadLabel} provinciaLabel={cms.paso3.provinciaLabel} />}
-            {step === 4 && <StepConfiguracion modelo={modelo} habitaciones={habitaciones} setHabitaciones={setHabitaciones} maxHab={maxHab} incluyeCocina={incluyeCocina} setIncluyeCocina={setIncluyeCocina} tipoCocina={tipoCocina} setTipoCocina={setTipoCocina} incluyeBano={incluyeBano} setIncluyeBano={setIncluyeBano} tipoAgua={tipoAgua} setTipoAgua={setTipoAgua} lavarropas={lavarropas} setLavarropas={setLavarropas} materiales={materiales} onSelectMaterial={selectMaterial} onSelectBalcon={elegirBalcon} priceFor={priceFor} notas={notas} setNotas={setNotas} notasError={notasError} />}
+            {step === 4 && <StepConfiguracion modelo={modelo} habitaciones={habitaciones} setHabitaciones={setHabitaciones} maxHab={maxHab} incluyeCocina={incluyeCocina} setIncluyeCocina={setIncluyeCocina} tipoCocina={tipoCocina} setTipoCocina={setTipoCocina} incluyeBano={incluyeBano} setIncluyeBano={setIncluyeBano} lavarropas={lavarropas} setLavarropas={setLavarropas} materiales={materiales} onSelectMaterial={selectMaterial} onSelectBalcon={elegirBalcon} priceFor={priceFor} notas={notas} setNotas={setNotas} notasError={notasError} />}
             {step === 5 && <StepDatos tipoCliente={tipoCliente} setTipoCliente={setTipoCliente} nombre={nombre} setNombre={setNombre} razonSocial={razonSocial} setRazonSocial={setRazonSocial} nombreContacto={nombreContacto} setNombreContacto={setNombreContacto} telefono={telefono} setTelefono={setTelefono} email={email} setEmail={setEmail} />}
           </motion.div>
         </AnimatePresence>
@@ -854,7 +848,7 @@ function Field({ label, children }: { label: React.ReactNode; children: React.Re
   );
 }
 
-function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incluyeCocina, setIncluyeCocina, tipoCocina, setTipoCocina, incluyeBano, setIncluyeBano, tipoAgua, setTipoAgua, lavarropas, setLavarropas, materiales, onSelectMaterial, onSelectBalcon, priceFor, notas, setNotas, notasError }: {
+function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incluyeCocina, setIncluyeCocina, tipoCocina, setTipoCocina, incluyeBano, setIncluyeBano, lavarropas, setLavarropas, materiales, onSelectMaterial, onSelectBalcon, priceFor, notas, setNotas, notasError }: {
   modelo: ModeloKey | null;
   habitaciones: 1 | 2 | 3;
   setHabitaciones: (v: 1 | 2 | 3) => void;
@@ -865,8 +859,6 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
   setTipoCocina: (v: TipoCocina) => void;
   incluyeBano: boolean;
   setIncluyeBano: (v: boolean) => void;
-  tipoAgua: TipoAgua;
-  setTipoAgua: (v: TipoAgua) => void;
   lavarropas: TipoLavarropas;
   setLavarropas: (v: TipoLavarropas) => void;
   materiales: MaterialesSeleccion;
@@ -890,7 +882,7 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
     modelo ? `Módulo ${modelo}` : null,
     `${habitaciones} habitación${habitaciones > 1 ? "es" : ""}`,
     incluyeCocina ? `cocina con ${tipoCocina === "electrico" ? "anafe eléctrico" : "preparación gas"}` : "sin cocina",
-    incluyeBano ? `baño con ${LABELS_AGUA[tipoAgua]}` : "sin baño",
+    incluyeBano ? `baño con ${LABEL_AGUA}` : "sin baño",
     LABELS_LAVA[lavarropas],
     materiales.balcon ? `balcón ${materiales.balcon}` : null,
   ].filter(Boolean).join(", ");
@@ -919,6 +911,7 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
           </Field>
           <Field label="¿Incluye baño?">
             <ToggleGroup value={incluyeBano ? "si" : "no"} onChange={(v) => setIncluyeBano(v === "si")} options={[{ value: "si", label: "Sí" }, { value: "no", label: "No" }]} />
+            {incluyeBano && <p className="text-xs text-stone-400 mt-1.5">Calefón eléctrico incluido.</p>}
           </Field>
         </Section>
 
@@ -930,12 +923,6 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
             </Field>
           </Section>
         )}
-
-        <Section title="Agua caliente">
-          <Field label="Sistema de agua caliente">
-            <ToggleGroup value={tipoAgua} onChange={setTipoAgua} options={[{ value: "calefon-electrico", label: "Calefón eléctrico" }, { value: "termotanque-gas", label: "Espacio termotanque gas" }]} />
-          </Field>
-        </Section>
 
         <Section title="Lavarropas">
           <Field label="Instalación">
@@ -1203,7 +1190,7 @@ export function StepDatos({
 // Result screen — Paso 7
 // ─────────────────────────────────────────────────────────
 
-function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, incluyeCocina, tipoCocina, incluyeBano, tipoAgua, lavarropas, aConsultar, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText, numeroConsulta, tokenSeguimiento, enviandoPedido, errorPedido, onRetry }: {
+function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, incluyeCocina, tipoCocina, incluyeBano, lavarropas, aConsultar, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText, numeroConsulta, tokenSeguimiento, enviandoPedido, errorPedido, onRetry }: {
   modelo: ModeloKey;
   finalidad: FinalidadKey;
   localidad: string;
@@ -1212,7 +1199,6 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, i
   incluyeCocina: boolean;
   tipoCocina: TipoCocina;
   incluyeBano: boolean;
-  tipoAgua: TipoAgua;
   lavarropas: TipoLavarropas;
   aConsultar: PrecioResumen["aConsultar"];
   waMessage: string;
@@ -1277,7 +1263,7 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, i
           <span className="text-stone-400">Habitaciones</span><span className="text-stone-800 font-semibold">{habitaciones}</span>
           <span className="text-stone-400">Cocina</span><span className="text-stone-800 font-semibold">{incluyeCocina ? (tipoCocina === "electrico" ? "Anafe eléctrico" : "Preparación gas") : "No incluye"}</span>
           <span className="text-stone-400">Baño</span><span className="text-stone-800 font-semibold">{incluyeBano ? "Incluido" : "No incluye"}</span>
-          <span className="text-stone-400">Agua caliente</span><span className="text-stone-800 font-semibold">{incluyeBano ? LABELS_AGUA[tipoAgua] : "—"}</span>
+          <span className="text-stone-400">Agua caliente</span><span className="text-stone-800 font-semibold">{incluyeBano ? "Calefón eléctrico" : "—"}</span>
           <span className="text-stone-400">Lavarropas</span><span className="text-stone-800 font-semibold capitalize">{LABELS_LAVA[lavarropas]}</span>
         </div>
       </div>

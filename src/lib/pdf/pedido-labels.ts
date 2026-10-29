@@ -1,4 +1,4 @@
-import type { PedidoInput } from "@/lib/validators/pedido";
+import type { PedidoInput, TipoAguaDiscontinuado } from "@/lib/validators/pedido";
 
 // Etiquetas en inglés — el spec técnico para el proveedor se genera en inglés.
 
@@ -22,9 +22,10 @@ export const tipoCocinaLabels: Record<PedidoInput["tipoCocina"], string> = {
   gas: "Gas-ready",
 };
 
-export const tipoAguaLabels: Record<PedidoInput["tipoAgua"], string> = {
+// Incluye la opción discontinuada, para que los pedidos viejos se sigan viendo.
+export const tipoAguaLabels: Record<PedidoInput["tipoAgua"] | TipoAguaDiscontinuado, string> = {
   "calefon-electrico": "Electric water heater",
-  "termotanque-gas": "Gas water heater space",
+  "termotanque-gas": "Gas water heater (discontinued option)",
 };
 
 export const lavarropasLabels: Record<PedidoInput["lavarropas"], string> = {

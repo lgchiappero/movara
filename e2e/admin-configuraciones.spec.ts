@@ -124,3 +124,62 @@ test.describe("/admin/configuraciones", () => {
     );
   });
 });
+
+test.describe("/admin/configuraciones — pedido viejo con termotanque a gas", () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+  });
+
+  test("se ve como opción discontinuada y se guarda sin perder el valor", async ({ page }) => {
+    const { numeroConsulta } = await seedPedido(page, "Playwright Termotanque Viejo");
+    await page.goto("/admin/configuraciones");
+    const href = await page.locator("tr", { hasText: numeroConsulta }).getByRole("link", { name: "Ver detalle" }).getAttribute("href");
+    const id = href!.split("/").pop()!;
+
+    // El configurador ya no lo ofrece: se simula un pedido viejo con ese valor.
+    const materiales = Object.fromEntries(
+      ["exterior", "piso", "panelesBano", "puertaBano", "cocina", "mesada", "puertaPrincipal", "ventanas"].map((k) => [k, null])
+    );
+    const viejo = await page.request.patch(`/api/admin/configuraciones/${id}/espacio`, {
+      data: {
+        modelo: "20ft",
+        finalidad: "vivienda",
+        provincia: "Buenos Aires",
+        localidad: "La Plata",
+        habitaciones: 2,
+        incluyeCocina: true,
+        tipoCocina: "electrico",
+        incluyeBano: true,
+        tipoAgua: "termotanque-gas",
+        lavarropas: "bano",
+        materiales,
+        upgrades: [],
+        notasConfiguracion: null,
+      },
+    });
+    expect(viejo.status()).toBe(200);
+
+    await page.goto(href!);
+    const select = page.getByLabel("Tipo de agua caliente");
+    await expect(select).toHaveValue("termotanque-gas");
+    await expect(select.locator("option:checked")).toHaveText("Termotanque a gas (opción discontinuada)");
+    await expect(page.getByText("Baño: Con baño — termotanque a gas (opción discontinuada)")).toBeVisible();
+
+    await page.getByRole("button", { name: "Guardar configuración" }).click();
+    await expect(page.getByText("Configuración guardada.")).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel("Tipo de agua caliente")).toHaveValue("termotanque-gas");
+  });
+
+  test("el configurador público ya no guarda termotanque a gas", async ({ page }) => {
+    const res = await page.request.post("/api/pedido", {
+      data: { ...pedidoPayload("Playwright Pagina Vieja"), tipoAgua: "termotanque-gas" },
+    });
+    expect(res.status()).toBe(200);
+    const { numeroConsulta } = await res.json();
+    await page.goto("/admin/configuraciones");
+    await page.goto((await page.locator("tr", { hasText: numeroConsulta }).getByRole("link", { name: "Ver detalle" }).getAttribute("href"))!);
+    await expect(page.getByLabel("Tipo de agua caliente")).toHaveValue("calefon-electrico");
+    await expect(page.getByLabel("Tipo de agua caliente").locator("option")).toHaveText(["Sin definir", "Calefón eléctrico"]);
+  });
+});

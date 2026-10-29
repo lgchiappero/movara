@@ -8,6 +8,7 @@ import { ADMIN_EXTRAS } from "@/data/admin-extras";
 import {
   tipoCocinaOptions,
   tipoAguaOptions,
+  tipoAguaDiscontinuadoOptions,
   lavarropasOptions,
 } from "@/lib/validators/pedido";
 import {
@@ -81,6 +82,12 @@ export default function ConfiguracionEspacioForm({ id, initial }: { id: string; 
     upgrades: new Set(initial.upgrades ?? []),
     notasConfiguracion: initial.notasConfiguracion ?? "",
   });
+  // La opción discontinuada solo aparece en el pedido viejo que la tiene,
+  // para que se vea y se conserve al guardar.
+  const opcionesAgua = [
+    ...tipoAguaOptions,
+    ...tipoAguaDiscontinuadoOptions.filter((opt) => opt === initial.tipoAgua),
+  ];
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -291,7 +298,7 @@ export default function ConfiguracionEspacioForm({ id, initial }: { id: string; 
                 onChange={(e) => set("tipoAgua", e.target.value)}
               >
                 <option value="">Sin definir</option>
-                {tipoAguaOptions.map((opt) => (
+                {opcionesAgua.map((opt) => (
                   <option key={opt} value={opt}>
                     {tipoAguaLabelsEs[opt]}
                   </option>

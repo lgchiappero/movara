@@ -165,3 +165,27 @@ describe("Configurador — notas y envío", () => {
     expect(body).not.toHaveProperty("upgrades");
   });
 });
+
+describe("Configurador — agua caliente", () => {
+  it("el calefón eléctrico es un dato fijo del baño, sin selector ni opción a gas", async () => {
+    const user = userEvent.setup();
+    await hastaConfiguracion(user);
+    expect(screen.queryByText("Agua caliente")).toBeNull();
+    expect(screen.queryByText(/termotanque/i)).toBeNull();
+    expect(screen.getByText("Calefón eléctrico incluido.")).toBeInTheDocument();
+
+    const bano = within(screen.getByText("¿Incluye baño?").parentElement!);
+    await user.click(bano.getByRole("button", { name: "No" }));
+    expect(screen.queryByText("Calefón eléctrico incluido.")).toBeNull();
+    await user.click(bano.getByRole("button", { name: "Sí" }));
+
+    await user.click(siguiente());
+    await user.type(await screen.findByPlaceholderText("Ej: Juan García"), "Juan García");
+    await user.type(screen.getByPlaceholderText("Ej: +54 9 11 1234-5678"), "+5491112345678");
+    await user.type(screen.getByPlaceholderText("tu@email.com"), "juan@example.com");
+    await user.click(screen.getByRole("button", { name: "Ver mi configuración" }));
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).tipoAgua).toBe("calefon-electrico");
+    expect((screen.getAllByRole("textbox").at(-1) as HTMLTextAreaElement).value).toContain("baño con calefón eléctrico");
+  });
+});
