@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PRODUCTO_SECCIONES, PRODUCTO_EXTRAS } from "@/data/producto";
+import { PRODUCTO_SECCIONES, PRODUCTO_EXTRAS, getProductoExtras } from "@/data/producto";
 
 describe("PRODUCTO_SECCIONES", () => {
   it("tiene al menos una sección", () => {
@@ -26,18 +26,28 @@ describe("PRODUCTO_SECCIONES", () => {
   });
 });
 
-describe("PRODUCTO_EXTRAS", () => {
-  it("tiene al menos un extra con texto y precio", () => {
-    expect(PRODUCTO_EXTRAS.length).toBeGreaterThan(0);
-    for (const e of PRODUCTO_EXTRAS) {
-      expect(e.texto.length).toBeGreaterThan(0);
-      expect(e.precio.length).toBeGreaterThan(0);
-    }
+describe("extras de la ficha técnica", () => {
+  it("sin precios en Sanity muestra los precios del fallback y el resto a consultar", () => {
+    expect(getProductoExtras(null)).toEqual([
+      { texto: "Balcón de 2 m con sobretecho, deck y barandas", precio: "+USD 3.100" },
+      { texto: "Sobretecho completo (balcón y toda la unidad)", precio: "A consultar" },
+      { texto: "Techo a dos aguas", precio: "A consultar" },
+      { texto: "Pared de vidrio (muro cortina)", precio: "A consultar" },
+      { texto: "Bañera en lugar de ducha", precio: "A consultar" },
+      { texto: "Inodoro inteligente con bidet", precio: "+USD 580" },
+      { texto: "Piso SPC 4 mm en lugar de PVC", precio: "+USD 390" },
+      { texto: "Fachada de panel metálico labrado", precio: "+USD 950" },
+      { texto: "Pre-instalación lavarropas", precio: "A consultar" },
+    ]);
   });
 
-  it("la terraza cubierta y la galería se cotizan aparte, sin precio fijo", () => {
-    const precio = (t: string) => PRODUCTO_EXTRAS.find((e) => e.texto.startsWith(t))?.precio;
-    expect(precio("Terraza cubierta")).toBe("Consultar");
-    expect(precio("Galería perimetral")).toBe("Consultar");
+  it("lee los precios de la misma fuente que el configurador (Sanity)", () => {
+    const extras = getProductoExtras({ preciosExtras: [{ nombre: "Inodoro inteligente con bidet", precio: 600 }] });
+    expect(extras.find((e) => e.texto.startsWith("Inodoro"))?.precio).toBe("+USD 600");
+    expect(extras.find((e) => e.texto.startsWith("Piso SPC"))?.precio).toBe("+USD 390");
+  });
+
+  it("no ofrece el kit solar", () => {
+    expect(PRODUCTO_EXTRAS.some((e) => /solar/i.test(e.texto))).toBe(false);
   });
 });

@@ -56,7 +56,7 @@ describe("buildPedidoNarrativeEs — pedidos cargados a mano desde el admin", ()
     const items = buildPedidoNarrativeEs({ ...base, upgrades: ["banera", "piso-spc"] });
     const group = findGroup(items, "Mejoras a cotizar");
     expect(group.bullets).toContain("Bañera");
-    expect(group.bullets).toContain("Piso SPC");
+    expect(group.bullets).toContain("Piso SPC 4 mm");
   });
 
   it("incluye las notas del cliente cuando están presentes", () => {

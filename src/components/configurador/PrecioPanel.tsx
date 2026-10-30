@@ -2,24 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, animate, useMotionValue } from "framer-motion";
+import { A_CONSULTAR, LEYENDA_PRECIOS, formatUSD } from "@/data/precios-extras";
+import type { PrecioResumen } from "@/lib/precio-configurador";
 
-export type PrecioAdicional = { key: string; nombre: string; precio: number };
+export type { PrecioAdicional, PrecioResumen } from "@/lib/precio-configurador";
 
-export type PrecioResumen = {
-  base: number;
-  adicionales: PrecioAdicional[];
-  total: number;
-  /** Opciones sin precio de lista elegidas: no suman al total, se cotizan aparte. */
-  aConsultar: { key: string; nombre: string }[];
-};
-
-/** "+ Balcón frontal: lo cotizamos en tu presupuesto", debajo del precio estimado. */
+/** "+ Bañera — opción 1: A consultar", debajo del precio estimado. */
 export function AConsultar({ items, color, className }: { items: PrecioResumen["aConsultar"]; color?: string; className: string }) {
   if (items.length === 0) return null;
   return (
     <ul className={`font-semibold ${className}`} style={color ? { color } : undefined}>
       {items.map((o) => (
-        <li key={o.key}>+ {o.nombre}: lo cotizamos en tu presupuesto</li>
+        <li key={o.key}>+ {o.nombre}: {A_CONSULTAR}</li>
       ))}
     </ul>
   );
@@ -29,12 +23,7 @@ const COLOR_SIN_ADICIONALES = { text: "#2d9e75", bg: "#e6f7f1" };
 const COLOR_CON_ADICIONALES = { text: "#854F0B", bg: "#faeeda" };
 const COLOR_SIN_MODELO = { text: "#78716c", bg: "#f5f5f4" };
 
-const NOTA =
-  "* Precio estimado de referencia. El precio final depende de la configuración completa y se confirma en el presupuesto personalizado.";
-
-function formatUSD(n: number): string {
-  return `USD ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(Math.round(n))}`;
-}
+const NOTA = `* Precio estimado de referencia. ${LEYENDA_PRECIOS} El precio final depende de la configuración completa y se confirma en el presupuesto personalizado.`;
 
 /** Anima el monto mostrado del valor anterior al nuevo en ~0.5s. */
 function useCountUp(target: number) {
@@ -52,9 +41,10 @@ function useCountUp(target: number) {
   return display;
 }
 
-function Desglose({ resumen, colors }: { resumen: PrecioResumen; colors: { text: string; bg: string } }) {
+/** Precio base, extras con precio y extras a consultar, línea por línea. */
+export function Desglose({ resumen, colors, className = "pt-3 mt-3 border-t" }: { resumen: PrecioResumen; colors: { text: string; bg?: string }; className?: string }) {
   return (
-    <div className="space-y-1.5 pt-3 mt-3 border-t" style={{ borderColor: `${colors.text}25` }}>
+    <div className={`space-y-1.5 ${className}`} style={{ borderColor: `${colors.text}25` }}>
       <div className="flex items-center justify-between text-xs font-bold" style={{ color: colors.text }}>
         <span>Precio base</span>
         <span className="tabular-nums">{formatUSD(resumen.base)}</span>
@@ -63,6 +53,12 @@ function Desglose({ resumen, colors }: { resumen: PrecioResumen; colors: { text:
         <div key={a.key} className="flex items-center justify-between text-xs" style={{ color: colors.text }}>
           <span className="truncate pr-2">+ {a.nombre}</span>
           <span className="tabular-nums shrink-0">{formatUSD(a.precio)}</span>
+        </div>
+      ))}
+      {resumen.aConsultar.map((o) => (
+        <div key={o.key} className="flex items-center justify-between text-xs" style={{ color: colors.text }}>
+          <span className="truncate pr-2">+ {o.nombre}</span>
+          <span className="shrink-0 font-semibold">{A_CONSULTAR}</span>
         </div>
       ))}
     </div>

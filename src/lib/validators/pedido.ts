@@ -72,6 +72,7 @@ export const pedidoSchema = z.object({
   upgrades: z.array(z.string()).default([]),
   notasConfiguracion: notasConfiguracionSchema.nullish().transform((v) => v ?? null),
 
+  // Lo manda el configurador, pero /api/pedido guarda el que calcula él.
   precioEstimado: z.number().nonnegative().optional(),
 });
 

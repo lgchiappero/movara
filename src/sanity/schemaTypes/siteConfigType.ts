@@ -1,4 +1,5 @@
 import { defineField, defineType, defineArrayMember } from 'sanity'
+import { NOMBRES_PRECIOS_EXTRAS, PRECIOS_EXTRAS_DEFAULT } from '../../data/precios-extras'
 
 export const siteConfigType = defineType({
   name: 'siteConfig',
@@ -167,7 +168,7 @@ export const siteConfigType = defineType({
       name: 'precioAdicionalDefault',
       title: 'Precio por defecto de un adicional (USD)',
       type: 'number',
-      description: 'Se usa para cualquier adicional que no tenga un precio propio cargado abajo en "Precios de adicionales".',
+      description: 'Solo se usa para un adicional que no tenga precio cargado abajo ni precio de fábrica en el código (hoy todos lo tienen).',
       initialValue: 500,
       validation: (Rule) => Rule.positive(),
       group: 'precios',
@@ -176,15 +177,9 @@ export const siteConfigType = defineType({
       name: 'preciosExtras',
       title: 'Precios de adicionales',
       type: 'array',
-      description: 'Precio individual (USD) de cada adicional con costo extra del configurador. El nombre debe coincidir exactamente con el de la lista.',
+      description: 'Precio de cada adicional con costo extra del configurador y de la ficha técnica, en USD con IVA incluido. Si un adicional no está cargado acá, el sitio usa el precio de fábrica del código.',
       group: 'precios',
-      initialValue: [
-        { nombre: 'Paneles premium', precio: 500 },
-        { nombre: 'Piso SPC', precio: 500 },
-        { nombre: 'Bañera', precio: 500 },
-        { nombre: 'Cocina ampliada', precio: 500 },
-        { nombre: 'Inodoro inteligente', precio: 500 },
-      ],
+      initialValue: NOMBRES_PRECIOS_EXTRAS.map((nombre) => ({ nombre, precio: PRECIOS_EXTRAS_DEFAULT[nombre] })),
       of: [
         defineArrayMember({
           type: 'object',
@@ -193,6 +188,10 @@ export const siteConfigType = defineType({
               name: 'nombre',
               title: 'Nombre del adicional',
               type: 'string',
+              // Lista cerrada: un nombre mal escrito haría que el sitio
+              // ignore el precio y use el del código.
+              options: { list: NOMBRES_PRECIOS_EXTRAS },
+              validation: (Rule) => Rule.required(),
             }),
             defineField({
               name: 'precio',

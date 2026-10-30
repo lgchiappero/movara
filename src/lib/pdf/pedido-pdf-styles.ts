@@ -160,6 +160,27 @@ export const pedidoPdfStyles = StyleSheet.create({
   },
 
   // ─── Divisor entre secciones ───────────────────────────────
+  desgloseRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    fontSize: 10,
+    marginBottom: 4,
+  },
+  desgloseTotal: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    marginTop: 4,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E5E5",
+  },
+  desgloseLeyenda: {
+    fontSize: 8,
+    color: "#666666",
+    marginTop: 6,
+  },
   sectionDivider: {
     marginTop: 24,
     marginBottom: 24,

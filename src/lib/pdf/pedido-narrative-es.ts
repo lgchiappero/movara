@@ -5,6 +5,7 @@ import {
   esSelectorAConsultar,
   getMaterialesAnteriores,
 } from "@/data/material-catalog";
+import { A_CONSULTAR } from "@/data/precios-extras";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { labelOrFallback, SIN_ESPECIFICAR } from "@/lib/pdf/pedido-record";
 import {
@@ -23,6 +24,7 @@ const SELECTOR_LABELS_ES: Record<string, string> = {
   panelesBano: "Paneles del baño",
   puertaBano: "Puerta del baño",
   banera: "Bañera",
+  inodoro: "Inodoro",
   cocina: "Cocina",
   mesada: "Mesada",
   cocinaAmpliada: "Cocina ampliada",
@@ -33,9 +35,9 @@ const SELECTOR_LABELS_ES: Record<string, string> = {
   techoBalcon: "Techo del balcón",
 };
 
-/** Extras sin precio de lista (balcón, techo, muro cortina): MOVARA los
- *  presupuesta aparte. */
-export const A_COTIZAR = "A cotizar";
+/** Extras sin precio de lista (bañera, muro cortina, sobretecho completo):
+ *  MOVARA los presupuesta aparte. */
+export const A_COTIZAR = A_CONSULTAR;
 
 export type NarrativeLine = { type: "line"; label: string; value: string };
 export type NarrativeGroup = { type: "group"; title: string; bullets: string[]; note?: string };
@@ -63,7 +65,7 @@ export function buildPedidoNarrativeEs(data: PedidoRecord): NarrativeItem[] {
       // El valor guardado puede ser un id de catálogo (configurador público),
       // un id de una opción retirada o texto libre cargado a mano por el admin.
       const valor = getStoredMaterialLabel(selector.key, materiales[selector.key] ?? null);
-      const aCotizar = valor && esSelectorAConsultar(selector.key) ? ` — ${A_COTIZAR}` : "";
+      const aCotizar = valor && esSelectorAConsultar(selector.key, materiales) ? ` — ${A_COTIZAR}` : "";
       bullets.push(`${nombreCampo}: ${valor ?? "no incluye"}${aCotizar}`);
     }
     return { type: "group", title: group.title, bullets };

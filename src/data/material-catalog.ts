@@ -9,11 +9,15 @@
 // compartir estado, elegir una opción premium desactiva automáticamente la
 // base elegida antes, y viceversa — son alternativas del mismo componente
 // físico. Cuando `priceName` está definido, esa franja tiene costo adicional
-// (se resuelve contra `siteConfig.preciosExtras` en Sanity, con fallback a
-// `precioAdicionalDefault`). `aConsultar` marca extras sin precio de lista
-// (balcón, techo, muro cortina): no suman al precio estimado y figuran "A
-// cotizar" en el admin, los PDFs y el email. `nullable` permite deseleccionar
-// (para extras opcionales que no reemplazan nada, como bañera o balcón).
+// (se resuelve contra `siteConfig.preciosExtras` en Sanity, con fallback en
+// precios-extras.ts). `aConsultar` marca extras sin precio de lista (bañera,
+// muro cortina, sobretecho completo): no suman al precio estimado y figuran
+// "A consultar" en el configurador, el admin, los PDFs y el email. Una opción
+// puede tener su propio `priceName`/`aConsultar` (el techo del balcón).
+// `nullable` permite deseleccionar (para extras opcionales que no reemplazan
+// nada, como bañera o balcón).
+
+import { PRECIO_BALCON, PRECIO_FACHADA, PRECIO_INODORO, PRECIO_PISO_SPC, PRECIO_COCINA_AMPLIADA } from "./precios-extras";
 
 export type MaterialOption = {
   id: string;
@@ -24,6 +28,10 @@ export type MaterialOption = {
   border?: boolean;
   /** Texto bajo el nombre — para opciones sin foto propia. */
   descripcion?: string;
+  /** Precio propio de esta opción (pisa el del selector). */
+  priceName?: string;
+  /** Esta opción se cotiza aparte (pisa el del selector). */
+  aConsultar?: boolean;
 };
 
 export type MaterialSelector = {
@@ -99,8 +107,8 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
       },
       {
         key: "exterior",
-        label: "Opciones con diseño — costo adicional",
-        priceName: "Paneles premium",
+        label: "Panel metálico labrado — costo adicional",
+        priceName: PRECIO_FACHADA,
         options: EXTERIOR_PREMIUM.map(([suffix, label]) => ({
           id: `premium-${suffix}`,
           img: `${DIR}/exterior-premium-${suffix}.png`,
@@ -126,8 +134,8 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
       },
       {
         key: "piso",
-        label: "SPC premium — costo adicional",
-        priceName: "Piso SPC",
+        label: "Piso SPC 4 mm — costo adicional",
+        priceName: PRECIO_PISO_SPC,
         options: [
           { id: "spc-8917", img: `${DIR}/piso/piso-spc-8917.jpg`, color: "#8b5e3c", label: "8917" },
           { id: "spc-8916", img: `${DIR}/piso/piso-spc-8916.jpg`, color: "#c79a65", label: "8916" },
@@ -172,13 +180,27 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
       },
       {
         key: "banera",
-        label: "Bañera en lugar de ducha — costo adicional",
+        label: "Bañera en lugar de ducha — precio a consultar",
         nullable: true,
-        priceName: "Bañera",
+        aConsultar: true,
         options: [
           { id: "banera-01", img: `${DIR}/bano-banera-01.png`, label: "Bañera — opción 1" },
           { id: "banera-02", img: `${DIR}/bano-banera-02.png`, label: "Bañera — opción 2" },
           { id: "banera-03", img: `${DIR}/bano-banera-03.png`, label: "Bañera — opción 3" },
+        ],
+      },
+      {
+        key: "inodoro",
+        label: "Inodoro inteligente — costo adicional",
+        nullable: true,
+        priceName: PRECIO_INODORO,
+        // Sin foto propia todavía: la card muestra nombre y descripción.
+        options: [
+          {
+            id: "inteligente-bidet",
+            label: PRECIO_INODORO,
+            descripcion: "En lugar del inodoro estándar. Con bidet incorporado.",
+          },
         ],
       },
     ],
@@ -214,7 +236,7 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
         key: "cocinaAmpliada",
         label: "Cocina ampliada — costo adicional",
         nullable: true,
-        priceName: "Cocina ampliada",
+        priceName: PRECIO_COCINA_AMPLIADA,
         options: [
           { id: "alacena-01", img: `${DIR}/cocina-premium-alacena-01.png`, label: "Con alacena — opción 1" },
           { id: "alacena-02", img: `${DIR}/cocina-premium-alacena-02.png`, label: "Con alacena — opción 2" },
@@ -284,7 +306,6 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
         key: "balcon",
         label: "Balcón",
         nullable: true,
-        aConsultar: true,
         options: [
           { id: "frontal", label: "Balcón frontal" },
           { id: "lateral", label: "Balcón lateral" },
@@ -293,11 +314,22 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
       {
         key: "techoBalcon",
         label: "Techo del balcón",
+        // Con balcón el techo es obligatorio (lo elige el configurador); el
+        // null es "sin balcón".
         nullable: true,
-        aConsultar: true,
         options: [
-          { id: "solo-balcon", img: `${DIR}/balcon%20solo.png`, label: "Sobretecho solo en el balcón" },
-          { id: "completo", img: `${DIR}/balcon%20con%20techocompleto.png`, label: "Sobretecho completo: balcón y toda la unidad" },
+          {
+            id: "solo-balcon",
+            img: `${DIR}/balcon%20solo.png`,
+            label: "Sobretecho solo en el balcón",
+            priceName: PRECIO_BALCON,
+          },
+          {
+            id: "completo",
+            img: `${DIR}/balcon%20con%20techocompleto.png`,
+            label: "Sobretecho completo: balcón y toda la unidad",
+            aConsultar: true,
+          },
         ],
       },
     ],
@@ -307,18 +339,56 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
 /** Modelos que admiten balcón lateral (superficie mayor a 18 m²). */
 export const BALCON_LATERAL_MODELOS: readonly string[] = ["20ft", "40ft"];
 
-/** Opciones "a consultar" elegidas, en orden de catálogo: no suman al precio
- *  estimado y se cotizan aparte. */
-export function getOpcionesAConsultar(materiales: MaterialesSeleccion): { key: string; nombre: string }[] {
-  return MATERIAL_CATEGORY_GROUPS.flatMap((g) => g.selectors).flatMap((sel) => {
-    if (!sel.aConsultar) return [];
+export type ExtraElegido = { key: string; nombre: string } & (
+  | { tipo: "precio"; priceName: string }
+  | { tipo: "a-consultar" }
+);
+
+/** Extras elegidos (con precio o a consultar), en orden de catálogo.
+ *
+ *  El balcón va junto con su techo: con sobretecho solo en el balcón es un
+ *  extra con precio (incluye deck y barandas); con sobretecho completo, o sin
+ *  techo, el balcón entero pasa a consultar. Un techo sin balcón no cuenta. */
+export function getExtrasElegidos(materiales: MaterialesSeleccion): ExtraElegido[] {
+  const seen = new Set<string>();
+  return MATERIAL_CATEGORY_GROUPS.flatMap((g) => g.selectors).flatMap((sel): ExtraElegido[] => {
+    if (seen.has(sel.key)) return [];
+    seen.add(sel.key);
     const found = findMaterialOption(sel.key, materiales[sel.key] ?? null);
-    return found ? [{ key: sel.key, nombre: found.option.label }] : [];
+    if (!found) return [];
+    const { option, selector } = found;
+
+    if (sel.key === "techoBalcon") return [];
+    if (sel.key === "balcon") {
+      const techo = findMaterialOption("techoBalcon", materiales.techoBalcon ?? null)?.option;
+      if (techo?.priceName) {
+        return [{ key: "balcon", nombre: `${option.label} de 2 m con sobretecho, deck y barandas`, tipo: "precio", priceName: techo.priceName }];
+      }
+      return [
+        { key: "balcon", nombre: option.label, tipo: "a-consultar" },
+        ...(techo ? [{ key: "techoBalcon", nombre: techo.label, tipo: "a-consultar" as const }] : []),
+      ];
+    }
+
+    if (option.aConsultar ?? selector.aConsultar) return [{ key: sel.key, nombre: option.label, tipo: "a-consultar" }];
+    const priceName = option.priceName ?? selector.priceName;
+    if (!priceName) return [];
+    // Un selector de una sola opción (el inodoro) ya se llama como el extra.
+    const nombre = selector.options.length === 1 ? priceName : `${priceName}: ${option.label}`;
+    return [{ key: sel.key, nombre, tipo: "precio", priceName }];
   });
 }
 
-export function esSelectorAConsultar(key: string): boolean {
-  return MATERIAL_CATEGORY_GROUPS.some((g) => g.selectors.some((s) => s.key === key && s.aConsultar));
+/** Opciones "a consultar" elegidas, en orden de catálogo: no suman al precio
+ *  estimado y se cotizan aparte. */
+export function getOpcionesAConsultar(materiales: MaterialesSeleccion): { key: string; nombre: string }[] {
+  return getExtrasElegidos(materiales).flatMap((e) => (e.tipo === "a-consultar" ? [{ key: e.key, nombre: e.nombre }] : []));
+}
+
+/** Si lo elegido en este selector se cotiza aparte (depende de la selección:
+ *  el balcón solo es a consultar con sobretecho completo). */
+export function esSelectorAConsultar(key: string, materiales: MaterialesSeleccion): boolean {
+  return getOpcionesAConsultar(materiales).some((o) => o.key === key);
 }
 
 export function getDefaultMateriales(): MaterialesSeleccion {

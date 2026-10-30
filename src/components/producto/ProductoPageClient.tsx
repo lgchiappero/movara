@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { PRODUCTO_EXTRAS } from "@/data/producto";
+import { getProductoExtras } from "@/data/producto";
+import { LEYENDA_PRECIOS, type PreciosConfig } from "@/data/precios-extras";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import EspecificacionesCompletas from "@/components/producto/EspecificacionesCompletas";
 
-export default function ProductoPageClient() {
+export default function ProductoPageClient({ precios }: { precios?: PreciosConfig | null }) {
   const waHref = getWhatsAppUrl(
     "Hola MOVARA! Quiero más información sobre las especificaciones técnicas del MOVARA Flex.",
   );
@@ -68,7 +69,7 @@ export default function ProductoPageClient() {
                 Configurá tu MOVARA según tu proyecto y tu presupuesto.
               </p>
               <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {PRODUCTO_EXTRAS.map((e) => (
+                {getProductoExtras(precios).map((e) => (
                   <div
                     key={e.texto}
                     className="flex items-center justify-between gap-4 py-3.5 px-4 border border-white/10 rounded-xl"
@@ -78,6 +79,7 @@ export default function ProductoPageClient() {
                   </div>
                 ))}
               </div>
+              <p className="mt-3 text-xs text-stone-500">{LEYENDA_PRECIOS}</p>
             </div>
           </div>
         </motion.section>

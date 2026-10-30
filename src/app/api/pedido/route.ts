@@ -7,7 +7,10 @@ import { modeloLabelsEs } from "@/lib/pdf/pedido-labels-es";
 import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
 import { generateNumeroConsulta } from "@/lib/pedido/numero-consulta";
 import { resumenError } from "@/lib/log-seguro";
-import { getOpcionesAConsultar } from "@/data/material-catalog";
+import { calcularPrecio, toDesgloseEstimado } from "@/lib/precio-configurador";
+import type { PreciosConfig } from "@/data/precios-extras";
+import { client } from "@/sanity/lib/client";
+import { SITE_CONFIG_QUERY } from "@/sanity/lib/queries";
 import { detalleConsultaHtml } from "@/lib/email/nueva-consulta";
 import { conSavepoint, registrarContacto } from "@/lib/clientes/servicio";
 import { origenDelBody } from "@/lib/origen-visita/clasificar";
@@ -38,6 +41,16 @@ async function sendNotificationEmail(clienteNombre: string, modelo: string, nume
   if (!resultado.ok) console.error(`[pedido] ${numeroConsulta} Falló el email a MOVARA: ${resultado.error}`);
 }
 
+/** Precios de Sanity; si no responde, el cálculo usa el fallback del código. */
+async function getPrecios(): Promise<PreciosConfig | null> {
+  try {
+    return await client.fetch<PreciosConfig | null>(SITE_CONFIG_QUERY);
+  } catch (err) {
+    console.error(`[pedido] No se pudieron leer los precios de Sanity: ${resumenError(err)}`);
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   const ip = getClientIP(req);
   const { allowed } = checkRateLimit(ip);
@@ -57,6 +70,9 @@ export async function POST(req: NextRequest) {
 
     const data = parsed.data;
     const origen = origenDelBody((body as { origen?: unknown } | null)?.origen);
+    // El desglose se calcula acá, no se toma del navegador: es la foto de los
+    // precios del día que muestran después los PDFs.
+    const precio = calcularPrecio({ modelo: data.modelo, materiales: data.materiales, precios: await getPrecios() });
 
     const { numeroConsulta, tokenSeguimiento } = await db.$transaction(async (tx) => {
       const numero = await generateNumeroConsulta(tx);
@@ -81,7 +97,8 @@ export async function POST(req: NextRequest) {
           materiales: data.materiales,
           upgrades: data.upgrades,
           notasConfiguracion: data.notasConfiguracion,
-          precioEstimado: data.precioEstimado,
+          precioEstimado: precio.total,
+          desgloseEstimado: toDesgloseEstimado(precio),
           numeroConsulta: numero,
         },
         select: { id: true, tokenSeguimiento: true },
@@ -110,7 +127,7 @@ export async function POST(req: NextRequest) {
       return { numeroConsulta: numero, tokenSeguimiento: creado.tokenSeguimiento };
     });
 
-    const aCotizar = getOpcionesAConsultar(data.materiales).map((o) => o.nombre);
+    const aCotizar = precio.aConsultar.map((o) => o.nombre);
     await sendNotificationEmail(
       data.clienteNombre,
       modeloLabelsEs[data.modelo],

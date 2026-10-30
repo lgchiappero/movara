@@ -6,7 +6,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { PROVINCIAS_AR } from "@/data/provincias";
 import { MOVARA_MODELS, FINALIDADES, type ModeloKey, type FinalidadKey } from "@/data/configurador-catalog";
-import { BALCON_LATERAL_MODELOS, getOpcionesAConsultar } from "@/data/material-catalog";
+import { BALCON_LATERAL_MODELOS } from "@/data/material-catalog";
+import { resolvePrecioExtra, formatUSD, A_CONSULTAR, LEYENDA_PRECIOS, PRECIO_BALCON, type PreciosConfig } from "@/data/precios-extras";
+import { calcularPrecio, type PrecioResumen } from "@/lib/precio-configurador";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { trackContact, trackInitiateCheckout, trackLead } from "@/lib/meta-pixel";
 import {
@@ -15,10 +17,9 @@ import {
   MATERIAL_CATEGORY_GROUPS,
   getDefaultMateriales,
   getMaterialLabel,
-  findMaterialOption,
   type MaterialesSeleccion,
 } from "./StepMateriales";
-import { PrecioPanel, AConsultar, type PrecioResumen } from "./PrecioPanel";
+import { PrecioPanel, Desglose } from "./PrecioPanel";
 import {
   validateField,
   particularSchema,
@@ -54,28 +55,11 @@ export type ConfiguradorPageData = {
   resultado?: { title?: string | null; waButtonText?: string | null; trustText?: string | null } | null;
 };
 
-export type PreciosConfig = {
-  precioBaseM2?: number | null;
-  precioAdicionalDefault?: number | null;
-  preciosExtras?: { nombre?: string | null; precio?: number | null }[] | null;
-};
-
-const DEFAULT_PRECIO_BASE_M2 = 680;
-const DEFAULT_PRECIO_ADICIONAL = 500;
+export type { PreciosConfig };
 
 // ─────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────
-
-/** Precio de una franja con costo adicional: el que esté cargado en Sanity
- * bajo ese nombre, o `precioAdicionalDefault` si no tiene uno propio. */
-function resolvePremiumPrice(priceName: string, precios?: PreciosConfig | null): number {
-  return (
-    precios?.preciosExtras?.find((e) => e.nombre === priceName)?.precio ??
-    precios?.precioAdicionalDefault ??
-    DEFAULT_PRECIO_ADICIONAL
-  );
-}
 
 // Único sistema de agua caliente: viene incluido con el baño.
 const TIPO_AGUA = "calefon-electrico";
@@ -88,35 +72,7 @@ const LABELS_LAVA: Record<TipoLavarropas, string> = {
   externo: "espacio externo con desagüe",
 };
 
-export function calcularPrecio({
-  modelo,
-  materiales,
-  precios,
-}: {
-  modelo: ModeloKey | null;
-  materiales: MaterialesSeleccion;
-  precios?: PreciosConfig | null;
-}): PrecioResumen {
-  const precioBaseM2 = precios?.precioBaseM2 ?? DEFAULT_PRECIO_BASE_M2;
-
-  const m = modelo ? MOVARA_MODELS.find((x) => x.key === modelo) : null;
-  const base = m ? m.superficie * precioBaseM2 : 0;
-
-  const adicionales = Object.entries(materiales).flatMap(([key, id]) => {
-    const found = findMaterialOption(key, id);
-    if (!found?.selector.priceName) return [];
-    return [
-      {
-        key,
-        nombre: `${found.selector.priceName}: ${found.option.label}`,
-        precio: resolvePremiumPrice(found.selector.priceName, precios),
-      },
-    ];
-  });
-
-  const total = base + adicionales.reduce((sum, a) => sum + a.precio, 0);
-  return { base, adicionales, total, aConsultar: getOpcionesAConsultar(materiales) };
-}
+export { calcularPrecio };
 
 function buildWAMessage(params: {
   modelo: ModeloKey;
@@ -135,6 +91,7 @@ function buildWAMessage(params: {
   telefono: string;
   email: string;
   materiales: MaterialesSeleccion;
+  resumen: PrecioResumen;
 }): string {
   const m = MOVARA_MODELS.find((x) => x.key === params.modelo)!;
   const f = FINALIDADES.find((x) => x.key === params.finalidad)!;
@@ -163,12 +120,11 @@ function buildWAMessage(params: {
     `- Ventanas: ${getMaterialLabel("ventanas", params.materiales.ventanas)}`,
   ].join("\n");
 
-  const premiumNames = Object.entries(params.materiales).flatMap(([key, id]) => {
-    const found = findMaterialOption(key, id);
-    return found?.selector.priceName ? [`${found.selector.priceName}: ${found.option.label}`] : [];
-  });
-  const premiumLine = premiumNames.length ? premiumNames.join(", ") : "Ninguna";
-  const aCotizar = getOpcionesAConsultar(params.materiales).map((o) => o.nombre);
+  const { resumen } = params;
+  const extrasLines = resumen.adicionales.length
+    ? resumen.adicionales.map((a) => `- ${a.nombre}: ${formatUSD(a.precio)}`).join("\n")
+    : "Ninguno";
+  const aConsultarLines = resumen.aConsultar.map((o) => `- ${o.nombre}: ${A_CONSULTAR}`).join("\n");
 
   const msg =
     `Hola MOVARA! 👋\n\n` +
@@ -181,8 +137,11 @@ function buildWAMessage(params: {
     `📍 Ubicación: ${loc || "(no especificada)"}\n` +
     `🏠 Configuración: ${params.habitaciones} hab., ${cocinaTxt}, ${banoTxt}, ${lavaTxt}\n` +
     `\n🎨 Materiales elegidos:\n${materialesLines}\n\n` +
-    `⭐ Opciones premium a cotizar:\n${premiumLine}\n\n` +
-    (aCotizar.length ? `🏗️ Para cotizar en el presupuesto:\n${aCotizar.join(", ")}\n\n` : "") +
+    `⭐ Extras:\n${extrasLines}\n\n` +
+    (aConsultarLines ? `🏗️ ${A_CONSULTAR}:\n${aConsultarLines}\n\n` : "") +
+    `💰 Precio estimado: ${formatUSD(resumen.total)}\n` +
+    (resumen.aConsultar.length ? `(sin lo que es ${A_CONSULTAR.toLowerCase()})\n` : "") +
+    `(${LEYENDA_PRECIOS})\n\n` +
     `Quedo a la espera de su presupuesto. Gracias!`;
 
   return sanitizarMensaje(msg, 2200);
@@ -270,7 +229,7 @@ export default function ConfiguradorMovara({
     setMateriales((prev) => ({ ...prev, [key]: nullable && prev[key] === id ? null : id }));
   }
 
-  const priceFor = (priceName: string) => resolvePremiumPrice(priceName, precios);
+  const priceFor = (priceName: string) => resolvePrecioExtra(priceName, precios);
 
   // Paso 5
   const [tipoCliente, setTipoCliente] = useState<TipoCliente>("particular");
@@ -388,6 +347,7 @@ export default function ConfiguradorMovara({
         telefono,
         email,
         materiales,
+        resumen: precioResumen,
       });
       setWaMessage(msg);
       setShowResult(true);
@@ -449,7 +409,7 @@ export default function ConfiguradorMovara({
               tipoCocina={tipoCocina}
               incluyeBano={incluyeBano}
               lavarropas={lavarropas}
-              aConsultar={precioResumen.aConsultar}
+              resumen={precioResumen}
               waMessage={waMessage}
               setWaMessage={setWaMessage}
               onBack={goBack}
@@ -946,13 +906,15 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
           <Field label="¿Querés balcón?">
             <ToggleGroup value={materiales.balcon ?? "no"} onChange={(v) => onSelectBalcon(v === "no" ? null : v)} options={balconOpts} />
             <p className="text-xs text-stone-400 mt-1.5">
-              Precio a consultar: lo cotizamos en tu presupuesto.
+              Balcón de 2 m con deck y barandas. Con sobretecho solo en el balcón: + {formatUSD(priceFor(PRECIO_BALCON))}. Con sobretecho
+              completo: precio a consultar. {LEYENDA_PRECIOS}
               {!lateralDisponible && " El balcón lateral está disponible para Flex 38 y Flex 77."}
             </p>
           </Field>
           {materiales.balcon && (
             <SelectorBlock
-              selector={{ ...techoSelector, label: "Techo" }}
+              // Con balcón el techo es obligatorio: no se puede deseleccionar.
+              selector={{ ...techoSelector, label: "Techo", nullable: false }}
               selectedId={materiales.techoBalcon ?? null}
               onSelect={(id) => onSelectMaterial("techoBalcon", id)}
               priceFor={priceFor}
@@ -1190,7 +1152,7 @@ export function StepDatos({
 // Result screen — Paso 7
 // ─────────────────────────────────────────────────────────
 
-function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, incluyeCocina, tipoCocina, incluyeBano, lavarropas, aConsultar, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText, numeroConsulta, tokenSeguimiento, enviandoPedido, errorPedido, onRetry }: {
+function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, incluyeCocina, tipoCocina, incluyeBano, lavarropas, resumen, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText, numeroConsulta, tokenSeguimiento, enviandoPedido, errorPedido, onRetry }: {
   modelo: ModeloKey;
   finalidad: FinalidadKey;
   localidad: string;
@@ -1200,7 +1162,7 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, i
   tipoCocina: TipoCocina;
   incluyeBano: boolean;
   lavarropas: TipoLavarropas;
-  aConsultar: PrecioResumen["aConsultar"];
+  resumen: PrecioResumen;
   waMessage: string;
   setWaMessage: (v: string) => void;
   onBack: () => void;
@@ -1271,11 +1233,13 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, i
       {/* Price */}
       <div className="bg-[#2F2F2F] rounded-2xl p-6 text-center">
         <p className="text-xs uppercase tracking-widest text-stone-500 mb-2">Presupuesto</p>
-        <p className="text-xl font-bold text-white leading-snug">El precio depende de tu configuración</p>
-        <p className="text-xs text-stone-500 mt-2">
-          Precio estimado de la unidad terminada, llave en mano. El traslado hasta tu terreno se cotiza según tu ubicación.
+        <p className="text-xl font-bold text-white leading-snug">
+          Precio estimado: <span className="tabular-nums">{formatUSD(resumen.total)}</span>
         </p>
-        <AConsultar items={aConsultar} className="mt-4 pt-4 border-t border-white/10 space-y-1 text-xs text-sage-300" />
+        <p className="text-xs text-stone-500 mt-2">
+          Precio estimado de la unidad terminada, llave en mano. {LEYENDA_PRECIOS} El traslado hasta tu terreno se cotiza según tu ubicación.
+        </p>
+        <Desglose resumen={resumen} colors={{ text: "#d6d3d1" }} className="mt-4 pt-4 border-t border-white/10 text-left" />
       </div>
 
       {/* WA message editor */}

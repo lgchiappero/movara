@@ -11,6 +11,7 @@ import {
   findMaterialOption,
   getStoredMaterialLabel,
   getMaterialesAnteriores,
+  esSelectorAConsultar,
 } from "@/data/material-catalog";
 import { etiquetaEstadoPedido, ESTADO_PEDIDO_CANCELADO } from "@/lib/pedido/estado-pedido";
 import CancelarPedidoSection from "@/components/admin/CancelarPedidoSection";
@@ -275,7 +276,7 @@ function MaterialesConImagenes({ materiales }: { materiales: Record<string, stri
           seenKeys.add(selector.key);
           const raw = materiales[selector.key] ?? null;
           const found = findMaterialOption(selector.key, raw);
-          const aCotizar = !!selector.aConsultar;
+          const aCotizar = esSelectorAConsultar(selector.key, materiales);
           if (found) return [{ key: selector.key, img: found.option.img, label: found.option.label, imageFit: found.selector.imageFit, aCotizar }];
           // Opción retirada del catálogo o texto libre del admin: sin foto,
           // pero se muestra igual para que el pedido no pierda el dato.
@@ -306,7 +307,7 @@ function MaterialesConImagenes({ materiales }: { materiales: Record<string, stri
                   <p className="text-xs text-stone-600 px-2 py-1.5 truncate" title={card.label}>{card.label}</p>
                   {card.aCotizar && (
                     <p className="mx-2 mb-2 inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#faeeda] text-[#854F0B]">
-                      A cotizar
+                      A consultar
                     </p>
                   )}
                 </div>

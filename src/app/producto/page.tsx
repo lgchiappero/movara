@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
 import ProductoPageClient from "@/components/producto/ProductoPageClient";
+import { client } from "@/sanity/lib/client";
+import { SITE_CONFIG_QUERY } from "@/sanity/lib/queries";
+import type { PreciosConfig } from "@/data/precios-extras";
+
+// Los precios de los extras vienen de Sanity: estática, revalidada cada 1h
+// (igual que el configurador).
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Ficha técnica MOVARA Flex — MOVARA",
@@ -7,6 +14,14 @@ export const metadata: Metadata = {
     "Especificaciones técnicas completas del MOVARA Flex: estructura de acero galvanizado, aislación, instalaciones y certificaciones internacionales.",
 };
 
-export default function ProductoPage() {
-  return <ProductoPageClient />;
+async function getPrecios(): Promise<PreciosConfig | null> {
+  try {
+    return await client.fetch<PreciosConfig | null>(SITE_CONFIG_QUERY);
+  } catch {
+    return null;
+  }
+}
+
+export default async function ProductoPage() {
+  return <ProductoPageClient precios={await getPrecios()} />;
 }

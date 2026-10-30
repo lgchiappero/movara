@@ -3,6 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { db } from "@/lib/db";
 import { PedidoDocumentCliente } from "@/lib/pdf/PedidoDocumentCliente";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
+import { parseDesgloseEstimado } from "@/lib/precio-configurador";
 
 export async function GET(
   _req: NextRequest,
@@ -32,6 +33,7 @@ export async function GET(
       precioFinal: config.precioFinal,
       anticipo: config.anticipo,
       saldoPendiente: config.saldoPendiente,
+      desglose: parseDesgloseEstimado(config.desgloseEstimado),
     })
   );
 

@@ -33,20 +33,30 @@ function grupoEn(items: ReturnType<typeof buildSupplierSpecItems>, title: string
   return g;
 }
 
-describe("PDF del cliente — balcón y opciones a cotizar", () => {
-  it("el balcón, el techo y el muro cortina figuran como A cotizar", () => {
+describe("PDF del cliente — balcón y opciones a consultar", () => {
+  it("con sobretecho completo, el balcón, el techo, la bañera y el muro cortina figuran como A consultar", () => {
     const items = buildPedidoNarrativeEs({
       ...base,
-      materiales: { balcon: "lateral", techoBalcon: "completo", muroVidrio: "vidrio-01" },
+      materiales: { balcon: "lateral", techoBalcon: "completo", muroVidrio: "vidrio-01", banera: "banera-01" },
     });
     expect(grupoEs(items, "Balcón").bullets).toEqual([
-      "Balcón: Balcón lateral — A cotizar",
-      "Techo del balcón: Sobretecho completo: balcón y toda la unidad — A cotizar",
+      "Balcón: Balcón lateral — A consultar",
+      "Techo del balcón: Sobretecho completo: balcón y toda la unidad — A consultar",
     ]);
-    expect(grupoEs(items, "Extras exteriores").bullets).toContain("Muro cortina de vidrio: Muro cortina de vidrio — A cotizar");
+    expect(grupoEs(items, "Extras exteriores").bullets).toContain("Muro cortina de vidrio: Muro cortina de vidrio — A consultar");
+    expect(grupoEs(items, "Baño").bullets).toContain("Bañera: Bañera — opción 1 — A consultar");
   });
 
-  it("sin balcón no dice A cotizar", () => {
+  it("con sobretecho solo en el balcón tiene precio: no dice A consultar; el inodoro inteligente figura en el baño", () => {
+    const items = buildPedidoNarrativeEs({
+      ...base,
+      materiales: { balcon: "frontal", techoBalcon: "solo-balcon", inodoro: "inteligente-bidet" },
+    });
+    expect(grupoEs(items, "Balcón").bullets).toEqual(["Balcón: Balcón frontal", "Techo del balcón: Sobretecho solo en el balcón"]);
+    expect(grupoEs(items, "Baño").bullets).toContain("Inodoro: Inodoro inteligente con bidet");
+  });
+
+  it("sin balcón no dice A consultar", () => {
     const items = buildPedidoNarrativeEs({ ...base, materiales: {} });
     expect(grupoEs(items, "Balcón").bullets).toEqual(["Balcón: no incluye", "Techo del balcón: no incluye"]);
   });
@@ -86,12 +96,21 @@ describe("PDFs sin zona climática", () => {
 });
 
 describe("PDF del proveedor — balcón, notas y pedidos viejos", () => {
-  it("el balcón figura como To quote (A cotizar)", () => {
-    const items = buildSupplierSpecItems({ ...base, materiales: { balcon: "frontal", techoBalcon: "solo-balcon" } });
+  it("con sobretecho completo el balcón figura como To quote (A consultar)", () => {
+    const items = buildSupplierSpecItems({ ...base, materiales: { balcon: "frontal", techoBalcon: "completo" } });
     expect(grupoEn(items, "Balcón").rows).toEqual([
-      { label: "Balcony", value: "Balcón frontal — To quote (A cotizar)" },
-      { label: "Balcony roof", value: "Sobretecho solo en el balcón — To quote (A cotizar)" },
+      { label: "Balcony", value: "Balcón frontal — To quote (A consultar)" },
+      { label: "Balcony roof", value: "Sobretecho completo: balcón y toda la unidad — To quote (A consultar)" },
     ]);
+  });
+
+  it("con sobretecho solo en el balcón no es To quote, y el inodoro inteligente figura sin precio", () => {
+    const items = buildSupplierSpecItems({ ...base, materiales: { balcon: "frontal", techoBalcon: "solo-balcon", inodoro: "inteligente-bidet" } });
+    expect(grupoEn(items, "Balcón").rows).toEqual([
+      { label: "Balcony", value: "Balcón frontal" },
+      { label: "Balcony roof", value: "Sobretecho solo en el balcón" },
+    ]);
+    expect(grupoEn(items, "Baño").rows).toContainEqual({ label: "Toilet", value: "Inodoro inteligente con bidet" });
   });
 
   it("sin balcón: Not included", () => {

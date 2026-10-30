@@ -75,6 +75,7 @@ export default defineConfig({
         "src/app/terminos/**/*.tsx",
         "src/app/api/webhooks/**/*.ts",
         "src/lib/whatsapp.ts",
+        "src/lib/precio-configurador.ts",
         "src/lib/validators/configurador.ts",
         "src/app/admin/**/*.{ts,tsx}",
         "src/app/api/admin/**/*.ts",

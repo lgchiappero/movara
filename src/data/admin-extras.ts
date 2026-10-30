@@ -4,13 +4,13 @@
 // Se guardan como strings sueltos en ConfiguracionPedido.upgrades — ver
 // getStoredUpgradeLabel() para cómo se muestran en la ficha y los PDFs.
 export const ADMIN_EXTRAS = [
-  { key: "paneles-premium", label: "Paneles premium" },
-  { key: "piso-spc", label: "Piso SPC" },
+  { key: "paneles-premium", label: "Panel metálico labrado" },
+  { key: "piso-spc", label: "Piso SPC 4 mm" },
   { key: "banera", label: "Bañera" },
   { key: "cocina-ampliada", label: "Cocina ampliada" },
   { key: "muro-vidrio", label: "Muro de vidrio" },
   { key: "galeria-sobretecho", label: "Galería con sobretecho" },
-  { key: "inodoro-inteligente", label: "Inodoro inteligente" },
+  { key: "inodoro-inteligente", label: "Inodoro inteligente con bidet" },
   { key: "sobretecho", label: "Sobretecho" },
 ] as const;
 

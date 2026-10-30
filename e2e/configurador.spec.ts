@@ -163,7 +163,7 @@ test.describe("Configurador — preselección vía ?modelo=", () => {
 });
 
 test.describe("Configurador — balcón a consultar y notas (6 pasos)", () => {
-  test("elige balcón y techo, deja notas, se guarda y el admin lo ve como A cotizar", async ({ page }) => {
+  test("elige balcón con sobretecho completo, deja notas, se guarda y el admin lo ve como A consultar", async ({ page }) => {
     const cfg = await abrirConfigurador(page);
     await cfg.locator("button").filter({ hasText: "MOVARA Flex 38" }).first().click();
     await cfg.getByRole("button", { name: "Siguiente" }).click();
@@ -179,7 +179,7 @@ test.describe("Configurador — balcón a consultar y notas (6 pasos)", () => {
     await expect(cfg.getByText("Techo", { exact: true })).toHaveCount(0);
     await cfg.getByRole("button", { name: "Lateral", exact: true }).click();
     await cfg.getByRole("button", { name: /Sobretecho completo: balcón y toda la unidad/ }).click();
-    await expect(cfg.getByText("+ Balcón lateral: lo cotizamos en tu presupuesto").first()).toBeVisible();
+    await expect(cfg.getByText("+ Balcón lateral: A consultar").first()).toBeVisible();
     await expect(cfg.getByText(/Galería con sobretecho/)).toHaveCount(0);
 
     const notas = cfg.getByLabel(/¿Algo más que necesitemos saber\?/);
@@ -196,7 +196,7 @@ test.describe("Configurador — balcón a consultar y notas (6 pasos)", () => {
 
     // Paso 6: resultado
     await expect(page.getByText("Paso 6 de 6 — Tu configuración")).toBeVisible();
-    await expect(page.getByText("+ Sobretecho completo: balcón y toda la unidad: lo cotizamos en tu presupuesto")).toBeVisible();
+    await expect(page.getByText("+ Sobretecho completo: balcón y toda la unidad").first()).toBeVisible();
     await expect(page.getByText(/El traslado hasta tu terreno se cotiza según tu ubicación/)).toBeVisible();
     await expect(page.getByText(/transporte e instalación/)).toHaveCount(0);
     await expect(page.getByText("Llanura Pampeana")).toHaveCount(0);
@@ -205,14 +205,14 @@ test.describe("Configurador — balcón a consultar y notas (6 pasos)", () => {
     await expect(registro).toBeVisible({ timeout: 20_000 });
     const numeroConsulta = (await registro.locator("span").textContent())!.trim();
 
-    // Admin: la ficha muestra el balcón como A cotizar y las notas
+    // Admin: la ficha muestra el balcón como A consultar y las notas
     await loginAsAdmin(page);
     await page.goto("/admin/configuraciones");
     const href = await page.locator("tr", { hasText: numeroConsulta }).getByRole("link", { name: "Ver detalle" }).getAttribute("href");
     await page.goto(href!);
     await expect(page.getByText("Balcón lateral", { exact: true })).toBeVisible();
     await expect(page.getByText("Sobretecho completo: balcón y toda la unidad", { exact: true })).toBeVisible();
-    await expect(page.getByText("A cotizar", { exact: true })).toHaveCount(2);
+    await expect(page.getByText("A consultar", { exact: true })).toHaveCount(2);
     await expect(page.locator("textarea").filter({ hasText: "Acceso con rampa" })).toHaveValue(
       "Acceso con rampa\nTerreno orientado al norte"
     );
@@ -228,6 +228,54 @@ test.describe("Configurador — balcón a consultar y notas (6 pasos)", () => {
     await cfg.getByRole("button", { name: "Siguiente" }).click();
     await expect(cfg.getByRole("button", { name: "Frontal", exact: true })).toBeVisible();
     await expect(cfg.getByRole("button", { name: "Lateral", exact: true })).toHaveCount(0);
+  });
+});
+
+test.describe("Configurador — precios de los extras", () => {
+  test("los 4 extras con precio suman base + USD 5.020 y el pedido guarda el desglose para el PDF", async ({ page }) => {
+    const cfg = await abrirConfigurador(page);
+    await llegarAlPaso4(cfg);
+    await cfg.getByRole("button", { name: "Frontal", exact: true }).click();
+    await expect(cfg.getByRole("button", { name: /Sobretecho solo en el balcón/ })).toContainText("+ USD 3.100");
+    await cfg.getByRole("button", { name: /Gris con líneas/ }).click();
+    await cfg.getByRole("button", { name: /^8917/ }).click();
+    const inodoro = cfg.getByRole("button", { name: /Inodoro inteligente con bidet/ });
+    await expect(inodoro).toContainText("+ USD 580");
+    await inodoro.click();
+    // 38 m² × 680 = 25.840 + 5.020
+    await expect(cfg.getByText("USD 30.860").first()).toBeVisible();
+    await expect(cfg.getByText(/Precios en USD, IVA incluido/).first()).toBeVisible();
+
+    await cfg.getByRole("button", { name: "Siguiente" }).click();
+    await cfg.getByPlaceholder("Ej: Juan García").fill("Playwright Extras");
+    await cfg.getByPlaceholder("Ej: +54 9 11 1234-5678").fill("+5491112345678");
+    await cfg.getByPlaceholder("tu@email.com").fill("extras@example.com");
+    await cfg.getByRole("button", { name: "Ver mi configuración" }).click();
+
+    await expect(page.getByText("Paso 6 de 6 — Tu configuración")).toBeVisible();
+    await expect(page.getByText("+ Inodoro inteligente con bidet", { exact: true })).toBeVisible();
+    const msg = await page.locator("textarea").first().inputValue();
+    expect(msg).toContain("- Balcón frontal de 2 m con sobretecho, deck y barandas: USD 3.100");
+    expect(msg).toContain("💰 Precio estimado: USD 30.860");
+    const registro = page.getByText(/Tu consulta fue registrada con el código/);
+    await expect(registro).toBeVisible({ timeout: 20_000 });
+    const numeroConsulta = (await registro.locator("span").textContent())!.trim();
+
+    await loginAsAdmin(page);
+    await page.goto("/admin/configuraciones");
+    const href = await page.locator("tr", { hasText: numeroConsulta }).getByRole("link", { name: "Ver detalle" }).getAttribute("href");
+    const pdf = await page.request.get(`/api${href}/pdf-cliente`);
+    expect(pdf.status()).toBe(200);
+    expect(pdf.headers()["content-type"]).toBe("application/pdf");
+  });
+
+  test("la ficha técnica muestra los mismos precios y la leyenda de IVA", async ({ page }) => {
+    await page.goto("/producto");
+    const extras = page.getByRole("heading", { name: "Extras y personalización" }).locator("..");
+    await expect(extras.getByText("Balcón de 2 m con sobretecho, deck y barandas").locator("..")).toContainText("+USD 3.100");
+    await expect(extras.getByText("Inodoro inteligente con bidet").locator("..")).toContainText("+USD 580");
+    await expect(extras.getByText("Techo a dos aguas").locator("..")).toContainText("A consultar");
+    await expect(extras.getByText("Precios en USD, IVA incluido.")).toBeVisible();
   });
 });
 

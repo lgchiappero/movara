@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockCreate, mockFindMany, mockSend, mockRegistrar } = vi.hoisted(() => ({
+const { mockCreate, mockFindMany, mockSend, mockRegistrar, mockSanityFetch } = vi.hoisted(() => ({
+  mockSanityFetch: vi.fn().mockResolvedValue(null),
   mockRegistrar: vi.fn().mockResolvedValue({ clienteId: "c1", leadId: "l1" }),
   mockCreate: vi.fn(),
   mockFindMany: vi.fn().mockResolvedValue([]),
@@ -22,6 +23,8 @@ vi.mock("@/lib/clientes/servicio", () => ({
   conSavepoint: (_tx: unknown, _nombre: string, fn: () => Promise<unknown>) => fn(),
   registrarContacto: mockRegistrar,
 }));
+
+vi.mock("@/sanity/lib/client", () => ({ client: { fetch: mockSanityFetch } }));
 
 import { POST } from "../route";
 import { NextRequest } from "next/server";
@@ -157,7 +160,50 @@ describe("POST /api/pedido", () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  it("el aviso por email lista el balcón como A cotizar y las notas escapadas", async () => {
+  it("guarda el precio y el desglose que calcula el servidor, no los que manda el navegador", async () => {
+    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
+    await POST(
+      req(
+        {
+          ...BASE,
+          materiales: { balcon: "frontal", techoBalcon: "solo-balcon", inodoro: "inteligente-bidet", banera: "banera-01" },
+          precioEstimado: 1,
+          desgloseEstimado: { base: 1, adicionales: [], aConsultar: [], total: 1 },
+        },
+        "10.0.0.40"
+      )
+    );
+    const { data } = mockCreate.mock.calls[0][0];
+    expect(data.precioEstimado).toBe(38 * 680 + 3100 + 580);
+    expect(data.desgloseEstimado).toEqual({
+      base: 38 * 680,
+      adicionales: [
+        { nombre: "Inodoro inteligente con bidet", precio: 580 },
+        { nombre: "Balcón frontal de 2 m con sobretecho, deck y barandas", precio: 3100 },
+      ],
+      aConsultar: ["Bañera — opción 1"],
+      total: 38 * 680 + 3100 + 580,
+    });
+  });
+
+  it("usa los precios cargados en Sanity", async () => {
+    mockSanityFetch.mockResolvedValueOnce({ preciosExtras: [{ nombre: "Inodoro inteligente con bidet", precio: 700 }] });
+    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
+    await POST(req({ ...BASE, materiales: { inodoro: "inteligente-bidet" } }, "10.0.0.41"));
+    expect(mockCreate.mock.calls[0][0].data.precioEstimado).toBe(38 * 680 + 700);
+  });
+
+  it("si Sanity no responde, calcula con los precios del código y guarda el pedido igual", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mockSanityFetch.mockRejectedValueOnce(new Error("sanity caído"));
+    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
+    const res = await POST(req({ ...BASE, materiales: { piso: "spc-8917" } }, "10.0.0.42"));
+    expect(res.status).toBe(200);
+    expect(mockCreate.mock.calls[0][0].data.precioEstimado).toBe(38 * 680 + 390);
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("No se pudieron leer los precios de Sanity"));
+  });
+
+  it("el aviso por email lista el balcón con sobretecho completo como A consultar y las notas escapadas", async () => {
     process.env.RESEND_API_KEY = "re_test";
     mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
     await POST(
@@ -167,7 +213,7 @@ describe("POST /api/pedido", () => {
       )
     );
     const html: string = mockSend.mock.calls[0][0].html;
-    expect(html).toContain("Balcón frontal — <strong");
+    expect(html).toContain("Balcón frontal — <strong style=\"color:#854F0B;\">A consultar</strong>");
     expect(html).toContain("Sobretecho completo: balcón y toda la unidad — <strong");
     expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
     expect(html).not.toContain("<img");

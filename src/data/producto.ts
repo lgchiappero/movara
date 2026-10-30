@@ -1,3 +1,14 @@
+import {
+  PRECIO_BALCON,
+  PRECIO_FACHADA,
+  PRECIO_INODORO,
+  PRECIO_PISO_SPC,
+  A_CONSULTAR,
+  formatUSD,
+  resolvePrecioExtra,
+  type PreciosConfig,
+} from "./precios-extras";
+
 export type ProductoResultado = {
   label: string;
   valorLabel: string;
@@ -138,16 +149,28 @@ export const PRODUCTO_SECCIONES: ProductoSeccion[] = [
 
 export type ProductoExtra = {
   texto: string;
-  precio: string;
+  /** Nombre del precio en precios-extras.ts (Sanity o fallback). Sin
+   *  precio: se cotiza aparte ("A consultar"). */
+  precioNombre?: string;
 };
 
+// Los precios salen de la misma fuente que el configurador: no se escriben acá.
 export const PRODUCTO_EXTRAS: ProductoExtra[] = [
-  { texto: "Terraza cubierta 2m con tarima, barandas y techo", precio: "Consultar" },
-  { texto: "Galería perimetral con techo", precio: "Consultar" },
-  { texto: "Techo a dos aguas", precio: "Consultar" },
-  { texto: "Pared de vidrio (muro cortina)", precio: "Consultar" },
-  { texto: "Inodoro inteligente con bidet", precio: "+USD 300" },
-  { texto: "Piso SPC 4mm en lugar de PVC", precio: "+USD 240" },
-  { texto: "Panel de fachada metálico tallado", precio: "+USD 500" },
-  { texto: "Pre-instalación lavarropas", precio: "Consultar" },
+  { texto: "Balcón de 2 m con sobretecho, deck y barandas", precioNombre: PRECIO_BALCON },
+  { texto: "Sobretecho completo (balcón y toda la unidad)" },
+  { texto: "Techo a dos aguas" },
+  { texto: "Pared de vidrio (muro cortina)" },
+  { texto: "Bañera en lugar de ducha" },
+  { texto: "Inodoro inteligente con bidet", precioNombre: PRECIO_INODORO },
+  { texto: "Piso SPC 4 mm en lugar de PVC", precioNombre: PRECIO_PISO_SPC },
+  { texto: "Fachada de panel metálico labrado", precioNombre: PRECIO_FACHADA },
+  { texto: "Pre-instalación lavarropas" },
 ];
+
+/** Extras de la ficha con su precio para mostrar: "+USD 3.100" o "A consultar". */
+export function getProductoExtras(precios?: PreciosConfig | null): { texto: string; precio: string }[] {
+  return PRODUCTO_EXTRAS.map((e) => ({
+    texto: e.texto,
+    precio: e.precioNombre ? `+${formatUSD(resolvePrecioExtra(e.precioNombre, precios))}` : A_CONSULTAR,
+  }));
+}

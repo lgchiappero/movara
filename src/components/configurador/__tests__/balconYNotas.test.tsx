@@ -62,7 +62,7 @@ describe("Configurador — 6 pasos, sin el paso de mejoras", () => {
 });
 
 describe("Configurador — sección Balcón", () => {
-  it("sin balcón no hay techo; al elegir uno aparece el techo con sus fotos y precio a consultar", async () => {
+  it("sin balcón no hay techo; al elegir uno aparece el techo con sus fotos: solo en el balcón + USD 3.100, completo a consultar", async () => {
     const user = userEvent.setup();
     await hastaConfiguracion(user);
     expect(screen.getByText("Paso 4 de 6")).toBeInTheDocument();
@@ -72,7 +72,13 @@ describe("Configurador — sección Balcón", () => {
 
     await user.click(balcon.getByRole("button", { name: "Frontal" }));
     expect(balcon.getByText("Techo")).toBeInTheDocument();
-    expect(balcon.getAllByText("Precio a consultar")).toHaveLength(2);
+    expect(within(balcon.getByRole("button", { name: /Sobretecho solo en el balcón/ })).getByText("+ USD 3.100")).toBeInTheDocument();
+    expect(within(balcon.getByRole("button", { name: /Sobretecho completo/ })).getByText("Precio a consultar")).toBeInTheDocument();
+    expect(balcon.getByText(/Con sobretecho solo en el balcón: \+ USD 3\.100/)).toBeInTheDocument();
+    expect(balcon.getByText(/Precios en USD, IVA incluido\./)).toBeInTheDocument();
+    expect(balcon.getByRole("button", { name: /Sobretecho solo en el balcón/ })).toHaveAttribute("aria-pressed", "true");
+    // Con balcón el techo no se puede sacar.
+    await user.click(balcon.getByRole("button", { name: /Sobretecho solo en el balcón/ }));
     expect(balcon.getByRole("button", { name: /Sobretecho solo en el balcón/ })).toHaveAttribute("aria-pressed", "true");
     expect(balcon.getByAltText("Sobretecho completo: balcón y toda la unidad")).toHaveAttribute("src", expect.stringContaining("balcon%20con%20techocompleto.png"));
 
@@ -80,18 +86,17 @@ describe("Configurador — sección Balcón", () => {
     expect(balcon.queryByText("Techo")).toBeNull();
   });
 
-  it("el balcón no suma al precio estimado: se lista como 'lo cotizamos en tu presupuesto'", async () => {
+  it("con sobretecho completo el balcón no suma al precio estimado: se lista como A consultar", async () => {
     const user = userEvent.setup();
     await hastaConfiguracion(user);
     const precioAntes = screen.getAllByText(/USD [\d.]+/)[0].textContent;
     const balcon = within(seccionBalcon());
     await user.click(balcon.getByRole("button", { name: "Lateral" }));
     await user.click(balcon.getByRole("button", { name: /Sobretecho completo/ }));
-    expect(screen.getAllByText("+ Balcón lateral: lo cotizamos en tu presupuesto").length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText("+ Sobretecho completo: balcón y toda la unidad: lo cotizamos en tu presupuesto").length
-    ).toBeGreaterThan(0);
-    expect(screen.getAllByText(/USD [\d.]+/)[0].textContent).toBe(precioAntes);
+    expect(screen.getAllByText("+ Balcón lateral: A consultar").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("+ Sobretecho completo: balcón y toda la unidad: A consultar").length).toBeGreaterThan(0);
+    // El monto se anima hasta el valor nuevo.
+    await vi.waitFor(() => expect(screen.getAllByText(/USD [\d.]+/)[0].textContent).toBe(precioAntes));
   });
 
   it("en Flex 18 no se ofrece el balcón lateral", async () => {
@@ -110,7 +115,7 @@ describe("Configurador — sección Balcón", () => {
       await user.click(screen.getByRole("button", { name: /Atrás/ }));
     }
     await user.click(await screen.findByRole("button", { name: /MOVARA Flex 18/ }));
-    expect(screen.queryByText(/Balcón lateral: lo cotizamos/)).toBeNull();
+    expect(screen.queryByText(/Balcón lateral de 2 m/)).toBeNull();
   });
 
   it("el muro cortina se muestra sin foto, con descripción y precio a consultar", async () => {
@@ -125,7 +130,7 @@ describe("Configurador — sección Balcón", () => {
 });
 
 describe("Configurador — notas y envío", () => {
-  it("cuenta los caracteres, manda las notas y el balcón al servidor y la pantalla final avisa que se cotiza", async () => {
+  it("cuenta los caracteres, manda las notas y el balcón al servidor y la pantalla final muestra el desglose", async () => {
     const user = userEvent.setup();
     await hastaConfiguracion(user);
     await user.click(within(seccionBalcon()).getByRole("button", { name: "Frontal" }));
@@ -146,15 +151,16 @@ describe("Configurador — notas y envío", () => {
     await user.click(enviar);
 
     expect(await screen.findByText("Paso 6 de 6 — Tu configuración")).toBeInTheDocument();
-    expect(screen.getByText("+ Balcón frontal: lo cotizamos en tu presupuesto")).toBeInTheDocument();
+    expect(screen.getByText("+ Balcón frontal de 2 m con sobretecho, deck y barandas")).toBeInTheDocument();
     expect(screen.queryByText("Mejoras seleccionadas")).toBeNull();
     const mensaje = (screen.getByRole("textbox") as HTMLTextAreaElement).value;
-    expect(mensaje).toContain("Para cotizar en el presupuesto:\nBalcón frontal, Sobretecho solo en el balcón");
+    expect(mensaje).toContain("⭐ Extras:\n- Balcón frontal de 2 m con sobretecho, deck y barandas: USD 3.100");
+    expect(mensaje).not.toContain("A consultar:");
     expect(mensaje).not.toContain("Mejoras a cotizar");
     expect(mensaje).not.toContain("Zona climática");
     expect(screen.queryByText("Llanura Pampeana")).toBeNull();
     expect(
-      screen.getByText("Precio estimado de la unidad terminada, llave en mano. El traslado hasta tu terreno se cotiza según tu ubicación.")
+      screen.getByText("Precio estimado de la unidad terminada, llave en mano. Precios en USD, IVA incluido. El traslado hasta tu terreno se cotiza según tu ubicación.")
     ).toBeInTheDocument();
     expect(screen.queryByText(/transporte e instalación/)).toBeNull();
 
@@ -163,6 +169,96 @@ describe("Configurador — notas y envío", () => {
     expect(body.notasConfiguracion).toBe("Necesito rampa");
     expect(body.materiales).toMatchObject({ balcon: "frontal", techoBalcon: "solo-balcon" });
     expect(body).not.toHaveProperty("upgrades");
+  });
+});
+
+async function hastaResultado(user: User) {
+  await user.click(siguiente());
+  await user.type(await screen.findByPlaceholderText("Ej: Juan García"), "Juan García");
+  await user.type(screen.getByPlaceholderText("Ej: +54 9 11 1234-5678"), "+5491112345678");
+  await user.type(screen.getByPlaceholderText("tu@email.com"), "juan@example.com");
+  const enviar = screen.getByRole("button", { name: "Ver mi configuración" });
+  await vi.waitFor(() => expect(enviar).toBeEnabled());
+  await user.click(enviar);
+  await screen.findByText("Paso 6 de 6 — Tu configuración");
+}
+
+const BASE_FLEX_38 = 38 * 680;
+const usd = (n: number) => `USD ${n.toLocaleString("es-AR")}`;
+
+describe("Configurador — precios de los extras", () => {
+  it("el inodoro inteligente se elige en el baño y suma USD 580", async () => {
+    const user = userEvent.setup();
+    await hastaConfiguracion(user);
+    const inodoro = screen.getByRole("button", { name: /Inodoro inteligente con bidet/ });
+    expect(within(inodoro).getByText("+ USD 580")).toBeInTheDocument();
+    expect(screen.getByText("Inodoro inteligente — costo adicional")).toBeInTheDocument();
+    await user.click(inodoro);
+    expect(inodoro).toHaveAttribute("aria-pressed", "true");
+    await vi.waitFor(() => expect(screen.getAllByText(usd(BASE_FLEX_38 + 580)).length).toBeGreaterThan(0));
+    // Se puede sacar.
+    await user.click(inodoro);
+    await vi.waitFor(() => expect(screen.getAllByText(usd(BASE_FLEX_38)).length).toBeGreaterThan(0));
+  });
+
+  it("los 4 extras con precio: total = base + 5.020, en el desglose, el resumen y el WhatsApp", async () => {
+    const user = userEvent.setup();
+    await hastaConfiguracion(user);
+    await user.click(within(seccionBalcon()).getByRole("button", { name: "Frontal" }));
+    await user.click(screen.getByRole("button", { name: /Gris con líneas/ }));
+    await user.click(screen.getByRole("button", { name: /Inodoro inteligente con bidet/ }));
+    await user.click(screen.getByRole("button", { name: /^8917/ }));
+    await vi.waitFor(() => expect(screen.getAllByText(usd(BASE_FLEX_38 + 5020)).length).toBeGreaterThan(0));
+
+    await hastaResultado(user);
+    expect(screen.getByText(usd(BASE_FLEX_38 + 5020))).toBeInTheDocument();
+    for (const linea of [
+      "+ Panel metálico labrado: Gris con líneas",
+      "+ Piso SPC 4 mm: 8917",
+      "+ Inodoro inteligente con bidet",
+      "+ Balcón frontal de 2 m con sobretecho, deck y barandas",
+    ]) {
+      expect(screen.getByText(linea)).toBeInTheDocument();
+    }
+    const mensaje = (screen.getAllByRole("textbox").at(-1) as HTMLTextAreaElement).value;
+    expect(mensaje).toContain(
+      "⭐ Extras:\n" +
+        "- Panel metálico labrado: Gris con líneas: USD 950\n" +
+        "- Piso SPC 4 mm: 8917: USD 390\n" +
+        "- Inodoro inteligente con bidet: USD 580\n" +
+        "- Balcón frontal de 2 m con sobretecho, deck y barandas: USD 3.100"
+    );
+    expect(mensaje).toContain(`💰 Precio estimado: ${usd(BASE_FLEX_38 + 5020)}\n(Precios en USD, IVA incluido.)`);
+  });
+
+  it("sobretecho completo + bañera + muro de vidrio: total = base, las tres A consultar en el resumen y el WhatsApp", async () => {
+    const user = userEvent.setup();
+    await hastaConfiguracion(user);
+    await user.click(within(seccionBalcon()).getByRole("button", { name: "Frontal" }));
+    await user.click(within(seccionBalcon()).getByRole("button", { name: /Sobretecho completo/ }));
+    // La barra de precio del celular también lista lo elegido: se toman las cards antes.
+    const banera = screen.getByRole("button", { name: /Bañera — opción 1/ });
+    const muro = screen.getByRole("button", { name: /Muro cortina de vidrio/ });
+    expect(within(banera).getByText("Precio a consultar")).toBeInTheDocument();
+    await user.click(banera);
+    await user.click(muro);
+    await vi.waitFor(() => expect(screen.getAllByText(usd(BASE_FLEX_38)).length).toBeGreaterThan(0));
+
+    await hastaResultado(user);
+    // Total y precio base del desglose: son iguales.
+    expect(screen.getAllByText(usd(BASE_FLEX_38))).toHaveLength(2);
+    const resumen = screen.getByText("Presupuesto").parentElement!;
+    expect(within(resumen).getAllByText("A consultar")).toHaveLength(4);
+    const mensaje = (screen.getAllByRole("textbox").at(-1) as HTMLTextAreaElement).value;
+    expect(mensaje).toContain("⭐ Extras:\nNinguno");
+    expect(mensaje).toContain(
+      "🏗️ A consultar:\n" +
+        "- Bañera — opción 1: A consultar\n" +
+        "- Muro cortina de vidrio: A consultar\n" +
+        "- Balcón frontal: A consultar\n" +
+        "- Sobretecho completo: balcón y toda la unidad: A consultar"
+    );
+    expect(mensaje).toContain(`💰 Precio estimado: ${usd(BASE_FLEX_38)}\n(sin lo que es a consultar)`);
   });
 });
 

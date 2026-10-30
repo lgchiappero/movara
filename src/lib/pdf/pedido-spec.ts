@@ -24,6 +24,7 @@ const SELECTOR_LABELS_EN: Record<string, string> = {
   panelesBano: "Bathroom wall panels",
   puertaBano: "Bathroom door",
   banera: "Bathtub",
+  inodoro: "Toilet",
   cocina: "Kitchen",
   mesada: "Countertop",
   cocinaAmpliada: "Extended kitchen",
@@ -35,7 +36,7 @@ const SELECTOR_LABELS_EN: Record<string, string> = {
 };
 
 /** Extras sin precio de lista: MOVARA los presupuesta aparte. */
-const TO_QUOTE = "To quote (A cotizar)";
+const TO_QUOTE = "To quote (A consultar)";
 
 const MODEL_CODES_LOOSE = MODEL_CODES as Record<string, string>;
 const TBD = "To be defined";
@@ -61,7 +62,7 @@ export function buildSupplierSpecItems(data: PedidoRecord): SupplierSpecItem[] {
       if (seenKeys.has(selector.key)) continue;
       seenKeys.add(selector.key);
       const valor = getStoredMaterialLabel(selector.key, materiales[selector.key] ?? null);
-      const toQuote = valor && esSelectorAConsultar(selector.key) ? ` — ${TO_QUOTE}` : "";
+      const toQuote = valor && esSelectorAConsultar(selector.key, materiales) ? ` — ${TO_QUOTE}` : "";
       rows.push({
         label: SELECTOR_LABELS_EN[selector.key] ?? selector.key,
         value: valor ? `${valor}${toQuote}` : "Not included",

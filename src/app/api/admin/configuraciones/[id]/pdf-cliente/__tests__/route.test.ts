@@ -10,6 +10,7 @@ vi.mock("@react-pdf/renderer", () => ({ renderToBuffer: mockRenderToBuffer }));
 vi.mock("@/lib/pdf/PedidoDocumentCliente", () => ({ PedidoDocumentCliente: vi.fn(() => "doc") }));
 
 import { GET } from "../route";
+import { PedidoDocumentCliente } from "@/lib/pdf/PedidoDocumentCliente";
 import { NextRequest } from "next/server";
 
 const CONFIG = {
@@ -41,5 +42,18 @@ describe("GET /api/admin/configuraciones/[id]/pdf-cliente", () => {
     expect(res.headers.get("Content-Disposition")).toBe(
       'attachment; filename="pedido-cliente-juan-garcía.pdf"'
     );
+  });
+
+  it("pasa al PDF el desglose guardado con el pedido, sin recalcularlo", async () => {
+    const desglose = { base: 25840, adicionales: [{ nombre: "Inodoro inteligente con bidet", precio: 580 }], aConsultar: ["Bañera — opción 1"], total: 26420 };
+    mockFindUnique.mockResolvedValueOnce({ ...CONFIG, desgloseEstimado: desglose });
+    await GET(new NextRequest("http://localhost/x"), { params: Promise.resolve({ id: "p1" }) });
+    expect(vi.mocked(PedidoDocumentCliente).mock.calls[0][0].desglose).toEqual(desglose);
+  });
+
+  it("un pedido anterior al desglose va sin desglose", async () => {
+    mockFindUnique.mockResolvedValueOnce({ ...CONFIG, desgloseEstimado: null });
+    await GET(new NextRequest("http://localhost/x"), { params: Promise.resolve({ id: "p1" }) });
+    expect(vi.mocked(PedidoDocumentCliente).mock.calls[0][0].desglose).toBeNull();
   });
 });

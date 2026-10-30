@@ -6,10 +6,10 @@ describe("detalleConsultaHtml (email de nueva consulta)", () => {
     expect(detalleConsultaHtml([], null)).toBe("");
   });
 
-  it("lista cada opción con la etiqueta A cotizar", () => {
+  it("lista cada opción con la etiqueta A consultar", () => {
     const html = detalleConsultaHtml(["Balcón frontal", "Sobretecho solo en el balcón"], null);
     expect(html).toContain("<li>Balcón frontal — <strong");
-    expect(html.match(/A cotizar<\/strong>/g)).toHaveLength(2);
+    expect(html.match(/A consultar<\/strong>/g)).toHaveLength(2);
   });
 
   it("escapa el HTML de las notas y respeta los saltos de línea", () => {

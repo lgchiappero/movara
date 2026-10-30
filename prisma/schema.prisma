@@ -176,7 +176,11 @@ model ConfiguracionPedido {
   razonSocial    String?
   nombreContacto String?
 
-  precioEstimado Float? // snapshot de calcularPrecio() al momento del envío
+  precioEstimado   Float? // snapshot de calcularPrecio() al momento del envío
+  // Desglose del precio estimado al momento del envío (base, extras con
+  // precio y a consultar) — ver DesgloseEstimado en src/lib/precio-configurador.ts.
+  // Null en pedidos anteriores.
+  desgloseEstimado Json?
 
   // ─── Gestión del pedido (post-venta) ──────────────────────
   numeroConsulta        String? // formato MOV-CONSULTA-{AÑO}-{NRO 3 dígitos}, generado al enviar el configurador

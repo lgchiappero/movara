@@ -13,6 +13,7 @@ import {
   type MaterialCategoryGroup,
   type MaterialesSeleccion,
 } from "@/data/material-catalog";
+import { LEYENDA_PRECIOS } from "@/data/precios-extras";
 
 export {
   MATERIAL_CATEGORY_GROUPS,
@@ -94,6 +95,10 @@ function StatusBadge({ isPremium }: { isPremium: boolean }) {
   );
 }
 
+function formatAmount(amount: number | "a-consultar"): string {
+  return amount === "a-consultar" ? "Precio a consultar" : `+ USD ${new Intl.NumberFormat("es-AR").format(amount)}`;
+}
+
 /** Badge de precio sobre la imagen — solo en cards premium. Siempre muestra el
  * precio, esté o no seleccionada; el estado "Agregado" vive en el área de texto. */
 function ImagePriceBadge({ amount }: { amount: number | "a-consultar" }) {
@@ -102,7 +107,7 @@ function ImagePriceBadge({ amount }: { amount: number | "a-consultar" }) {
       className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold shadow whitespace-nowrap"
       style={{ backgroundColor: "#faeeda", color: "#854F0B" }}
     >
-      {amount === "a-consultar" ? "Precio a consultar" : `+ USD ${amount}`}
+      {formatAmount(amount)}
     </span>
   );
 }
@@ -143,7 +148,7 @@ function MaterialCard({
         isPremium && (
           <div className="px-2 pt-2">
             <span className="inline-block px-1.5 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap" style={{ backgroundColor: "#faeeda", color: "#854F0B" }}>
-              {priceAmount === "a-consultar" ? "Precio a consultar" : `+ USD ${priceAmount}`}
+              {formatAmount(priceAmount!)}
             </span>
           </div>
         )
@@ -185,7 +190,12 @@ export function SelectorBlock({
   onSelect: (id: string) => void;
   priceFor: (priceName: string) => number;
 }) {
-  const amount = selector.aConsultar ? ("a-consultar" as const) : selector.priceName ? priceFor(selector.priceName) : undefined;
+  // Cada opción puede tener su propio precio (el techo del balcón).
+  const amountFor = (opt: MaterialOption) => {
+    if (opt.aConsultar ?? selector.aConsultar) return "a-consultar" as const;
+    const priceName = opt.priceName ?? selector.priceName;
+    return priceName ? priceFor(priceName) : undefined;
+  };
   return (
     <div>
       <p className="text-xs font-bold text-stone-500 uppercase tracking-wide mb-2">{selector.label}</p>
@@ -196,7 +206,7 @@ export function SelectorBlock({
             option={opt}
             selected={selectedId === opt.id}
             onSelect={() => onSelect(opt.id)}
-            priceAmount={amount}
+            priceAmount={amountFor(opt)}
             imageFit={selector.imageFit}
             imageBg={selector.imageBg}
           />
@@ -257,7 +267,7 @@ export function MaterialesSection({
         <h3 className="text-xl font-bold text-stone-900">Elegí los materiales de tu MOVARA</h3>
         <p className="text-stone-500 text-sm mt-1">
           Fotos de referencia — el color y la textura final pueden variar levemente según el lote de fabricación. Las opciones marcadas con
-          &quot;+ USD&quot; suman ese monto al precio estimado; las de &quot;Precio a consultar&quot; las cotizamos en tu presupuesto.
+          &quot;+ USD&quot; suman ese monto al precio estimado; las de &quot;Precio a consultar&quot; las cotizamos en tu presupuesto. {LEYENDA_PRECIOS}
         </p>
       </div>
       <div className="space-y-8">

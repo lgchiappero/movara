@@ -3,6 +3,8 @@ import { Document, Page, View, Text, Image } from "@react-pdf/renderer";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { buildPedidoNarrativeEs } from "@/lib/pdf/pedido-narrative-es";
 import { pedidoPdfStyles as styles } from "@/lib/pdf/pedido-pdf-styles";
+import type { DesgloseEstimado } from "@/lib/precio-configurador";
+import { A_CONSULTAR, LEYENDA_PRECIOS } from "@/data/precios-extras";
 
 const logoPath = path.join(process.cwd(), "public", "Logo.jpeg");
 
@@ -13,6 +15,8 @@ type Props = {
   precioFinal: number | null;
   anticipo: number | null;
   saldoPendiente: number | null;
+  /** Desglose guardado al enviar el pedido; null en pedidos anteriores. */
+  desglose: DesgloseEstimado | null;
 };
 
 const usd = (value: number) =>
@@ -25,6 +29,7 @@ export function PedidoDocumentCliente({
   precioFinal,
   anticipo,
   saldoPendiente,
+  desglose,
 }: Props) {
   const narrative = buildPedidoNarrativeEs(data);
 
@@ -80,6 +85,37 @@ export function PedidoDocumentCliente({
               {item.note ? <Text style={styles.narrativeNote}>{item.note}</Text> : null}
             </View>
           )
+        )}
+
+        {desglose && (
+          <View wrap={false}>
+            <View style={styles.sectionDivider} />
+            <Text style={styles.clientSectionTitle}>Presupuesto estimado</Text>
+            <View style={styles.desgloseRow}>
+              <Text>Precio base</Text>
+              <Text>USD {usd(desglose.base)}</Text>
+            </View>
+            {desglose.adicionales.map((a, i) => (
+              <View key={`a${i}`} style={styles.desgloseRow}>
+                <Text>+ {a.nombre}</Text>
+                <Text>USD {usd(a.precio)}</Text>
+              </View>
+            ))}
+            {desglose.aConsultar.map((nombre, i) => (
+              <View key={`c${i}`} style={styles.desgloseRow}>
+                <Text>+ {nombre}</Text>
+                <Text>{A_CONSULTAR}</Text>
+              </View>
+            ))}
+            <View style={styles.desgloseTotal}>
+              <Text>Total estimado</Text>
+              <Text>USD {usd(desglose.total)}</Text>
+            </View>
+            <Text style={styles.desgloseLeyenda}>
+              {LEYENDA_PRECIOS}
+              {desglose.aConsultar.length ? ` Lo que figura como "${A_CONSULTAR}" no está incluido en el total.` : ""}
+            </Text>
+          </View>
         )}
 
         {precioFinal != null && (

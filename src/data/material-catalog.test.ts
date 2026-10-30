@@ -7,6 +7,7 @@ import {
   getStoredMaterialLabel,
   getOpcionesAConsultar,
   esSelectorAConsultar,
+  getExtrasElegidos,
   getMaterialesAnteriores,
 } from "@/data/material-catalog";
 
@@ -114,13 +115,38 @@ describe("getStoredMaterialLabel", () => {
   });
 });
 
-describe("opciones a consultar (balcón, techo, muro cortina)", () => {
-  it("no tienen precio de lista y son las únicas a consultar", () => {
+describe("opciones a consultar (bañera, muro cortina, sobretecho completo)", () => {
+  it("la bañera y el muro cortina no tienen precio de lista y son los únicos selectores a consultar", () => {
     const aConsultar = MATERIAL_CATEGORY_GROUPS.flatMap((g) => g.selectors).filter((s) => s.aConsultar);
-    expect(aConsultar.map((s) => s.key)).toEqual(["muroVidrio", "balcon", "techoBalcon"]);
+    expect(aConsultar.map((s) => s.key)).toEqual(["banera", "muroVidrio"]);
     expect(aConsultar.every((s) => !s.priceName && s.nullable)).toBe(true);
-    expect(esSelectorAConsultar("balcon")).toBe(true);
-    expect(esSelectorAConsultar("piso")).toBe(false);
+  });
+
+  it("el techo del balcón: solo en el balcón tiene precio, el completo es a consultar", () => {
+    expect(findMaterialOption("techoBalcon", "solo-balcon")?.option).toMatchObject({ priceName: "Balcón con sobretecho" });
+    expect(findMaterialOption("techoBalcon", "completo")?.option).toMatchObject({ aConsultar: true });
+  });
+
+  it("esSelectorAConsultar depende de lo elegido", () => {
+    expect(esSelectorAConsultar("balcon", { balcon: "frontal", techoBalcon: "completo" })).toBe(true);
+    expect(esSelectorAConsultar("techoBalcon", { balcon: "frontal", techoBalcon: "completo" })).toBe(true);
+    expect(esSelectorAConsultar("balcon", { balcon: "frontal", techoBalcon: "solo-balcon" })).toBe(false);
+    expect(esSelectorAConsultar("banera", { banera: "banera-01" })).toBe(true);
+    expect(esSelectorAConsultar("banera", { banera: null })).toBe(false);
+    expect(esSelectorAConsultar("piso", { piso: "spc-8917" })).toBe(false);
+  });
+
+  it("los extras con precio tienen el nombre del precio en precios-extras", () => {
+    expect(getExtrasElegidos({ exterior: "premium-02-azul-oscuro", piso: "spc-8911", inodoro: "inteligente-bidet", exterior2: "x" })).toEqual([
+      { key: "exterior", nombre: "Panel metálico labrado: Azul oscuro", tipo: "precio", priceName: "Panel metálico labrado" },
+      { key: "piso", nombre: "Piso SPC 4 mm: 8911", tipo: "precio", priceName: "Piso SPC 4 mm" },
+      { key: "inodoro", nombre: "Inodoro inteligente con bidet", tipo: "precio", priceName: "Inodoro inteligente con bidet" },
+    ]);
+    expect(getExtrasElegidos({ exterior: "gris-oscuro", piso: "nogal-oscuro" })).toEqual([]);
+  });
+
+  it("el configurador arranca sin inodoro inteligente", () => {
+    expect(getDefaultMateriales().inodoro).toBeNull();
   });
 
   it("el configurador arranca sin balcón, sin techo y sin muro cortina", () => {
