@@ -11,6 +11,7 @@ export const PRECIO_FACHADA = "Panel metálico labrado";
 export const PRECIO_INODORO = "Inodoro inteligente";
 export const PRECIO_PISO_SPC = "Piso SPC 4 mm";
 export const PRECIO_COCINA_AMPLIADA = "Cocina ampliada";
+export const PRECIO_BASE_DUCHA = "Base de ducha";
 
 export const PRECIOS_EXTRAS_DEFAULT: Record<string, number> = {
   [PRECIO_BALCON]: 3100,
@@ -18,6 +19,7 @@ export const PRECIOS_EXTRAS_DEFAULT: Record<string, number> = {
   [PRECIO_INODORO]: 580,
   [PRECIO_PISO_SPC]: 390,
   [PRECIO_COCINA_AMPLIADA]: 500,
+  [PRECIO_BASE_DUCHA]: 165,
 };
 
 /** Nombres que se pueden elegir en el Studio (lista desplegable). */

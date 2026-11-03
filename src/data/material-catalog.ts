@@ -17,7 +17,7 @@
 // `nullable` permite deseleccionar (para extras opcionales que no reemplazan
 // nada, como bañera o balcón).
 
-import { PRECIO_BALCON, PRECIO_FACHADA, PRECIO_INODORO, PRECIO_PISO_SPC, PRECIO_COCINA_AMPLIADA } from "./precios-extras";
+import { PRECIO_BALCON, PRECIO_FACHADA, PRECIO_INODORO, PRECIO_PISO_SPC, PRECIO_COCINA_AMPLIADA, PRECIO_BASE_DUCHA } from "./precios-extras";
 
 export type MaterialOption = {
   id: string;
@@ -32,6 +32,9 @@ export type MaterialOption = {
   priceName?: string;
   /** Esta opción se cotiza aparte (pisa el del selector). */
   aConsultar?: boolean;
+  /** Nombre del extra con costo de esta opción en el desglose, el WhatsApp
+   *  y los PDF (ej. "Base de ducha (negra)"). Sin él: "precio: opción". */
+  extraNombre?: string;
 };
 
 export type MaterialSelector = {
@@ -84,6 +87,13 @@ export const AMOBLAMIENTO_BANO_OPCIONES = [
   "Amoblamiento — opción 3",
   "Amoblamiento — opción 4",
 ] as const;
+
+/** Opciones de amoblamiento que incluyen base de ducha (con costo): la 2
+ *  trae base negra y la 4 base blanca. Las demás son sin costo. */
+const BASE_DUCHA_POR_OPCION: Record<number, { es: string; en: string }> = {
+  1: { es: "negra", en: "black" },
+  3: { es: "blanca", en: "white" },
+};
 
 const amoblamientoId = (i: number) => `amoblamiento-${String(i + 1).padStart(2, "0")}`;
 
@@ -199,13 +209,21 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
       },
       {
         key: "amoblamientoBano",
-        label: "Amoblamiento del baño — sin costo",
+        label: "Amoblamiento del baño",
         sinDato: "—",
-        options: AMOBLAMIENTO_BANO_OPCIONES.map((label, i) => ({
-          id: amoblamientoId(i),
-          img: `${DIR}/bano/bano-${amoblamientoId(i)}.jpg`,
-          label,
-        })),
+        options: AMOBLAMIENTO_BANO_OPCIONES.map((label, i) => {
+          const base = BASE_DUCHA_POR_OPCION[i];
+          return {
+            id: amoblamientoId(i),
+            img: `${DIR}/bano/bano-${amoblamientoId(i)}.jpg`,
+            label,
+            ...(base && {
+              priceName: PRECIO_BASE_DUCHA,
+              descripcion: `Incluye base de ducha ${base.es}`,
+              extraNombre: `${PRECIO_BASE_DUCHA} (${base.es})`,
+            }),
+          };
+        }),
       },
       {
         key: "banera",
@@ -402,16 +420,26 @@ export function getExtrasElegidos(materiales: MaterialesSeleccion): ExtraElegido
     if (option.aConsultar ?? selector.aConsultar) return [{ key: sel.key, nombre: option.label, tipo: "a-consultar" }];
     const priceName = option.priceName ?? selector.priceName;
     if (!priceName) return [];
-    // Un selector de una sola opción (el inodoro) se nombra con su opción.
-    const nombre = selector.options.length === 1 ? option.label : `${priceName}: ${option.label}`;
+    // Nombre propio de la opción (base de ducha); un selector de una sola
+    // opción (el inodoro) se nombra con su opción.
+    const nombre = option.extraNombre ?? (selector.options.length === 1 ? option.label : `${priceName}: ${option.label}`);
     return [{ key: sel.key, nombre, tipo: "precio", priceName }];
   });
 }
 
 /** Nombre en inglés de cada opción de amoblamiento, para el PDF del proveedor. */
 export const AMOBLAMIENTO_BANO_EN: Record<string, string> = Object.fromEntries(
-  AMOBLAMIENTO_BANO_OPCIONES.map((_, i) => [amoblamientoId(i), `Bathroom furniture — option ${i + 1}`])
+  AMOBLAMIENTO_BANO_OPCIONES.map((_, i) => {
+    const base = BASE_DUCHA_POR_OPCION[i];
+    return [amoblamientoId(i), `Bathroom furniture — option ${i + 1}${base ? ` · Shower base — ${base.en}` : ""}`];
+  })
 );
+
+/** Extra con costo que trae la opción elegida ("Base de ducha (negra)"), para
+ *  mostrarlo junto a la opción en el admin y en el PDF del cliente. */
+export function getExtraDeOpcion(key: string, id: string | null): string | null {
+  return findMaterialOption(key, id)?.option.extraNombre ?? null;
+}
 
 /** Keys de los selectores del baño. */
 export const BANO_KEYS: readonly string[] = [

@@ -173,3 +173,24 @@ describe("PDFs — amoblamiento del baño", () => {
     expect(grupoEn(buildSupplierSpecItems(data), "Baño").rows).toContainEqual({ label: "Bathtub", value: "Not included" });
   });
 });
+
+describe("PDFs — base de ducha", () => {
+  it("la opción 4: en el del cliente 'Base de ducha (blanca)', en el del proveedor 'Shower base — white'", () => {
+    const data = { ...base, materiales: { amoblamientoBano: "amoblamiento-04" } };
+    expect(grupoEs(buildPedidoNarrativeEs(data), "Baño").bullets).toContain("Amoblamiento del baño: Amoblamiento — opción 4 — Base de ducha (blanca)");
+    expect(grupoEn(buildSupplierSpecItems(data), "Baño").rows).toContainEqual({
+      label: "Bathroom furniture",
+      value: "Bathroom furniture — option 4 · Shower base — white",
+    });
+  });
+
+  it("la opción 2 es la negra; la 1 y la 3 no traen base", () => {
+    expect(grupoEn(buildSupplierSpecItems({ ...base, materiales: { amoblamientoBano: "amoblamiento-02" } }), "Baño").rows).toContainEqual({
+      label: "Bathroom furniture",
+      value: "Bathroom furniture — option 2 · Shower base — black",
+    });
+    expect(grupoEs(buildPedidoNarrativeEs({ ...base, materiales: { amoblamientoBano: "amoblamiento-03" } }), "Baño").bullets).toContain(
+      "Amoblamiento del baño: Amoblamiento — opción 3"
+    );
+  });
+});

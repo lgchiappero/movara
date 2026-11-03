@@ -223,7 +223,7 @@ describe("Configurador — precios de los extras", () => {
   it("amoblamiento del baño: sin costo, con placeholder mientras no hay foto; va al resumen, al WhatsApp y al pedido", async () => {
     const user = userEvent.setup();
     await hastaConfiguracion(user);
-    expect(screen.getByText("Amoblamiento del baño — sin costo")).toBeInTheDocument();
+    expect(screen.getByText("Amoblamiento del baño", { selector: "p" })).toBeInTheDocument();
     const opcion3 = screen.getByRole("button", { name: /Amoblamiento — opción 3/ });
     // La foto todavía no existe: la card muestra el placeholder.
     fireEvent.error(within(opcion3).getByRole("img", { name: "Amoblamiento — opción 3" }));
@@ -241,11 +241,37 @@ describe("Configurador — precios de los extras", () => {
     expect(body.materiales.amoblamientoBano).toBe("amoblamiento-03");
   });
 
+  it("amoblamiento con base de ducha: la 2 y la 4 cuestan USD 165; con la 4 el total sube 165 y figura en el desglose, el resumen, el WhatsApp y el pedido", async () => {
+    const user = userEvent.setup();
+    await hastaConfiguracion(user);
+    const op2 = screen.getByRole("button", { name: /Amoblamiento — opción 2/ });
+    const op4 = screen.getByRole("button", { name: /Amoblamiento — opción 4/ });
+    expect(within(op2).getByText("+ USD 165")).toBeInTheDocument();
+    expect(within(op2).getByText("Incluye base de ducha negra")).toBeInTheDocument();
+    expect(within(op4).getByText("+ USD 165")).toBeInTheDocument();
+    expect(within(op4).getByText("Incluye base de ducha blanca")).toBeInTheDocument();
+    for (const n of [1, 3]) expect(within(screen.getByRole("button", { name: new RegExp(`Amoblamiento — opción ${n}`) })).queryByText(/USD/)).toBeNull();
+
+    await user.click(op4);
+    await vi.waitFor(() => expect(screen.getAllByText(usd(BASE_FLEX_38 + 165)).length).toBeGreaterThan(0));
+
+    await hastaResultado(user);
+    expect(screen.getByText(usd(BASE_FLEX_38 + 165))).toBeInTheDocument();
+    expect(screen.getAllByText("+ Base de ducha (blanca)").length).toBeGreaterThan(0);
+    const mensaje = (screen.getAllByRole("textbox").at(-1) as HTMLTextAreaElement).value;
+    expect(mensaje).toContain("- Base de ducha (blanca): USD 165");
+    expect(mensaje).toContain("- Amoblamiento baño: Amoblamiento — opción 4");
+    expect(mensaje).toContain(`💰 Precio estimado: ${usd(BASE_FLEX_38 + 165)}`);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.materiales.amoblamientoBano).toBe("amoblamiento-04");
+    expect(body.precioEstimado).toBe(BASE_FLEX_38 + 165);
+  });
+
   it("sin baño el WhatsApp no lista paneles, puerta ni amoblamiento del baño", async () => {
     const user = userEvent.setup();
     await hastaConfiguracion(user);
     await user.click(within(screen.getByText("¿Incluye baño?").parentElement!).getByRole("button", { name: "No" }));
-    expect(screen.queryByText("Amoblamiento del baño — sin costo")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Amoblamiento — opción/ })).toBeNull();
     await hastaResultado(user);
     expect(screen.getByText("Amoblamiento del baño").nextElementSibling).toHaveTextContent("—");
     const mensaje = (screen.getAllByRole("textbox").at(-1) as HTMLTextAreaElement).value;

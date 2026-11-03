@@ -12,6 +12,7 @@ import {
   materialesSegunAmbientes,
   AMOBLAMIENTO_BANO_OPCIONES,
   AMOBLAMIENTO_BANO_EN,
+  getExtraDeOpcion,
 } from "@/data/material-catalog";
 
 describe("getDefaultMateriales", () => {
@@ -210,17 +211,31 @@ describe("materialesSegunAmbientes", () => {
 describe("amoblamiento del baño", () => {
   const selector = MATERIAL_CATEGORY_GROUPS.find((g) => g.key === "bano-group")!.selectors;
 
-  it("va en el baño después de paneles y puerta, sin costo, con 4 opciones y sus fotos en public/configurador/bano", () => {
+  it("va en el baño después de paneles y puerta, con 4 opciones: la 2 y la 4 traen base de ducha con costo", () => {
     expect(selector.map((s) => s.key).slice(0, 3)).toEqual(["panelesBano", "puertaBano", "amoblamientoBano"]);
     const amob = selector[2];
-    expect(amob.label).toBe("Amoblamiento del baño — sin costo");
+    expect(amob.label).toBe("Amoblamiento del baño");
     expect(amob.priceName).toBeUndefined();
     expect(amob.aConsultar).toBeUndefined();
     expect(amob.options).toEqual([
       { id: "amoblamiento-01", img: "/configurador/bano/bano-amoblamiento-01.jpg", label: "Amoblamiento — opción 1" },
-      { id: "amoblamiento-02", img: "/configurador/bano/bano-amoblamiento-02.jpg", label: "Amoblamiento — opción 2" },
+      {
+        id: "amoblamiento-02",
+        img: "/configurador/bano/bano-amoblamiento-02.jpg",
+        label: "Amoblamiento — opción 2",
+        priceName: "Base de ducha",
+        descripcion: "Incluye base de ducha negra",
+        extraNombre: "Base de ducha (negra)",
+      },
       { id: "amoblamiento-03", img: "/configurador/bano/bano-amoblamiento-03.jpg", label: "Amoblamiento — opción 3" },
-      { id: "amoblamiento-04", img: "/configurador/bano/bano-amoblamiento-04.jpg", label: "Amoblamiento — opción 4" },
+      {
+        id: "amoblamiento-04",
+        img: "/configurador/bano/bano-amoblamiento-04.jpg",
+        label: "Amoblamiento — opción 4",
+        priceName: "Base de ducha",
+        descripcion: "Incluye base de ducha blanca",
+        extraNombre: "Base de ducha (blanca)",
+      },
     ]);
     expect(amob.options.map((o) => o.label)).toEqual([...AMOBLAMIENTO_BANO_OPCIONES]);
   });
@@ -228,6 +243,7 @@ describe("amoblamiento del baño", () => {
   it("arranca en la opción 1, no es un extra y sin baño no se guarda", () => {
     expect(getDefaultMateriales().amoblamientoBano).toBe("amoblamiento-01");
     expect(getExtrasElegidos({ amoblamientoBano: "amoblamiento-03" })).toEqual([]);
+    expect(getExtrasElegidos({ amoblamientoBano: "amoblamiento-01" })).toEqual([]);
     expect(materialesSegunAmbientes({ amoblamientoBano: "amoblamiento-03" }, { incluyeBano: false }).amoblamientoBano).toBeNull();
     expect(getStoredMaterialLabel("amoblamientoBano", "amoblamiento-03")).toBe("Amoblamiento — opción 3");
   });
@@ -235,9 +251,44 @@ describe("amoblamiento del baño", () => {
   it("nombres en inglés para el proveedor", () => {
     expect(AMOBLAMIENTO_BANO_EN).toEqual({
       "amoblamiento-01": "Bathroom furniture — option 1",
-      "amoblamiento-02": "Bathroom furniture — option 2",
+      "amoblamiento-02": "Bathroom furniture — option 2 · Shower base — black",
       "amoblamiento-03": "Bathroom furniture — option 3",
-      "amoblamiento-04": "Bathroom furniture — option 4",
+      "amoblamiento-04": "Bathroom furniture — option 4 · Shower base — white",
     });
+  });
+});
+
+describe("base de ducha (opciones 2 y 4 del amoblamiento)", () => {
+  it("es un extra con precio propio por opción, con nombre negra/blanca", () => {
+    expect(getExtrasElegidos({ amoblamientoBano: "amoblamiento-02" })).toEqual([
+      { key: "amoblamientoBano", nombre: "Base de ducha (negra)", tipo: "precio", priceName: "Base de ducha" },
+    ]);
+    expect(getExtrasElegidos({ amoblamientoBano: "amoblamiento-04" })).toEqual([
+      { key: "amoblamientoBano", nombre: "Base de ducha (blanca)", tipo: "precio", priceName: "Base de ducha" },
+    ]);
+  });
+
+  it("getExtraDeOpcion devuelve el extra de la opción elegida, o null", () => {
+    expect(getExtraDeOpcion("amoblamientoBano", "amoblamiento-04")).toBe("Base de ducha (blanca)");
+    expect(getExtraDeOpcion("amoblamientoBano", "amoblamiento-01")).toBeNull();
+    expect(getExtraDeOpcion("amoblamientoBano", null)).toBeNull();
+  });
+
+  it("sin baño no se cobra", () => {
+    expect(getExtrasElegidos(materialesSegunAmbientes({ amoblamientoBano: "amoblamiento-04" }, { incluyeBano: false }))).toEqual([]);
+  });
+
+  it("los demás selectores con precio por opción o por selector no cambian", () => {
+    expect(getExtrasElegidos({ piso: "spc-8911" })).toEqual([{ key: "piso", nombre: "Piso SPC 4 mm: 8911", tipo: "precio", priceName: "Piso SPC 4 mm" }]);
+    expect(getExtrasElegidos({ balcon: "frontal", techoBalcon: "solo-balcon" })[0]).toMatchObject({ tipo: "precio", priceName: "Balcón con sobretecho" });
+  });
+});
+
+describe("precio de la base de ducha", () => {
+  it("USD 165 de fallback y elegible en la lista del Studio", async () => {
+    const { PRECIOS_EXTRAS_DEFAULT, NOMBRES_PRECIOS_EXTRAS, resolvePrecioExtra } = await import("@/data/precios-extras");
+    expect(PRECIOS_EXTRAS_DEFAULT["Base de ducha"]).toBe(165);
+    expect(NOMBRES_PRECIOS_EXTRAS).toContain("Base de ducha");
+    expect(resolvePrecioExtra("Base de ducha", null)).toBe(165);
   });
 });

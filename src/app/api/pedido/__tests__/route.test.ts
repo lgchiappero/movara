@@ -194,6 +194,26 @@ describe("POST /api/pedido", () => {
     expect(data.precioEstimado).toBe(38 * 680 + 390);
   });
 
+  it("con el amoblamiento 4 guarda la base de ducha blanca (USD 165) en el precio y el desglose", async () => {
+    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
+    await POST(req({ ...BASE, materiales: { amoblamientoBano: "amoblamiento-04" } }, "10.0.0.44"));
+    const { data } = mockCreate.mock.calls[0][0];
+    expect(data.precioEstimado).toBe(38 * 680 + 165);
+    expect(data.desgloseEstimado).toEqual({
+      base: 38 * 680,
+      adicionales: [{ nombre: "Base de ducha (blanca)", precio: 165 }],
+      aConsultar: [],
+      total: 38 * 680 + 165,
+    });
+  });
+
+  it("la base de ducha toma el precio de Sanity si está cargado", async () => {
+    mockSanityFetch.mockResolvedValueOnce({ preciosExtras: [{ nombre: "Base de ducha", precio: 200 }] });
+    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
+    await POST(req({ ...BASE, materiales: { amoblamientoBano: "amoblamiento-02" } }, "10.0.0.45"));
+    expect(mockCreate.mock.calls[0][0].data.desgloseEstimado.adicionales).toEqual([{ nombre: "Base de ducha (negra)", precio: 200 }]);
+  });
+
   it("usa los precios cargados en Sanity", async () => {
     mockSanityFetch.mockResolvedValueOnce({ preciosExtras: [{ nombre: "Inodoro inteligente", precio: 700 }] });
     mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });

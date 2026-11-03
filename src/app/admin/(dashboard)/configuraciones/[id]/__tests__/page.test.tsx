@@ -248,7 +248,8 @@ describe("ConfiguracionDetailPage", () => {
   it("MaterialesConImagenes: amoblamiento del baño elegido con su nombre; un pedido viejo sin el dato muestra —", async () => {
     mockFindUnique.mockResolvedValueOnce({ ...CONFIG_BASE, materiales: { amoblamientoBano: "amoblamiento-02" } });
     const { unmount } = render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
-    expect(screen.getAllByText("Amoblamiento — opción 2").length).toBeGreaterThan(0);
+    // La opción 2 trae base de ducha negra: figura junto a la opción.
+    expect(screen.getAllByText("Amoblamiento — opción 2 — Base de ducha (negra)").length).toBeGreaterThan(0);
     unmount();
 
     mockFindUnique.mockResolvedValueOnce({ ...CONFIG_BASE, materiales: { panelesBano: "blanco-liso" } });
@@ -312,7 +313,7 @@ describe("ConfiguracionDetailPage", () => {
       render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
       expect(screen.queryByRole("alert")).toBeNull();
       expect(screen.getAllByText("Inodoro inteligente con bidet").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("Amoblamiento — opción 2").length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Amoblamiento — opción 2/).length).toBeGreaterThan(0);
     });
 
     it("materiales con forma rara y upgrades nulos no rompen", async () => {

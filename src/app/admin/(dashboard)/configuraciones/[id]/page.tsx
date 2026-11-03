@@ -310,7 +310,10 @@ function MaterialesConImagenes({ materiales }: { materiales: Record<string, stri
           const raw = materiales[selector.key] ?? null;
           const found = findMaterialOption(selector.key, raw);
           const aCotizar = esSelectorAConsultar(selector.key, materiales);
-          if (found) return [{ key: selector.key, img: found.option.img, label: found.option.label, imageFit: found.selector.imageFit, aCotizar }];
+          if (found) {
+            const label = found.option.extraNombre ? `${found.option.label} — ${found.option.extraNombre}` : found.option.label;
+            return [{ key: selector.key, img: found.option.img, label, imageFit: found.selector.imageFit, aCotizar }];
+          }
           // Opción retirada del catálogo o texto libre del admin: sin foto,
           // pero se muestra igual para que el pedido no pierda el dato.
           const label = getStoredMaterialLabel(selector.key, raw);

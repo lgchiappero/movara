@@ -4,6 +4,7 @@ import {
   getStoredMaterialLabel,
   esSelectorAConsultar,
   getMaterialesAnteriores,
+  getExtraDeOpcion,
 } from "@/data/material-catalog";
 import { A_CONSULTAR } from "@/data/precios-extras";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
@@ -67,7 +68,9 @@ export function buildPedidoNarrativeEs(data: PedidoRecord): NarrativeItem[] {
       // un id de una opción retirada o texto libre cargado a mano por el admin.
       const valor = getStoredMaterialLabel(selector.key, materiales[selector.key] ?? null);
       const aCotizar = valor && esSelectorAConsultar(selector.key, materiales) ? ` — ${A_COTIZAR}` : "";
-      bullets.push(`${nombreCampo}: ${valor ?? selector.sinDato ?? "no incluye"}${aCotizar}`);
+      // Extra que trae la opción (ej. la base de ducha del amoblamiento).
+      const extra = getExtraDeOpcion(selector.key, materiales[selector.key] ?? null);
+      bullets.push(`${nombreCampo}: ${valor ?? selector.sinDato ?? "no incluye"}${extra ? ` — ${extra}` : ""}${aCotizar}`);
     }
     return { type: "group", title: group.title, bullets };
   });

@@ -295,10 +295,10 @@ test.describe("Configurador — precios de los extras", () => {
 });
 
 test.describe("Configurador — amoblamiento del baño", () => {
-  test("sin costo, con placeholder mientras no hay fotos; llega al resumen, al WhatsApp, al pedido y al admin", async ({ page }) => {
+  test("opción sin costo, con placeholder mientras no hay fotos; llega al resumen, al WhatsApp, al pedido y al admin", async ({ page }) => {
     const cfg = await abrirConfigurador(page);
     await llegarAlPaso4(cfg);
-    await expect(cfg.getByText("Amoblamiento del baño — sin costo")).toBeVisible();
+    await expect(cfg.getByText("Amoblamiento del baño", { exact: true })).toBeVisible();
     const opciones = cfg.getByRole("button", { name: /Amoblamiento — opción/ });
     await expect(opciones).toHaveCount(4);
     // Sin fotos publicadas (las originales tienen marca de agua del proveedor y
@@ -308,8 +308,8 @@ test.describe("Configurador — amoblamiento del baño", () => {
       await opciones.nth(i).scrollIntoViewIfNeeded();
       await expect(opciones.nth(i).getByText("Foto próximamente")).toBeVisible();
     }
-    await cfg.getByRole("button", { name: /Amoblamiento — opción 2/ }).click();
-    await expect(cfg.getByText("USD 25.840").first()).toBeVisible();
+    await cfg.getByRole("button", { name: /Amoblamiento — opción 3/ }).click();
+    await expect(cfg.getByText("USD 25.840").filter({ visible: true }).first()).toBeVisible();
 
     await cfg.getByRole("button", { name: "Siguiente" }).click();
     await cfg.getByPlaceholder("Ej: Juan García").fill("Playwright Amoblamiento");
@@ -318,8 +318,8 @@ test.describe("Configurador — amoblamiento del baño", () => {
     await cfg.getByRole("button", { name: "Ver mi configuración" }).click();
 
     await expect(page.getByText("Paso 6 de 6 — Tu configuración")).toBeVisible();
-    await expect(page.getByText("Amoblamiento del baño", { exact: true }).locator("xpath=following-sibling::span[1]")).toHaveText("Amoblamiento — opción 2");
-    expect(await page.locator("textarea").first().inputValue()).toContain("- Amoblamiento baño: Amoblamiento — opción 2");
+    await expect(page.getByText("Amoblamiento del baño", { exact: true }).locator("xpath=following-sibling::span[1]")).toHaveText("Amoblamiento — opción 3");
+    expect(await page.locator("textarea").first().inputValue()).toContain("- Amoblamiento baño: Amoblamiento — opción 3");
     const registro = page.getByText(/Tu consulta fue registrada con el código/);
     await expect(registro).toBeVisible({ timeout: 20_000 });
     const numeroConsulta = (await registro.locator("span").textContent())!.trim();
@@ -328,14 +328,48 @@ test.describe("Configurador — amoblamiento del baño", () => {
     await page.goto("/admin/configuraciones");
     const href = await page.locator("tr", { hasText: numeroConsulta }).getByRole("link", { name: "Ver detalle" }).getAttribute("href");
     await page.goto(href!);
-    await expect(page.getByText("Amoblamiento del baño: Amoblamiento — opción 2")).toBeVisible();
+    await expect(page.getByText("Amoblamiento del baño: Amoblamiento — opción 3")).toBeVisible();
+  });
+
+  test("opción 4 con base de ducha blanca: + USD 165 en el total, el desglose, el WhatsApp y el pedido guardado", async ({ page }) => {
+    const cfg = await abrirConfigurador(page);
+    await llegarAlPaso4(cfg);
+    const op4 = cfg.getByRole("button", { name: /Amoblamiento — opción 4/ });
+    await expect(op4).toContainText("+ USD 165");
+    await expect(op4).toContainText("Incluye base de ducha blanca");
+    await expect(cfg.getByRole("button", { name: /Amoblamiento — opción 2/ })).toContainText("Incluye base de ducha negra");
+    await op4.click();
+    await expect(cfg.getByText("USD 26.005").filter({ visible: true }).first()).toBeVisible();
+
+    await cfg.getByRole("button", { name: "Siguiente" }).click();
+    await cfg.getByPlaceholder("Ej: Juan García").fill("Playwright Base Ducha");
+    await cfg.getByPlaceholder("Ej: +54 9 11 1234-5678").fill("+5491112345678");
+    await cfg.getByPlaceholder("tu@email.com").fill("baseducha@example.com");
+    await cfg.getByRole("button", { name: "Ver mi configuración" }).click();
+
+    await expect(page.getByText("Paso 6 de 6 — Tu configuración")).toBeVisible();
+    await expect(page.getByText("+ Base de ducha (blanca)", { exact: true })).toBeVisible();
+    const msg = await page.locator("textarea").first().inputValue();
+    expect(msg).toContain("- Base de ducha (blanca): USD 165");
+    expect(msg).toContain("💰 Precio estimado: USD 26.005");
+    const registro = page.getByText(/Tu consulta fue registrada con el código/);
+    await expect(registro).toBeVisible({ timeout: 20_000 });
+    const numeroConsulta = (await registro.locator("span").textContent())!.trim();
+
+    await loginAsAdmin(page);
+    await page.goto("/admin/configuraciones");
+    const href = await page.locator("tr", { hasText: numeroConsulta }).getByRole("link", { name: "Ver detalle" }).getAttribute("href");
+    await page.goto(href!);
+    await expect(page.getByText("Amoblamiento del baño: Amoblamiento — opción 4 — Base de ducha (blanca)")).toBeVisible();
+    const pdf = await page.request.get(`/api${href}/pdf-cliente`);
+    expect(pdf.status()).toBe(200);
   });
 
   test("sin baño no se muestra", async ({ page }) => {
     const cfg = await abrirConfigurador(page);
     await llegarAlPaso4(cfg);
     await cfg.getByText("¿Incluye baño?").locator("..").getByRole("button", { name: "No", exact: true }).click();
-    await expect(cfg.getByText("Amoblamiento del baño — sin costo")).toHaveCount(0);
+    await expect(cfg.getByRole("button", { name: /Amoblamiento — opción/ })).toHaveCount(0);
   });
 });
 
