@@ -227,6 +227,18 @@ describe("ConfiguracionDetailPage", () => {
     expect(screen.getAllByText("Galería con sobretecho (configuración anterior)").length).toBeGreaterThan(0);
   });
 
+  it("MaterialesConImagenes: amoblamiento del baño elegido con su nombre; un pedido viejo sin el dato muestra —", async () => {
+    mockFindUnique.mockResolvedValueOnce({ ...CONFIG_BASE, materiales: { amoblamientoBano: "amoblamiento-02" } });
+    const { unmount } = render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+    expect(screen.getAllByText("Amoblamiento — opción 2").length).toBeGreaterThan(0);
+    unmount();
+
+    mockFindUnique.mockResolvedValueOnce({ ...CONFIG_BASE, materiales: { panelesBano: "blanco-liso" } });
+    render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+    // La card de materiales y el resumen del pedido.
+    expect(screen.getAllByText("Amoblamiento del baño: —")).toHaveLength(2);
+  });
+
   it("MaterialesConImagenes: el balcón con sobretecho solo en el balcón tiene precio, no es A consultar", async () => {
     mockFindUnique.mockResolvedValueOnce({
       ...CONFIG_BASE,

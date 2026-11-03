@@ -5,6 +5,7 @@ import {
   esSelectorAConsultar,
   getMaterialesAnteriores,
   INODORO_INTELIGENTE_ID,
+  AMOBLAMIENTO_BANO_EN,
 } from "@/data/material-catalog";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { labelOrFallback, SIN_ESPECIFICAR } from "@/lib/pdf/pedido-record";
@@ -24,6 +25,7 @@ const SELECTOR_LABELS_EN: Record<string, string> = {
   piso: "Flooring",
   panelesBano: "Bathroom wall panels",
   puertaBano: "Bathroom door",
+  amoblamientoBano: "Bathroom furniture",
   banera: "Bathtub",
   inodoro: "Toilet",
   cocina: "Kitchen",
@@ -40,6 +42,7 @@ const SELECTOR_LABELS_EN: Record<string, string> = {
  *  materiales se muestra con su nombre en castellano. */
 const OPTION_LABELS_EN: Record<string, Record<string, string>> = {
   inodoro: { [INODORO_INTELIGENTE_ID]: "Smart toilet with bidet" },
+  amoblamientoBano: AMOBLAMIENTO_BANO_EN,
 };
 
 /** Extras sin precio de lista: MOVARA los presupuesta aparte. */
@@ -73,7 +76,7 @@ export function buildSupplierSpecItems(data: PedidoRecord): SupplierSpecItem[] {
       const toQuote = valor && esSelectorAConsultar(selector.key, materiales) ? ` — ${TO_QUOTE}` : "";
       rows.push({
         label: SELECTOR_LABELS_EN[selector.key] ?? selector.key,
-        value: valor ? `${valor}${toQuote}` : "Not included",
+        value: valor ? `${valor}${toQuote}` : (selector.sinDato ?? "Not included"),
       });
     }
     return { type: "group", title: group.title, rows };

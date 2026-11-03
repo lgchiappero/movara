@@ -112,8 +112,13 @@ function buildWAMessage(params: {
 
   const materialesLines = [
     `- Exterior: ${getMaterialLabel("exterior", params.materiales.exterior)}`,
-    `- Paneles baño: ${getMaterialLabel("panelesBano", params.materiales.panelesBano)}`,
-    `- Puerta baño: ${getMaterialLabel("puertaBano", params.materiales.puertaBano)}`,
+    ...(params.incluyeBano
+      ? [
+          `- Paneles baño: ${getMaterialLabel("panelesBano", params.materiales.panelesBano)}`,
+          `- Puerta baño: ${getMaterialLabel("puertaBano", params.materiales.puertaBano)}`,
+          `- Amoblamiento baño: ${getMaterialLabel("amoblamientoBano", params.materiales.amoblamientoBano)}`,
+        ]
+      : []),
     `- Cocina: ${getMaterialLabel("cocina", params.materiales.cocina)}`,
     `- Mesada: ${getMaterialLabel("mesada", params.materiales.mesada)}`,
     `- Piso: ${getMaterialLabel("piso", params.materiales.piso)}`,
@@ -435,6 +440,7 @@ export default function ConfiguradorMovara({
               tipoCocina={tipoCocina}
               incluyeBano={incluyeBano}
               lavarropas={lavarropas}
+              materiales={materialesElegidos}
               resumen={precioResumen}
               waMessage={waMessage}
               setWaMessage={setWaMessage}
@@ -1171,7 +1177,7 @@ export function StepDatos({
 // Result screen — Paso 7
 // ─────────────────────────────────────────────────────────
 
-function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, incluyeCocina, tipoCocina, incluyeBano, lavarropas, resumen, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText, numeroConsulta, tokenSeguimiento, enviandoPedido, errorPedido, onRetry }: {
+function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, incluyeCocina, tipoCocina, incluyeBano, lavarropas, materiales, resumen, waMessage, setWaMessage, onBack, onSend, waButtonText, trustText, numeroConsulta, tokenSeguimiento, enviandoPedido, errorPedido, onRetry }: {
   modelo: ModeloKey;
   finalidad: FinalidadKey;
   localidad: string;
@@ -1181,6 +1187,7 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, i
   tipoCocina: TipoCocina;
   incluyeBano: boolean;
   lavarropas: TipoLavarropas;
+  materiales: MaterialesSeleccion;
   resumen: PrecioResumen;
   waMessage: string;
   setWaMessage: (v: string) => void;
@@ -1245,6 +1252,7 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, i
           <span className="text-stone-400">Cocina</span><span className="text-stone-800 font-semibold">{incluyeCocina ? (tipoCocina === "electrico" ? "Anafe eléctrico" : "Preparación gas") : "No incluye"}</span>
           <span className="text-stone-400">Baño</span><span className="text-stone-800 font-semibold">{incluyeBano ? "Incluido" : "No incluye"}</span>
           <span className="text-stone-400">Agua caliente</span><span className="text-stone-800 font-semibold">{incluyeBano ? "Calefón eléctrico" : "—"}</span>
+          <span className="text-stone-400">Amoblamiento del baño</span><span className="text-stone-800 font-semibold">{incluyeBano ? getMaterialLabel("amoblamientoBano", materiales.amoblamientoBano ?? null) : "—"}</span>
           <span className="text-stone-400">Lavarropas</span><span className="text-stone-800 font-semibold capitalize">{LABELS_LAVA[lavarropas]}</span>
         </div>
       </div>

@@ -157,3 +157,19 @@ describe("PDFs — agua caliente", () => {
     });
   });
 });
+
+describe("PDFs — amoblamiento del baño", () => {
+  it("el elegido figura en el baño: en castellano en el del cliente, en inglés en el del proveedor", () => {
+    const data = { ...base, materiales: { panelesBano: "blanco-liso", amoblamientoBano: "amoblamiento-03" } };
+    expect(grupoEs(buildPedidoNarrativeEs(data), "Baño").bullets).toContain("Amoblamiento del baño: Amoblamiento — opción 3");
+    expect(grupoEn(buildSupplierSpecItems(data), "Baño").rows).toContainEqual({ label: "Bathroom furniture", value: "Bathroom furniture — option 3" });
+  });
+
+  it("un pedido viejo sin el dato muestra —", () => {
+    const data = { ...base, materiales: { panelesBano: "blanco-liso" } };
+    expect(grupoEs(buildPedidoNarrativeEs(data), "Baño").bullets).toContain("Amoblamiento del baño: —");
+    expect(grupoEn(buildSupplierSpecItems(data), "Baño").rows).toContainEqual({ label: "Bathroom furniture", value: "—" });
+    // Los otros selectores siguen como antes.
+    expect(grupoEn(buildSupplierSpecItems(data), "Baño").rows).toContainEqual({ label: "Bathtub", value: "Not included" });
+  });
+});

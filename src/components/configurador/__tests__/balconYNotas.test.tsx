@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("next/image", () => ({
@@ -218,6 +218,38 @@ describe("Configurador — precios de los extras", () => {
     expect(mensaje).not.toContain("Inodoro");
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.materiales).toMatchObject({ inodoro: null, panelesBano: null });
+  });
+
+  it("amoblamiento del baño: sin costo, con placeholder mientras no hay foto; va al resumen, al WhatsApp y al pedido", async () => {
+    const user = userEvent.setup();
+    await hastaConfiguracion(user);
+    expect(screen.getByText("Amoblamiento del baño — sin costo")).toBeInTheDocument();
+    const opcion3 = screen.getByRole("button", { name: /Amoblamiento — opción 3/ });
+    // La foto todavía no existe: la card muestra el placeholder.
+    fireEvent.error(within(opcion3).getByRole("img", { name: "Amoblamiento — opción 3" }));
+    expect(within(opcion3).getByText("Foto próximamente")).toBeInTheDocument();
+    expect(within(opcion3).queryByText(/USD/)).toBeNull();
+    await user.click(opcion3);
+    expect(opcion3).toHaveAttribute("aria-pressed", "true");
+    await vi.waitFor(() => expect(screen.getAllByText(usd(BASE_FLEX_38)).length).toBeGreaterThan(0));
+
+    await hastaResultado(user);
+    expect(screen.getByText("Amoblamiento del baño").nextElementSibling).toHaveTextContent("Amoblamiento — opción 3");
+    const mensaje = (screen.getAllByRole("textbox").at(-1) as HTMLTextAreaElement).value;
+    expect(mensaje).toContain("- Amoblamiento baño: Amoblamiento — opción 3");
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.materiales.amoblamientoBano).toBe("amoblamiento-03");
+  });
+
+  it("sin baño el WhatsApp no lista paneles, puerta ni amoblamiento del baño", async () => {
+    const user = userEvent.setup();
+    await hastaConfiguracion(user);
+    await user.click(within(screen.getByText("¿Incluye baño?").parentElement!).getByRole("button", { name: "No" }));
+    expect(screen.queryByText("Amoblamiento del baño — sin costo")).toBeNull();
+    await hastaResultado(user);
+    expect(screen.getByText("Amoblamiento del baño").nextElementSibling).toHaveTextContent("—");
+    const mensaje = (screen.getAllByRole("textbox").at(-1) as HTMLTextAreaElement).value;
+    expect(mensaje).not.toMatch(/Paneles baño|Puerta baño|Amoblamiento baño/);
   });
 
   it("los 4 extras con precio: total = base + 5.020, en el desglose, el resumen y el WhatsApp", async () => {

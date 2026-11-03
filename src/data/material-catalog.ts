@@ -54,6 +54,8 @@ export type MaterialSelector = {
   imageFit?: "cover" | "contain";
   /** Fondo neutro detrás de la imagen cuando imageFit es "contain". */
   imageBg?: string;
+  /** Texto para pedidos guardados antes de que existiera este selector. */
+  sinDato?: string;
 };
 
 export type MaterialCategoryGroup = {
@@ -72,6 +74,18 @@ export const INODORO_INTELIGENTE_ID = "inteligente-bidet";
 
 export const BALCON_GROUP_KEY = "balcon-group";
 export const BANO_GROUP_KEY = "bano-group";
+
+/** Nombres de las opciones de amoblamiento del baño — se cambian acá. Las
+ *  fotos van en public/configurador/bano/bano-amoblamiento-01.jpg a 04.jpg;
+ *  mientras no existan, cada card muestra "Foto próximamente". */
+export const AMOBLAMIENTO_BANO_OPCIONES = [
+  "Amoblamiento — opción 1",
+  "Amoblamiento — opción 2",
+  "Amoblamiento — opción 3",
+  "Amoblamiento — opción 4",
+] as const;
+
+const amoblamientoId = (i: number) => `amoblamiento-${String(i + 1).padStart(2, "0")}`;
 
 const EXTERIOR_PREMIUM = [
   ["01-gris-lineas", "Gris con líneas"],
@@ -182,6 +196,16 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
           { id: "blanco-horizontal", img: `${DIR}/bano-puerta-03-blanco-horizontal.png`, label: "Blanco horizontal" },
           { id: "blanco-mixto", img: `${DIR}/bano-puerta-04-blanco-mixto.png`, label: "Blanco mixto" },
         ],
+      },
+      {
+        key: "amoblamientoBano",
+        label: "Amoblamiento del baño — sin costo",
+        sinDato: "—",
+        options: AMOBLAMIENTO_BANO_OPCIONES.map((label, i) => ({
+          id: amoblamientoId(i),
+          img: `${DIR}/bano/bano-${amoblamientoId(i)}.jpg`,
+          label,
+        })),
       },
       {
         key: "banera",
@@ -383,6 +407,11 @@ export function getExtrasElegidos(materiales: MaterialesSeleccion): ExtraElegido
     return [{ key: sel.key, nombre, tipo: "precio", priceName }];
   });
 }
+
+/** Nombre en inglés de cada opción de amoblamiento, para el PDF del proveedor. */
+export const AMOBLAMIENTO_BANO_EN: Record<string, string> = Object.fromEntries(
+  AMOBLAMIENTO_BANO_OPCIONES.map((_, i) => [amoblamientoId(i), `Bathroom furniture — option ${i + 1}`])
+);
 
 /** Keys de los selectores del baño. */
 export const BANO_KEYS: readonly string[] = [

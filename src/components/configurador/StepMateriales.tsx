@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { MaterialImage } from "./MaterialImage";
 import {
   MATERIAL_CATEGORY_GROUPS,
   BALCON_GROUP_KEY,
@@ -42,45 +41,6 @@ function CheckIcon({ className }: { className?: string }) {
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
     </svg>
-  );
-}
-
-function MaterialImage({
-  src,
-  alt,
-  sizes,
-  fit = "cover",
-  fallbackColor,
-  fallbackBorder,
-}: {
-  src: string;
-  alt: string;
-  sizes: string;
-  fit?: "cover" | "contain";
-  /** Si la imagen no carga (todavía no existe el archivo), mostrar este color en vez del cuadro gris genérico. */
-  fallbackColor?: string;
-  fallbackBorder?: boolean;
-}) {
-  const [error, setError] = useState(false);
-  if (error) {
-    if (fallbackColor) {
-      return <div className={`w-full h-full ${fallbackBorder ? "border border-stone-300" : ""}`} style={{ backgroundColor: fallbackColor }} />;
-    }
-    return (
-      <div className="w-full h-full bg-stone-200 flex items-center justify-center p-2 text-center">
-        <span className="text-[10px] font-semibold text-stone-500 leading-snug">{alt}</span>
-      </div>
-    );
-  }
-  return (
-    <Image
-      src={src}
-      alt={alt}
-      fill
-      sizes={sizes}
-      className={`object-center ${fit === "contain" ? "object-contain" : "object-cover"}`}
-      onError={() => setError(true)}
-    />
   );
 }
 

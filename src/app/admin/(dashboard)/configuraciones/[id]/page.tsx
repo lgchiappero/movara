@@ -1,7 +1,6 @@
 import Link from "next/link";
 import LinkSeguimiento from "@/components/admin/LinkSeguimiento";
 import { linkSeguimiento } from "@/lib/email/pedido-estado-email";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { buildPedidoNarrativeEs } from "@/lib/pdf/pedido-narrative-es";
@@ -19,6 +18,7 @@ import { getSignedUrl, BUCKET_PEDIDOS } from "@/lib/admin/storage";
 import GestionPedidoPanel from "@/components/admin/GestionPedidoPanel";
 import DocumentosPedidoSection, { type DocumentoConUrl } from "@/components/admin/DocumentosPedidoSection";
 import ConfiguracionEspacioForm from "@/components/admin/ConfiguracionEspacioForm";
+import { MaterialImage } from "@/components/configurador/MaterialImage";
 import EliminarConfiguracionButton from "@/components/admin/EliminarConfiguracionButton";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { isAdmin } from "@/lib/admin/roles";
@@ -281,7 +281,12 @@ function MaterialesConImagenes({ materiales }: { materiales: Record<string, stri
           // Opción retirada del catálogo o texto libre del admin: sin foto,
           // pero se muestra igual para que el pedido no pierda el dato.
           const label = getStoredMaterialLabel(selector.key, raw);
-          return label ? [{ key: selector.key, img: undefined, label, imageFit: undefined, aCotizar }] : [];
+          if (label) return [{ key: selector.key, img: undefined, label, imageFit: undefined, aCotizar }];
+          // Selector agregado después del pedido (ej. amoblamiento del baño).
+          if (selector.sinDato) {
+            return [{ key: selector.key, img: undefined, label: `${selector.label.split(" — ")[0]}: ${selector.sinDato}`, imageFit: undefined, aCotizar }];
+          }
+          return [];
         });
 
         if (cards.length === 0) return null;
@@ -296,12 +301,7 @@ function MaterialesConImagenes({ materiales }: { materiales: Record<string, stri
                 <div key={card.key} className="rounded-xl border border-[#E5E5E5] overflow-hidden">
                   {card.img && (
                     <div className="relative w-full aspect-square bg-stone-50">
-                      <Image
-                        src={card.img}
-                        alt={card.label}
-                        fill
-                        className={card.imageFit === "contain" ? "object-contain" : "object-cover"}
-                      />
+                      <MaterialImage src={card.img} alt={card.label} sizes="(min-width: 640px) 33vw, 50vw" fit={card.imageFit} />
                     </div>
                   )}
                   <p className="text-xs text-stone-600 px-2 py-1.5 truncate" title={card.label}>{card.label}</p>

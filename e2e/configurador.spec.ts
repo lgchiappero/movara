@@ -294,6 +294,50 @@ test.describe("Configurador — precios de los extras", () => {
   });
 });
 
+test.describe("Configurador — amoblamiento del baño", () => {
+  test("sin costo, con placeholder mientras no hay fotos; llega al resumen, al WhatsApp, al pedido y al admin", async ({ page }) => {
+    const cfg = await abrirConfigurador(page);
+    await llegarAlPaso4(cfg);
+    await expect(cfg.getByText("Amoblamiento del baño — sin costo")).toBeVisible();
+    const opciones = cfg.getByRole("button", { name: /Amoblamiento — opción/ });
+    await expect(opciones).toHaveCount(4);
+    // Las fotos todavía no están en public/configurador/bano: cada card muestra el placeholder.
+    // (las imágenes son lazy: intentan cargar al entrar en pantalla).
+    for (let i = 0; i < 4; i++) {
+      await opciones.nth(i).scrollIntoViewIfNeeded();
+      await expect(opciones.nth(i).getByText("Foto próximamente")).toBeVisible();
+    }
+    await cfg.getByRole("button", { name: /Amoblamiento — opción 2/ }).click();
+    await expect(cfg.getByText("USD 25.840").first()).toBeVisible();
+
+    await cfg.getByRole("button", { name: "Siguiente" }).click();
+    await cfg.getByPlaceholder("Ej: Juan García").fill("Playwright Amoblamiento");
+    await cfg.getByPlaceholder("Ej: +54 9 11 1234-5678").fill("+5491112345678");
+    await cfg.getByPlaceholder("tu@email.com").fill("amoblamiento@example.com");
+    await cfg.getByRole("button", { name: "Ver mi configuración" }).click();
+
+    await expect(page.getByText("Paso 6 de 6 — Tu configuración")).toBeVisible();
+    await expect(page.getByText("Amoblamiento del baño", { exact: true }).locator("xpath=following-sibling::span[1]")).toHaveText("Amoblamiento — opción 2");
+    expect(await page.locator("textarea").first().inputValue()).toContain("- Amoblamiento baño: Amoblamiento — opción 2");
+    const registro = page.getByText(/Tu consulta fue registrada con el código/);
+    await expect(registro).toBeVisible({ timeout: 20_000 });
+    const numeroConsulta = (await registro.locator("span").textContent())!.trim();
+
+    await loginAsAdmin(page);
+    await page.goto("/admin/configuraciones");
+    const href = await page.locator("tr", { hasText: numeroConsulta }).getByRole("link", { name: "Ver detalle" }).getAttribute("href");
+    await page.goto(href!);
+    await expect(page.getByText("Amoblamiento del baño: Amoblamiento — opción 2")).toBeVisible();
+  });
+
+  test("sin baño no se muestra", async ({ page }) => {
+    const cfg = await abrirConfigurador(page);
+    await llegarAlPaso4(cfg);
+    await cfg.getByText("¿Incluye baño?").locator("..").getByRole("button", { name: "No", exact: true }).click();
+    await expect(cfg.getByText("Amoblamiento del baño — sin costo")).toHaveCount(0);
+  });
+});
+
 test.describe("Configurador — agua caliente sin opción a gas (6 pasos)", () => {
   test("el calefón eléctrico es un dato fijo y llega así al mensaje y al pedido", async ({ page }) => {
     const cfg = await abrirConfigurador(page);

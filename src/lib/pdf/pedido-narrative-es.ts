@@ -23,6 +23,7 @@ const SELECTOR_LABELS_ES: Record<string, string> = {
   piso: "Piso",
   panelesBano: "Paneles del baño",
   puertaBano: "Puerta del baño",
+  amoblamientoBano: "Amoblamiento del baño",
   banera: "Bañera",
   inodoro: "Inodoro",
   cocina: "Cocina",
@@ -66,7 +67,7 @@ export function buildPedidoNarrativeEs(data: PedidoRecord): NarrativeItem[] {
       // un id de una opción retirada o texto libre cargado a mano por el admin.
       const valor = getStoredMaterialLabel(selector.key, materiales[selector.key] ?? null);
       const aCotizar = valor && esSelectorAConsultar(selector.key, materiales) ? ` — ${A_COTIZAR}` : "";
-      bullets.push(`${nombreCampo}: ${valor ?? "no incluye"}${aCotizar}`);
+      bullets.push(`${nombreCampo}: ${valor ?? selector.sinDato ?? "no incluye"}${aCotizar}`);
     }
     return { type: "group", title: group.title, bullets };
   });

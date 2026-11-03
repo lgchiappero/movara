@@ -10,6 +10,8 @@ import {
   getExtrasElegidos,
   getMaterialesAnteriores,
   materialesSegunAmbientes,
+  AMOBLAMIENTO_BANO_OPCIONES,
+  AMOBLAMIENTO_BANO_EN,
 } from "@/data/material-catalog";
 
 describe("getDefaultMateriales", () => {
@@ -202,5 +204,40 @@ describe("materialesSegunAmbientes", () => {
     expect(r).toMatchObject({ panelesBano: null, puertaBano: null, banera: null, inodoro: null, piso: "spc-8911" });
     expect(getExtrasElegidos(r).map((e) => e.key)).toEqual(["piso"]);
     expect(m.inodoro).toBe("inteligente-bidet");
+  });
+});
+
+describe("amoblamiento del baño", () => {
+  const selector = MATERIAL_CATEGORY_GROUPS.find((g) => g.key === "bano-group")!.selectors;
+
+  it("va en el baño después de paneles y puerta, sin costo, con 4 opciones y sus fotos en public/configurador/bano", () => {
+    expect(selector.map((s) => s.key).slice(0, 3)).toEqual(["panelesBano", "puertaBano", "amoblamientoBano"]);
+    const amob = selector[2];
+    expect(amob.label).toBe("Amoblamiento del baño — sin costo");
+    expect(amob.priceName).toBeUndefined();
+    expect(amob.aConsultar).toBeUndefined();
+    expect(amob.options).toEqual([
+      { id: "amoblamiento-01", img: "/configurador/bano/bano-amoblamiento-01.jpg", label: "Amoblamiento — opción 1" },
+      { id: "amoblamiento-02", img: "/configurador/bano/bano-amoblamiento-02.jpg", label: "Amoblamiento — opción 2" },
+      { id: "amoblamiento-03", img: "/configurador/bano/bano-amoblamiento-03.jpg", label: "Amoblamiento — opción 3" },
+      { id: "amoblamiento-04", img: "/configurador/bano/bano-amoblamiento-04.jpg", label: "Amoblamiento — opción 4" },
+    ]);
+    expect(amob.options.map((o) => o.label)).toEqual([...AMOBLAMIENTO_BANO_OPCIONES]);
+  });
+
+  it("arranca en la opción 1, no es un extra y sin baño no se guarda", () => {
+    expect(getDefaultMateriales().amoblamientoBano).toBe("amoblamiento-01");
+    expect(getExtrasElegidos({ amoblamientoBano: "amoblamiento-03" })).toEqual([]);
+    expect(materialesSegunAmbientes({ amoblamientoBano: "amoblamiento-03" }, { incluyeBano: false }).amoblamientoBano).toBeNull();
+    expect(getStoredMaterialLabel("amoblamientoBano", "amoblamiento-03")).toBe("Amoblamiento — opción 3");
+  });
+
+  it("nombres en inglés para el proveedor", () => {
+    expect(AMOBLAMIENTO_BANO_EN).toEqual({
+      "amoblamiento-01": "Bathroom furniture — option 1",
+      "amoblamiento-02": "Bathroom furniture — option 2",
+      "amoblamiento-03": "Bathroom furniture — option 3",
+      "amoblamiento-04": "Bathroom furniture — option 4",
+    });
   });
 });
