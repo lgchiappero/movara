@@ -113,7 +113,7 @@ export default async function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  className="w-9 h-9 rounded-lg bg-sage-900 border border-sage-800 flex items-center justify-center text-stone-500 hover:text-white hover:border-sage-600 transition-colors"
+                  className="w-9 h-9 max-sm:w-11 max-sm:h-11 rounded-lg bg-sage-900 border border-sage-800 flex items-center justify-center text-stone-500 hover:text-white hover:border-sage-600 transition-colors"
                 >
                   {icon}
                 </a>
@@ -124,12 +124,12 @@ export default async function Footer() {
           {/* Nav links (dinámico desde Sanity) */}
           <div>
             <h3 className="text-white font-semibold text-sm mb-4">Navegación</h3>
-            <ul className="space-y-3">
+            <ul className="space-y-3 max-sm:space-y-0">
               {config.footerNavLinks.map(({ label, url }) => (
                 <li key={url}>
                   <LinkInterno
                     href={url}
-                    className="text-sm text-stone-500 hover:text-stone-300 transition-colors"
+                    className="text-sm text-stone-500 hover:text-stone-300 transition-colors max-sm:inline-flex max-sm:items-center max-sm:min-h-11"
                   >
                     {label}
                   </LinkInterno>
@@ -141,12 +141,12 @@ export default async function Footer() {
           {/* Contacto dinámico */}
           <div>
             <h3 className="text-white font-semibold text-sm mb-4">Contacto</h3>
-            <ul className="space-y-3">
+            <ul className="space-y-3 max-sm:space-y-0">
               {contactLinks.map(({ label, href }) => (
                 <li key={label}>
                   <a
                     href={href}
-                    className="text-sm text-stone-500 hover:text-stone-300 transition-colors"
+                    className="text-sm text-stone-500 hover:text-stone-300 transition-colors max-sm:inline-flex max-sm:items-center max-sm:min-h-11"
                   >
                     {label}
                   </a>
@@ -155,7 +155,7 @@ export default async function Footer() {
               <li>
                 <Link
                   href="/agendar"
-                  className="text-sm font-semibold text-[#D4B36A] hover:text-[#e0c384] transition-colors"
+                  className="text-sm font-semibold text-[#D4B36A] hover:text-[#e0c384] transition-colors max-sm:inline-flex max-sm:items-center max-sm:min-h-11"
                 >
                   Agendar visita al showroom →
                 </Link>
@@ -169,10 +169,10 @@ export default async function Footer() {
             © {year} {config.copyrightText}
           </p>
           <div className="flex items-center gap-6 text-sm">
-            <Link href="/privacidad" className="text-stone-600 hover:text-stone-400 transition-colors">
+            <Link href="/privacidad" className="text-stone-600 hover:text-stone-400 transition-colors max-sm:inline-flex max-sm:items-center max-sm:min-h-11">
               Privacidad
             </Link>
-            <Link href="/terminos" className="text-stone-600 hover:text-stone-400 transition-colors">
+            <Link href="/terminos" className="text-stone-600 hover:text-stone-400 transition-colors max-sm:inline-flex max-sm:items-center max-sm:min-h-11">
               Términos
             </Link>
           </div>

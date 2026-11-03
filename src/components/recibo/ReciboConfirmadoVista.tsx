@@ -55,7 +55,7 @@ export default function ReciboConfirmadoVista({ d }: { d: DatosConfirmado }) {
         href={getWhatsAppUrl(`Hola! Tengo una consulta sobre mi Recibo en Conformidad ${d.numeroRecibo}.`, WHATSAPP_MOVARA_NUMERO)}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-block text-xs text-stone-500 hover:text-stone-300"
+        className="inline-block max-sm:inline-flex max-sm:items-center max-sm:min-h-11 text-xs text-stone-500 hover:text-stone-300"
       >
         ¿Dudas? Escribinos por WhatsApp al {WHATSAPP_MOVARA_VISIBLE}
       </a>

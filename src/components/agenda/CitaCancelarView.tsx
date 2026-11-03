@@ -88,7 +88,7 @@ export default function CitaCancelarView({ cita }: { cita: CitaCancelarData }) {
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
               placeholder="tu@email.com"
-              className="w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-base sm:text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </label>
           {error && <p className="text-xs text-red-600">{error}</p>}

@@ -126,9 +126,10 @@ describe("HomeHashScroll", () => {
 });
 
 describe("BackToTop", () => {
-  function barra(alto: number) {
+  function barra(alto: number, position = "fixed") {
     const b = document.createElement("div");
     b.setAttribute("data-barra-inferior", "");
+    b.style.position = position;
     Object.defineProperty(b, "offsetHeight", { configurable: true, value: alto });
     document.body.appendChild(b);
   }
@@ -139,6 +140,30 @@ describe("BackToTop", () => {
     barra(94);
     barra(69);
     expect(altoBarraInferior()).toBe(94);
+  });
+
+  it("altoBarraInferior no cuenta una barra estática (la navegación del configurador desde sm)", () => {
+    barra(200, "static");
+    barra(40);
+    expect(altoBarraInferior()).toBe(40);
+  });
+
+  it("en el configurador se oculta en el celular (ahí está la barra con Atrás/Siguiente)", () => {
+    mockPathname.mockReturnValue("/configurador");
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 1200 });
+    render(<BackToTop />);
+    expect(screen.getByRole("button", { name: "Volver al inicio" })).toHaveClass("max-sm:hidden");
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+    mockPathname.mockReturnValue("/");
+  });
+
+  it("sin pathname (fuera del router) se muestra normal", () => {
+    mockPathname.mockReturnValue(null as unknown as string);
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 1200 });
+    render(<BackToTop />);
+    expect(screen.getByRole("button", { name: "Volver al inicio" })).not.toHaveClass("max-sm:hidden");
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+    mockPathname.mockReturnValue("/");
   });
 
   it("aparece al bajar, se ubica 16px arriba de la barra y sube al tocarlo", () => {

@@ -63,7 +63,7 @@ export default function ContactoForm({
   const waUrl = getWhatsAppUrl(waMsg, waNumber);
 
   const inputCls =
-    "w-full px-4 py-3 rounded-xl bg-stone-800 border border-stone-700 text-white placeholder:text-stone-500 text-sm focus:outline-none focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20 transition-colors";
+    "w-full px-4 py-3 rounded-xl bg-stone-800 border border-stone-700 text-white placeholder:text-stone-500 text-base sm:text-sm focus:outline-none focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20 transition-colors";
 
   return (
     <section id="contacto" className="py-24 bg-[#2F2F2F]">

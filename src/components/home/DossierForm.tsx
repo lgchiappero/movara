@@ -100,8 +100,8 @@ const TOTAL_STEPS = 3;
 
 // ─── Style helpers ────────────────────────────────────────────────────────────
 
-const baseInput = "w-full bg-white/5 border text-white placeholder-stone-600 rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors";
-const selectCls = "w-full bg-[#2F2F2F] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#D4B36A]/50 transition-colors appearance-none";
+const baseInput = "w-full bg-white/5 border text-white placeholder-stone-600 rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none transition-colors";
+const selectCls = "w-full bg-[#2F2F2F] border border-white/10 text-white rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:border-[#D4B36A]/50 transition-colors appearance-none";
 
 function inputCls(errors: FieldErrors, key: ValidatableField) {
   const err = errors[key];

@@ -23,10 +23,10 @@ export default function PaginaLegal({ doc, otro }: { doc: DocumentoLegal; otro: 
 
           <nav aria-label="Índice" className="mt-8 rounded-2xl bg-stone-50 border border-stone-100 p-5">
             <p className="text-xs font-semibold uppercase tracking-widest text-stone-500 mb-3">Índice</p>
-            <ol className="space-y-1.5 text-sm">
+            <ol className="space-y-1.5 max-sm:space-y-0 text-sm">
               {doc.secciones.map((s) => (
                 <li key={s.id}>
-                  <a href={`#${s.id}`} className="text-[#2F2F2F] hover:text-[#BF9D52] underline-offset-2 hover:underline">
+                  <a href={`#${s.id}`} className="text-[#2F2F2F] hover:text-[#BF9D52] underline-offset-2 hover:underline max-sm:inline-flex max-sm:items-center max-sm:min-h-11">
                     {s.titulo}
                   </a>
                 </li>

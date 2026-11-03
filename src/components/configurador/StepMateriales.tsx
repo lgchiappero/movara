@@ -32,7 +32,7 @@ export {
 
 const GREEN = "#2d9e75";
 const ORANGE = "#d45a1a";
-const TILE_GRID = "grid grid-cols-2 sm:grid-cols-3 gap-3";
+const TILE_GRID = "grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3";
 const TILE_RADIUS = "rounded-xl";
 const TILE_SIZES = "(min-width: 640px) 33vw, 50vw";
 
@@ -114,7 +114,7 @@ function MaterialCard({
           </div>
         )
       ) : (
-      <div className="relative w-full aspect-[4/3]" style={{ backgroundColor: imageBg ?? "#f5f5f4" }}>
+      <div className="relative w-full aspect-[16/10] sm:aspect-[4/3]" style={{ backgroundColor: imageBg ?? "#f5f5f4" }}>
         {option.img ? (
           <MaterialImage
             src={option.img}
@@ -131,9 +131,9 @@ function MaterialCard({
       </div>
       )}
       {/* Estado de selección: solo acá — nunca sobre la imagen. */}
-      <div className="px-2 py-2 transition-colors duration-200" style={{ backgroundColor: selected ? textBg : "#ffffff" }}>
+      <div className="px-2 py-1.5 sm:py-2 transition-colors duration-200" style={{ backgroundColor: selected ? textBg : "#ffffff" }}>
         {selected && <StatusBadge isPremium={isPremium} />}
-        <p className={`text-xs font-semibold leading-snug line-clamp-3 ${selected ? "text-stone-900" : "text-stone-600"}`}>{option.label}</p>
+        <p className={`text-xs font-semibold leading-snug sm:line-clamp-3 ${selected ? "text-stone-900" : "text-stone-600"}`}>{option.label}</p>
         {option.descripcion && <p className="mt-1 text-[11px] leading-snug text-stone-500">{option.descripcion}</p>}
       </div>
     </button>
@@ -190,7 +190,7 @@ function CategoryGroupBlock({
 }) {
   return (
     <div>
-      <h4 className="text-base font-bold text-stone-900 mb-4">{category.title}</h4>
+      <h4 className="text-base font-bold text-stone-900 mb-3 sm:mb-4">{category.title}</h4>
       <div className="space-y-5">
         {category.selectors.map((sel, i) => {
           const conCosto = (x: MaterialSelector) => !!x.priceName || !!x.aConsultar;
@@ -234,10 +234,10 @@ export function MaterialesSection({
           &quot;+ USD&quot; suman ese monto al precio estimado; las de &quot;Precio a consultar&quot; las cotizamos en tu presupuesto. {LEYENDA_PRECIOS}
         </p>
       </div>
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* El balcón tiene su propia sección en "Configurá tu espacio". */}
         {MATERIAL_CATEGORY_GROUPS.filter((cat) => cat.key !== BALCON_GROUP_KEY && (incluyeBano || cat.key !== BANO_GROUP_KEY)).map((cat) => (
-          <div key={cat.key} className="pb-8 border-b border-stone-200 last:border-b-0 last:pb-0">
+          <div key={cat.key} className="pb-6 sm:pb-8 border-b border-stone-200 last:border-b-0 last:pb-0">
             <CategoryGroupBlock category={cat} seleccion={seleccion} onSelect={onSelect} priceFor={priceFor} />
           </div>
         ))}

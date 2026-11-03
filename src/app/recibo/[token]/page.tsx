@@ -64,8 +64,8 @@ export default async function ReciboPage({ params }: { params: Promise<{ token: 
         />
       )}
       <p className="text-center text-[11px] text-stone-600">
-        MOVARA · <a href={`https://wa.me/${WHATSAPP_MOVARA_NUMERO}`} className="hover:text-stone-400">{WHATSAPP_MOVARA_VISIBLE}</a> ·{" "}
-        <a href="/privacidad" className="hover:text-stone-400 underline underline-offset-2">
+        MOVARA · <a href={`https://wa.me/${WHATSAPP_MOVARA_NUMERO}`} className="hover:text-stone-400 max-sm:inline-flex max-sm:items-center max-sm:min-h-11">{WHATSAPP_MOVARA_VISIBLE}</a> ·{" "}
+        <a href="/privacidad" className="hover:text-stone-400 underline underline-offset-2 max-sm:inline-flex max-sm:items-center max-sm:min-h-11">
           Política de Privacidad
         </a>
       </p>

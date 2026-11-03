@@ -249,7 +249,7 @@ export default function ExitIntentPopup() {
                     placeholder="tu@email.com"
                     autoComplete="email"
                     className={[
-                      "w-full px-4 py-3 rounded-xl bg-white/8 text-white placeholder:text-stone-500 text-sm outline-none transition-colors border",
+                      "w-full px-4 py-3 rounded-xl bg-white/8 text-white placeholder:text-stone-500 text-base sm:text-sm outline-none transition-colors border",
                       touched && !emailOk
                         ? "border-red-500/60 focus:border-red-400"
                         : emailOk

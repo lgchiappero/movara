@@ -190,7 +190,7 @@ function Field({
 }
 
 const inputClass = (hasError: boolean) =>
-  `w-full px-4 py-2.5 rounded-xl border text-stone-900 bg-white text-sm placeholder:text-stone-400 outline-none transition-colors focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 ${
+  `w-full px-4 py-2.5 rounded-xl border text-stone-900 bg-white text-base sm:text-sm placeholder:text-stone-400 outline-none transition-colors focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 ${
     hasError
       ? "border-red-300 focus:border-red-400 focus:ring-red-200"
       : "border-stone-200 hover:border-stone-300"

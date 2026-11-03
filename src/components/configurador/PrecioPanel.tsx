@@ -50,14 +50,14 @@ export function Desglose({ resumen, colors, className = "pt-3 mt-3 border-t" }: 
         <span className="tabular-nums">{formatUSD(resumen.base)}</span>
       </div>
       {resumen.adicionales.map((a) => (
-        <div key={a.key} className="flex items-center justify-between text-xs" style={{ color: colors.text }}>
-          <span className="truncate pr-2">+ {a.nombre}</span>
+        <div key={a.key} className="flex items-start sm:items-center justify-between text-xs" style={{ color: colors.text }}>
+          <span className="min-w-0 pr-2 sm:truncate">+ {a.nombre}</span>
           <span className="tabular-nums shrink-0">{formatUSD(a.precio)}</span>
         </div>
       ))}
       {resumen.aConsultar.map((o) => (
-        <div key={o.key} className="flex items-center justify-between text-xs" style={{ color: colors.text }}>
-          <span className="truncate pr-2">+ {o.nombre}</span>
+        <div key={o.key} className="flex items-start sm:items-center justify-between text-xs" style={{ color: colors.text }}>
+          <span className="min-w-0 pr-2 sm:truncate">+ {o.nombre}</span>
           <span className="shrink-0 font-semibold">{A_CONSULTAR}</span>
         </div>
       ))}
@@ -65,11 +65,63 @@ export function Desglose({ resumen, colors, className = "pt-3 mt-3 border-t" }: 
   );
 }
 
+/** Colores del precio: gris sin modelo, verde sin extras, naranja con extras. */
+export function coloresPrecio(resumen: PrecioResumen, modeloLabel: string | null) {
+  if (!modeloLabel) return COLOR_SIN_MODELO;
+  return resumen.adicionales.length > 0 ? COLOR_CON_ADICIONALES : COLOR_SIN_ADICIONALES;
+}
+
+/** Celular: el total arriba de Atrás/Siguiente, en la barra fija del
+ *  configurador. "Detalle" despliega el desglose y la nota del precio. */
+export function PrecioBarraMovil({ resumen, modeloLabel }: { resumen: PrecioResumen; modeloLabel: string | null }) {
+  const [open, setOpen] = useState(false);
+  const displayTotal = useCountUp(resumen.total);
+  const colors = coloresPrecio(resumen, modeloLabel);
+
+  if (!modeloLabel) {
+    return (
+      <p className="sm:hidden min-h-11 flex items-center text-sm font-bold" style={{ color: colors.text }}>
+        Seleccioná un modelo para ver el precio
+      </p>
+    );
+  }
+  return (
+    <div className="sm:hidden" style={{ color: colors.text }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full min-h-11 flex items-center justify-between gap-3 text-left cursor-pointer"
+      >
+        <span className="min-w-0">
+          <span className="block text-[11px] font-semibold leading-tight truncate">{modeloLabel} · Precio estimado</span>
+          <span className="block text-lg font-extrabold leading-tight tabular-nums">{formatUSD(displayTotal)}</span>
+          {resumen.aConsultar.length > 0 && (
+            <span className="block text-[10px] font-semibold leading-tight">
+              + {resumen.aConsultar.length} {resumen.aConsultar.length === 1 ? "opción" : "opciones"} a consultar
+            </span>
+          )}
+        </span>
+        <span className="shrink-0 text-xs font-bold underline underline-offset-2 decoration-1">{open ? "Ocultar" : "Ver detalle"}</span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+            <div className="max-h-[40vh] overflow-y-auto">
+              <Desglose resumen={resumen} colors={colors} />
+              <p className="text-[10px] mt-2 leading-snug opacity-80">{NOTA}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export function PrecioPanel({ resumen, modeloLabel }: { resumen: PrecioResumen; modeloLabel: string | null }) {
   const [open, setOpen] = useState(false);
   const displayTotal = useCountUp(resumen.total);
-  const hasExtras = resumen.adicionales.length > 0;
-  const colors = !modeloLabel ? COLOR_SIN_MODELO : hasExtras ? COLOR_CON_ADICIONALES : COLOR_SIN_ADICIONALES;
+  const colors = coloresPrecio(resumen, modeloLabel);
 
   const scale = useMotionValue(1);
   useEffect(() => {
@@ -125,45 +177,6 @@ export function PrecioPanel({ resumen, modeloLabel }: { resumen: PrecioResumen; 
         )}
       </motion.div>
 
-      {/* Mobile — barra fija abajo */}
-      <motion.div
-        style={{ scale, backgroundColor: colors.bg }}
-        data-barra-inferior
-        className="sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-black/5 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-[0_-4px_16px_rgba(0,0,0,0.08)] transition-colors duration-500"
-      >
-        {!modeloLabel ? (
-          <p className="text-sm font-bold transition-colors duration-500" style={{ color: colors.text }}>
-            Seleccioná un modelo para ver el precio
-          </p>
-        ) : (
-          <>
-            <button type="button" onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between gap-3 cursor-pointer">
-              <div className="text-left min-w-0">
-                <p className="text-xs font-extrabold transition-colors duration-500" style={{ color: colors.text }}>
-                  {modeloLabel}
-                </p>
-                <p className="text-[11px] font-semibold transition-colors duration-500" style={{ color: colors.text }}>
-                  Precio estimado: <span className="text-lg font-extrabold tabular-nums">{formatUSD(displayTotal)}</span>
-                </p>
-                <AConsultar items={resumen.aConsultar} color={colors.text} className="text-[10px] leading-tight" />
-              </div>
-              <span className="shrink-0 text-[11px] font-bold underline underline-offset-2 decoration-1 transition-colors duration-500" style={{ color: colors.text }}>
-                {open ? "Ocultar" : "Ver detalle"}
-              </span>
-            </button>
-            <p className="text-[8.5px] mt-1 leading-tight opacity-70 transition-colors duration-500" style={{ color: colors.text }}>
-              {NOTA}
-            </p>
-            <AnimatePresence initial={false}>
-              {open && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
-                  <Desglose resumen={resumen} colors={colors} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </>
-        )}
-      </motion.div>
     </>
   );
 }

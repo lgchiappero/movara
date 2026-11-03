@@ -19,7 +19,7 @@ import {
   getMaterialLabel,
   type MaterialesSeleccion,
 } from "./StepMateriales";
-import { PrecioPanel, Desglose } from "./PrecioPanel";
+import { PrecioPanel, PrecioBarraMovil, coloresPrecio, Desglose } from "./PrecioPanel";
 import {
   validateField,
   particularSchema,
@@ -423,12 +423,12 @@ export default function ConfiguradorMovara({
   if (showResult) {
     return (
       <main className="min-h-screen bg-stone-50 pt-16">
-        <div className="bg-[#2F2F2F] px-4 sm:px-6 pt-14 pb-10 text-center">
+        <div className="bg-[#2F2F2F] px-4 sm:px-6 pt-5 pb-5 sm:pt-14 sm:pb-10 text-center">
           <span ref={(el) => { inicioRef.current = el; }} data-cfg-inicio className="block text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Paso {TOTAL_PASOS} de {TOTAL_PASOS} — Tu configuración</span>
-          <h1 className="text-3xl font-bold text-white mt-2">{cms.resultado.title}</h1>
-          <p className="text-stone-400 mt-2 text-sm">Revisá el mensaje y enviánoslo por WhatsApp para arrancar.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mt-1 sm:mt-2">{cms.resultado.title}</h1>
+          <p className="text-stone-400 mt-1 sm:mt-2 text-sm">Revisá el mensaje y enviánoslo por WhatsApp para arrancar.</p>
         </div>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             <ResultScreen
               modelo={modelo!}
@@ -464,16 +464,18 @@ export default function ConfiguradorMovara({
     // data-configurador="listo": ya hidratado e interactivo (los e2e lo esperan
     // antes de hacer clic; durante la carga hay una copia oculta del HTML).
     <main data-configurador={hydrated ? "listo" : "cargando"} className="min-h-screen bg-stone-50 pt-16">
-      <div className="bg-[#2F2F2F] px-4 sm:px-6 pt-14 pb-10 text-center">
-        <span className="text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Configurador</span>
-        <h1 className="text-3xl sm:text-4xl font-bold text-white mt-2 tracking-tight">Diseñá tu MOVARA</h1>
-        <p className="text-stone-400 mt-2 text-sm">{TOTAL_PASOS} pasos para encontrar el módulo ideal y recibir un presupuesto por WhatsApp.</p>
+      {/* En el celular, encabezado e indicador compactos (~15 % de la pantalla). */}
+      <div className="bg-[#2F2F2F] px-4 sm:px-6 pt-4 pb-3 sm:pt-14 sm:pb-10 text-center">
+        <span className="text-sage-400 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em]">Configurador</span>
+        <h1 className="text-xl sm:text-4xl font-bold text-white mt-0.5 sm:mt-2 tracking-tight">Diseñá tu MOVARA</h1>
+        <p className="hidden sm:block text-stone-400 mt-2 text-sm">{TOTAL_PASOS} pasos para encontrar el módulo ideal y recibir un presupuesto por WhatsApp.</p>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 pb-28 sm:pb-10">
+      {/* pb-36: en el celular, lugar para la barra fija de abajo (total + Atrás/Siguiente). */}
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-3 sm:pt-10 pb-36 sm:pb-10">
         {/* Progress */}
-        <div ref={(el) => { inicioRef.current = el; }} data-cfg-inicio className="mb-10">
-          <div className="flex gap-1.5 mb-3">
+        <div ref={(el) => { inicioRef.current = el; }} data-cfg-inicio className="mb-5 sm:mb-10">
+          <div className="flex gap-1.5 mb-2 sm:mb-3">
             {STEP_LABELS.map((_, i) => i + 1).map((n) => (
               <div key={n} className="flex-1 h-1.5 rounded-full bg-stone-200 overflow-hidden">
                 <div className="h-full rounded-full bg-sage-500 transition-all duration-500" style={{ width: n <= step ? "100%" : "0%" }} />
@@ -507,26 +509,35 @@ export default function ConfiguradorMovara({
           </motion.div>
         </AnimatePresence>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between mt-10 pt-6 border-t border-stone-200">
-          {step > 1 ? (
-            <button type="button" onClick={goBack} className="flex items-center gap-1.5 px-4 py-2.5 text-stone-500 hover:text-stone-800 text-sm font-semibold transition-colors">
-              <ChevronLeftIcon /> Atrás
+        {/* Navigation — en el celular es una barra fija abajo con el total
+            (siempre a la vista); desde sm queda al pie del paso, como siempre. */}
+        <div
+          data-barra-inferior
+          data-cfg-navegacion
+          style={{ "--barra-bg": coloresPrecio(precioResumen, modeloLabel).bg } as React.CSSProperties}
+          className="max-sm:fixed max-sm:bottom-0 max-sm:inset-x-0 max-sm:z-40 max-sm:bg-[var(--barra-bg)] max-sm:border-t max-sm:border-black/5 max-sm:px-4 max-sm:pt-1.5 max-sm:pb-[calc(env(safe-area-inset-bottom)+0.5rem)] max-sm:shadow-[0_-4px_16px_rgba(0,0,0,0.08)] max-sm:transition-colors max-sm:duration-500 sm:mt-10 sm:pt-6 sm:border-t sm:border-stone-200"
+        >
+          <PrecioBarraMovil resumen={precioResumen} modeloLabel={modeloLabel} />
+          <div className="flex items-center justify-between max-sm:gap-3 max-sm:mt-1">
+            {step > 1 ? (
+              <button type="button" onClick={goBack} className="flex items-center gap-1.5 px-4 py-2.5 max-sm:px-2 max-sm:min-h-11 text-stone-500 hover:text-stone-800 text-sm font-semibold transition-colors">
+                <ChevronLeftIcon /> Atrás
+              </button>
+            ) : (
+              <Link href="/" className="flex items-center gap-1.5 px-4 py-2.5 max-sm:px-2 max-sm:min-h-11 text-stone-400 hover:text-stone-600 text-sm font-semibold transition-colors">
+                <ChevronLeftIcon /> Inicio
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={!canNext}
+              className="flex items-center gap-2 px-8 py-3 max-sm:flex-1 max-sm:justify-center max-sm:min-h-11 max-sm:px-5 bg-sage-500 hover:bg-sage-600 disabled:opacity-35 disabled:cursor-not-allowed text-white text-sm font-bold rounded-full transition-all duration-200 hover:shadow-lg hover:shadow-sage-500/25 hover:-translate-y-px"
+            >
+              {step === 5 ? "Ver mi configuración" : "Siguiente"}
+              <ChevronRightIcon />
             </button>
-          ) : (
-            <Link href="/" className="flex items-center gap-1.5 px-4 py-2.5 text-stone-400 hover:text-stone-600 text-sm font-semibold transition-colors">
-              <ChevronLeftIcon /> Inicio
-            </Link>
-          )}
-          <button
-            type="button"
-            onClick={goNext}
-            disabled={!canNext}
-            className="flex items-center gap-2 px-8 py-3 bg-sage-500 hover:bg-sage-600 disabled:opacity-35 disabled:cursor-not-allowed text-white text-sm font-bold rounded-full transition-all duration-200 hover:shadow-lg hover:shadow-sage-500/25 hover:-translate-y-px"
-          >
-            {step === 5 ? "Ver mi configuración" : "Siguiente"}
-            <ChevronRightIcon />
-          </button>
+          </div>
         </div>
       </div>
     </main>
@@ -645,7 +656,7 @@ function StepModelo({ modelo, onSelect, title, subtitle, taglines, modeloImagene
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 1 de {TOTAL_PASOS}</p>
-      <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
+      <h2 className="text-xl sm:text-2xl font-bold text-stone-900 mb-1">{title}</h2>
       <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
       <div className="space-y-4">
         {MOVARA_MODELS.map((m) => {
@@ -701,7 +712,7 @@ function StepFinalidad({ finalidad, onSelect, title, subtitle, descs }: {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 2 de {TOTAL_PASOS}</p>
-      <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
+      <h2 className="text-xl sm:text-2xl font-bold text-stone-900 mb-1">{title}</h2>
       <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {FINALIDADES.map((f) => {
@@ -760,7 +771,7 @@ function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, title
   const locIsValid = localidad.trim() !== "" && !validateField(localidadSchema, localidad.trim());
 
   function locCls() {
-    const base = "w-full px-4 py-3 rounded-xl border-2 outline-none text-stone-900 text-sm placeholder:text-stone-400 transition-all bg-white";
+    const base = "w-full px-4 py-3 rounded-xl border-2 outline-none text-stone-900 text-base sm:text-sm placeholder:text-stone-400 transition-all bg-white";
     if (!mostrarLocError) return `${base} border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20`;
     if (locError) return `${base} border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-400/20`;
     return `${base} border-green-400 focus:border-green-500 focus:ring-2 focus:ring-green-400/20`;
@@ -769,7 +780,7 @@ function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, title
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 3 de {TOTAL_PASOS}</p>
-      <h2 className="text-2xl font-bold text-stone-900 mb-1">{title}</h2>
+      <h2 className="text-xl sm:text-2xl font-bold text-stone-900 mb-1">{title}</h2>
       <p className="text-stone-500 text-sm mb-8">{subtitle}</p>
       <div className="space-y-5">
         <div>
@@ -796,7 +807,7 @@ function StepUbicacion({ localidad, setLocalidad, provincia, setProvincia, title
         </div>
         <div>
           <label htmlFor="cfg-provincia" className="block text-sm font-semibold text-stone-700 mb-1.5">{provinciaLabel} <span className="text-sage-500">*</span></label>
-          <select id="cfg-provincia" value={provincia} onChange={(e) => setProvincia(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20 outline-none text-stone-900 text-sm transition-colors bg-white">
+          <select id="cfg-provincia" value={provincia} onChange={(e) => setProvincia(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20 outline-none text-stone-900 text-base sm:text-sm transition-colors bg-white">
             <option value="">Seleccioná una provincia</option>
             {PROVINCIAS_AR.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
@@ -814,7 +825,7 @@ function ToggleGroup<T extends string>({ value, onChange, options }: { value: T;
   return (
     <div className="flex gap-2 flex-wrap">
       {options.map((opt) => (
-        <button key={opt.value} type="button" onClick={() => onChange(opt.value)} className={`px-4 py-2 rounded-lg text-sm font-semibold border-2 transition-all ${value === opt.value ? "border-sage-500 bg-sage-50 text-sage-800" : "border-stone-200 bg-white text-stone-600 hover:border-sage-300"}`}>
+        <button key={opt.value} type="button" onClick={() => onChange(opt.value)} className={`px-4 py-2 max-sm:min-h-11 rounded-lg text-sm font-semibold border-2 transition-all ${value === opt.value ? "border-sage-500 bg-sage-50 text-sage-800" : "border-stone-200 bg-white text-stone-600 hover:border-sage-300"}`}>
           {opt.label}
         </button>
       ))}
@@ -883,7 +894,7 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 4 de {TOTAL_PASOS}</p>
-      <h2 className="text-2xl font-bold text-stone-900 mb-1">Configurá tu espacio</h2>
+      <h2 className="text-xl sm:text-2xl font-bold text-stone-900 mb-1">Configurá tu espacio</h2>
       <p className="text-stone-500 text-sm mb-6">Personalizá el interior de tu módulo según tus necesidades.</p>
 
       <div className="space-y-4">
@@ -918,7 +929,7 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
                 { value: "cocina" as TipoLavarropas, label: "En la cocina" },
                 { value: "externo" as TipoLavarropas, label: "Espacio externo" },
               ]).map((opt) => (
-                <button key={opt.value} type="button" onClick={() => setLavarropas(opt.value)} className={`px-3 py-2.5 rounded-lg text-sm font-semibold border-2 text-left transition-all ${lavarropas === opt.value ? "border-sage-500 bg-sage-50 text-sage-800" : "border-stone-200 bg-white text-stone-600 hover:border-sage-300"}`}>
+                <button key={opt.value} type="button" onClick={() => setLavarropas(opt.value)} className={`px-3 py-2.5 max-sm:min-h-11 rounded-lg text-sm font-semibold border-2 text-left transition-all ${lavarropas === opt.value ? "border-sage-500 bg-sage-50 text-sage-800" : "border-stone-200 bg-white text-stone-600 hover:border-sage-300"}`}>
                   {opt.label}
                 </button>
               ))}
@@ -967,7 +978,7 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
             maxLength={NOTAS_CONFIGURACION_MAX}
             aria-describedby="cfg-notas-contador"
             placeholder="Contanos cualquier necesidad puntual: accesibilidad, orientación del terreno, uso específico…"
-            className={`w-full px-4 py-3 rounded-xl border-2 outline-none text-stone-900 text-sm placeholder:text-stone-400 transition-all bg-white resize-y ${notasError ? "border-red-300 focus:border-red-400" : "border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20"}`}
+            className={`w-full px-4 py-3 rounded-xl border-2 outline-none text-stone-900 text-base sm:text-sm placeholder:text-stone-400 transition-all bg-white resize-y ${notasError ? "border-red-300 focus:border-red-400" : "border-stone-200 hover:border-stone-300 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20"}`}
           />
           <div className="flex justify-between gap-3 mt-1">
             <FieldError msg={notasError} />
@@ -986,7 +997,7 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
 // ─────────────────────────────────────────────────────────
 
 const INPUT_BASE =
-  "w-full px-4 py-3 rounded-xl border-2 outline-none text-stone-900 text-sm placeholder:text-stone-400 transition-all bg-white";
+  "w-full px-4 py-3 rounded-xl border-2 outline-none text-stone-900 text-base sm:text-sm placeholder:text-stone-400 transition-all bg-white";
 
 function inputCls(error: string | null, isDirty: boolean): string {
   if (!isDirty)
@@ -1048,7 +1059,7 @@ export function StepDatos({
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-sage-500 mb-2">Paso 5 de {TOTAL_PASOS}</p>
-      <h2 className="text-2xl font-bold text-stone-900 mb-1">Tus datos</h2>
+      <h2 className="text-xl sm:text-2xl font-bold text-stone-900 mb-1">Tus datos</h2>
       <p className="text-stone-500 text-sm mb-6">Completá tus datos para que podamos preparar tu presupuesto personalizado.</p>
 
       <div className="space-y-4">
@@ -1216,7 +1227,7 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, i
           {tokenSeguimiento && (
             <a
               href={`/mi-pedido?t=${tokenSeguimiento}`}
-              className="inline-block mt-1.5 text-xs font-bold text-sage-700 hover:underline"
+              className="inline-block mt-1.5 max-sm:inline-flex max-sm:items-center max-sm:min-h-11 max-sm:mt-0 text-xs font-bold text-sage-700 hover:underline"
             >
               Seguí tu consulta →
             </a>
@@ -1273,7 +1284,7 @@ function ResultScreen({ modelo, finalidad, localidad, provincia, habitaciones, i
       <div>
         <label className="block text-sm font-semibold text-stone-700 mb-1.5">Vista previa del mensaje de WhatsApp</label>
         <p className="text-xs text-stone-400 mb-2">Podés editarlo antes de enviar.</p>
-        <textarea value={waMessage} onChange={(e) => setWaMessage(e.target.value)} rows={10} className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20 outline-none text-stone-800 text-sm font-mono leading-relaxed resize-none transition-colors bg-stone-50" />
+        <textarea value={waMessage} onChange={(e) => setWaMessage(e.target.value)} rows={10} className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-sage-400 focus:ring-2 focus:ring-sage-400/20 outline-none text-stone-800 text-base sm:text-sm font-mono leading-relaxed resize-none transition-colors bg-stone-50" />
       </div>
 
       {/* CTAs */}

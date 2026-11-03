@@ -58,7 +58,7 @@ export default function Preventa({ content }: { content?: PreventaContent | null
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-4xl sm:text-5xl font-bold text-white leading-tight mb-6">
+          <h2 className="text-[1.625rem] sm:text-5xl font-bold text-white leading-tight mb-6">
             {content?.titulo ? (
               content.titulo
             ) : (

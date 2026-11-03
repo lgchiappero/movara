@@ -54,7 +54,7 @@ export default function NuevaCategoria({ content }: { content?: NuevaCategoriaCo
           <span className="text-xs font-semibold uppercase tracking-widest text-[#D4B36A] mb-5 block">
             Una nueva categoría
           </span>
-          <h2 className="text-4xl sm:text-5xl font-bold text-[#2F2F2F] leading-tight max-w-3xl mx-auto">
+          <h2 className="text-[1.625rem] sm:text-5xl font-bold text-[#2F2F2F] leading-tight max-w-3xl mx-auto">
             {titulo}
           </h2>
           <p className="mt-6 text-lg text-stone-500 max-w-xl mx-auto leading-relaxed">{subtitulo}</p>

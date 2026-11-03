@@ -92,7 +92,7 @@ export default function Navbar() {
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Menú"
-          className="md:hidden p-2 rounded-md text-stone-700 hover:bg-stone-100 transition-colors"
+          className="md:hidden p-2 max-sm:p-2.5 rounded-md text-stone-700 hover:bg-stone-100 transition-colors"
         >
           {menuOpen ? <XIcon /> : <MenuIcon />}
         </button>

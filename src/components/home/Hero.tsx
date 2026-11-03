@@ -92,10 +92,11 @@ export default function Hero({
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, delay: 0.08 }}
-            className="text-left text-3xl sm:text-[2.75rem] lg:text-[3.25rem] font-bold text-white leading-[1.05] tracking-tight mb-4 sm:mb-5 [text-shadow:0_2px_20px_rgba(0,0,0,0.7)]"
+            className="text-left text-2xl sm:text-[2.75rem] lg:text-[3.25rem] font-bold text-white leading-[1.05] tracking-tight mb-4 sm:mb-5 [text-shadow:0_2px_20px_rgba(0,0,0,0.7)]"
           >
-            {c.titulo}
-            <br />
+            {c.titulo}{" "}
+            {/* En el celular el título corre seguido (3 líneas en vez de 4). */}
+            <br className="hidden sm:inline" />
             <span className="text-[#D4B36A]">{c.tituloDestacado}</span>
           </motion.h1>
 

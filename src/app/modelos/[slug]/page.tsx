@@ -105,12 +105,12 @@ export default async function ModelDetailPage({ params }: Props) {
         <div className="grid lg:grid-cols-5 gap-10 lg:gap-14">
 
           {/* Gallery */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 min-w-0">
             <ImageGallery images={model.images} modelName={model.name} video={model.video} videos={model.videos} />
           </div>
 
           {/* Info sidebar */}
-          <div className="lg:col-span-2 flex flex-col gap-6">
+          <div className="lg:col-span-2 flex flex-col gap-6 min-w-0">
             <div>
               {model.tag && (
                 <span className="inline-block text-xs font-bold uppercase tracking-widest text-white bg-sage-600 px-3 py-1 rounded-full mb-3">
@@ -211,7 +211,7 @@ export default async function ModelDetailPage({ params }: Props) {
 
         {/* Content below gallery */}
         <div className="mt-14 grid lg:grid-cols-3 gap-10 lg:gap-14">
-          <div className="lg:col-span-2 space-y-12">
+          <div className="lg:col-span-2 space-y-12 min-w-0">
 
             {/* Description */}
             {(model.description || (model.features && model.features.length > 0)) && (
@@ -273,7 +273,7 @@ export default async function ModelDetailPage({ params }: Props) {
           </div>
 
           {/* Sidebar */}
-          <aside className="space-y-6">
+          <aside className="space-y-6 min-w-0">
             <div className="bg-stone-50 border border-stone-100 rounded-2xl p-6 space-y-4">
               <h3 className="font-bold text-stone-900">Incluido en el precio</h3>
               {PRECIO_INCLUYE.map((item) => (

@@ -146,7 +146,7 @@ export default function ImageGallery({ images, modelName, video, videos }: Props
             <button
               key={f}
               onClick={() => changeFilter(f)}
-              className={`px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all ${
+              className={`px-3.5 py-1.5 max-sm:min-h-11 text-sm font-medium rounded-lg transition-all ${
                 filter === f
                   ? "bg-white text-stone-900 shadow-sm"
                   : "text-stone-500 hover:text-stone-700"
@@ -221,14 +221,14 @@ export default function ImageGallery({ images, modelName, video, videos }: Props
           <>
             <button
               onClick={() => setSelected((s) => (s - 1 + items.length) % items.length)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/50 transition-colors"
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 max-sm:w-11 max-sm:h-11 rounded-full bg-black/30 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/50 transition-colors"
               aria-label="Imagen anterior"
             >
               <ChevronLeftIcon />
             </button>
             <button
               onClick={() => setSelected((s) => (s + 1) % items.length)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/50 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 max-sm:w-11 max-sm:h-11 rounded-full bg-black/30 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/50 transition-colors"
               aria-label="Imagen siguiente"
             >
               <ChevronRightIcon />
@@ -317,7 +317,7 @@ function VideoThumbnail({ label }: { label: string }) {
           <path d="M8 5v14l11-7z" />
         </svg>
       </div>
-      <span className="text-[8px] text-white/60 font-medium truncate px-1 max-w-full">
+      <span className="hidden sm:block text-[8px] text-white/60 font-medium truncate px-1 max-w-full">
         {label}
       </span>
     </div>
