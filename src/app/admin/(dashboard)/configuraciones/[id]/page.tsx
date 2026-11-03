@@ -22,11 +22,27 @@ import { MaterialImage } from "@/components/configurador/MaterialImage";
 import EliminarConfiguracionButton from "@/components/admin/EliminarConfiguracionButton";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { isAdmin } from "@/lib/admin/roles";
+import { buscarPedidoTolerante } from "@/lib/admin/pedido-tolerante";
+import SeccionSegura from "@/components/admin/SeccionSegura";
+import { seccionSegura } from "@/components/admin/DatoNoDisponible";
 
 export const dynamic = "force-dynamic";
 
+/** Link firmado del documento; si Storage falla, el documento queda sin
+ *  link pero el pedido se ve igual. */
 async function resolveUrl(path: string | null): Promise<string | null> {
-  return path ? getSignedUrl(BUCKET_PEDIDOS, path) : null;
+  if (!path) return null;
+  try {
+    return await getSignedUrl(BUCKET_PEDIDOS, path);
+  } catch (err) {
+    console.error(`[admin] No se pudo firmar ${path}:`, err);
+    return null;
+  }
+}
+
+/** Lo que se guardó en `materiales`, solo si tiene la forma esperada. */
+function materialesDe(raw: unknown): Record<string, string | null> | null {
+  return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, string | null>) : null;
 }
 
 export default async function ConfiguracionDetailPage({
@@ -35,9 +51,12 @@ export default async function ConfiguracionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const config = await db.configuracionPedido.findUnique({ where: { id } });
-
-  if (!config) notFound();
+  // Nunca rompe entero por una columna que falte en la base: esos campos
+  // vienen vacíos y se avisa arriba.
+  const resultado = await buscarPedidoTolerante(id);
+  if (!resultado) notFound();
+  const { pedido: config, camposNoDisponibles } = resultado;
+  const materiales = materialesDe(config.materiales);
 
   const session = await getAdminUser();
 
@@ -47,7 +66,10 @@ export default async function ConfiguracionDetailPage({
       select: { email: true, nombre: true },
       orderBy: { nombre: "asc" },
     }),
-    db.documentoPedido.findMany({ where: { pedidoId: id }, orderBy: { createdAt: "desc" } }),
+    db.documentoPedido.findMany({ where: { pedidoId: id }, orderBy: { createdAt: "desc" } }).catch((err) => {
+      console.error(`[admin] No se pudieron leer los documentos del pedido ${id}:`, err);
+      return [];
+    }),
   ]);
 
   const [piUrl, comprobantePagoUrl, comprobanteSaldoUrl, seguroUrl, inspeccionUrl, fotosUrl, documentosConUrl] =
@@ -66,7 +88,7 @@ export default async function ConfiguracionDetailPage({
           notas: d.notas,
           subidoPor: d.subidoPor,
           createdAt: d.createdAt.toISOString(),
-          signedUrl: await getSignedUrl(BUCKET_PEDIDOS, d.url),
+          signedUrl: await resolveUrl(d.url),
         }))
       ),
     ]);
@@ -94,6 +116,13 @@ export default async function ConfiguracionDetailPage({
           {session && isAdmin(session.rol) && <EliminarConfiguracionButton id={id} />}
         </div>
       </div>
+
+      {camposNoDisponibles.length > 0 && (
+        <div role="alert" className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-sm text-amber-900">
+          Hay datos de este pedido que no se pudieron leer ({camposNoDisponibles.join(", ")}): figuran como dato no
+          disponible. El resto del pedido está completo.
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 mb-6 space-y-2 text-sm">
         <div className="flex justify-between">
@@ -132,107 +161,111 @@ export default async function ConfiguracionDetailPage({
       </div>
 
       <div className="mb-6">
-        <ConfiguracionEspacioForm
-          id={id}
-          initial={{
-            modelo: config.modelo,
-            finalidad: config.finalidad,
-            provincia: config.provincia,
-            localidad: config.localidad,
-            habitaciones: config.habitaciones,
-            incluyeCocina: config.incluyeCocina,
-            tipoCocina: config.tipoCocina,
-            incluyeBano: config.incluyeBano,
-            tipoAgua: config.tipoAgua,
-            lavarropas: config.lavarropas,
-            materiales: config.materiales as Record<string, string | null> | null,
-            upgrades: config.upgrades,
-            notasConfiguracion: config.notasConfiguracion,
-          }}
-        />
+        <SeccionSegura titulo="Configuración del espacio">
+          <ConfiguracionEspacioForm
+            id={id}
+            initial={{
+              modelo: config.modelo,
+              finalidad: config.finalidad,
+              provincia: config.provincia,
+              localidad: config.localidad,
+              habitaciones: config.habitaciones,
+              incluyeCocina: config.incluyeCocina,
+              tipoCocina: config.tipoCocina,
+              incluyeBano: config.incluyeBano,
+              tipoAgua: config.tipoAgua,
+              lavarropas: config.lavarropas,
+              materiales,
+              upgrades: config.upgrades ?? [],
+              notasConfiguracion: config.notasConfiguracion,
+            }}
+          />
+        </SeccionSegura>
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 mb-6">
         <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600 mb-4">
           Configuración completa
         </h2>
-        <NarrativeView
-          data={{
-            ...config,
-            materiales: config.materiales as Record<string, string | null> | null,
-          }}
-        />
+        {/* Se llaman como funciones para que seccionSegura atrape un error al armarlas. */}
+        {seccionSegura("Configuración completa", () => NarrativeView({ data: { ...config, upgrades: config.upgrades ?? [], materiales } }))}
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 mb-6">
         <h2 className="text-sm font-bold uppercase tracking-widest text-sage-600 mb-4">
           Materiales elegidos
         </h2>
-        <MaterialesConImagenes materiales={(config.materiales as Record<string, string | null>) ?? {}} />
+        {seccionSegura("Materiales elegidos", () => MaterialesConImagenes({ materiales: materiales ?? {} }))}
       </div>
 
       <div className="space-y-6">
-        <CancelarPedidoSection
-          id={id}
-          cancelado={config.estadoPedido === ESTADO_PEDIDO_CANCELADO}
-          motivoCancelacion={config.motivoCancelacion}
-          fechaCancelacion={config.fechaCancelacion?.toISOString() ?? null}
-          canceladoPor={config.canceladoPor}
-          estadoAntesDeCancelar={config.estadoAntesDeCancelar}
-        />
+        <SeccionSegura titulo="Cancelación">
+          <CancelarPedidoSection
+            id={id}
+            cancelado={config.estadoPedido === ESTADO_PEDIDO_CANCELADO}
+            motivoCancelacion={config.motivoCancelacion}
+            fechaCancelacion={config.fechaCancelacion?.toISOString() ?? null}
+            canceladoPor={config.canceladoPor}
+            estadoAntesDeCancelar={config.estadoAntesDeCancelar}
+          />
+        </SeccionSegura>
         {/* key: al cancelar o reactivar se vuelve a montar con el estado nuevo
             (si no, el formulario guardaría el estado viejo y lo reactivaría). */}
-        <GestionPedidoPanel
-          key={config.estadoPedido}
-          id={id}
-          numeroPedido={config.numeroPedido}
-          initial={{
-            estadoPedido: config.estadoPedido,
-            precioFinal: config.precioFinal,
-            anticipo: config.anticipo,
-            numeroFabrica: config.numeroFabrica,
-            numeroContenedor: config.numeroContenedor,
-            numeroBL: config.numeroBL,
-            fechaConfirmacion: config.fechaConfirmacion?.toISOString() ?? null,
-            fechaProduccion: config.fechaProduccion?.toISOString() ?? null,
-            fechaDespacho: config.fechaDespacho?.toISOString() ?? null,
-            fechaArriboEstimado: config.fechaArriboEstimado?.toISOString() ?? null,
-            fechaEntrega: config.fechaEntrega?.toISOString() ?? null,
-            notasInternas: config.notasInternas,
-            notasCliente: config.notasCliente,
-            costoProveedor: config.costoProveedor,
-            costoFlete: config.costoFlete,
-            costoAduana: config.costoAduana,
-            costoOtros: config.costoOtros,
+        <SeccionSegura titulo="Gestión del pedido">
+          <GestionPedidoPanel
+            key={config.estadoPedido}
+            id={id}
+            numeroPedido={config.numeroPedido}
+            initial={{
+              estadoPedido: config.estadoPedido,
+              precioFinal: config.precioFinal,
+              anticipo: config.anticipo,
+              numeroFabrica: config.numeroFabrica,
+              numeroContenedor: config.numeroContenedor,
+              numeroBL: config.numeroBL,
+              fechaConfirmacion: config.fechaConfirmacion?.toISOString() ?? null,
+              fechaProduccion: config.fechaProduccion?.toISOString() ?? null,
+              fechaDespacho: config.fechaDespacho?.toISOString() ?? null,
+              fechaArriboEstimado: config.fechaArriboEstimado?.toISOString() ?? null,
+              fechaEntrega: config.fechaEntrega?.toISOString() ?? null,
+              notasInternas: config.notasInternas,
+              notasCliente: config.notasCliente,
+              costoProveedor: config.costoProveedor,
+              costoFlete: config.costoFlete,
+              costoAduana: config.costoAduana,
+              costoOtros: config.costoOtros,
 
-            vendedorAsignado: config.vendedorAsignado,
-            piProveedor: config.piProveedor,
-            fechaPIPagado: config.fechaPIPagado?.toISOString() ?? null,
-            montoPI: config.montoPI,
+              vendedorAsignado: config.vendedorAsignado,
+              piProveedor: config.piProveedor,
+              fechaPIPagado: config.fechaPIPagado?.toISOString() ?? null,
+              montoPI: config.montoPI,
 
-            seguroTransporte: config.seguroTransporte,
-            inspeccionFabrica: config.inspeccionFabrica,
-            fotosDespachadas: config.fotosDespachadas,
-            notasDespachador: config.notasDespachador,
-            gastosDespachante: config.gastosDespachante,
-            impuestosAduana: config.impuestosAduana,
-            gastosPortuarios: config.gastosPortuarios,
+              seguroTransporte: config.seguroTransporte,
+              inspeccionFabrica: config.inspeccionFabrica,
+              fotosDespachadas: config.fotosDespachadas,
+              notasDespachador: config.notasDespachador,
+              gastosDespachante: config.gastosDespachante,
+              impuestosAduana: config.impuestosAduana,
+              gastosPortuarios: config.gastosPortuarios,
 
-            costoGruaDescarga: config.costoGruaDescarga,
-            costoTransporteLocal: config.costoTransporteLocal,
-            instalacionFecha: config.instalacionFecha?.toISOString() ?? null,
-            instalacionNotas: config.instalacionNotas,
-            satisfaccionCliente: config.satisfaccionCliente,
+              costoGruaDescarga: config.costoGruaDescarga,
+              costoTransporteLocal: config.costoTransporteLocal,
+              instalacionFecha: config.instalacionFecha?.toISOString() ?? null,
+              instalacionNotas: config.instalacionNotas,
+              satisfaccionCliente: config.satisfaccionCliente,
 
-            garantiaActivada: config.garantiaActivada,
-            garantiaFechaInicio: config.garantiaFechaInicio?.toISOString() ?? null,
-            garantiaFechaFin: config.garantiaFechaFin?.toISOString() ?? null,
-          }}
-          documentUrls={{ piUrl, comprobantePagoUrl, comprobanteSaldoUrl, seguroUrl, inspeccionUrl, fotosUrl }}
-          vendedores={vendedores}
-        />
+              garantiaActivada: config.garantiaActivada,
+              garantiaFechaInicio: config.garantiaFechaInicio?.toISOString() ?? null,
+              garantiaFechaFin: config.garantiaFechaFin?.toISOString() ?? null,
+            }}
+            documentUrls={{ piUrl, comprobantePagoUrl, comprobanteSaldoUrl, seguroUrl, inspeccionUrl, fotosUrl }}
+            vendedores={vendedores}
+          />
+        </SeccionSegura>
 
-        <DocumentosPedidoSection pedidoId={id} documentos={documentosConUrl} puedeEliminar={!!session && isAdmin(session.rol)} />
+        <SeccionSegura titulo="Documentos">
+          <DocumentosPedidoSection pedidoId={id} documentos={documentosConUrl} puedeEliminar={!!session && isAdmin(session.rol)} />
+        </SeccionSegura>
       </div>
     </div>
   );

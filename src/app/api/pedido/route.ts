@@ -42,6 +42,25 @@ async function sendNotificationEmail(clienteNombre: string, modelo: string, nume
   if (!resultado.ok) console.error(`[pedido] ${numeroConsulta} Falló el email a MOVARA: ${resultado.error}`);
 }
 
+/** Si el pedido no se pudo guardar (ej. a la base le falta una columna), el
+ *  contacto no se pierde: llega por email a MOVARA para recontactarlo. Los
+ *  datos personales van solo al email, nunca a los logs. */
+async function avisarPedidoNoGuardado(data: { clienteNombre: string; clienteWhatsapp: string; clienteEmail?: string | null; modelo: string; provincia: string; localidad: string }) {
+  const contactEmail = process.env.CONTACT_EMAIL || "lucianogchiappero@gmail.com";
+  const fila = (k: string, v: string | null | undefined) =>
+    `<tr><td style="padding:4px 8px;color:#777;">${k}</td><td style="padding:4px 8px;color:#222;font-weight:bold;">${escapeHtml(v || "—")}</td></tr>`;
+  const resultado = await enviarEmail({
+    to: contactEmail,
+    replyTo: "lucianogchiappero@gmail.com",
+    subject: `⚠️ Consulta NO guardada — recontactar a ${data.clienteNombre}`,
+    html: `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;padding:20px;">
+<p style="font-size:16px;font-weight:bold;color:#9a3412;">El configurador no pudo guardar esta consulta (error de base de datos). No figura en el admin: hay que recontactarla.</p>
+<table>${fila("Fecha", new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" }))}${fila("Nombre", data.clienteNombre)}${fila("WhatsApp", data.clienteWhatsapp)}${fila("Email", data.clienteEmail)}${fila("Modelo", modeloLabelsEs[data.modelo as keyof typeof modeloLabelsEs] ?? data.modelo)}${fila("Ubicación", `${data.localidad}, ${data.provincia}`)}</table>
+</body></html>`,
+  });
+  if (!resultado.ok) console.error(`[pedido] Falló el email de consulta no guardada: ${resultado.error}`);
+}
+
 /** Precios de Sanity; si no responde, el cálculo usa el fallback del código. */
 async function getPrecios(): Promise<PreciosConfig | null> {
   try {
@@ -59,6 +78,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Demasiadas solicitudes" }, { status: 429 });
   }
 
+  // Solo se avisa "no guardada" si falló antes de guardar el pedido.
+  let datosContacto: Parameters<typeof avisarPedidoNoGuardado>[0] | null = null;
   try {
     const body = await req.json();
     const parsed = pedidoSchema.safeParse(body);
@@ -70,6 +91,7 @@ export async function POST(req: NextRequest) {
     }
 
     const data = parsed.data;
+    datosContacto = data;
     const origen = origenDelBody((body as { origen?: unknown } | null)?.origen);
     // El desglose se calcula acá, no se toma del navegador: es la foto de los
     // precios del día que muestran después los PDFs.
@@ -131,6 +153,7 @@ export async function POST(req: NextRequest) {
       return { numeroConsulta: numero, tokenSeguimiento: creado.tokenSeguimiento };
     });
 
+    datosContacto = null;
     const aCotizar = precio.aConsultar.map((o) => o.nombre);
     await sendNotificationEmail(
       data.clienteNombre,
@@ -142,6 +165,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, numeroConsulta, tokenSeguimiento });
   } catch (err) {
     console.error(`[pedido] ${resumenError(err)}`);
+    if (datosContacto) await avisarPedidoNoGuardado(datosContacto).catch(() => {});
     return NextResponse.json({ error: "Error al procesar la solicitud" }, { status: 500 });
   }
 }

@@ -234,6 +234,38 @@ describe("POST /api/pedido", () => {
     expect((await POST(req(BASE, "10.0.0.5"))).status).toBe(500);
   });
 
+  it("si no se puede guardar (columna faltante, como el 3/11), igual llega a MOVARA un email para recontactar, sin datos en los logs", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    const errores = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockSend.mockClear();
+    mockCreate.mockRejectedValueOnce(
+      Object.assign(new Error("The column `configuraciones_pedido.desgloseEstimado` does not exist in the current database."), { code: "P2022" })
+    );
+    const res = await POST(req(BASE, "10.0.0.6"));
+    expect(res.status).toBe(500);
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    const { subject, html } = mockSend.mock.calls[0][0];
+    expect(subject).toBe(`⚠️ Consulta NO guardada — recontactar a ${BASE.clienteNombre}`);
+    expect(html).toContain(BASE.clienteWhatsapp);
+    expect(html).toContain(BASE.clienteEmail);
+    expect(html).toContain("La Plata, Buenos Aires");
+    const logueado = errores.mock.calls.flat().join(" ");
+    expect(logueado).not.toContain(BASE.clienteWhatsapp);
+    expect(logueado).not.toContain(BASE.clienteNombre);
+    delete process.env.RESEND_API_KEY;
+  });
+
+  it("si el pedido se guardó, un error posterior no manda el aviso de no guardada", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mockSend.mockClear();
+    mockCreate.mockResolvedValueOnce({ tokenSeguimiento: "f".repeat(64) });
+    mockSend.mockRejectedValueOnce(new Error("resend caído"));
+    await POST(req(BASE, "10.0.0.7"));
+    expect(mockSend.mock.calls.map((c) => c[0].subject).some((s: string) => s.includes("NO guardada"))).toBe(false);
+    delete process.env.RESEND_API_KEY;
+  });
+
   it("429 al superar el límite por IP", async () => {
     mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
     let ultimo = 0;

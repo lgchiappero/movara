@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { db } from "@/lib/db";
+import { buscarPedidoTolerante } from "@/lib/admin/pedido-tolerante";
 import { PedidoDocumentBilingual } from "@/lib/pdf/PedidoDocumentBilingual";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 
@@ -9,7 +9,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const config = await db.configuracionPedido.findUnique({ where: { id } });
+  // Sin romper si a la base le falta una columna (ese dato sale vacío).
+  const config = (await buscarPedidoTolerante(id))?.pedido ?? null;
 
   if (!config) {
     return NextResponse.json({ error: "Configuración no encontrada" }, { status: 404 });

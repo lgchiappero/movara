@@ -50,7 +50,25 @@ vi.mock("@/components/admin/EliminarConfiguracionButton", () => ({
   default: () => <div>EliminarConfiguracionButton</div>,
 }));
 
+const { mockNarrative } = vi.hoisted(() => ({ mockNarrative: vi.fn() }));
+vi.mock("@/lib/pdf/pedido-narrative-es", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/lib/pdf/pedido-narrative-es")>();
+  mockNarrative.mockImplementation(real.buildPedidoNarrativeEs);
+  return { ...real, buildPedidoNarrativeEs: (d: Parameters<typeof real.buildPedidoNarrativeEs>[0]) => mockNarrative(d) };
+});
+
 import ConfiguracionDetailPage from "../page";
+
+/** El error de producción del 3/11/2026 (digest 2875324328). */
+function errorColumnaFaltante() {
+  return Object.assign(
+    new Error(
+      "\nInvalid `prisma.configuracionPedido.findUnique()` invocation:\n\n\n" +
+        "The column `configuraciones_pedido.desgloseEstimado` does not exist in the current database."
+    ),
+    { code: "P2022", meta: { modelName: "ConfiguracionPedido" } }
+  );
+}
 
 const CONFIG_BASE = {
   id: "p1",
@@ -271,5 +289,60 @@ describe("ConfiguracionDetailPage", () => {
     render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
     expect(screen.queryByText("EliminarConfiguracionButton")).not.toBeInTheDocument();
     expect(screen.queryByText(/puede eliminar/)).not.toBeInTheDocument();
+  });
+
+  describe("nunca rompe entero", () => {
+    it("reproduce producción: sin la columna desgloseEstimado el detalle abre igual, con aviso", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      mockFindUnique.mockRejectedValueOnce(errorColumnaFaltante()).mockResolvedValueOnce(CONFIG_BASE);
+      render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+      expect(screen.getByRole("heading", { name: "Juan García" })).toBeInTheDocument();
+      expect(screen.getByRole("alert")).toHaveTextContent("Hay datos de este pedido que no se pudieron leer (desgloseEstimado)");
+      expect(screen.getByText("Configuración completa")).toBeInTheDocument();
+      expect(screen.getByText("ConfiguracionEspacioForm")).toBeInTheDocument();
+      expect(screen.getByText("GestionPedidoPanel")).toBeInTheDocument();
+    });
+
+    it("un pedido nuevo con inodoro, amoblamiento y desglose nulo abre sin aviso", async () => {
+      mockFindUnique.mockResolvedValueOnce({
+        ...CONFIG_BASE,
+        desgloseEstimado: null,
+        materiales: { inodoro: "inteligente-bidet", amoblamientoBano: "amoblamiento-02", balcon: "frontal", techoBalcon: "solo-balcon" },
+      });
+      render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.getAllByText("Inodoro inteligente con bidet").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Amoblamiento — opción 2").length).toBeGreaterThan(0);
+    });
+
+    it("materiales con forma rara y upgrades nulos no rompen", async () => {
+      mockFindUnique.mockResolvedValueOnce({ ...CONFIG_BASE, materiales: "texto suelto", upgrades: null });
+      render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+      expect(screen.getByText("Materiales elegidos")).toBeInTheDocument();
+      expect(screen.queryByText("Dato no disponible.")).toBeNull();
+    });
+
+    it("si una sección falla al armarse muestra 'Dato no disponible' y el resto del pedido", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      mockNarrative.mockImplementationOnce(() => {
+        throw new Error("campo raro");
+      });
+      mockFindUnique.mockResolvedValueOnce(CONFIG_BASE);
+      render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+      expect(screen.getByText("Dato no disponible.")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Juan García" })).toBeInTheDocument();
+      expect(screen.getByText("GestionPedidoPanel")).toBeInTheDocument();
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining("Configuración completa"), expect.any(Error));
+    });
+
+    it("si fallan Storage o la lectura de documentos, el pedido se ve igual", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      mockFindUnique.mockResolvedValueOnce({ ...CONFIG_BASE, piUrl: "pi.pdf" });
+      mockGetSignedUrl.mockRejectedValueOnce(new Error("storage caído"));
+      mockFindManyDocs.mockRejectedValueOnce(new Error("db docs"));
+      render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+      expect(screen.getByText(/Documentos: 0/)).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Juan García" })).toBeInTheDocument();
+    });
   });
 });

@@ -51,6 +51,18 @@ describe("GET /api/admin/configuraciones/[id]/pdf-cliente", () => {
     expect(vi.mocked(PedidoDocumentCliente).mock.calls[0][0].desglose).toEqual(desglose);
   });
 
+  it("si a la base le falta la columna desgloseEstimado, el PDF sale igual, sin desglose", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mockFindUnique
+      .mockRejectedValueOnce(
+        Object.assign(new Error("The column `configuraciones_pedido.desgloseEstimado` does not exist in the current database."), { code: "P2022" })
+      )
+      .mockResolvedValueOnce(CONFIG);
+    const res = await GET(new NextRequest("http://localhost/x"), { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(200);
+    expect(vi.mocked(PedidoDocumentCliente).mock.calls.at(-1)![0].desglose).toBeNull();
+  });
+
   it("un pedido anterior al desglose va sin desglose", async () => {
     mockFindUnique.mockResolvedValueOnce({ ...CONFIG, desgloseEstimado: null });
     await GET(new NextRequest("http://localhost/x"), { params: Promise.resolve({ id: "p1" }) });
