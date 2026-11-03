@@ -55,6 +55,14 @@ function cancelarCorreccion(): void {
   correccionPendiente = null;
 }
 
+/** Deja el elemento justo debajo del header fijo, sin animar. "instant" y no
+ * "auto": globals.css pone scroll-behavior: smooth en html. Lo usa el
+ * configurador al cambiar de paso. */
+export function scrollInstantaneoA(el: HTMLElement): void {
+  cancelarCorreccion();
+  window.scrollTo({ top: destinoDeSeccion(el), behavior: "instant" });
+}
+
 export function scrollArriba(): void {
   cancelarCorreccion();
   window.scrollTo({ top: 0, behavior: comportamientoScroll() });

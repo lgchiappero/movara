@@ -5,6 +5,7 @@ import {
   comportamientoScroll,
   scrollArriba,
   scrollASeccion,
+  scrollInstantaneoA,
   topDeLayout,
   MARGEN_BAJO_HEADER,
 } from "@/lib/scroll";
@@ -173,5 +174,24 @@ describe("scrollASeccion", () => {
   it("con un id que no existe no hace nada", () => {
     expect(scrollASeccion("no-existe")).toBe(false);
     expect(scrollTo).not.toHaveBeenCalled();
+  });
+});
+
+describe("scrollInstantaneoA", () => {
+  it("deja el elemento debajo del header, sin animar aunque no haya reduced-motion", () => {
+    armarHeader(64);
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    conLayout(el, 300);
+    scrollInstantaneoA(el);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 300 - 64 - MARGEN_BAJO_HEADER, behavior: "instant" });
+  });
+
+  it("nunca pide un scroll negativo", () => {
+    armarHeader(64);
+    const el = document.createElement("div");
+    conLayout(el, 10);
+    scrollInstantaneoA(el);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "instant" });
   });
 });

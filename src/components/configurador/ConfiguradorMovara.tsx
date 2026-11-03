@@ -37,6 +37,7 @@ import {
 } from "@/lib/validators/configurador";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 import { leerOrigen } from "@/lib/origen-visita/navegador";
+import { scrollInstantaneoA } from "@/lib/scroll";
 
 // ─────────────────────────────────────────────────────────
 // Constants
@@ -253,6 +254,28 @@ export default function ConfiguradorMovara({
   const modeloSeleccionado = modelo ? MOVARA_MODELS.find((m) => m.key === modelo)! : null;
   // InitiateCheckout una sola vez por visita, aunque vuelva al paso 1.
   const inicioMedido = useRef(false);
+
+  // Al cambiar de paso (Siguiente, Atrás, resultado) la vista vuelve al
+  // inicio del configurador: el indicador de pasos (o el título del
+  // resultado) justo debajo del header fijo. Con AnimatePresence en modo
+  // "wait" el paso nuevo se monta recién cuando termina de salir el
+  // anterior: `pasoMontado` se actualiza en ese momento.
+  const inicioRef = useRef<HTMLElement | null>(null);
+  const [pasoMontado, setPasoMontado] = useState(step);
+  const primeraVista = useRef(true);
+  useEffect(() => {
+    if (primeraVista.current) {
+      primeraVista.current = false;
+      return;
+    }
+    const fijar = () => {
+      if (inicioRef.current) scrollInstantaneoA(inicioRef.current);
+    };
+    fijar();
+    // Otra vez en el frame siguiente, con el layout del paso nuevo asentado.
+    const frame = requestAnimationFrame(fijar);
+    return () => cancelAnimationFrame(frame);
+  }, [pasoMontado, showResult]);
   const maxHab = modeloSeleccionado?.maxHab ?? 3;
   const modeloLabel = modeloSeleccionado ? `${modeloSeleccionado.nombre}m²` : null;
 
@@ -393,7 +416,7 @@ export default function ConfiguradorMovara({
     return (
       <main className="min-h-screen bg-stone-50 pt-16">
         <div className="bg-[#2F2F2F] px-4 sm:px-6 pt-14 pb-10 text-center">
-          <span className="text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Paso {TOTAL_PASOS} de {TOTAL_PASOS} — Tu configuración</span>
+          <span ref={(el) => { inicioRef.current = el; }} data-cfg-inicio className="block text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Paso {TOTAL_PASOS} de {TOTAL_PASOS} — Tu configuración</span>
           <h1 className="text-3xl font-bold text-white mt-2">{cms.resultado.title}</h1>
           <p className="text-stone-400 mt-2 text-sm">Revisá el mensaje y enviánoslo por WhatsApp para arrancar.</p>
         </div>
@@ -440,7 +463,7 @@ export default function ConfiguradorMovara({
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 pb-28 sm:pb-10">
         {/* Progress */}
-        <div className="mb-10">
+        <div ref={(el) => { inicioRef.current = el; }} data-cfg-inicio className="mb-10">
           <div className="flex gap-1.5 mb-3">
             {STEP_LABELS.map((_, i) => i + 1).map((n) => (
               <div key={n} className="flex-1 h-1.5 rounded-full bg-stone-200 overflow-hidden">
@@ -459,7 +482,7 @@ export default function ConfiguradorMovara({
 
         <PrecioPanel resumen={precioResumen} modeloLabel={modeloLabel} />
 
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence mode="wait" initial={false} onExitComplete={() => setPasoMontado(step)}>
           <motion.div
             key={step}
             initial={{ opacity: 0, x: slideDir * 30 }}
@@ -829,13 +852,6 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
   setNotas: (v: string) => void;
   notasError: string | null;
 }) {
-  // Este paso es el más largo del configurador — sin este reset, el scroll
-  // arrastrado desde el paso anterior puede dejar al usuario a mitad o al
-  // final de la página en vez de arrancar arriba.
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }, []);
-
   const habOpts = ([1, 2, 3] as const).filter((n) => n <= maxHab).map((n) => ({ value: String(n), label: `${n} hab.` }));
 
   const preview = [
