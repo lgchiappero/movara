@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
 import { MOVARA_MODELS, FINALIDADES, getStoredUpgradeLabel } from "@/data/configurador-catalog";
-import { ADMIN_EXTRAS } from "@/data/admin-extras";
+import { ADMIN_EXTRAS, extrasAdminTildados } from "@/data/admin-extras";
 import {
   tipoCocinaOptions,
   tipoAguaOptions,
@@ -79,7 +79,7 @@ export default function ConfiguracionEspacioForm({ id, initial }: { id: string; 
     materiales: Object.fromEntries(
       materialesTextoKeys.map((k) => [k, initial.materiales?.[k] ?? ""])
     ) as Record<string, string>,
-    upgrades: new Set(initial.upgrades ?? []),
+    upgrades: new Set(extrasAdminTildados(initial.materiales, initial.upgrades ?? [])),
     notasConfiguracion: initial.notasConfiguracion ?? "",
   });
   // La opción discontinuada solo aparece en el pedido viejo que la tiene,

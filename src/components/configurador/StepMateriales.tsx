@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   MATERIAL_CATEGORY_GROUPS,
   BALCON_GROUP_KEY,
+  BANO_GROUP_KEY,
   getDefaultMateriales,
   findMaterialOption,
   getMaterialLabel,
@@ -256,10 +257,13 @@ export function MaterialesSection({
   seleccion,
   onSelect,
   priceFor,
+  incluyeBano = true,
 }: {
   seleccion: MaterialesSeleccion;
   onSelect: (key: string, id: string, nullable?: boolean) => void;
   priceFor: (priceName: string) => number;
+  /** Sin baño no se muestra el grupo del baño. */
+  incluyeBano?: boolean;
 }) {
   return (
     <div className="space-y-8 pt-2">
@@ -272,7 +276,7 @@ export function MaterialesSection({
       </div>
       <div className="space-y-8">
         {/* El balcón tiene su propia sección en "Configurá tu espacio". */}
-        {MATERIAL_CATEGORY_GROUPS.filter((cat) => cat.key !== BALCON_GROUP_KEY).map((cat) => (
+        {MATERIAL_CATEGORY_GROUPS.filter((cat) => cat.key !== BALCON_GROUP_KEY && (incluyeBano || cat.key !== BANO_GROUP_KEY)).map((cat) => (
           <div key={cat.key} className="pb-8 border-b border-stone-200 last:border-b-0 last:pb-0">
             <CategoryGroupBlock category={cat} seleccion={seleccion} onSelect={onSelect} priceFor={priceFor} />
           </div>

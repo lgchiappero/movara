@@ -42,7 +42,7 @@ describe("extras de la ficha técnica", () => {
   });
 
   it("lee los precios de la misma fuente que el configurador (Sanity)", () => {
-    const extras = getProductoExtras({ preciosExtras: [{ nombre: "Inodoro inteligente con bidet", precio: 600 }] });
+    const extras = getProductoExtras({ preciosExtras: [{ nombre: "Inodoro inteligente", precio: 600 }] });
     expect(extras.find((e) => e.texto.startsWith("Inodoro"))?.precio).toBe("+USD 600");
     expect(extras.find((e) => e.texto.startsWith("Piso SPC"))?.precio).toBe("+USD 390");
   });

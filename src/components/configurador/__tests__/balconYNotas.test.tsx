@@ -201,6 +201,25 @@ describe("Configurador — precios de los extras", () => {
     await vi.waitFor(() => expect(screen.getAllByText(usd(BASE_FLEX_38)).length).toBeGreaterThan(0));
   });
 
+  it("sin baño no se muestra la sección del baño ni suma el inodoro elegido; al volver a elegir baño reaparece", async () => {
+    const user = userEvent.setup();
+    await hastaConfiguracion(user);
+    await user.click(screen.getByRole("button", { name: /Inodoro inteligente con bidet/ }));
+    await vi.waitFor(() => expect(screen.getAllByText(usd(BASE_FLEX_38 + 580)).length).toBeGreaterThan(0));
+
+    const campoBano = screen.getByText("¿Incluye baño?").parentElement!;
+    await user.click(within(campoBano).getByRole("button", { name: "No" }));
+    expect(screen.queryByRole("button", { name: /Inodoro inteligente con bidet/ })).toBeNull();
+    expect(screen.queryByText("Paneles de pared — sin costo")).toBeNull();
+    await vi.waitFor(() => expect(screen.getAllByText(usd(BASE_FLEX_38)).length).toBeGreaterThan(0));
+
+    await hastaResultado(user);
+    const mensaje = (screen.getAllByRole("textbox").at(-1) as HTMLTextAreaElement).value;
+    expect(mensaje).not.toContain("Inodoro");
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.materiales).toMatchObject({ inodoro: null, panelesBano: null });
+  });
+
   it("los 4 extras con precio: total = base + 5.020, en el desglose, el resumen y el WhatsApp", async () => {
     const user = userEvent.setup();
     await hastaConfiguracion(user);

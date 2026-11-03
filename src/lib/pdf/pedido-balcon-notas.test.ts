@@ -110,7 +110,7 @@ describe("PDF del proveedor — balcón, notas y pedidos viejos", () => {
       { label: "Balcony", value: "Balcón frontal" },
       { label: "Balcony roof", value: "Sobretecho solo en el balcón" },
     ]);
-    expect(grupoEn(items, "Baño").rows).toContainEqual({ label: "Toilet", value: "Inodoro inteligente con bidet" });
+    expect(grupoEn(items, "Baño").rows).toContainEqual({ label: "Toilet", value: "Smart toilet with bidet" });
   });
 
   it("sin balcón: Not included", () => {

@@ -267,6 +267,21 @@ test.describe("Configurador — precios de los extras", () => {
     const pdf = await page.request.get(`/api${href}/pdf-cliente`);
     expect(pdf.status()).toBe(200);
     expect(pdf.headers()["content-type"]).toBe("application/pdf");
+    // En el detalle es el extra "inodoro-inteligente", tildado.
+    await page.goto(href!);
+    await expect(page.getByRole("checkbox", { name: "Inodoro inteligente con bidet" })).toBeChecked();
+  });
+
+  test("sin baño el inodoro inteligente no se ofrece ni suma, aunque se haya elegido antes", async ({ page }) => {
+    const cfg = await abrirConfigurador(page);
+    await llegarAlPaso4(cfg);
+    await cfg.getByRole("button", { name: /Inodoro inteligente con bidet/ }).click();
+    await expect(cfg.getByText("USD 26.420").first()).toBeVisible();
+    await cfg.getByText("¿Incluye baño?").locator("..").getByRole("button", { name: "No", exact: true }).click();
+    await expect(cfg.getByRole("button", { name: /Inodoro inteligente con bidet/ })).toHaveCount(0);
+    await expect(cfg.getByText("USD 25.840").first()).toBeVisible();
+    await cfg.getByText("¿Incluye baño?").locator("..").getByRole("button", { name: "Sí", exact: true }).click();
+    await expect(cfg.getByRole("button", { name: /Inodoro inteligente con bidet/ })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("la ficha técnica muestra los mismos precios y la leyenda de IVA", async ({ page }) => {

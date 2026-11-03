@@ -9,6 +9,7 @@ import {
   esSelectorAConsultar,
   getExtrasElegidos,
   getMaterialesAnteriores,
+  materialesSegunAmbientes,
 } from "@/data/material-catalog";
 
 describe("getDefaultMateriales", () => {
@@ -140,7 +141,7 @@ describe("opciones a consultar (bañera, muro cortina, sobretecho completo)", ()
     expect(getExtrasElegidos({ exterior: "premium-02-azul-oscuro", piso: "spc-8911", inodoro: "inteligente-bidet", exterior2: "x" })).toEqual([
       { key: "exterior", nombre: "Panel metálico labrado: Azul oscuro", tipo: "precio", priceName: "Panel metálico labrado" },
       { key: "piso", nombre: "Piso SPC 4 mm: 8911", tipo: "precio", priceName: "Piso SPC 4 mm" },
-      { key: "inodoro", nombre: "Inodoro inteligente con bidet", tipo: "precio", priceName: "Inodoro inteligente con bidet" },
+      { key: "inodoro", nombre: "Inodoro inteligente con bidet", tipo: "precio", priceName: "Inodoro inteligente" },
     ]);
     expect(getExtrasElegidos({ exterior: "gris-oscuro", piso: "nogal-oscuro" })).toEqual([]);
   });
@@ -186,5 +187,20 @@ describe("getMaterialesAnteriores (pedidos con la galería vieja)", () => {
     expect(getMaterialesAnteriores({ galeria: "Galería de madera" })[0].label).toBe("Galería de madera (configuración anterior)");
     expect(getMaterialesAnteriores({ galeria: null })).toEqual([]);
     expect(getMaterialesAnteriores({})).toEqual([]);
+  });
+});
+
+describe("materialesSegunAmbientes", () => {
+  it("con baño deja todo como está", () => {
+    const m = { inodoro: "inteligente-bidet", piso: "spc-8911" };
+    expect(materialesSegunAmbientes(m, { incluyeBano: true })).toBe(m);
+  });
+
+  it("sin baño saca todo lo del baño (y no suma el inodoro), sin tocar el resto", () => {
+    const m = { panelesBano: "marmol-venas", puertaBano: "negro-cuadricula", banera: "banera-01", inodoro: "inteligente-bidet", piso: "spc-8911" };
+    const r = materialesSegunAmbientes(m, { incluyeBano: false });
+    expect(r).toMatchObject({ panelesBano: null, puertaBano: null, banera: null, inodoro: null, piso: "spc-8911" });
+    expect(getExtrasElegidos(r).map((e) => e.key)).toEqual(["piso"]);
+    expect(m.inodoro).toBe("inteligente-bidet");
   });
 });

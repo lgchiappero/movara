@@ -9,6 +9,7 @@ import { generateNumeroConsulta } from "@/lib/pedido/numero-consulta";
 import { resumenError } from "@/lib/log-seguro";
 import { calcularPrecio, toDesgloseEstimado } from "@/lib/precio-configurador";
 import type { PreciosConfig } from "@/data/precios-extras";
+import { materialesSegunAmbientes } from "@/data/material-catalog";
 import { client } from "@/sanity/lib/client";
 import { SITE_CONFIG_QUERY } from "@/sanity/lib/queries";
 import { detalleConsultaHtml } from "@/lib/email/nueva-consulta";
@@ -72,7 +73,10 @@ export async function POST(req: NextRequest) {
     const origen = origenDelBody((body as { origen?: unknown } | null)?.origen);
     // El desglose se calcula acá, no se toma del navegador: es la foto de los
     // precios del día que muestran después los PDFs.
-    const precio = calcularPrecio({ modelo: data.modelo, materiales: data.materiales, precios: await getPrecios() });
+    // Sin baño no se guarda ni se cobra nada del baño (un navegador viejo
+    // podría mandarlo igual).
+    const materiales = materialesSegunAmbientes(data.materiales, { incluyeBano: data.incluyeBano });
+    const precio = calcularPrecio({ modelo: data.modelo, materiales, precios: await getPrecios() });
 
     const { numeroConsulta, tokenSeguimiento } = await db.$transaction(async (tx) => {
       const numero = await generateNumeroConsulta(tx);
@@ -94,7 +98,7 @@ export async function POST(req: NextRequest) {
           incluyeBano: data.incluyeBano,
           tipoAgua: data.tipoAgua,
           lavarropas: data.lavarropas,
-          materiales: data.materiales,
+          materiales,
           upgrades: data.upgrades,
           notasConfiguracion: data.notasConfiguracion,
           precioEstimado: precio.total,

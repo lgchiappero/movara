@@ -8,7 +8,7 @@
 
 export const PRECIO_BALCON = "Balcón con sobretecho";
 export const PRECIO_FACHADA = "Panel metálico labrado";
-export const PRECIO_INODORO = "Inodoro inteligente con bidet";
+export const PRECIO_INODORO = "Inodoro inteligente";
 export const PRECIO_PISO_SPC = "Piso SPC 4 mm";
 export const PRECIO_COCINA_AMPLIADA = "Cocina ampliada";
 

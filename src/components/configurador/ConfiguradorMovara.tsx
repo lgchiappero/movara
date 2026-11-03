@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { PROVINCIAS_AR } from "@/data/provincias";
 import { MOVARA_MODELS, FINALIDADES, type ModeloKey, type FinalidadKey } from "@/data/configurador-catalog";
-import { BALCON_LATERAL_MODELOS } from "@/data/material-catalog";
+import { BALCON_LATERAL_MODELOS, materialesSegunAmbientes } from "@/data/material-catalog";
 import { resolvePrecioExtra, formatUSD, A_CONSULTAR, LEYENDA_PRECIOS, PRECIO_BALCON, type PreciosConfig } from "@/data/precios-extras";
 import { calcularPrecio, type PrecioResumen } from "@/lib/precio-configurador";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
@@ -279,9 +279,12 @@ export default function ConfiguradorMovara({
   const maxHab = modeloSeleccionado?.maxHab ?? 3;
   const modeloLabel = modeloSeleccionado ? `${modeloSeleccionado.nombre}m²` : null;
 
+  // Lo que cuenta para el precio, el WhatsApp y el pedido: sin baño no va
+  // nada del baño.
+  const materialesElegidos = useMemo(() => materialesSegunAmbientes(materiales, { incluyeBano }), [materiales, incluyeBano]);
   const precioResumen = useMemo(
-    () => calcularPrecio({ modelo, materiales, precios }),
-    [modelo, materiales, precios]
+    () => calcularPrecio({ modelo, materiales: materialesElegidos, precios }),
+    [modelo, materialesElegidos, precios]
   );
 
   const datosValidos =
@@ -321,7 +324,7 @@ export default function ConfiguradorMovara({
           incluyeBano,
           tipoAgua: TIPO_AGUA,
           lavarropas,
-          materiales,
+          materiales: materialesElegidos,
           notasConfiguracion: notas,
           precioEstimado: precioResumen.total,
           origen: leerOrigen(),
@@ -369,7 +372,7 @@ export default function ConfiguradorMovara({
         nombreContacto,
         telefono,
         email,
-        materiales,
+        materiales: materialesElegidos,
         resumen: precioResumen,
       });
       setWaMessage(msg);
@@ -944,7 +947,7 @@ function StepConfiguracion({ modelo, habitaciones, setHabitaciones, maxHab, incl
           <p className="text-sm text-stone-700 leading-relaxed">{preview}</p>
         </div>
 
-        <MaterialesSection seleccion={materiales} onSelect={onSelectMaterial} priceFor={priceFor} />
+        <MaterialesSection seleccion={materiales} onSelect={onSelectMaterial} priceFor={priceFor} incluyeBano={incluyeBano} />
 
         <div>
           <label htmlFor="cfg-notas" className="block text-sm font-semibold text-stone-700 mb-1.5">

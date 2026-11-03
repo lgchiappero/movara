@@ -4,6 +4,7 @@ import {
   getStoredMaterialLabel,
   esSelectorAConsultar,
   getMaterialesAnteriores,
+  INODORO_INTELIGENTE_ID,
 } from "@/data/material-catalog";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { labelOrFallback, SIN_ESPECIFICAR } from "@/lib/pdf/pedido-record";
@@ -35,6 +36,12 @@ const SELECTOR_LABELS_EN: Record<string, string> = {
   techoBalcon: "Balcony roof",
 };
 
+/** Opciones con nombre en inglés para el proveedor. El resto de los
+ *  materiales se muestra con su nombre en castellano. */
+const OPTION_LABELS_EN: Record<string, Record<string, string>> = {
+  inodoro: { [INODORO_INTELIGENTE_ID]: "Smart toilet with bidet" },
+};
+
 /** Extras sin precio de lista: MOVARA los presupuesta aparte. */
 const TO_QUOTE = "To quote (A consultar)";
 
@@ -61,7 +68,8 @@ export function buildSupplierSpecItems(data: PedidoRecord): SupplierSpecItem[] {
     for (const selector of group.selectors) {
       if (seenKeys.has(selector.key)) continue;
       seenKeys.add(selector.key);
-      const valor = getStoredMaterialLabel(selector.key, materiales[selector.key] ?? null);
+      const raw = materiales[selector.key] ?? null;
+      const valor = (raw && OPTION_LABELS_EN[selector.key]?.[raw]) || getStoredMaterialLabel(selector.key, raw);
       const toQuote = valor && esSelectorAConsultar(selector.key, materiales) ? ` — ${TO_QUOTE}` : "";
       rows.push({
         label: SELECTOR_LABELS_EN[selector.key] ?? selector.key,

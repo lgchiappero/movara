@@ -66,7 +66,12 @@ export type MaterialesSeleccion = Record<string, string | null>;
 
 const DIR = "/configurador";
 
+/** Id del inodoro inteligente en `materiales.inodoro`. En el admin es el
+ *  extra "inodoro-inteligente" (admin-extras.ts). */
+export const INODORO_INTELIGENTE_ID = "inteligente-bidet";
+
 export const BALCON_GROUP_KEY = "balcon-group";
+export const BANO_GROUP_KEY = "bano-group";
 
 const EXTERIOR_PREMIUM = [
   ["01-gris-lineas", "Gris con líneas"],
@@ -153,7 +158,7 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
     ],
   },
   {
-    key: "bano-group",
+    key: BANO_GROUP_KEY,
     title: "Baño",
     selectors: [
       {
@@ -197,8 +202,8 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
         // Sin foto propia todavía: la card muestra nombre y descripción.
         options: [
           {
-            id: "inteligente-bidet",
-            label: PRECIO_INODORO,
+            id: INODORO_INTELIGENTE_ID,
+            label: "Inodoro inteligente con bidet",
             descripcion: "En lugar del inodoro estándar. Con bidet incorporado.",
           },
         ],
@@ -373,10 +378,24 @@ export function getExtrasElegidos(materiales: MaterialesSeleccion): ExtraElegido
     if (option.aConsultar ?? selector.aConsultar) return [{ key: sel.key, nombre: option.label, tipo: "a-consultar" }];
     const priceName = option.priceName ?? selector.priceName;
     if (!priceName) return [];
-    // Un selector de una sola opción (el inodoro) ya se llama como el extra.
-    const nombre = selector.options.length === 1 ? priceName : `${priceName}: ${option.label}`;
+    // Un selector de una sola opción (el inodoro) se nombra con su opción.
+    const nombre = selector.options.length === 1 ? option.label : `${priceName}: ${option.label}`;
     return [{ key: sel.key, nombre, tipo: "precio", priceName }];
   });
+}
+
+/** Keys de los selectores del baño. */
+export const BANO_KEYS: readonly string[] = [
+  ...new Set(MATERIAL_CATEGORY_GROUPS.find((g) => g.key === BANO_GROUP_KEY)!.selectors.map((s) => s.key)),
+];
+
+/** Lo elegido que corresponde a los ambientes incluidos: sin baño, todo lo
+ *  del baño (paneles, puerta, bañera, inodoro...) queda sin elegir, así no
+ *  suma al precio ni figura en el pedido. La selección original se conserva
+ *  en el configurador por si vuelve a elegir baño. */
+export function materialesSegunAmbientes(materiales: MaterialesSeleccion, { incluyeBano }: { incluyeBano: boolean }): MaterialesSeleccion {
+  if (incluyeBano) return materiales;
+  return { ...materiales, ...Object.fromEntries(BANO_KEYS.map((k) => [k, null])) };
 }
 
 /** Opciones "a consultar" elegidas, en orden de catálogo: no suman al precio

@@ -66,3 +66,24 @@ describe("ConfiguracionEspacioForm — agua caliente", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).tipoAgua).toBe("termotanque-gas");
   });
 });
+
+describe("ConfiguracionEspacioForm — inodoro inteligente", () => {
+  it("el inodoro elegido en el configurador aparece tildado como el extra inodoro-inteligente y se reenvía", async () => {
+    render(<ConfiguracionEspacioForm id="p1" initial={{ ...INICIAL, materiales: { inodoro: "inteligente-bidet" }, upgrades: [] }} />);
+    expect(screen.getByRole("checkbox", { name: "Inodoro inteligente con bidet" })).toBeChecked();
+
+    fireEvent.click(screen.getByRole("button", { name: "Guardar configuración" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).upgrades).toEqual(["inodoro-inteligente"]);
+  });
+
+  it("sin inodoro inteligente el extra no está tildado", () => {
+    render(<ConfiguracionEspacioForm id="p1" initial={{ ...INICIAL, materiales: { inodoro: null }, upgrades: [] }} />);
+    expect(screen.getByRole("checkbox", { name: "Inodoro inteligente con bidet" })).not.toBeChecked();
+  });
+
+  it("no duplica el extra si ya estaba tildado a mano", () => {
+    render(<ConfiguracionEspacioForm id="p1" initial={{ ...INICIAL, materiales: { inodoro: "inteligente-bidet" }, upgrades: ["inodoro-inteligente"] }} />);
+    expect(screen.getAllByRole("checkbox", { name: "Inodoro inteligente con bidet" })).toHaveLength(1);
+  });
+});

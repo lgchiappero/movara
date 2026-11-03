@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { configuracionEspacioSchema } from "@/lib/validators/admin-pedido-espacio";
+import { separarInodoroDeExtras } from "@/data/admin-extras";
 
 export async function PATCH(
   req: NextRequest,
@@ -17,6 +18,7 @@ export async function PATCH(
     );
   }
   const data = parsed.data;
+  const { upgrades, inodoro } = separarInodoroDeExtras(data.upgrades);
 
   try {
     // El form solo edita los materiales de texto libre: el resto de lo que
@@ -42,8 +44,8 @@ export async function PATCH(
         incluyeBano: data.incluyeBano,
         tipoAgua: data.tipoAgua,
         lavarropas: data.lavarropas,
-        materiales: { ...materialesActuales, ...data.materiales },
-        upgrades: data.upgrades,
+        materiales: { ...materialesActuales, ...data.materiales, inodoro },
+        upgrades,
         notasConfiguracion: data.notasConfiguracion,
       },
     });

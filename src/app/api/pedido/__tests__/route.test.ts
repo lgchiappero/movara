@@ -186,8 +186,16 @@ describe("POST /api/pedido", () => {
     });
   });
 
+  it("sin baño no guarda ni cobra lo del baño aunque el navegador lo mande", async () => {
+    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
+    await POST(req({ ...BASE, incluyeBano: false, materiales: { inodoro: "inteligente-bidet", panelesBano: "marmol-venas", piso: "spc-8917" } }, "10.0.0.43"));
+    const { data } = mockCreate.mock.calls[0][0];
+    expect(data.materiales).toMatchObject({ inodoro: null, panelesBano: null, piso: "spc-8917" });
+    expect(data.precioEstimado).toBe(38 * 680 + 390);
+  });
+
   it("usa los precios cargados en Sanity", async () => {
-    mockSanityFetch.mockResolvedValueOnce({ preciosExtras: [{ nombre: "Inodoro inteligente con bidet", precio: 700 }] });
+    mockSanityFetch.mockResolvedValueOnce({ preciosExtras: [{ nombre: "Inodoro inteligente", precio: 700 }] });
     mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
     await POST(req({ ...BASE, materiales: { inodoro: "inteligente-bidet" } }, "10.0.0.41"));
     expect(mockCreate.mock.calls[0][0].data.precioEstimado).toBe(38 * 680 + 700);

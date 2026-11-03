@@ -104,6 +104,7 @@ describe("PATCH /api/admin/configuraciones/[id]/espacio", () => {
       muroVidrio: "vidrio-01",
       galeria: "galeria-01",
       piso: "Piso nuevo",
+      inodoro: null,
     });
   });
 
@@ -111,7 +112,23 @@ describe("PATCH /api/admin/configuraciones/[id]/espacio", () => {
     mockFindUnique.mockResolvedValueOnce({ materiales: null });
     mockUpdate.mockResolvedValueOnce({ id: "p1" });
     await PATCH(makeRequest(VALID), { params: Promise.resolve({ id: "p1" }) });
-    expect(mockUpdate.mock.calls[0][0].data.materiales).toEqual(MATERIALES_VACIOS);
+    expect(mockUpdate.mock.calls[0][0].data.materiales).toEqual({ ...MATERIALES_VACIOS, inodoro: null });
+  });
+
+  it("el extra inodoro-inteligente se guarda como el inodoro elegido en el configurador, no como mejora", async () => {
+    mockFindUnique.mockResolvedValueOnce({ materiales: { inodoro: null, banera: "banera-01" } });
+    mockUpdate.mockResolvedValueOnce({ id: "p1" });
+    await PATCH(makeRequest({ ...VALID, upgrades: ["piso-spc", "inodoro-inteligente"] }), { params: Promise.resolve({ id: "p1" }) });
+    const { data } = mockUpdate.mock.calls[0][0];
+    expect(data.materiales).toMatchObject({ inodoro: "inteligente-bidet", banera: "banera-01" });
+    expect(data.upgrades).toEqual(["piso-spc"]);
+  });
+
+  it("destildar el inodoro inteligente lo saca del pedido", async () => {
+    mockFindUnique.mockResolvedValueOnce({ materiales: { inodoro: "inteligente-bidet" } });
+    mockUpdate.mockResolvedValueOnce({ id: "p1" });
+    await PATCH(makeRequest({ ...VALID, upgrades: [] }), { params: Promise.resolve({ id: "p1" }) });
+    expect(mockUpdate.mock.calls[0][0].data.materiales.inodoro).toBeNull();
   });
 
   it("404 si el pedido no existe", async () => {
