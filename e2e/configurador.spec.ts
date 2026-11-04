@@ -382,6 +382,54 @@ test.describe("Configurador — amoblamiento del baño", () => {
   });
 });
 
+test.describe("Configurador — extras con costo de fábrica", () => {
+  test("puerta doble hoja moderna + cocina en U + amoblamiento 4: total = base + 330 + 655 + 165, guardado y en el admin y los PDF", async ({ page }) => {
+    const cfg = await abrirConfigurador(page);
+    await llegarAlPaso4(cfg);
+    const puerta = cfg.getByRole("button", { name: /Doble hoja moderna/ });
+    await expect(puerta).toContainText("+ USD 330");
+    await expect(cfg.getByRole("button", { name: /Corredera doble hoja/ })).not.toContainText("USD");
+    const enU = cfg.getByRole("button", { name: /En U — opción 1/ });
+    await expect(enU).toContainText("+ USD 655");
+    await expect(cfg.getByRole("button", { name: /Con alacena — opción 1/ })).toContainText("+ USD 500");
+    await puerta.click();
+    await enU.click();
+    await cfg.getByRole("button", { name: /Amoblamiento — opción 4/ }).click();
+    // 38 m² × 680 = 25.840 + 330 + 655 + 165 = 26.990
+    await expect(cfg.getByText("USD 26.990").filter({ visible: true }).first()).toBeVisible();
+
+    await cfg.getByRole("button", { name: "Siguiente" }).click();
+    await cfg.getByPlaceholder("Ej: Juan García").fill("Playwright Costo Fabrica");
+    await cfg.getByPlaceholder("Ej: +54 9 11 1234-5678").fill("+5491112345678");
+    await cfg.getByPlaceholder("tu@email.com").fill("costofabrica@example.com");
+    await cfg.getByRole("button", { name: "Ver mi configuración" }).click();
+
+    await expect(page.getByText("Paso 6 de 6 — Tu configuración")).toBeVisible();
+    for (const linea of ["+ Puerta doble hoja moderna", "+ Cocina en U — opción 1", "+ Base de ducha (blanca)"]) {
+      await expect(page.getByText(linea, { exact: true })).toBeVisible();
+    }
+    const msg = await page.locator("textarea").first().inputValue();
+    expect(msg).toContain("- Puerta doble hoja moderna: USD 330");
+    expect(msg).toContain("- Cocina en U — opción 1: USD 655");
+    expect(msg).toContain("💰 Precio estimado: USD 26.990");
+    const registro = page.getByText(/Tu consulta fue registrada con el código/);
+    await expect(registro).toBeVisible({ timeout: 20_000 });
+    const numeroConsulta = (await registro.locator("span").textContent())!.trim();
+
+    await loginAsAdmin(page);
+    await page.goto("/admin/configuraciones");
+    const href = await page.locator("tr", { hasText: numeroConsulta }).getByRole("link", { name: "Ver detalle" }).getAttribute("href");
+    await page.goto(href!);
+    await expect(page.getByText("Puerta principal: Puerta doble hoja moderna")).toBeVisible();
+    await expect(page.getByText("Cocina ampliada: Cocina en U — opción 1")).toBeVisible();
+    for (const pdf of ["pdf-cliente", "pdf-proveedor"]) {
+      const res = await page.request.get(`/api${href}/${pdf}`);
+      expect(res.status()).toBe(200);
+      expect(res.headers()["content-type"]).toBe("application/pdf");
+    }
+  });
+});
+
 test.describe("Configurador — agua caliente sin opción a gas (6 pasos)", () => {
   test("el calefón eléctrico es un dato fijo y llega así al mensaje y al pedido", async ({ page }) => {
     const cfg = await abrirConfigurador(page);
