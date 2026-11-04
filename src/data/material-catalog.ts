@@ -57,6 +57,9 @@ export type MaterialSelector = {
   imageFit?: "cover" | "contain";
   /** Fondo neutro detrás de la imagen cuando imageFit es "contain". */
   imageBg?: string;
+  /** Fotos verticales: la card las muestra completas (3:4, sin recorte) y
+   *  con una lupa que las abre a pantalla completa. */
+  fotosVerticales?: boolean;
   /** Texto para pedidos guardados antes de que existiera este selector. */
   sinDato?: string;
 };
@@ -211,6 +214,9 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
         key: "amoblamientoBano",
         label: "Amoblamiento del baño",
         sinDato: "—",
+        fotosVerticales: true,
+        imageFit: "contain",
+        imageBg: "#1c1917",
         options: AMOBLAMIENTO_BANO_OPCIONES.map((label, i) => {
           const base = BASE_DUCHA_POR_OPCION[i];
           return {

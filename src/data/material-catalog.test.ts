@@ -215,6 +215,7 @@ describe("amoblamiento del baño", () => {
     expect(selector.map((s) => s.key).slice(0, 3)).toEqual(["panelesBano", "puertaBano", "amoblamientoBano"]);
     const amob = selector[2];
     expect(amob.label).toBe("Amoblamiento del baño");
+    expect(amob).toMatchObject({ fotosVerticales: true, imageFit: "contain" });
     expect(amob.priceName).toBeUndefined();
     expect(amob.aConsultar).toBeUndefined();
     expect(amob.options).toEqual([

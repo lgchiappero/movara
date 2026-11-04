@@ -1,6 +1,8 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { MaterialImage } from "./MaterialImage";
+import { FotoAmpliada } from "./FotoAmpliada";
 import {
   MATERIAL_CATEGORY_GROUPS,
   BALCON_GROUP_KEY,
@@ -80,6 +82,9 @@ function MaterialCard({
   priceAmount,
   imageFit = "cover",
   imageBg,
+  vertical = false,
+  onAmpliar,
+  numero,
 }: {
   option: MaterialOption;
   selected: boolean;
@@ -88,17 +93,23 @@ function MaterialCard({
   priceAmount?: number | "a-consultar";
   imageFit?: "cover" | "contain";
   imageBg?: string;
+  /** Foto vertical: se muestra completa (3:4) en lugar de recortada. */
+  vertical?: boolean;
+  /** Si está, la foto lleva una lupa que la abre a pantalla completa. */
+  onAmpliar?: () => void;
+  /** Número de la opción en su selector (para el nombre de la lupa). */
+  numero?: number;
 }) {
   const isPremium = priceAmount !== undefined;
   const accent = isPremium ? ORANGE : GREEN;
   const textBg = isPremium ? "#faeeda" : "#e6f7f1";
 
-  return (
+  const card = (
     <button
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`w-full text-left ${TILE_RADIUS} overflow-hidden transition-all duration-200 cursor-pointer ${
+      className={`${onAmpliar ? "block h-full " : ""}w-full text-left ${TILE_RADIUS} overflow-hidden transition-all duration-200 cursor-pointer ${
         selected ? "border-[3px] shadow-md" : "border border-stone-200 hover:border-stone-300"
       }`}
       style={selected ? { borderColor: accent } : undefined}
@@ -114,7 +125,7 @@ function MaterialCard({
           </div>
         )
       ) : (
-      <div className="relative w-full aspect-[16/10] sm:aspect-[4/3]" style={{ backgroundColor: imageBg ?? "#f5f5f4" }}>
+      <div className={`relative w-full ${vertical ? "aspect-[3/4]" : "aspect-[16/10] sm:aspect-[4/3]"}`} style={{ backgroundColor: imageBg ?? "#f5f5f4" }}>
         {option.img ? (
           <MaterialImage
             src={option.img}
@@ -138,6 +149,27 @@ function MaterialCard({
       </div>
     </button>
   );
+  if (!onAmpliar || !option.img) return card;
+  // La lupa es un botón hermano (no puede ir dentro del botón de la card):
+  // ampliar la foto no elige ni saca la opción.
+  return (
+    <div className="relative">
+      {card}
+      <button
+        type="button"
+        onClick={onAmpliar}
+        aria-label={`Ampliar la foto de la opción ${numero ?? ""}`.trim()}
+        className="absolute left-1 top-1 w-11 h-11 rounded-full flex items-center justify-center"
+      >
+        <span className="w-8 h-8 rounded-full bg-black/55 text-white flex items-center justify-center shadow">
+          <svg aria-hidden className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <circle cx="11" cy="11" r="6.5" />
+            <path strokeLinecap="round" d="M16 16l4.5 4.5M11 8.5v5M8.5 11h5" />
+          </svg>
+        </span>
+      </button>
+    </div>
+  );
 }
 
 export function SelectorBlock({
@@ -157,11 +189,13 @@ export function SelectorBlock({
     const priceName = opt.priceName ?? selector.priceName;
     return priceName ? priceFor(priceName) : undefined;
   };
+  const [ampliada, setAmpliada] = useState<MaterialOption | null>(null);
+  const cerrar = useCallback(() => setAmpliada(null), []);
   return (
     <div>
       <p className="text-xs font-bold text-stone-500 uppercase tracking-wide mb-2">{selector.label}</p>
       <div className={TILE_GRID}>
-        {selector.options.map((opt) => (
+        {selector.options.map((opt, i) => (
           <MaterialCard
             key={opt.id}
             option={opt}
@@ -170,9 +204,13 @@ export function SelectorBlock({
             priceAmount={amountFor(opt)}
             imageFit={selector.imageFit}
             imageBg={selector.imageBg}
+            vertical={selector.fotosVerticales}
+            onAmpliar={selector.fotosVerticales ? () => setAmpliada(opt) : undefined}
+            numero={i + 1}
           />
         ))}
       </div>
+      {ampliada?.img && <FotoAmpliada src={ampliada.img} alt={ampliada.label} onClose={cerrar} />}
     </div>
   );
 }

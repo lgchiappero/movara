@@ -309,6 +309,14 @@ test.describe("Configurador — amoblamiento del baño", () => {
       await expect.poll(() => foto.evaluate((im: HTMLImageElement) => im.complete && im.naturalWidth > 0)).toBe(true);
       await expect(opciones.nth(i).getByText("Foto próximamente")).toHaveCount(0);
     }
+    // Fotos verticales: se ven completas y la lupa las amplía sin elegir la opción.
+    await expect(page.getByRole("button", { name: /Ampliar la foto de la opción/ })).toHaveCount(4);
+    const elegidaAntes = await opciones.nth(1).getAttribute("aria-pressed");
+    await page.getByRole("button", { name: "Ampliar la foto de la opción 2" }).click();
+    await expect(page.getByRole("dialog", { name: "Foto ampliada: Amoblamiento — opción 2" })).toBeVisible();
+    await page.getByRole("button", { name: "Cerrar foto ampliada" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(opciones.nth(1)).toHaveAttribute("aria-pressed", elegidaAntes!);
     await cfg.getByRole("button", { name: /Amoblamiento — opción 3/ }).click();
     await expect(cfg.getByText("USD 25.840").filter({ visible: true }).first()).toBeVisible();
 
