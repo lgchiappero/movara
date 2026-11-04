@@ -295,18 +295,19 @@ test.describe("Configurador — precios de los extras", () => {
 });
 
 test.describe("Configurador — amoblamiento del baño", () => {
-  test("opción sin costo, con placeholder mientras no hay fotos; llega al resumen, al WhatsApp, al pedido y al admin", async ({ page }) => {
+  test("opción sin costo, con su foto; llega al resumen, al WhatsApp, al pedido y al admin", async ({ page }) => {
     const cfg = await abrirConfigurador(page);
     await llegarAlPaso4(cfg);
     await expect(cfg.getByText("Amoblamiento del baño", { exact: true })).toBeVisible();
     const opciones = cfg.getByRole("button", { name: /Amoblamiento — opción/ });
     await expect(opciones).toHaveCount(4);
-    // Sin fotos publicadas (las originales tienen marca de agua del proveedor y
-    // quedan en assets-origen): cada card muestra el placeholder. Las imágenes
-    // son lazy: intentan cargar al entrar en pantalla.
+    // Las 4 fotos están en public/configurador/bano (bano-amoblamiento-0N.jpg):
+    // cada card muestra la suya, no el placeholder. Son lazy: cargan al entrar en pantalla.
     for (let i = 0; i < 4; i++) {
       await opciones.nth(i).scrollIntoViewIfNeeded();
-      await expect(opciones.nth(i).getByText("Foto próximamente")).toBeVisible();
+      const foto = opciones.nth(i).getByRole("img", { name: `Amoblamiento — opción ${i + 1}` });
+      await expect.poll(() => foto.evaluate((im: HTMLImageElement) => im.complete && im.naturalWidth > 0)).toBe(true);
+      await expect(opciones.nth(i).getByText("Foto próximamente")).toHaveCount(0);
     }
     await cfg.getByRole("button", { name: /Amoblamiento — opción 3/ }).click();
     await expect(cfg.getByText("USD 25.840").filter({ visible: true }).first()).toBeVisible();
