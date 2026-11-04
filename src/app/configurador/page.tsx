@@ -4,7 +4,7 @@ import ConfiguradorMovara, { type ModeloKey } from "@/components/configurador/Co
 import ConfiguradorModeloReader from "@/components/configurador/ConfiguradorModeloReader";
 import { client } from "@/sanity/lib/client";
 import { CONFIGURADOR_PAGE_QUERY, SITE_CONFIG_QUERY, CONFIGURADOR_MODELOS_QUERY } from "@/sanity/lib/queries";
-import { urlFor } from "@/sanity/lib/image";
+import { urlImagenCompleta } from "@/sanity/lib/image";
 
 // Contenido del CMS: cambia poco, se sirve estático y se revalida cada 1h.
 // `force-static` es una barrera explícita: si alguien reintroduce una API
@@ -45,15 +45,14 @@ const PLACEHOLDER_IMG = "/banner-hero.webp";
 
 function buildUrls(m?: ModeloImagenesRaw | null): string[] {
   const urls: string[] = [];
-  // Sin hotspot/crop a propósito: con fit("max") y un solo eje (width), un
-  // rect= editorial recortaría la foto antes de escalarla — mismo criterio
-  // que ya se usa en el resto del sitio para estas galerías (ver HeroGaleria).
+  // Foto completa (fit("max"), un solo eje): respeta el crop del Studio si
+  // está cargado, y la card la muestra entera (object-contain).
   if (m?.imagenPrincipal?.asset?._ref) {
-    urls.push(urlFor({ asset: m.imagenPrincipal.asset }).width(900).fit("max").auto("format").url());
+    urls.push(urlImagenCompleta(m.imagenPrincipal, 1200));
   }
   const galeria = (m?.galeria ?? []).filter((img): img is SanityImage & { asset: SanityAsset } => !!img?.asset?._ref);
   for (const img of galeria) {
-    urls.push(urlFor({ asset: img.asset }).width(900).fit("max").auto("format").url());
+    urls.push(urlImagenCompleta(img, 1200));
   }
   return urls.length > 0 ? urls : [PLACEHOLDER_IMG];
 }

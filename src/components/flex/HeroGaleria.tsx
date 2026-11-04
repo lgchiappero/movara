@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play } from "lucide-react";
-import { urlFor } from "@/sanity/lib/image";
+import { urlImagenCompleta } from "@/sanity/lib/image";
 
 type SanityAsset = { _ref: string; _type: string };
 type SanityImage = { asset?: SanityAsset; hotspot?: unknown; crop?: unknown; label?: string };
@@ -83,7 +83,7 @@ function VideoThumb({ videoId, label }: { videoId: string | null; label: string 
           src={src}
           alt={label}
           fill
-          className="object-cover"
+          className="object-contain"
           sizes="80px"
           onLoad={(e) => {
             const img = e.currentTarget;
@@ -122,14 +122,10 @@ export default function HeroGaleria({
   const imageItems: GalleryItem[] = hasSanityImages
     ? validImages.map((img, i) => ({
         kind: "image" as const,
-        // Se pasa solo { asset }, sin hotspot/crop: un recorte editorial
-        // guardado en Sanity generaría un rect= que recorta la foto antes
-        // de que llegue fit("max"), volviendo a mostrarla incompleta.
-        // Solo width: si se pasan width y height juntos, @sanity/image-url
-        // calcula igual un rect= que recorta la imagen para forzar ese
-        // aspect ratio, sin importar el modo fit. Con un solo eje la
-        // imagen escala proporcional, sin recortar.
-        src: urlFor({ asset: img.asset }).width(1800).fit("max").auto("format").url(),
+        // Foto completa: un solo eje con fit("max") (width y height juntos
+        // forzarían un rect= que recorta). Respeta el crop del Studio si
+        // está cargado.
+        src: urlImagenCompleta(img, 1800),
         isSanity: true,
         alt: img.label ?? `${title} — foto ${i + 1}`,
       }))

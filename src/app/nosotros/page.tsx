@@ -3,7 +3,7 @@ import Image from "next/image";
 import { PortableText } from "@portabletext/react";
 import { client } from "@/sanity/lib/client";
 import { QUIENES_SOMOS_QUERY } from "@/sanity/lib/queries";
-import { urlFor } from "@/sanity/lib/image";
+import { urlImagenCompleta, posicionHotspot } from "@/sanity/lib/image";
 import { resolverQuienesSomos, type QuienesSomosSanity } from "@/data/quienes-somos";
 import Navbar from "@/components/home/Navbar";
 import Footer from "@/components/home/Footer";
@@ -40,11 +40,14 @@ export default async function QuienesSomosPage() {
           {/* Background image */}
           {heroImage?.asset && (
             <div className="absolute inset-0">
+              {/* Fondo: acá el recorte es intencional (cubre el hero), centrado en
+                  el hotspot del Studio; la foto se pide entera (con su crop). */}
               <Image
-                src={urlFor(heroImage).width(1600).height(600).fit("crop").auto("format").url()}
+                src={urlImagenCompleta(heroImage, 2000)}
                 alt=""
                 fill
                 className="object-cover opacity-20"
+                style={{ objectPosition: posicionHotspot(heroImage.hotspot) }}
                 priority
                 sizes="100vw"
               />

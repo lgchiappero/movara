@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
@@ -20,6 +20,7 @@ import {
   type MaterialesSeleccion,
 } from "./StepMateriales";
 import { PrecioPanel, PrecioBarraMovil, coloresPrecio, Desglose } from "./PrecioPanel";
+import { FotoAmpliada } from "./FotoAmpliada";
 import {
   validateField,
   particularSchema,
@@ -587,20 +588,35 @@ function PhotoCarousel({ slides }: { slides: number }) {
 }
 
 /** Fotos reales del modelo (de Sanity) con fila de thumbnails clickeable. */
+// Las fotos de cada tamaño se ven completas (las hay cuadradas y apaisadas):
+// object-contain sobre fondo oscuro, 4:3 en el celular y 256px de alto
+// desde sm. Tocar la foto la abre a pantalla completa.
 function ModeloPhotoCarousel({ images }: { images: string[] }) {
   const [current, setCurrent] = useState(0);
+  const [ampliada, setAmpliada] = useState(false);
+  const cerrar = useCallback(() => setAmpliada(false), []);
   const total = images.length;
+  const alt = `Foto ${current + 1} de ${total}`;
 
   return (
     <div className="mt-3 rounded-xl overflow-hidden border border-stone-100">
-      <div className="relative bg-stone-100 h-36">
-        <Image
-          src={images[current]}
-          alt={`Foto ${current + 1} de ${total}`}
-          fill
-          className="object-cover"
-          sizes="(max-width: 640px) 100vw, 400px"
-        />
+      <div className="relative bg-[#1A1A1A] aspect-[4/3] sm:aspect-auto sm:h-64">
+        <button type="button" onClick={() => setAmpliada(true)} aria-label={`Ampliar ${alt.toLowerCase()}`} className="absolute inset-0 cursor-zoom-in">
+          <Image
+            src={images[current]}
+            alt={alt}
+            fill
+            className="object-contain"
+            sizes="(max-width: 640px) calc(100vw - 5rem), 460px"
+          />
+          <span aria-hidden className="absolute left-2 top-2 w-8 h-8 rounded-full bg-black/55 text-white flex items-center justify-center shadow">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <circle cx="11" cy="11" r="6.5" />
+              <path strokeLinecap="round" d="M16 16l4.5 4.5M11 8.5v5M8.5 11h5" />
+            </svg>
+          </span>
+        </button>
+        {ampliada && <FotoAmpliada src={images[current]} alt={alt} onClose={cerrar} />}
         {total > 1 && (
           <>
             <button
@@ -636,7 +652,7 @@ function ModeloPhotoCarousel({ images }: { images: string[] }) {
                 i === current ? "border-sage-500" : "border-transparent hover:border-stone-300"
               }`}
             >
-              <Image src={src} alt="" fill className="object-cover" sizes="48px" />
+              <Image src={src} alt="" fill className="object-contain bg-[#1A1A1A]" sizes="48px" />
             </button>
           ))}
         </div>

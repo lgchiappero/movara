@@ -83,6 +83,11 @@ export type MaterialesSeleccion = Record<string, string | null>;
 
 const DIR = "/configurador";
 
+/** Fotos de ambientes (casas, cocinas, baños): se ven completas, sin
+ *  recorte, sobre fondo oscuro. Las texturas (piso, mesada, paneles) sí
+ *  llenan la card: recortarlas no esconde nada. */
+const FOTO_COMPLETA = { imageFit: "contain", imageBg: "#1A1A1A" } as const;
+
 /** Id del inodoro inteligente en `materiales.inodoro`. En el admin es el
  *  extra "inodoro-inteligente" (admin-extras.ts). */
 export const INODORO_INTELIGENTE_ID = "inteligente-bidet";
@@ -137,6 +142,7 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
       {
         key: "exterior",
         label: "Opciones base — sin costo",
+        ...FOTO_COMPLETA,
         options: [
           { id: "gris-oscuro", img: `${DIR}/exterior-01-gris-oscuro.png`, label: "Gris oscuro" },
           { id: "madera-naranja", img: `${DIR}/exterior-02-madera-naranja.png`, label: "Madera naranja" },
@@ -149,6 +155,7 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
       {
         key: "exterior",
         label: "Panel metálico labrado — costo adicional",
+        ...FOTO_COMPLETA,
         priceName: PRECIO_FACHADA,
         options: EXTERIOR_PREMIUM.map(([suffix, label]) => ({
           id: `premium-${suffix}`,
@@ -243,6 +250,7 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
       {
         key: "banera",
         label: "Bañera en lugar de ducha — precio a consultar",
+        ...FOTO_COMPLETA,
         nullable: true,
         aConsultar: true,
         options: [
@@ -274,6 +282,7 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
       {
         key: "cocina",
         label: "Cocina L-Shape — sin costo",
+        ...FOTO_COMPLETA,
         options: [
           { id: "lshape-gris", img: `${DIR}/cocina-01-lshape-gris.png`, label: "L-Shape gris" },
           { id: "lshape-blanco", img: `${DIR}/cocina-02-lshape-blanco.png`, label: "L-Shape blanco" },
@@ -297,6 +306,7 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
       {
         key: "cocinaAmpliada",
         label: "Cocina ampliada — costo adicional",
+        ...FOTO_COMPLETA,
         nullable: true,
         priceName: PRECIO_COCINA_AMPLIADA,
         options: [
@@ -385,6 +395,7 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
       {
         key: "techoBalcon",
         label: "Techo del balcón",
+        ...FOTO_COMPLETA,
         // Con balcón el techo es obligatorio (lo elige el configurador); el
         // null es "sin balcón".
         nullable: true,

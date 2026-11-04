@@ -14,6 +14,7 @@ vi.mock("next/image", () => ({
 }));
 
 vi.mock("@/sanity/lib/image", () => ({
+  urlImagenCompleta: () => "https://cdn.sanity.io/images/test/production/abc123-800x600.jpg",
   // Builder chainable: cualquier método (width, height, fit, auto...)
   // devuelve el propio proxy; solo url() termina la cadena.
   urlFor: () => {

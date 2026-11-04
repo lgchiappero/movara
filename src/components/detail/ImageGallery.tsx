@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { urlFor } from "@/sanity/lib/image";
+import { urlImagenCompleta } from "@/sanity/lib/image";
 
 type SanityAsset = { _ref: string; _type: string };
 
@@ -173,7 +173,7 @@ export default function ImageGallery({ images, modelName, video, videos }: Props
               src={active.url}
               controls
               autoPlay
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-contain"
               aria-label={active.label}
             />
           ) : (
@@ -190,7 +190,7 @@ export default function ImageGallery({ images, modelName, video, videos }: Props
           )
         ) : isSanityImage(active.img) ? (
           <Image
-            src={urlFor({ asset: active.img.asset }).width(900).fit("max").auto("format").url()}
+            src={urlImagenCompleta(active.img, 1600)}
             alt={active.img.label ?? modelName}
             fill
             className="object-contain transition-opacity duration-500"
@@ -266,11 +266,7 @@ export default function ImageGallery({ images, modelName, video, videos }: Props
                 <VideoThumbnail label={item.label} />
               ) : isSanityImage(item.img) ? (
                 <Image
-                  src={urlFor({ asset: item.img.asset })
-                    .width(200)
-                    .fit("max")
-                    .auto("format")
-                    .url()}
+                  src={urlImagenCompleta(item.img, 200)}
                   alt={item.img.label ?? `Imagen ${i + 1}`}
                   fill
                   className="object-contain"

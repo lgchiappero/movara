@@ -25,6 +25,11 @@ vi.mock("framer-motion", () => ({
 // componente le pasara una imagen con asset null.
 vi.mock("@/sanity/lib/image", () => ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  urlImagenCompleta: (img: any) => {
+    void img.asset._ref;
+    return "https://cdn.sanity.io/test.jpg";
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   urlFor: (source: any) => {
     void source.asset._ref;
     // Builder chainable: cualquier método encadenado (width, height, fit,
