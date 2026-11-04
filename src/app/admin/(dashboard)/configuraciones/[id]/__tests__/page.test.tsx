@@ -258,6 +258,13 @@ describe("ConfiguracionDetailPage", () => {
     expect(screen.getAllByText("Amoblamiento del baño: —")).toHaveLength(2);
   });
 
+  it("MaterialesConImagenes: la puerta y la cocina con costo se ven con el nombre del extra", async () => {
+    mockFindUnique.mockResolvedValueOnce({ ...CONFIG_BASE, materiales: { puertaPrincipal: "doble-hoja-moderna", cocinaAmpliada: "ushape-02" } });
+    render(await ConfiguracionDetailPage({ params: Promise.resolve({ id: "p1" }) }));
+    expect(screen.getAllByText("Puerta doble hoja moderna").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Cocina en U — opción 2").length).toBeGreaterThan(0);
+  });
+
   it("MaterialesConImagenes: el balcón con sobretecho solo en el balcón tiene precio, no es A consultar", async () => {
     mockFindUnique.mockResolvedValueOnce({
       ...CONFIG_BASE,

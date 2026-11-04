@@ -12,6 +12,38 @@ export const PRECIO_INODORO = "Inodoro inteligente";
 export const PRECIO_PISO_SPC = "Piso SPC 4 mm";
 export const PRECIO_COCINA_AMPLIADA = "Cocina ampliada";
 export const PRECIO_BASE_DUCHA = "Base de ducha";
+export const PRECIO_PUERTA_MODERNA = "Puerta doble hoja moderna";
+export const PRECIO_COCINA_U = "Cocina en U";
+
+// Regla de precio MOVARA para los extras:
+//
+//   precio = costo de fábrica × 1,35 (margen) × 1,21 (IVA),
+//            redondeado hacia arriba a múltiplos de USD 5.
+//
+// Costo de fábrica (USD) → precio con IVA:
+//   Base de ducha              100 → 165
+//   Puerta doble hoja moderna  200 → 330
+//   Cocina en U                400 → 655
+// Los demás extras todavía no tienen costo de fábrica cargado: su precio es
+// el de lista de abajo (balcón 3.100, panel labrado 950, inodoro 580, piso
+// SPC 390, cocina ampliada con alacena 500).
+export const MARGEN_EXTRAS = 1.35;
+export const IVA = 1.21;
+
+/** Precio con IVA de un extra a partir de su costo de fábrica (ver la regla
+ *  arriba). Se redondea a centavos antes de subir al múltiplo de 5 para que
+ *  un error de coma flotante no sume 5 de más. */
+export function precioDesdeCostoFabrica(costo: number): number {
+  const conIva = Math.round(costo * MARGEN_EXTRAS * IVA * 100) / 100;
+  return Math.ceil(conIva / 5) * 5;
+}
+
+/** Costo de fábrica de los extras que lo tienen (USD). */
+export const COSTOS_FABRICA: Record<string, number> = {
+  [PRECIO_BASE_DUCHA]: 100,
+  [PRECIO_PUERTA_MODERNA]: 200,
+  [PRECIO_COCINA_U]: 400,
+};
 
 export const PRECIOS_EXTRAS_DEFAULT: Record<string, number> = {
   [PRECIO_BALCON]: 3100,
@@ -19,7 +51,7 @@ export const PRECIOS_EXTRAS_DEFAULT: Record<string, number> = {
   [PRECIO_INODORO]: 580,
   [PRECIO_PISO_SPC]: 390,
   [PRECIO_COCINA_AMPLIADA]: 500,
-  [PRECIO_BASE_DUCHA]: 165,
+  ...Object.fromEntries(Object.entries(COSTOS_FABRICA).map(([nombre, costo]) => [nombre, precioDesdeCostoFabrica(costo)])),
 };
 
 /** Nombres que se pueden elegir en el Studio (lista desplegable). */

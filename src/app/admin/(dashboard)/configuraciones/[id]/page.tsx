@@ -11,6 +11,7 @@ import {
   getStoredMaterialLabel,
   getMaterialesAnteriores,
   esSelectorAConsultar,
+  etiquetaConExtra,
 } from "@/data/material-catalog";
 import { etiquetaEstadoPedido, ESTADO_PEDIDO_CANCELADO } from "@/lib/pedido/estado-pedido";
 import CancelarPedidoSection from "@/components/admin/CancelarPedidoSection";
@@ -311,7 +312,7 @@ function MaterialesConImagenes({ materiales }: { materiales: Record<string, stri
           const found = findMaterialOption(selector.key, raw);
           const aCotizar = esSelectorAConsultar(selector.key, materiales);
           if (found) {
-            const label = found.option.extraNombre ? `${found.option.label} — ${found.option.extraNombre}` : found.option.label;
+            const label = etiquetaConExtra(found.option.label, found.option.extraNombre);
             return [{ key: selector.key, img: found.option.img, label, imageFit: found.selector.imageFit, aCotizar }];
           }
           // Opción retirada del catálogo o texto libre del admin: sin foto,

@@ -194,3 +194,17 @@ describe("PDFs — base de ducha", () => {
     );
   });
 });
+
+describe("PDFs — puerta doble hoja moderna y cocina en U", () => {
+  const data = { ...base, materiales: { puertaPrincipal: "doble-hoja-moderna", cocinaAmpliada: "ushape-01" } };
+  it("cliente: con el nombre del extra", () => {
+    const items = buildPedidoNarrativeEs(data);
+    expect(grupoEs(items, "Puertas y ventanas").bullets).toContain("Puerta principal: Puerta doble hoja moderna");
+    expect(grupoEs(items, "Cocina").bullets).toContain("Cocina ampliada: Cocina en U — opción 1");
+  });
+  it("proveedor: en inglés", () => {
+    const items = buildSupplierSpecItems(data);
+    expect(grupoEn(items, "Puertas y ventanas").rows).toContainEqual({ label: "Main door", value: "Modern double-leaf door" });
+    expect(grupoEn(items, "Cocina").rows).toContainEqual({ label: "Extended kitchen", value: "U-shaped kitchen — option 1" });
+  });
+});

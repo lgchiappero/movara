@@ -43,6 +43,8 @@ const SELECTOR_LABELS_EN: Record<string, string> = {
 const OPTION_LABELS_EN: Record<string, Record<string, string>> = {
   inodoro: { [INODORO_INTELIGENTE_ID]: "Smart toilet with bidet" },
   amoblamientoBano: AMOBLAMIENTO_BANO_EN,
+  puertaPrincipal: { "doble-hoja-moderna": "Modern double-leaf door" },
+  cocinaAmpliada: { "ushape-01": "U-shaped kitchen — option 1", "ushape-02": "U-shaped kitchen — option 2" },
 };
 
 /** Extras sin precio de lista: MOVARA los presupuesta aparte. */

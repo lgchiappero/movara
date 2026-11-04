@@ -207,6 +207,18 @@ describe("POST /api/pedido", () => {
     });
   });
 
+  it("puerta doble hoja moderna + cocina en U + amoblamiento 4: base + 330 + 655 + 165, con el desglose", async () => {
+    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
+    await POST(req({ ...BASE, materiales: { puertaPrincipal: "doble-hoja-moderna", cocinaAmpliada: "ushape-01", amoblamientoBano: "amoblamiento-04" } }, "10.0.0.46"));
+    const { data } = mockCreate.mock.calls[0][0];
+    expect(data.precioEstimado).toBe(38 * 680 + 330 + 655 + 165);
+    expect(data.desgloseEstimado.adicionales).toEqual([
+      { nombre: "Base de ducha (blanca)", precio: 165 },
+      { nombre: "Cocina en U — opción 1", precio: 655 },
+      { nombre: "Puerta doble hoja moderna", precio: 330 },
+    ]);
+  });
+
   it("la base de ducha toma el precio de Sanity si está cargado", async () => {
     mockSanityFetch.mockResolvedValueOnce({ preciosExtras: [{ nombre: "Base de ducha", precio: 200 }] });
     mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });

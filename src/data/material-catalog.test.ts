@@ -13,6 +13,7 @@ import {
   AMOBLAMIENTO_BANO_OPCIONES,
   AMOBLAMIENTO_BANO_EN,
   getExtraDeOpcion,
+  etiquetaConExtra,
 } from "@/data/material-catalog";
 
 describe("getDefaultMateriales", () => {
@@ -291,5 +292,48 @@ describe("precio de la base de ducha", () => {
     expect(PRECIOS_EXTRAS_DEFAULT["Base de ducha"]).toBe(165);
     expect(NOMBRES_PRECIOS_EXTRAS).toContain("Base de ducha");
     expect(resolvePrecioExtra("Base de ducha", null)).toBe(165);
+  });
+});
+
+describe("regla de precio: costo de fábrica × 1,35 × 1,21, hacia arriba a múltiplos de 5", () => {
+  it("da los precios documentados y redondea siempre hacia arriba", async () => {
+    const { precioDesdeCostoFabrica, COSTOS_FABRICA, PRECIOS_EXTRAS_DEFAULT, NOMBRES_PRECIOS_EXTRAS } = await import("@/data/precios-extras");
+    expect(precioDesdeCostoFabrica(100)).toBe(165);
+    expect(precioDesdeCostoFabrica(200)).toBe(330);
+    expect(precioDesdeCostoFabrica(400)).toBe(655);
+    expect(precioDesdeCostoFabrica(101)).toBe(165); // 164,98 → 165
+    expect(precioDesdeCostoFabrica(0)).toBe(0);
+    expect(COSTOS_FABRICA).toEqual({ "Base de ducha": 100, "Puerta doble hoja moderna": 200, "Cocina en U": 400 });
+    expect(PRECIOS_EXTRAS_DEFAULT).toMatchObject({ "Base de ducha": 165, "Puerta doble hoja moderna": 330, "Cocina en U": 655, "Cocina ampliada": 500 });
+    expect(NOMBRES_PRECIOS_EXTRAS).toEqual(expect.arrayContaining(["Puerta doble hoja moderna", "Cocina en U"]));
+  });
+});
+
+describe("puerta doble hoja moderna y cocina en U", () => {
+  it("solo la puerta doble hoja moderna tiene costo; el selector ya no dice sin costo", () => {
+    const sel = MATERIAL_CATEGORY_GROUPS.flatMap((g) => g.selectors).find((s) => s.key === "puertaPrincipal")!;
+    expect(sel.label).toBe("Puerta principal");
+    expect(sel.options.filter((o) => o.priceName).map((o) => o.id)).toEqual(["doble-hoja-moderna"]);
+    expect(getExtrasElegidos({ puertaPrincipal: "doble-hoja-moderna" })).toEqual([
+      { key: "puertaPrincipal", nombre: "Puerta doble hoja moderna", tipo: "precio", priceName: "Puerta doble hoja moderna" },
+    ]);
+    for (const id of ["corredera-doble", "doble-hoja-abatible", "vidrio-lateral"]) expect(getExtrasElegidos({ puertaPrincipal: id })).toEqual([]);
+    expect(getDefaultMateriales().puertaPrincipal).toBe("corredera-doble");
+  });
+
+  it("las cocinas en U son el extra Cocina en U; las de alacena siguen en Cocina ampliada", () => {
+    expect(getExtrasElegidos({ cocinaAmpliada: "ushape-02" })).toEqual([
+      { key: "cocinaAmpliada", nombre: "Cocina en U — opción 2", tipo: "precio", priceName: "Cocina en U" },
+    ]);
+    expect(getExtrasElegidos({ cocinaAmpliada: "alacena-01" })).toEqual([
+      { key: "cocinaAmpliada", nombre: "Cocina ampliada: Con alacena — opción 1", tipo: "precio", priceName: "Cocina ampliada" },
+    ]);
+  });
+
+  it("etiquetaConExtra: muestra solo el extra si ya incluye la opción, si no los dos", () => {
+    expect(etiquetaConExtra("Doble hoja moderna", "Puerta doble hoja moderna")).toBe("Puerta doble hoja moderna");
+    expect(etiquetaConExtra("En U — opción 1", "Cocina en U — opción 1")).toBe("Cocina en U — opción 1");
+    expect(etiquetaConExtra("Amoblamiento — opción 4", "Base de ducha (blanca)")).toBe("Amoblamiento — opción 4 — Base de ducha (blanca)");
+    expect(etiquetaConExtra("Maple", null)).toBe("Maple");
   });
 });

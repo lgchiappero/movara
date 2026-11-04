@@ -17,7 +17,16 @@
 // `nullable` permite deseleccionar (para extras opcionales que no reemplazan
 // nada, como bañera o balcón).
 
-import { PRECIO_BALCON, PRECIO_FACHADA, PRECIO_INODORO, PRECIO_PISO_SPC, PRECIO_COCINA_AMPLIADA, PRECIO_BASE_DUCHA } from "./precios-extras";
+import {
+  PRECIO_BALCON,
+  PRECIO_FACHADA,
+  PRECIO_INODORO,
+  PRECIO_PISO_SPC,
+  PRECIO_COCINA_AMPLIADA,
+  PRECIO_BASE_DUCHA,
+  PRECIO_PUERTA_MODERNA,
+  PRECIO_COCINA_U,
+} from "./precios-extras";
 
 export type MaterialOption = {
   id: string;
@@ -294,8 +303,10 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
           { id: "alacena-01", img: `${DIR}/cocina-premium-alacena-01.png`, label: "Con alacena — opción 1" },
           { id: "alacena-02", img: `${DIR}/cocina-premium-alacena-02.png`, label: "Con alacena — opción 2" },
           { id: "alacena-03", img: `${DIR}/cocina-premium-alacena-03.png`, label: "Con alacena — opción 3" },
-          { id: "ushape-01", img: `${DIR}/cocina-premium-ushape-01.png`, label: "En U — opción 1" },
-          { id: "ushape-02", img: `${DIR}/cocina-premium-ushape-02.png`, label: "En U — opción 2" },
+          // Las cocinas en U son su propio extra (con costo de fábrica); las
+          // de alacena siguen en "Cocina ampliada".
+          { id: "ushape-01", img: `${DIR}/cocina-premium-ushape-01.png`, label: "En U — opción 1", priceName: PRECIO_COCINA_U, extraNombre: `${PRECIO_COCINA_U} — opción 1` },
+          { id: "ushape-02", img: `${DIR}/cocina-premium-ushape-02.png`, label: "En U — opción 2", priceName: PRECIO_COCINA_U, extraNombre: `${PRECIO_COCINA_U} — opción 2` },
         ],
       },
     ],
@@ -306,14 +317,21 @@ export const MATERIAL_CATEGORY_GROUPS: MaterialCategoryGroup[] = [
     selectors: [
       {
         key: "puertaPrincipal",
-        label: "Puerta principal — sin costo",
+        // Solo la doble hoja moderna tiene costo; las demás son sin costo.
+        label: "Puerta principal",
         imageFit: "contain",
         imageBg: "#f0f0f0",
         options: [
           { id: "corredera-doble", img: `${DIR}/puertacorrediza2hojas.png`, label: "Corredera doble hoja" },
           { id: "doble-hoja-abatible", img: `${DIR}/puertadeabrir2hojas.png`, label: "Doble hoja abatible" },
           { id: "vidrio-lateral", img: `${DIR}/puerta4vidrios.png`, label: "Con vidrio lateral" },
-          { id: "doble-hoja-moderna", img: `${DIR}/puertadoblehojaconcargo.png`, label: "Doble hoja moderna" },
+          {
+            id: "doble-hoja-moderna",
+            img: `${DIR}/puertadoblehojaconcargo.png`,
+            label: "Doble hoja moderna",
+            priceName: PRECIO_PUERTA_MODERNA,
+            extraNombre: PRECIO_PUERTA_MODERNA,
+          },
         ],
       },
       {
@@ -445,6 +463,15 @@ export const AMOBLAMIENTO_BANO_EN: Record<string, string> = Object.fromEntries(
  *  mostrarlo junto a la opción en el admin y en el PDF del cliente. */
 export function getExtraDeOpcion(key: string, id: string | null): string | null {
   return findMaterialOption(key, id)?.option.extraNombre ?? null;
+}
+
+/** Cómo se muestra una opción junto con su extra: si el nombre del extra ya
+ *  contiene el de la opción, solo el extra ("Puerta doble hoja moderna",
+ *  "Cocina en U — opción 1"); si no, los dos ("Amoblamiento — opción 4 —
+ *  Base de ducha (blanca)"). */
+export function etiquetaConExtra(label: string, extra: string | null | undefined): string {
+  if (!extra) return label;
+  return extra.toLowerCase().includes(label.toLowerCase()) ? extra : `${label} — ${extra}`;
 }
 
 /** Keys de los selectores del baño. */

@@ -63,6 +63,13 @@ describe("GET /api/admin/configuraciones/[id]/pdf-cliente", () => {
     expect(vi.mocked(PedidoDocumentCliente).mock.calls.at(-1)![0].desglose).toBeNull();
   });
 
+  it("un pedido viejo con la puerta doble hoja moderna (antes sin costo) muestra lo que tenía guardado, sin recalcular", async () => {
+    const guardado = { base: 25840, adicionales: [], aConsultar: [], total: 25840 };
+    mockFindUnique.mockResolvedValueOnce({ ...CONFIG, materiales: { puertaPrincipal: "doble-hoja-moderna" }, desgloseEstimado: guardado });
+    await GET(new NextRequest("http://localhost/x"), { params: Promise.resolve({ id: "p1" }) });
+    expect(vi.mocked(PedidoDocumentCliente).mock.calls.at(-1)![0].desglose).toEqual(guardado);
+  });
+
   it("un pedido anterior al desglose va sin desglose", async () => {
     mockFindUnique.mockResolvedValueOnce({ ...CONFIG, desgloseEstimado: null });
     await GET(new NextRequest("http://localhost/x"), { params: Promise.resolve({ id: "p1" }) });

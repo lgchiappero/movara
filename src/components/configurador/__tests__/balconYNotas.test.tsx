@@ -267,6 +267,39 @@ describe("Configurador — precios de los extras", () => {
     expect(body.precioEstimado).toBe(BASE_FLEX_38 + 165);
   });
 
+  it("puerta doble hoja moderna + cocina en U + amoblamiento 4: total = base + 330 + 655 + 165 en el desglose, el resumen y el WhatsApp", async () => {
+    const user = userEvent.setup();
+    await hastaConfiguracion(user);
+    expect(screen.getByText("Puerta principal", { selector: "p" })).toBeInTheDocument();
+    const puerta = screen.getByRole("button", { name: /Doble hoja moderna/ });
+    expect(within(puerta).getByText("+ USD 330")).toBeInTheDocument();
+    for (const otra of [/Corredera doble hoja/, /Doble hoja abatible/, /Con vidrio lateral/]) {
+      expect(within(screen.getByRole("button", { name: otra })).queryByText(/USD/)).toBeNull();
+    }
+    const enU = screen.getByRole("button", { name: /En U — opción 1/ });
+    expect(within(enU).getByText("+ USD 655")).toBeInTheDocument();
+    expect(within(screen.getByRole("button", { name: /Con alacena — opción 1/ })).getByText("+ USD 500")).toBeInTheDocument();
+
+    await user.click(puerta);
+    await user.click(enU);
+    await user.click(screen.getByRole("button", { name: /Amoblamiento — opción 4/ }));
+    const total = BASE_FLEX_38 + 330 + 655 + 165;
+    await vi.waitFor(() => expect(screen.getAllByText(usd(total)).length).toBeGreaterThan(0));
+
+    await hastaResultado(user);
+    expect(screen.getByText(usd(total))).toBeInTheDocument();
+    for (const linea of ["+ Puerta doble hoja moderna", "+ Cocina en U — opción 1", "+ Base de ducha (blanca)"]) {
+      expect(screen.getAllByText(linea).length).toBeGreaterThan(0);
+    }
+    const mensaje = (screen.getAllByRole("textbox").at(-1) as HTMLTextAreaElement).value;
+    expect(mensaje).toContain("- Puerta doble hoja moderna: USD 330");
+    expect(mensaje).toContain("- Cocina en U — opción 1: USD 655");
+    expect(mensaje).toContain("- Base de ducha (blanca): USD 165");
+    expect(mensaje).toContain(`💰 Precio estimado: ${usd(total)}`);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.precioEstimado).toBe(total);
+  });
+
   it("sin baño el WhatsApp no lista paneles, puerta ni amoblamiento del baño", async () => {
     const user = userEvent.setup();
     await hastaConfiguracion(user);
