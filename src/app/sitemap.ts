@@ -3,7 +3,8 @@ import { client } from "@/sanity/lib/client";
 import { MODELOS_SITEMAP_QUERY } from "@/sanity/lib/queries";
 import { construirSitemap, type ModeloSitemap } from "@/lib/seo/sitemap";
 
-export const revalidate = 3600;
+// Respaldo: el webhook de Sanity (/api/revalidate) regenera al publicar.
+export const revalidate = 300;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let modelos: ModeloSitemap[] = [];

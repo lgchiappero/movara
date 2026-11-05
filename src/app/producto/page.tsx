@@ -6,7 +6,8 @@ import type { PreciosConfig } from "@/data/precios-extras";
 
 // Los precios de los extras vienen de Sanity: estática, revalidada cada 1h
 // (igual que el configurador).
-export const revalidate = 3600;
+// Respaldo: el webhook de Sanity (/api/revalidate) regenera al publicar.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Ficha técnica MOVARA Flex — MOVARA",

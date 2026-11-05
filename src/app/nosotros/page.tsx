@@ -8,7 +8,8 @@ import { resolverQuienesSomos, type QuienesSomosSanity } from "@/data/quienes-so
 import Navbar from "@/components/home/Navbar";
 import Footer from "@/components/home/Footer";
 
-export const revalidate = 3600;
+// Respaldo: el webhook de Sanity (/api/revalidate) regenera al publicar.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Nosotros — MOVARA",

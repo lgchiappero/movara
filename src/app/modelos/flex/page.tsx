@@ -3,7 +3,8 @@ import { client } from "@/sanity/lib/client";
 import { FLEX_PAGE_QUERY, SITE_CONFIG_QUERY } from "@/sanity/lib/queries";
 import FlexPageClient, { type FlexPageData } from "@/components/flex/FlexPageClient";
 
-export const revalidate = 3600;
+// Respaldo: el webhook de Sanity (/api/revalidate) regenera al publicar.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "MOVARA Flex — MOVARA",

@@ -23,7 +23,8 @@ const FINALIDAD_LABELS: Record<string, string> = {
   "sector-publico": "🏛️ Sector público",
 };
 
-export const revalidate = 3600;
+// Respaldo: el webhook de Sanity (/api/revalidate) regenera al publicar.
+export const revalidate = 300;
 
 type Props = { params: Promise<{ slug: string }> };
 

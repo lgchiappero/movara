@@ -18,6 +18,10 @@ import { SITE_CONFIG_QUERY, HOME_PAGE_QUERY, MODELOS_CARD_QUERY, FAQ_PAGE_QUERY 
 import type { FaqCategory } from "@/data/faq";
 import type { ModeloCardData } from "@/components/modelos/ModeloCard";
 
+// Lee Sanity: se regenera al publicar (webhook /api/revalidate) y, de
+// respaldo, cada 5 minutos.
+export const revalidate = 300;
+
 async function getPageData() {
   try {
     const [config, homePage, modelos, faqPage] = await Promise.all([

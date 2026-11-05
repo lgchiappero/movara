@@ -10,7 +10,8 @@ export const metadata: Metadata = {
     "Explorá nuestros modelos de casas modulares: vivienda familiar, alquiler turístico y oficinas. Precios, planos y especificaciones.",
 };
 
-export const revalidate = 3600;
+// Respaldo: el webhook de Sanity (/api/revalidate) regenera al publicar.
+export const revalidate = 300;
 
 // Sin fallback a datos hardcodeados: el catálogo muestra exactamente los
 // modelos activos de Sanity, ordenados por "order" — con la misma card y la

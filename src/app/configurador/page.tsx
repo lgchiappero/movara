@@ -11,7 +11,8 @@ import { urlImagenCompleta } from "@/sanity/lib/image";
 // dinámica (searchParams/cookies/headers) en esta página, el build falla
 // en vez de degradar silenciosamente a SSR por request.
 export const dynamic = "force-static";
-export const revalidate = 3600;
+// Respaldo: el webhook de Sanity (/api/revalidate) regenera al publicar.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Configurador — MOVARA",
