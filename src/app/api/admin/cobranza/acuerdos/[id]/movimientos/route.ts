@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { archivoDelFormulario } from "@/lib/admin/subidas";
 import { registrarMovimientoSchema } from "@/lib/validators/cobranza";
-import { estadoCuota } from "@/lib/cobranza/calc";
+import { recalcularEstadosPlan } from "@/lib/cobranza/recalcular-plan";
 import { periodoEstaCerrado } from "@/lib/cobranza/periodo-cerrado";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -50,10 +50,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 
-  let cuota: { id: string; acuerdoId: string; importe: number; estado: string; vencimiento: Date | null } | null =
-    null;
   if (data.cuotaId) {
-    cuota = await db.cuota.findUnique({ where: { id: data.cuotaId } });
+    const cuota = await db.cuota.findUnique({ where: { id: data.cuotaId }, select: { acuerdoId: true } });
     if (!cuota || cuota.acuerdoId !== acuerdoId) {
       return NextResponse.json({ error: "La cuota no pertenece a este acuerdo" }, { status: 400 });
     }
@@ -65,33 +63,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
   const comprobanteUrl = comprobante.value?.path ?? null;
 
-  const movimiento = await db.movimiento.create({
-    data: {
-      acuerdoId,
-      cuotaId: data.cuotaId,
-      fecha: fechaMovimiento,
-      importe: data.importe,
-      modalidad: data.modalidad,
-      comprobanteUrl,
-      notas: data.notas,
-      registradoPor: session.email,
-    },
-  });
-
-  // Recalcular el estado de la cuota saldada por este movimiento — el
-  // estado del acuerdo no se persiste, se deriva en cada lectura (ver
-  // src/lib/cobranza/calc.ts) así que no hay nada más que actualizar acá.
-  if (cuota) {
-    const movimientosCuota = await db.movimiento.findMany({
-      where: { cuotaId: cuota.id },
-      select: { importe: true },
+  // El movimiento y el estado de las cuotas que salda, juntos: si el
+  // recálculo falla, el pago no queda registrado a medias.
+  const movimiento = await db.$transaction(async (tx) => {
+    const creado = await tx.movimiento.create({
+      data: {
+        acuerdoId,
+        cuotaId: data.cuotaId,
+        fecha: fechaMovimiento,
+        importe: data.importe,
+        modalidad: data.modalidad,
+        comprobanteUrl,
+        notas: data.notas,
+        registradoPor: session.email,
+      },
     });
-    const totalPagadoCuota = movimientosCuota.reduce((acc, m) => acc + m.importe, 0);
-    const nuevoEstado = estadoCuota(cuota.importe, totalPagadoCuota, cuota.vencimiento, new Date());
-    if (nuevoEstado !== cuota.estado) {
-      await db.cuota.update({ where: { id: cuota.id }, data: { estado: nuevoEstado } });
-    }
-  }
+    await recalcularEstadosPlan(tx, acuerdoId);
+    return creado;
+  });
 
   return NextResponse.json({ ok: true, id: movimiento.id }, { status: 201 });
 }

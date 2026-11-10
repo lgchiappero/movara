@@ -21,6 +21,7 @@ import UnidadesEnMovimientoGrid, {
 } from "@/components/admin/UnidadesEnMovimientoGrid";
 import { inicioSemana as inicioSemanaCobranza, finSemana as finSemanaCobranza } from "@/lib/cobranza/periodo";
 import { proximoPasoCorto } from "@/lib/envios/timeline";
+import { alertasPlanes, formatSaldo } from "@/lib/dashboard/alertas-planes";
 import { resumenCobranzaPorUnidad, RESUMEN_COBRANZA_VACIO, type ResumenCobranzaUnidad } from "@/lib/cobranza/resumen-unidad";
 
 const MESES_LABEL = [
@@ -144,15 +145,13 @@ export default async function AdminDashboardPage() {
     cobradoEsteMesAgg,
     porCobrarTotalAgg,
     porCobrarMovidoAgg,
-    cuotasVencenSemanaCobro,
+    planesConVencimientos,
     pagadoEsteMesAgg,
     porPagarTotalAgg,
     porPagarMovidoAgg,
     unidadesEnAduanaLargas,
     cobrosVencidos,
     leadsPipelineResumen,
-    unidadesCobroVencido,
-    unidadesPagoVencido,
     mesAnteriorCierre,
     mesAnteriorTuvoMovimientos,
   ] = await Promise.all([
@@ -223,11 +222,18 @@ export default async function AdminDashboardPage() {
       _sum: { importe: true },
       where: { acuerdo: { tipo: "cobro", moneda: "USD" } },
     }),
-    db.cuota.count({
-      where: {
-        estado: "pendiente",
-        vencimiento: { gte: inicioSemanaCobranza(now), lt: finSemanaCobranza(now) },
-        acuerdo: { tipo: "cobro" },
+    // Planes con alguna cuota que vence antes del fin de esta semana: sobre
+    // ellos se calculan las alertas de cuotas vencidas (cobro y pago) y de
+    // "vence esta semana", con el saldo real de cada cuota (sus pagos
+    // imputados), no con Cuota.estado — ver lib/dashboard/alertas-planes.ts.
+    db.acuerdoPago.findMany({
+      where: { cuotas: { some: { vencimiento: { lt: finSemanaCobranza(now) } } } },
+      select: {
+        unidadId: true,
+        tipo: true,
+        moneda: true,
+        cuotas: { select: { id: true, importe: true, vencimiento: true, createdAt: true } },
+        movimientos: { select: { cuotaId: true, importe: true } },
       },
     }),
     db.movimiento.aggregate({
@@ -255,25 +261,6 @@ export default async function AdminDashboardPage() {
       take: 5,
       select: { id: true, nombre: true, apellido: true, etapa: true, createdAt: true },
     }),
-    // Unidades con cuotas vencidas, separadas en cobranza (clientes) y
-    // pagos (proveedores) — misma vista por unidad que /admin/cobranza y
-    // /admin/pagos. Vencidas "en vivo" por fecha (no por el campo estado):
-    // el barrido que marca Cuota.estado = "vencido" solo corre al cargar
-    // esas páginas, así que esta alerta no puede depender de eso.
-    db.unidad.count({
-      where: {
-        acuerdosPago: {
-          some: { tipo: "cobro", cuotas: { some: { vencimiento: { lt: startOfDay(now) }, estado: { not: "pagado" } } } },
-        },
-      },
-    }),
-    db.unidad.count({
-      where: {
-        acuerdosPago: {
-          some: { tipo: "pago", cuotas: { some: { vencimiento: { lt: startOfDay(now) }, estado: { not: "pagado" } } } },
-        },
-      },
-    }),
     db.cierrePeriodo.findUnique({ where: { mes_anio: { mes: mesAnteriorNum, anio: anioAnterior } } }),
     // Solo tiene sentido avisar "sin cerrar" si el mes anterior tuvo algo
     // de actividad — un negocio recién arrancado no debería ver esta
@@ -282,6 +269,13 @@ export default async function AdminDashboardPage() {
   ]);
 
   const rol = session?.rol ?? "vendedor";
+  const alertasDePlanes = alertasPlanes(planesConVencimientos, now, {
+    desde: inicioSemanaCobranza(now),
+    hasta: finSemanaCobranza(now),
+  });
+  const unidadesCobroVencido = alertasDePlanes.cobroVencido.unidades;
+  const unidadesPagoVencido = alertasDePlanes.pagoVencido.unidades;
+  const cuotasVencenSemanaCobro = alertasDePlanes.cobroVenceSemana.cuotas;
   const cobradoEsteMes = cobradoEsteMesAgg._sum.importe ?? 0;
   const porCobrar = (porCobrarTotalAgg._sum.totalAcordado ?? 0) - (porCobrarMovidoAgg._sum.importe ?? 0);
   const pagadoEsteMes = pagadoEsteMesAgg._sum.importe ?? 0;
@@ -416,7 +410,7 @@ export default async function AdminDashboardPage() {
               <li className="flex items-center justify-between gap-3">
                 <span>
                   <strong>{unidadesCobroVencido}</strong> unidad{unidadesCobroVencido === 1 ? "" : "es"} con cuotas de
-                  cobro vencidas
+                  cobro vencidas — saldo vencido <strong>{formatSaldo(alertasDePlanes.cobroVencido.saldo)}</strong>
                 </span>
                 <Link href="/admin/cobranza?estado=vencidas" className={BOTON_VER_ALERTA}>
                   Ver →
@@ -427,7 +421,7 @@ export default async function AdminDashboardPage() {
               <li className="flex items-center justify-between gap-3">
                 <span>
                   <strong>{unidadesPagoVencido}</strong> unidad{unidadesPagoVencido === 1 ? "" : "es"} con pagos a
-                  proveedores vencidos
+                  proveedores vencidos — saldo vencido <strong>{formatSaldo(alertasDePlanes.pagoVencido.saldo)}</strong>
                 </span>
                 <Link href="/admin/pagos?estado=vencidas" className={BOTON_VER_ALERTA}>
                   Ver →
@@ -438,7 +432,8 @@ export default async function AdminDashboardPage() {
               <li className="flex items-center justify-between gap-3">
                 <span>
                   <strong>{cuotasVencenSemanaCobro}</strong> cuota{cuotasVencenSemanaCobro === 1 ? "" : "s"} de cobro vence
-                  {cuotasVencenSemanaCobro === 1 ? "" : "n"} esta semana
+                  {cuotasVencenSemanaCobro === 1 ? "" : "n"} esta semana — saldo{" "}
+                  <strong>{formatSaldo(alertasDePlanes.cobroVenceSemana.saldo)}</strong>
                 </span>
                 <Link href="/admin/cobranza?vence=semana" className={BOTON_VER_ALERTA}>
                   Ver →

@@ -15,6 +15,7 @@ const {
   mockFindManyMovimiento,
   mockFindUniqueCierre,
   mockUploadDocument,
+  mockFindManyCuota,
 } = vi.hoisted(() => ({
   mockGetAdminUser: vi.fn(),
   mockFindUniqueMovimiento: vi.fn(),
@@ -25,6 +26,7 @@ const {
   mockFindManyMovimiento: vi.fn(),
   mockFindUniqueCierre: vi.fn(),
   mockUploadDocument: vi.fn().mockResolvedValue(undefined),
+  mockFindManyCuota: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -32,6 +34,13 @@ vi.mock("@/lib/db", () => ({
     movimiento: { findUnique: mockFindUniqueMovimiento, update: mockUpdateMovimiento, delete: mockDeleteMovimiento, findMany: mockFindManyMovimiento },
     cuota: { findUnique: mockFindUniqueCuota, update: mockUpdateCuota },
     cierrePeriodo: { findUnique: mockFindUniqueCierre },
+    // Edición/borrado y recálculo de las cuotas del plan, en una transacción
+    // (recalcularEstadosPlan real, sobre este mismo tx).
+    $transaction: (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        movimiento: { update: mockUpdateMovimiento, delete: mockDeleteMovimiento, findMany: mockFindManyMovimiento },
+        cuota: { findMany: mockFindManyCuota, update: mockUpdateCuota },
+      }),
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -87,6 +96,7 @@ describe("PATCH /api/admin/cobranza/acuerdos/[id]/movimientos/[movimientoId]", (
     mockFindUniqueCierre.mockResolvedValue(null);
     mockUpdateMovimiento.mockResolvedValue({ id: "m1" });
     mockFindManyMovimiento.mockResolvedValue([]);
+    mockFindManyCuota.mockResolvedValue([]);
   });
 
   it("401 sin sesión", async () => {
@@ -209,27 +219,40 @@ describe("PATCH /api/admin/cobranza/acuerdos/[id]/movimientos/[movimientoId]", (
     expect(res.status).toBe(500);
   });
 
-  it("recalcula la cuota anterior cuando se quita la asociación", async () => {
-    mockFindUniqueMovimiento.mockResolvedValueOnce({ ...MOVIMIENTO, cuotaId: "c-vieja" });
-    mockFindUniqueCuota.mockResolvedValueOnce({ id: "c-vieja", importe: 100, estado: "pagado", vencimiento: null });
-    mockFindManyMovimiento.mockResolvedValueOnce([]); // sin más movimientos para c-vieja tras el update
-    await PATCH(makeFormRequest({ fecha: "2026-06-11", importe: "100", modalidad: "efectivo" }), {
-      params: Promise.resolve({ id: "a1", movimientoId: "m1" }),
-    });
-    expect(mockFindUniqueCuota).toHaveBeenCalledWith({ where: { id: "c-vieja" } });
-    expect(mockUpdateCuota).toHaveBeenCalledWith({ where: { id: "c-vieja" }, data: { estado: "pendiente" } });
+  const CUOTA = (id: string, importe: number, estado: string, vencimiento: Date | null = null) => ({
+    id,
+    importe,
+    vencimiento,
+    createdAt: new Date(0),
+    estado,
   });
 
-  it("recalcula la nueva cuota asociada usando los datos ya resueltos (sin refetch extra)", async () => {
-    mockFindUniqueCuota.mockResolvedValueOnce({ id: "c-nueva", acuerdoId: "a1", importe: 100, estado: "pendiente", vencimiento: null });
-    mockFindManyMovimiento.mockResolvedValueOnce([{ importe: 100 }]);
+  it("al bajar el importe de un pago, la cuota que saldaba vuelve a tener saldo", async () => {
+    mockFindUniqueMovimiento.mockResolvedValueOnce({ ...MOVIMIENTO, cuotaId: "c1" });
+    mockFindUniqueCuota.mockResolvedValueOnce({ acuerdoId: "a1" });
+    mockFindManyCuota.mockResolvedValueOnce([CUOTA("c1", 100, "pagado")]);
+    mockFindManyMovimiento.mockResolvedValueOnce([{ cuotaId: "c1", importe: 60 }]); // ya editado
+    await PATCH(makeFormRequest({ fecha: "2026-06-11", importe: "60", modalidad: "efectivo", cuotaId: "c1" }), {
+      params: Promise.resolve({ id: "a1", movimientoId: "m1" }),
+    });
+    expect(mockFindManyMovimiento).toHaveBeenCalledWith({ where: { acuerdoId: "a1" }, select: { cuotaId: true, importe: true } });
+    expect(mockUpdateCuota).toHaveBeenCalledWith({ where: { id: "c1" }, data: { estado: "pendiente" } });
+  });
+
+  it("al imputar el pago a otra cuota, recalcula las dos", async () => {
+    mockFindUniqueMovimiento.mockResolvedValueOnce({ ...MOVIMIENTO, cuotaId: "c-vieja" });
+    mockFindUniqueCuota.mockResolvedValueOnce({ acuerdoId: "a1" });
+    mockFindManyCuota.mockResolvedValueOnce([
+      CUOTA("c-vieja", 100, "pagado", new Date("2099-01-01")),
+      CUOTA("c-nueva", 100, "pendiente", new Date("2099-02-01")),
+    ]);
+    mockFindManyMovimiento.mockResolvedValueOnce([{ cuotaId: "c-nueva", importe: 100 }]);
     await PATCH(
       makeFormRequest({ fecha: "2026-06-11", importe: "100", modalidad: "efectivo", cuotaId: "c-nueva" }),
       { params: Promise.resolve({ id: "a1", movimientoId: "m1" }) }
     );
+    expect(mockUpdateCuota).toHaveBeenCalledWith({ where: { id: "c-vieja" }, data: { estado: "pendiente" } });
     expect(mockUpdateCuota).toHaveBeenCalledWith({ where: { id: "c-nueva" }, data: { estado: "pagado" } });
-    // La cuota nueva ya se había resuelto al validar cuotaId -> no se vuelve a pedir con findUnique.
-    expect(mockFindUniqueCuota).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -241,6 +264,7 @@ describe("DELETE /api/admin/cobranza/acuerdos/[id]/movimientos/[movimientoId]", 
     mockFindUniqueCierre.mockResolvedValue(null);
     mockDeleteMovimiento.mockResolvedValue({ id: "m1" });
     mockFindManyMovimiento.mockResolvedValue([]);
+    mockFindManyCuota.mockResolvedValue([]);
   });
 
   function makeDeleteRequest(): NextRequest {
@@ -275,18 +299,19 @@ describe("DELETE /api/admin/cobranza/acuerdos/[id]/movimientos/[movimientoId]", 
     expect(mockDeleteMovimiento).not.toHaveBeenCalled();
   });
 
-  it("200 y borra el pago sin cuota asociada (sin recalcular nada)", async () => {
+  it("200: borra el pago y recalcula las cuotas del plan en la misma transacción", async () => {
     const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "a1", movimientoId: "m1" }) });
     expect(res.status).toBe(200);
     expect(mockDeleteMovimiento).toHaveBeenCalledWith({ where: { id: "m1" } });
-    expect(mockFindUniqueCuota).not.toHaveBeenCalled();
+    expect(mockFindManyCuota).toHaveBeenCalledWith(expect.objectContaining({ where: { acuerdoId: "a1" } }));
   });
 
-  it("recalcula el estado de la cuota asociada tras borrar", async () => {
-    mockFindUniqueMovimiento.mockResolvedValueOnce({ ...MOVIMIENTO, cuotaId: "c1" });
-    mockFindUniqueCuota.mockResolvedValueOnce({ id: "c1", importe: 100, estado: "pagado", vencimiento: null });
-    mockFindManyMovimiento.mockResolvedValueOnce([]); // sin movimientos restantes tras el borrado
+  it("al borrar el único pago de una cuota pagada y vencida, vuelve a 'vencido' (y a alertar)", async () => {
+    mockFindManyCuota.mockResolvedValueOnce([
+      { id: "c1", importe: 100, vencimiento: new Date("2026-01-01"), createdAt: new Date(0), estado: "pagado" },
+    ]);
+    mockFindManyMovimiento.mockResolvedValueOnce([]); // sin movimientos tras el borrado
     await DELETE(makeDeleteRequest(), { params: Promise.resolve({ id: "a1", movimientoId: "m1" }) });
-    expect(mockUpdateCuota).toHaveBeenCalledWith({ where: { id: "c1" }, data: { estado: "pendiente" } });
+    expect(mockUpdateCuota).toHaveBeenCalledWith({ where: { id: "c1" }, data: { estado: "vencido" } });
   });
 });

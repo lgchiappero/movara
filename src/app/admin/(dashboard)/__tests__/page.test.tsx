@@ -12,7 +12,7 @@ const {
   mockUnidadCount,
   mockEnvioFindMany,
   mockCitaFindMany,
-  mockCuotaCount,
+  mockAcuerdoPagoFindMany,
   mockFindUniqueCierre,
   mockCountMovimiento,
   mockFindManyMovimiento,
@@ -29,7 +29,7 @@ const {
   mockUnidadCount: vi.fn(),
   mockEnvioFindMany: vi.fn(),
   mockCitaFindMany: vi.fn(),
-  mockCuotaCount: vi.fn(),
+  mockAcuerdoPagoFindMany: vi.fn(),
   mockFindUniqueCierre: vi.fn(),
   mockCountMovimiento: vi.fn(),
   mockFindManyMovimiento: vi.fn().mockResolvedValue([]),
@@ -44,10 +44,9 @@ vi.mock("@/lib/db", () => ({
     unidad: { findMany: mockUnidadFindMany, groupBy: mockUnidadGroupBy, count: mockUnidadCount },
     envio: { findMany: mockEnvioFindMany },
     cita: { findMany: mockCitaFindMany },
-    cuota: { count: mockCuotaCount },
     cierrePeriodo: { findUnique: mockFindUniqueCierre },
     movimiento: { count: mockCountMovimiento, findMany: mockFindManyMovimiento, aggregate: mockMovimientoAggregate },
-    acuerdoPago: { aggregate: mockAcuerdoPagoAggregate },
+    acuerdoPago: { aggregate: mockAcuerdoPagoAggregate, findMany: mockAcuerdoPagoFindMany },
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -90,15 +89,15 @@ function setupDefaults() {
   mockUnidadCount.mockReset();
   mockUnidadCount.mockResolvedValueOnce(0); // unidadesEntregadasMes
   mockUnidadCount.mockResolvedValueOnce(0); // unidadesEnAduanaLargas
-  mockUnidadCount.mockResolvedValueOnce(0); // unidadesCobroVencido
-  mockUnidadCount.mockResolvedValueOnce(0); // unidadesPagoVencido
 
   mockEnvioFindMany.mockResolvedValue([]);
   mockCitaFindMany.mockResolvedValue([]);
   mockLeadFindMany.mockResolvedValue([]); // leadsPipelineResumen
 
-  mockCuotaCount.mockReset();
-  mockCuotaCount.mockResolvedValueOnce(0); // cuotasVencenSemanaCobro (KPI Financiero + alerta)
+  // Planes con cuotas que vencen hasta fin de semana: de acá salen las
+  // alertas de cuotas vencidas (cobro/pago) y "vence esta semana".
+  mockAcuerdoPagoFindMany.mockReset();
+  mockAcuerdoPagoFindMany.mockResolvedValue([]);
 
   mockFindUniqueCierre.mockResolvedValue({ id: "cierre1" }); // mes anterior YA cerrado por default
   mockCountMovimiento.mockResolvedValue(0); // mesAnteriorTuvoMovimientos
@@ -111,6 +110,31 @@ function setupDefaults() {
   mockMovimientoAggregate.mockResolvedValue({ _sum: { importe: null } });
   mockAcuerdoPagoAggregate.mockReset();
   mockAcuerdoPagoAggregate.mockResolvedValue({ _sum: { totalAcordado: null } });
+}
+
+/** Plan con una cuota vencida (hace 30 días) y `pagado` registrado sin
+ * cuota específica. */
+function planVencido(unidadId: string, tipo: "cobro" | "pago", importe: number, pagado: number) {
+  return {
+    unidadId,
+    tipo,
+    moneda: "USD",
+    cuotas: [{ id: `${unidadId}-q1`, importe, vencimiento: new Date(Date.now() - 30 * 86400000), createdAt: new Date(0) }],
+    movimientos: pagado ? [{ cuotaId: null, importe: pagado }] : [],
+  };
+}
+
+/** Plan de cobro con una cuota que vence hoy al mediodía (dentro de la semana). */
+function planCobroQueVenceEstaSemana(unidadId: string, importe: number) {
+  const hoy = new Date();
+  hoy.setHours(12, 0, 0, 0);
+  return {
+    unidadId,
+    tipo: "cobro",
+    moneda: "USD",
+    cuotas: [{ id: `${unidadId}-q1`, importe, vencimiento: hoy, createdAt: new Date(0) }],
+    movimientos: [],
+  };
 }
 
 describe("AdminDashboardPage", () => {
@@ -178,8 +202,9 @@ describe("AdminDashboardPage", () => {
     mockAcuerdoPagoAggregate.mockReset();
     mockAcuerdoPagoAggregate.mockResolvedValueOnce({ _sum: { totalAcordado: 50000 } }); // total acordado cobro
     mockAcuerdoPagoAggregate.mockResolvedValueOnce({ _sum: { totalAcordado: 20000 } }); // total acordado pago
-    mockCuotaCount.mockReset();
-    mockCuotaCount.mockResolvedValueOnce(7); // cuotasVencenSemanaCobro
+    mockAcuerdoPagoFindMany.mockResolvedValueOnce(
+      Array.from({ length: 7 }, (_, i) => planCobroQueVenceEstaSemana(`u${i}`, 1000))
+    ); // cuotasVencenSemanaCobro
     render(await AdminDashboardPage());
     expect(screen.getByText("💰 Financiero")).toBeInTheDocument();
     expect(screen.getByText("Cobrado este mes").nextElementSibling?.textContent).toBe("USD 10.000");
@@ -421,74 +446,66 @@ describe("AdminDashboardPage", () => {
     expect(screen.queryByText(/alertas y acciones urgentes/i)).not.toBeInTheDocument();
   });
 
-  function mockUnidadesVencidas(cobro: number, pago: number) {
-    mockUnidadCount.mockReset();
-    mockUnidadCount
-      .mockResolvedValueOnce(0) // unidadesEntregadasMes
-      .mockResolvedValueOnce(0) // unidadesEnAduanaLargas
-      .mockResolvedValueOnce(cobro)
-      .mockResolvedValueOnce(pago);
-  }
-
-  it("alerta: unidades con cuotas de cobro vencidas, con botón Ver hacia /admin/cobranza?estado=vencidas", async () => {
-    mockUnidadesVencidas(3, 0);
+  it("alerta: unidades con cuotas de cobro vencidas y su saldo vencido, con botón Ver hacia /admin/cobranza?estado=vencidas", async () => {
+    mockAcuerdoPagoFindMany.mockResolvedValueOnce([
+      planVencido("u1", "cobro", 5000, 2000),
+      planVencido("u2", "cobro", 5000, 0),
+      planVencido("u3", "cobro", 1000, 0),
+    ]);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
-    expect(alertBox.textContent).toContain("3 unidades con cuotas de cobro vencidas");
+    expect(alertBox.textContent).toContain("3 unidades con cuotas de cobro vencidas — saldo vencido USD 9.000");
     expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/cobranza?estado=vencidas");
   });
 
   it("alerta: unidades con pagos a proveedores vencidos, con botón Ver hacia /admin/pagos?estado=vencidas", async () => {
-    mockUnidadesVencidas(0, 1);
+    mockAcuerdoPagoFindMany.mockResolvedValueOnce([planVencido("u1", "pago", 15000, 5000)]);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
-    expect(alertBox.textContent).toContain("1 unidad con pagos a proveedores vencidos");
+    expect(alertBox.textContent).toContain("1 unidad con pagos a proveedores vencidos — saldo vencido USD 10.000");
     expect(alertBox.textContent).not.toContain("1 unidades");
     expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/pagos?estado=vencidas");
   });
 
+  it("un pago a proveedor registrado sin cuota específica que cubre la cuota vencida: no hay alerta (el bug)", async () => {
+    // La cuota sigue guardada como "vencido" en la base: la alerta no mira
+    // ese campo sino el saldo real.
+    mockAcuerdoPagoFindMany.mockResolvedValueOnce([planVencido("u1", "pago", 15000, 15000)]);
+    render(await AdminDashboardPage());
+    expect(screen.queryByText(/alertas y acciones urgentes/i)).not.toBeInTheDocument();
+  });
+
   it("singular correcto para 1 unidad con cobro vencido", async () => {
-    mockUnidadesVencidas(1, 0);
+    mockAcuerdoPagoFindMany.mockResolvedValueOnce([planVencido("u1", "cobro", 5000, 0)]);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("1 unidad con cuotas de cobro vencidas");
   });
 
-  it("cuenta unidades con cuotas vencidas por fecha y estado != pagado, separando cobro y pago", async () => {
+  it("trae los planes con cuotas que vencen antes del fin de semana, con cuotas y movimientos", async () => {
     render(await AdminDashboardPage());
-    const cobro = mockUnidadCount.mock.calls[2][0].where.acuerdosPago.some;
-    const pago = mockUnidadCount.mock.calls[3][0].where.acuerdosPago.some;
-    expect(cobro.tipo).toBe("cobro");
-    expect(pago.tipo).toBe("pago");
-    expect(cobro.cuotas.some.estado).toEqual({ not: "pagado" });
-    expect(cobro.cuotas.some.vencimiento.lt).toBeInstanceOf(Date);
+    const call = mockAcuerdoPagoFindMany.mock.calls[0][0];
+    expect(call.where.cuotas.some.vencimiento.lt).toBeInstanceOf(Date);
+    expect(call.select.cuotas.select).toEqual({ id: true, importe: true, vencimiento: true, createdAt: true });
+    expect(call.select.movimientos.select).toEqual({ cuotaId: true, importe: true });
   });
 
-  it("alerta: cuotas de cobro que vencen esta semana, con botón Ver hacia /admin/cobranza?vence=semana", async () => {
-    mockCuotaCount.mockReset();
-    mockCuotaCount.mockResolvedValueOnce(4);
+  it("alerta: cuotas de cobro que vencen esta semana, con su saldo y botón Ver hacia /admin/cobranza?vence=semana", async () => {
+    mockAcuerdoPagoFindMany.mockResolvedValueOnce(
+      Array.from({ length: 4 }, (_, i) => planCobroQueVenceEstaSemana(`u${i}`, 1500))
+    );
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
-    expect(alertBox.textContent).toContain("4 cuotas de cobro vencen esta semana");
+    expect(alertBox.textContent).toContain("4 cuotas de cobro vencen esta semana — saldo USD 6.000");
     expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/cobranza?vence=semana");
   });
 
   it("singular correcto para 1 cuota que vence esta semana", async () => {
-    mockCuotaCount.mockReset();
-    mockCuotaCount.mockResolvedValueOnce(1);
+    mockAcuerdoPagoFindMany.mockResolvedValueOnce([planCobroQueVenceEstaSemana("u1", 1000)]);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("1 cuota de cobro vence esta semana");
     expect(alertBox.textContent).not.toContain("vencen");
-  });
-
-  it("cuotasVencenSemanaCobro consulta cuotas de cobro pendientes con vencimiento en la semana en curso", async () => {
-    render(await AdminDashboardPage());
-    const call = mockCuotaCount.mock.calls[0][0];
-    expect(call.where.estado).toBe("pendiente");
-    expect(call.where.acuerdo).toEqual({ tipo: "cobro" });
-    expect(call.where.vencimiento.gte).toBeInstanceOf(Date);
-    expect(call.where.vencimiento.lt).toBeInstanceOf(Date);
   });
 
   it("alerta: mes anterior sin cerrar (con movimientos), con botón Ver hacia /admin/cobranza?tab=cierres", async () => {

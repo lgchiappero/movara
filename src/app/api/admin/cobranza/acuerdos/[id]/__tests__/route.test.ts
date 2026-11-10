@@ -10,6 +10,7 @@ const {
   mockTxDeleteMany,
   mockTxUpdateCuota,
   mockTxCreateCuota,
+  mockRecalcular,
 } = vi.hoisted(() => ({
   mockFindUnique: vi.fn(),
   mockDelete: vi.fn(),
@@ -20,6 +21,7 @@ const {
   mockTxDeleteMany: vi.fn(),
   mockTxUpdateCuota: vi.fn(),
   mockTxCreateCuota: vi.fn(),
+  mockRecalcular: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -27,6 +29,7 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
 vi.mock("@/lib/cobranza/periodo-cerrado", () => ({ periodoEstaCerrado: mockPeriodoCerrado }));
+vi.mock("@/lib/cobranza/recalcular-plan", () => ({ recalcularEstadosPlan: mockRecalcular }));
 
 import { DELETE, PATCH } from "../route";
 import { NextRequest } from "next/server";
@@ -160,6 +163,8 @@ describe("PATCH /api/admin/cobranza/acuerdos/[id] — editar plan", () => {
       params
     );
     expect(res.status).toBe(200);
+    // Con las cuotas escritas, el estado real de todas, en la misma transacción.
+    expect(mockRecalcular).toHaveBeenCalledWith(expect.objectContaining({ cuota: expect.any(Object) }), "a1", expect.any(Date));
     expect(mockTxUpdateAcuerdo).toHaveBeenCalledWith({
       where: { id: "a1" },
       data: { totalAcordado: 26000, descripcion: "Plan renegociado" },

@@ -14,6 +14,7 @@ const {
   mockUpdateCuota,
   mockUploadDocument,
   mockFindUniqueCierre,
+  mockFindManyCuota,
 } = vi.hoisted(() => ({
   mockGetAdminUser: vi.fn(),
   mockFindUniqueAcuerdo: vi.fn(),
@@ -23,6 +24,7 @@ const {
   mockUpdateCuota: vi.fn(),
   mockUploadDocument: vi.fn().mockResolvedValue(undefined),
   mockFindUniqueCierre: vi.fn(),
+  mockFindManyCuota: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -31,6 +33,13 @@ vi.mock("@/lib/db", () => ({
     cuota: { findUnique: mockFindUniqueCuota, update: mockUpdateCuota },
     movimiento: { create: mockCreateMovimiento, findMany: mockFindManyMovimiento },
     cierrePeriodo: { findUnique: mockFindUniqueCierre },
+    // El movimiento y el recálculo de las cuotas corren en una transacción
+    // (recalcularEstadosPlan real, sobre este mismo tx).
+    $transaction: (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        movimiento: { create: mockCreateMovimiento, findMany: mockFindManyMovimiento },
+        cuota: { findMany: mockFindManyCuota, update: mockUpdateCuota },
+      }),
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -74,6 +83,7 @@ describe("POST /api/admin/cobranza/acuerdos/[id]/movimientos", () => {
     mockCreateMovimiento.mockResolvedValue({ id: "m1" });
     mockFindManyMovimiento.mockResolvedValue([]);
     mockFindUniqueCierre.mockResolvedValue(null);
+    mockFindManyCuota.mockResolvedValue([]);
   });
 
   it("401 sin sesión", async () => {
@@ -199,37 +209,56 @@ describe("POST /api/admin/cobranza/acuerdos/[id]/movimientos", () => {
     expect(res.status).toBe(500);
   });
 
-  it("con cuotaId válida: recalcula y actualiza el estado de la cuota a 'pagado' cuando se salda por completo", async () => {
-    mockFindUniqueCuota.mockResolvedValueOnce({
-      id: "c1",
-      acuerdoId: "a1",
-      importe: 100,
-      estado: "pendiente",
-      vencimiento: null,
-    });
-    mockFindManyMovimiento.mockResolvedValueOnce([{ importe: 100 }]);
+  it("con cuotaId: si el pago salda la cuota, pasa a 'pagado' en la misma transacción", async () => {
+    mockFindUniqueCuota.mockResolvedValueOnce({ acuerdoId: "a1" });
+    mockFindManyCuota.mockResolvedValueOnce([
+      { id: "c1", importe: 100, vencimiento: null, createdAt: new Date(0), estado: "pendiente" },
+    ]);
+    mockFindManyMovimiento.mockResolvedValueOnce([{ cuotaId: "c1", importe: 100 }]);
     const res = await POST(
       makeFormRequest({ fecha: "2026-01-01", importe: "100", modalidad: "transferencia", cuotaId: "c1" }),
       { params: Promise.resolve({ id: "a1" }) }
     );
     expect(res.status).toBe(201);
+    expect(mockFindManyMovimiento).toHaveBeenCalledWith({ where: { acuerdoId: "a1" }, select: { cuotaId: true, importe: true } });
     expect(mockUpdateCuota).toHaveBeenCalledWith({ where: { id: "c1" }, data: { estado: "pagado" } });
   });
 
-  it("con cuotaId válida: si el pago es parcial, la cuota se queda 'pendiente' y no se llama a update", async () => {
-    mockFindUniqueCuota.mockResolvedValueOnce({
-      id: "c1",
-      acuerdoId: "a1",
-      importe: 100,
-      estado: "pendiente",
-      vencimiento: null,
-    });
-    mockFindManyMovimiento.mockResolvedValueOnce([{ importe: 40 }]);
+  it("con cuotaId: un pago parcial deja la cuota como estaba y no la actualiza", async () => {
+    mockFindUniqueCuota.mockResolvedValueOnce({ acuerdoId: "a1" });
+    mockFindManyCuota.mockResolvedValueOnce([
+      { id: "c1", importe: 100, vencimiento: null, createdAt: new Date(0), estado: "pendiente" },
+    ]);
+    mockFindManyMovimiento.mockResolvedValueOnce([{ cuotaId: "c1", importe: 40 }]);
     const res = await POST(
       makeFormRequest({ fecha: "2026-01-01", importe: "40", modalidad: "transferencia", cuotaId: "c1" }),
       { params: Promise.resolve({ id: "a1" }) }
     );
     expect(res.status).toBe(201);
     expect(mockUpdateCuota).not.toHaveBeenCalled();
+  });
+
+  it("sin cuota específica: el pago salda la cuota vencida (el caso del bug del dashboard)", async () => {
+    mockFindManyCuota.mockResolvedValueOnce([
+      { id: "c1", importe: 15000, vencimiento: new Date("2026-01-10"), createdAt: new Date(0), estado: "vencido" },
+      { id: "c2", importe: 15000, vencimiento: new Date("2099-01-10"), createdAt: new Date(1), estado: "pendiente" },
+    ]);
+    mockFindManyMovimiento.mockResolvedValueOnce([{ cuotaId: null, importe: 15000 }]);
+    const res = await POST(
+      makeFormRequest({ fecha: "2026-01-01", importe: "15000", modalidad: "transferencia" }),
+      { params: Promise.resolve({ id: "a1" }) }
+    );
+    expect(res.status).toBe(201);
+    expect(mockUpdateCuota).toHaveBeenCalledTimes(1);
+    expect(mockUpdateCuota).toHaveBeenCalledWith({ where: { id: "c1" }, data: { estado: "pagado" } });
+  });
+
+  it("si el recálculo falla, la transacción falla entera (el pago no queda a medias)", async () => {
+    mockFindManyCuota.mockRejectedValueOnce(new Error("db caída"));
+    await expect(
+      POST(makeFormRequest({ fecha: "2026-01-01", importe: "10", modalidad: "transferencia" }), {
+        params: Promise.resolve({ id: "a1" }),
+      })
+    ).rejects.toThrow("db caída");
   });
 });

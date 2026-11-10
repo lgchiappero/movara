@@ -28,21 +28,41 @@ describe("cuotasSaldables", () => {
     expect(c.restante).toBe(2000);
   });
 
-  it("los movimientos de otras cuotas o sin cuota no cuentan", () => {
+  it("los movimientos de cuotas de otro plan cuentan como pagos sin cuota específica", () => {
+    // c2 no es de este plan: se imputa como un pago general, igual que el
+    // de cuotaId null.
     const [c] = cuotasSaldables([cuota("c1", 5000)], [
-      { cuotaId: "c2", importe: 4000 },
-      { cuotaId: null, importe: 4000 },
+      { cuotaId: "c2", importe: 1000 },
+      { cuotaId: null, importe: 1500 },
     ]);
-    expect(c.estado).toBe("pendiente");
-    expect(c.restante).toBe(5000);
+    expect(c.estado).toBe("parcial");
+    expect(c.restante).toBe(2500);
   });
 
-  it("excluye las cuotas pagadas, por estado o porque ya no les queda saldo", () => {
+  it("un pago sin cuota específica salda primero la que vence antes", () => {
+    const res = cuotasSaldables(
+      [
+        { ...cuota("c2", 3000), vencimiento: "2026-12-01" },
+        { ...cuota("c1", 2000), vencimiento: "2026-11-01" },
+      ],
+      [{ cuotaId: null, importe: 2500 }],
+      new Date(2026, 9, 1)
+    );
+    expect(res).toEqual([{ id: "c2", descripcion: "Cuota c2", importe: 3000, restante: 2500, estado: "parcial" }]);
+  });
+
+  it("excluye las cuotas que ya no tienen saldo, por el saldo real y no por el campo estado", () => {
     const res = cuotasSaldables(
       [cuota("c1", 5000, "pagado"), cuota("c2", 3000), cuota("c3", 1000)],
       [{ cuotaId: "c2", importe: 3000 }]
     );
-    expect(res.map((c) => c.id)).toEqual(["c3"]);
+    // c1 dice "pagado" pero no tiene pagos: sigue saldable.
+    expect(res.map((c) => c.id)).toEqual(["c1", "c3"]);
+  });
+
+  it("una cuota vencida por fecha se ofrece como vencida aunque su estado diga pendiente", () => {
+    const [c] = cuotasSaldables([{ ...cuota("c1", 1000), vencimiento: "2026-01-01" }], [], new Date(2026, 5, 1));
+    expect(c.estado).toBe("vencido");
   });
 
   it("tolera errores de redondeo al considerar una cuota saldada", () => {

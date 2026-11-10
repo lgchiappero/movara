@@ -4,6 +4,7 @@ import { getAdminUser } from "@/lib/admin/current-user";
 import { isAdmin } from "@/lib/admin/roles";
 import { editarPlanSchema } from "@/lib/validators/cobranza";
 import { estadoCuota } from "@/lib/cobranza/calc";
+import { recalcularEstadosPlan } from "@/lib/cobranza/recalcular-plan";
 import { periodoEstaCerrado } from "@/lib/cobranza/periodo-cerrado";
 
 // Tolerancia para comparar importes — misma que calc.ts.
@@ -91,6 +92,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         });
       }
     }
+    // Con las cuotas ya escritas, el estado real (incluye los pagos sin
+    // cuota específica, que se imputan a las que vencen antes).
+    await recalcularEstadosPlan(tx, id, ahora);
   });
 
   return NextResponse.json({ ok: true });

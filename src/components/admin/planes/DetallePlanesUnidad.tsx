@@ -8,10 +8,11 @@ import {
   type TipoAcuerdo,
 } from "@/lib/cobranza/constantes";
 import { sumaImportes } from "@/lib/cobranza/calc";
+import { imputarCuotas, type CuotaImputada } from "@/lib/cobranza/imputacion";
 import type { FilaPlanUnidad } from "@/lib/cobranza/planes-unidad";
 import EliminarButton from "@/components/admin/EliminarButton";
 import { isAdmin } from "@/lib/admin/roles";
-import type { AcuerdoConDetalle, Cuota } from "@/lib/cobranza/types";
+import type { AcuerdoConDetalle } from "@/lib/cobranza/types";
 import type { AccionesPlanes } from "@/components/admin/planes/useAccionesPlanes";
 
 // Tolerancia para comparar importes — misma que calc.ts.
@@ -47,14 +48,13 @@ export const TEXTOS_TIPO: Record<
   },
 };
 
-function estadoCuota(c: Cuota, aplicado: number): { label: string; color: string } {
-  if (c.estado !== "pagado" && aplicado > EPSILON) {
+/** Estado real de la cuota (imputacion.ts): "Parcial" si tiene pagos y le
+ * queda saldo (aunque esté vencida, como antes). */
+function estadoCuota(c: CuotaImputada): { label: string; color: string } {
+  if (c.estado !== "pagado" && c.pagado > EPSILON) {
     return { label: "Parcial", color: "bg-blue-100 text-blue-700" };
   }
-  return {
-    label: ESTADO_CUOTA_LABELS[c.estado as keyof typeof ESTADO_CUOTA_LABELS] ?? c.estado,
-    color: ESTADO_CUOTA_COLORS[c.estado as keyof typeof ESTADO_CUOTA_COLORS] ?? "bg-stone-100 text-stone-500",
-  };
+  return { label: ESTADO_CUOTA_LABELS[c.estado], color: ESTADO_CUOTA_COLORS[c.estado] };
 }
 
 /** Detalle de UNA unidad: cada plan como una sola sección (encabezado con
@@ -151,6 +151,7 @@ export function PlanDePago({
   // Del más reciente al más viejo.
   const pagos = [...plan.movimientos].sort((a, b) => b.fecha.localeCompare(a.fecha));
   const n = plan.movimientos.length;
+  const cuotasImputadas = imputarCuotas(plan.cuotas, plan.movimientos, new Date());
 
   return (
     <section className="bg-white rounded-xl p-4 space-y-4" aria-label={tituloPlan(plan)}>
@@ -242,9 +243,9 @@ export function PlanDePago({
                 </tr>
               </thead>
               <tbody>
-                {plan.cuotas.map((c) => {
-                  const aplicado = sumaImportes(plan.movimientos.filter((m) => m.cuotaId === c.id));
-                  const estado = estadoCuota(c, aplicado);
+                {plan.cuotas.map((c, i) => {
+                  const aplicado = cuotasImputadas[i].pagado;
+                  const estado = estadoCuota(cuotasImputadas[i]);
                   return (
                     <tr key={c.id} className="border-b border-[#F0F0F0] last:border-0">
                       <td className="px-3 py-2 text-[#2F2F2F] font-medium">{c.descripcion}</td>

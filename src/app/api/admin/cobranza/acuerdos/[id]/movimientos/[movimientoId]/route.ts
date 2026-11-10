@@ -5,7 +5,7 @@ import { isAdmin } from "@/lib/admin/roles";
 import { archivoDelFormulario } from "@/lib/admin/subidas";
 import { registrarMovimientoSchema } from "@/lib/validators/cobranza";
 import { periodoEstaCerrado } from "@/lib/cobranza/periodo-cerrado";
-import { recalcularEstadoCuota } from "@/lib/cobranza/recalcular-cuota";
+import { recalcularEstadosPlan } from "@/lib/cobranza/recalcular-plan";
 
 type Params = { id: string; movimientoId: string };
 
@@ -69,10 +69,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<Para
     );
   }
 
-  let cuotaNueva: { id: string; acuerdoId: string; importe: number; estado: string; vencimiento: Date | null } | null =
-    null;
   if (data.cuotaId) {
-    cuotaNueva = await db.cuota.findUnique({ where: { id: data.cuotaId } });
+    const cuotaNueva = await db.cuota.findUnique({ where: { id: data.cuotaId }, select: { acuerdoId: true } });
     if (!cuotaNueva || cuotaNueva.acuerdoId !== acuerdoId) {
       return NextResponse.json({ error: "La cuota no pertenece a este acuerdo" }, { status: 400 });
     }
@@ -84,27 +82,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<Para
   }
   const comprobanteUrl = comprobante.value?.path ?? movimientoActual.comprobanteUrl;
 
-  await db.movimiento.update({
-    where: { id: movimientoId },
-    data: {
-      fecha: fechaNueva,
-      importe: data.importe,
-      cuotaId: data.cuotaId,
-      modalidad: data.modalidad,
-      comprobanteUrl,
-      notas: data.notas,
-    },
+  // El pago editado y el estado de las cuotas del plan, en la misma
+  // transacción (pudo cambiar el importe o la cuota a la que se imputa).
+  await db.$transaction(async (tx) => {
+    await tx.movimiento.update({
+      where: { id: movimientoId },
+      data: {
+        fecha: fechaNueva,
+        importe: data.importe,
+        cuotaId: data.cuotaId,
+        modalidad: data.modalidad,
+        comprobanteUrl,
+        notas: data.notas,
+      },
+    });
+    await recalcularEstadosPlan(tx, acuerdoId);
   });
-
-  // La cuota asociada pudo cambiar — recalcular tanto la anterior (si
-  // tenía una y ya no) como la nueva (si corresponde).
-  const cuotaAnteriorId = movimientoActual.cuotaId;
-  if (cuotaAnteriorId && cuotaAnteriorId !== data.cuotaId) {
-    await recalcularEstadoCuota(cuotaAnteriorId);
-  }
-  if (cuotaNueva) {
-    await recalcularEstadoCuota(cuotaNueva.id, cuotaNueva);
-  }
 
   return NextResponse.json({ ok: true }, { status: 200 });
 }
@@ -132,11 +125,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<Pa
     );
   }
 
-  await db.movimiento.delete({ where: { id: movimientoId } });
-
-  if (movimiento.cuotaId) {
-    await recalcularEstadoCuota(movimiento.cuotaId);
-  }
+  await db.$transaction(async (tx) => {
+    await tx.movimiento.delete({ where: { id: movimientoId } });
+    await recalcularEstadosPlan(tx, acuerdoId);
+  });
 
   return NextResponse.json({ ok: true }, { status: 200 });
 }

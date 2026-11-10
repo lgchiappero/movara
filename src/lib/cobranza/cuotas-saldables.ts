@@ -1,3 +1,5 @@
+import { imputarCuotas } from "@/lib/cobranza/imputacion";
+
 // Tolerancia para comparar sumas de floats — misma que calc.ts.
 const EPSILON = 0.01;
 
@@ -25,16 +27,22 @@ const ESTADO_LABEL: Record<EstadoCuotaSaldable, string> = {
  * pagadas (por estado o porque ya no les queda saldo). Las vencidas se
  * mantienen: son justamente las que más urge saldar. */
 export function cuotasSaldables(
-  cuotas: { id: string; descripcion: string; importe: number; estado: string }[],
-  movimientos: { cuotaId: string | null; importe: number }[]
+  cuotas: { id: string; descripcion: string; importe: number; estado: string; vencimiento?: string | null }[],
+  movimientos: { cuotaId: string | null; importe: number }[],
+  ahora: Date = new Date()
 ): CuotaSaldable[] {
-  return cuotas.flatMap((c) => {
-    if (c.estado === "pagado") return [];
-    const pagado = movimientos.filter((m) => m.cuotaId === c.id).reduce((acc, m) => acc + m.importe, 0);
-    const restante = c.importe - pagado;
+  // Lo pagado sale de la imputación (incluye los pagos sin cuota
+  // específica, que saldan las que vencen antes).
+  const imputadas = imputarCuotas(
+    cuotas.map((c) => ({ ...c, vencimiento: c.vencimiento ?? null })),
+    movimientos,
+    ahora
+  );
+  return cuotas.flatMap((c, i) => {
+    const { pagado, restante, vencida } = imputadas[i];
     if (restante <= EPSILON) return [];
     const estado: EstadoCuotaSaldable =
-      c.estado === "vencido" ? "vencido" : pagado > EPSILON ? "parcial" : "pendiente";
+      vencida || c.estado === "vencido" ? "vencido" : pagado > EPSILON ? "parcial" : "pendiente";
     return [{ id: c.id, descripcion: c.descripcion, importe: c.importe, restante, estado }];
   });
 }
