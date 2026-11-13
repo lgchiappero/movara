@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
+    "test:tz": "TZ=UTC vitest run && TZ=Asia/Tokyo vitest run && TZ=America/Los_Angeles vitest run && TZ=America/Argentina/Cordoba vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
