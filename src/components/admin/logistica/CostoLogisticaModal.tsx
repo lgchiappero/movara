@@ -14,6 +14,7 @@ import {
 import { prorratear, type CostoLogisticaRow } from "@/lib/cobranza/logistica";
 import { useToast } from "@/components/admin/Toast";
 import SearchableSelect from "@/components/admin/SearchableSelect";
+import { hoyAR } from "@/lib/fecha-ar";
 
 export type EnvioOpcion = { id: string; numeroPI: string | null; numeroContenedor: string | null; cantidadUnidades: number };
 
@@ -22,7 +23,7 @@ const inputClass =
 const labelClass = "text-xs font-medium text-stone-500";
 
 function hoyISODate(): string {
-  return new Date().toISOString().slice(0, 10);
+  return hoyAR(); // hoy en Argentina (en UTC, de 21 a 24 h ya es mañana)
 }
 
 function esConcepto(c: string): c is ConceptoLogistica {

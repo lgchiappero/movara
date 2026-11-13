@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import { useToast } from "@/components/admin/Toast";
 import ResumenCierre from "@/components/admin/cobranza/ResumenCierre";
 import type { CierreRow } from "@/lib/cobranza/types";
+import { inicioMesAR, mesAnioAR } from "@/lib/fecha-ar";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
@@ -20,9 +21,7 @@ function formatMoneda(value: number, moneda: string): string {
 /** Mes anterior al actual, en formato {mes, anio} — default razonable para
  * el selector de "Cerrar mes" (el mes actual todavía no terminó). */
 function mesAnteriorPorDefecto(): { mes: number; anio: number } {
-  const now = new Date();
-  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  return { mes: prev.getMonth() + 1, anio: prev.getFullYear() };
+  return mesAnioAR(inicioMesAR(new Date(), -1));
 }
 
 export default function CierresTab({

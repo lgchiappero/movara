@@ -68,7 +68,7 @@ vi.mock("@/components/admin/CobranzaPanel", () => ({
     monedaInicial,
     clienteIdInicial,
   }: {
-    filas: { key: string; estado: string; saldo: number }[];
+    filas: { key: string; estado: string; monedas: { saldo: number }[] }[];
     prorrateosLogistica: { unidadId: string; importe: number; fecha: string; unidadNumero: string | null }[];
     acuerdosCobro: { movimientos: { comprobanteSignedUrl: string | null }[] }[];
     acuerdosPago: unknown[];
@@ -93,7 +93,7 @@ vi.mock("@/components/admin/CobranzaPanel", () => ({
     clienteIdInicial?: string;
   }) => (
     <div>
-      CobranzaPanel filas={filas.map((f) => `${f.key}:${f.estado}:${f.saldo}`).join(",")} prorrateos=
+      CobranzaPanel filas={filas.map((f) => `${f.key}:${f.estado}:${f.monedas.map((m) => m.saldo).join("+")}`).join(",")} prorrateos=
       {prorrateosLogistica.map((p) => `${p.unidadNumero}:${p.importe}:${p.fecha.slice(0, 10)}`).join(",") || "none"} conPlan=
       {unidades.filter((u) => u.tienePlanCobro).map((u) => u.id).join(",")} cobro={acuerdosCobro.length} pago=
       {acuerdosPago.length} unidades={unidades.length} clientes={clientes.length} tiposCambio={tiposCambio.length} cierres=
@@ -108,6 +108,7 @@ vi.mock("@/components/admin/CobranzaPanel", () => ({
 }));
 
 import AdminCobranzaPage from "../page";
+import { claveInicioMes } from "@/lib/fecha-ar";
 
 const ACUERDO = {
   id: "a1",
@@ -137,8 +138,6 @@ function setupDefaults() {
   mockFindUniqueCierre.mockResolvedValue(null);
   mockFindManyProrrateo.mockResolvedValue([]);
   mockAggregateMovimiento.mockReset();
-  mockAggregateMovimiento.mockResolvedValueOnce({ _sum: { importe: null } }); // cobradoUSD
-  mockAggregateMovimiento.mockResolvedValueOnce({ _sum: { importe: null } }); // cobradoARS
   mockAggregateMovimiento.mockResolvedValueOnce({ _min: { fecha: null } }); // primer movimiento
   mockGetSignedUrl.mockReset();
   mockGetSignedUrl.mockResolvedValue("https://signed.example/comprobante.pdf");
@@ -257,20 +256,23 @@ describe("AdminCobranzaPage", () => {
     expect(screen.getByText(/cierreActual=si/)).toBeInTheDocument();
   });
 
-  it("'Cobrado en el período' por moneda: movimientos de cobro dentro del rango", async () => {
-    mockAggregateMovimiento.mockReset();
-    mockAggregateMovimiento.mockResolvedValueOnce({ _sum: { importe: 1000 } }); // cobradoUSD
-    mockAggregateMovimiento.mockResolvedValueOnce({ _sum: { importe: 2000 } }); // cobradoARS
-    mockAggregateMovimiento.mockResolvedValueOnce({ _min: { fecha: null } });
+  it("'Cobrado en el período' por moneda: pagos de cobro con fecha (sin hora) dentro del rango, misma función que el dashboard", async () => {
+    const diaUno = new Date(`${claveInicioMes()}T00:00:00.000Z`);
+    const mesPasado = new Date(`${claveInicioMes(new Date(), -1)}T00:00:00.000Z`);
+    const mov = (id: string, importe: number, fecha: Date) => ({
+      id, fecha, importe, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a",
+    });
+    mockFindManyAcuerdo.mockReset();
+    mockFindManyAcuerdo
+      .mockResolvedValueOnce([
+        { ...ACUERDO, movimientos: [mov("m1", 1000, diaUno), mov("m0", 999, mesPasado)] },
+        { ...ACUERDO, id: "a2", moneda: "ARS", movimientos: [mov("m2", 2000, diaUno)] },
+      ])
+      .mockResolvedValueOnce([]);
     render(await AdminCobranzaPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText(/cobradoUSD=1000 cobradoARS=2000/)).toBeInTheDocument();
-
-    const callCobradoUSD = mockAggregateMovimiento.mock.calls[0][0];
-    expect(callCobradoUSD.where.acuerdo).toEqual({ tipo: "cobro", moneda: "USD" });
-    expect(callCobradoUSD.where.fecha.gte).toBeInstanceOf(Date);
-    expect(callCobradoUSD.where.fecha.lt).toBeInstanceOf(Date);
-    expect(mockAggregateMovimiento.mock.calls[1][0].where.acuerdo).toEqual({ tipo: "cobro", moneda: "ARS" });
   });
+
 
   it("arma una fila por unidad (con o sin plan) y las métricas de pendiente / saldadas / vencidas", async () => {
     const hoy = new Date();
@@ -301,7 +303,7 @@ describe("AdminCobranzaPage", () => {
       ])
       .mockResolvedValueOnce([]);
     render(await AdminCobranzaPage({ searchParams: Promise.resolve({}) }));
-    expect(screen.getByText(/filas=u1\|USD:en_curso:30000,u2\|USD:sin_plan:0,u3\|USD:saldado:0/)).toBeInTheDocument();
+    expect(screen.getByText(/filas=u1:en_curso:30000,u2:sin_plan:0,u3:saldado:0/)).toBeInTheDocument();
     expect(screen.getByText(/pendienteUSD=30000 pendienteARS=0 saldadasMes=1/)).toBeInTheDocument();
     expect(screen.getByText(/conVencidas=1/)).toBeInTheDocument();
     // Las unidades que ya tienen plan quedan marcadas (un solo plan por unidad).

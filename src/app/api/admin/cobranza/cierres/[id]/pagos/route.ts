@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/admin/current-user";
+import { soloFecha, sumarMeses } from "@/lib/fecha-ar";
 
 /** Lista completa de los pagos (movimientos) del mes de un cierre —
  * CierrePeriodo solo guarda los 4 totales agregados, no las filas
@@ -18,8 +19,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Cierre no encontrado" }, { status: 404 });
   }
 
-  const desde = new Date(cierre.anio, cierre.mes - 1, 1);
-  const hasta = new Date(cierre.anio, cierre.mes, 1);
+  // Movimiento.fecha es solo fecha: el mes del cierre va de día 1 a día 1
+  // (medianoche UTC), sin depender de la zona de la máquina.
+  const claveDesde = `${cierre.anio}-${String(cierre.mes).padStart(2, "0")}-01`;
+  const desde = soloFecha(claveDesde);
+  const hasta = soloFecha(sumarMeses(claveDesde, 1));
 
   const movimientos = await db.movimiento.findMany({
     where: { fecha: { gte: desde, lt: hasta } },

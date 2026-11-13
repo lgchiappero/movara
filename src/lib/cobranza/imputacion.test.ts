@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { imputarCuotas, inicioDelDia } from "./imputacion";
+import { imputarCuotas } from "./imputacion";
 
-const AHORA = new Date(2026, 10, 10, 15, 30); // 10/11/2026 15:30
-const VENCIDA = new Date(2026, 9, 15); // 15/10/2026
-const FUTURA = new Date(2026, 11, 15); // 15/12/2026
+const AHORA = new Date("2026-11-10T18:30:00Z"); // 10/11/2026 15:30 en Argentina
+const VENCIDA = new Date("2026-10-15T00:00:00Z"); // vencimientos: solo fecha, medianoche UTC
+const FUTURA = new Date("2026-12-15T00:00:00Z");
 const cuota = (id: string, importe: number, vencimiento: Date | string | null = null, createdAt?: Date) => ({
   id,
   importe,
@@ -85,9 +85,14 @@ describe("imputarCuotas", () => {
     expect(c).toMatchObject({ restante: 0, estado: "pagado" });
   });
 
+  it("a las 22:30 del 10/11 en Argentina (en UTC ya es 11/11), la que vence el 10/11 todavía no está vencida", () => {
+    const [c] = imputarCuotas([cuota("c1", 100, "2026-11-10")], [], new Date("2026-11-11T01:30:00Z"));
+    expect(c).toMatchObject({ estado: "pendiente", vencida: false });
+  });
+
   it("vencida desde el día siguiente al vencimiento: la que vence hoy todavía no", () => {
     const [hoy, ayer] = imputarCuotas(
-      [cuota("hoy", 100, new Date(2026, 10, 10)), cuota("ayer", 100, new Date(2026, 10, 9))],
+      [cuota("hoy", 100, "2026-11-10"), cuota("ayer", 100, "2026-11-09")],
       [],
       AHORA
     );
@@ -119,11 +124,5 @@ describe("imputarCuotas", () => {
 
   it("sin cuotas: lista vacía (los pagos no imputables no rompen)", () => {
     expect(imputarCuotas([], [{ cuotaId: null, importe: 100 }], AHORA)).toEqual([]);
-  });
-});
-
-describe("inicioDelDia", () => {
-  it("las 00:00 del mismo día", () => {
-    expect(inicioDelDia(AHORA)).toEqual(new Date(2026, 10, 10));
   });
 });

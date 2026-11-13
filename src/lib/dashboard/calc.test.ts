@@ -1,25 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diasHasta, seccionesFaltantes } from "@/lib/dashboard/calc";
-
-describe("diasHasta", () => {
-  const ahora = new Date(2026, 8, 24, 15, 30); // 24 sep 2026, 15:30 local
-
-  it("devuelve null si no hay fecha", () => {
-    expect(diasHasta(null, ahora)).toBeNull();
-  });
-
-  it("devuelve 0 si la fecha es hoy, sin importar la hora", () => {
-    expect(diasHasta(new Date(2026, 8, 24, 2, 0), ahora)).toBe(0);
-  });
-
-  it("devuelve positivo para una fecha futura", () => {
-    expect(diasHasta(new Date(2026, 8, 31), ahora)).toBe(7);
-  });
-
-  it("devuelve negativo para una fecha ya pasada", () => {
-    expect(diasHasta(new Date(2026, 8, 20), ahora)).toBe(-4);
-  });
-});
+import { seccionesFaltantes } from "@/lib/dashboard/calc";
 
 describe("seccionesFaltantes", () => {
   const criticas = ["02_contrato", "03_pagos", "07_entrega"] as const;

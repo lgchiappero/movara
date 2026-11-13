@@ -6,13 +6,14 @@ import { CONCEPTO_LABELS, MODALIDAD_LABELS, ESTADO_ACUERDO_LABELS, ESTADO_ACUERD
 import { sumaImportes, estadoAcuerdo } from "@/lib/cobranza/calc";
 import SearchableSelect from "@/components/admin/SearchableSelect";
 import type { AcuerdoConDetalle, ClienteOpcion } from "@/lib/cobranza/types";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 function formatMoneda(value: number, moneda: string): string {
   return `${moneda} ${value.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
 }
 
 function formatFecha(value: string): string {
-  return new Date(value).toLocaleDateString("es-AR", { timeZone: "UTC" });
+  return formatearSoloFecha(value);
 }
 
 export default function EstadoCuentaClienteTab({

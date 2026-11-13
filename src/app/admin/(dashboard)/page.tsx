@@ -14,15 +14,30 @@ import {
 } from "@/lib/envios/constantes";
 import { ETAPA_LABELS, ETAPA_COLORS, type Etapa } from "@/lib/leads/constantes";
 import { estadoGeneralEnvio } from "@/lib/envios/estado-general";
-import { diasHasta, seccionesFaltantes } from "@/lib/dashboard/calc";
-import { fechaKeyToDate } from "@/lib/agenda/fecha";
-import { hoyAR } from "@/lib/fecha-ar";
+import { seccionesFaltantes } from "@/lib/dashboard/calc";
 import UnidadesEnMovimientoGrid, {
   type UnidadMovimiento,
 } from "@/components/admin/UnidadesEnMovimientoGrid";
-import { inicioSemana as inicioSemanaCobranza, finSemana as finSemanaCobranza } from "@/lib/cobranza/periodo";
+import { calcularRangoPeriodo } from "@/lib/cobranza/periodo";
+import { filasPorUnidad, metricasPlanes } from "@/lib/cobranza/planes-unidad";
+import { serializeAcuerdo } from "@/lib/cobranza/serialize";
+import { COSTO_INCLUDE, serializeCosto } from "@/lib/cobranza/logistica";
+import {
+  diasHastaSoloFecha,
+  formatearFechaAR,
+  formatearSoloFecha,
+  inicioMesAR,
+  inicioMesSoloFechaAR,
+  mesAnioAR,
+} from "@/lib/fecha-ar";
+import { hrefIndicadorLead, whereIndicadorLead } from "@/lib/indicadores/leads";
+import { hrefIndicadorUnidad, whereIndicadorUnidad } from "@/lib/indicadores/unidades";
+import { hrefIndicadorPedido, hrefPedidosPorEstado, whereIndicadorPedido } from "@/lib/indicadores/pedidos";
+import { whereCitasDelDia } from "@/lib/indicadores/citas";
+import { cobradoEnRango, cobrosQueVencenEnLaSemana, cobrosVencidos } from "@/lib/indicadores/cobros";
+import { metricasPagos, pagosVencidos, totalPorMoneda } from "@/lib/indicadores/pagos";
+import { formatMontos } from "@/lib/indicadores/montos";
 import { proximoPasoCorto } from "@/lib/envios/timeline";
-import { alertasPlanes, formatSaldo } from "@/lib/dashboard/alertas-planes";
 import { resumenCobranzaPorUnidad, RESUMEN_COBRANZA_VACIO, type ResumenCobranzaUnidad } from "@/lib/cobranza/resumen-unidad";
 
 const MESES_LABEL = [
@@ -31,16 +46,6 @@ const MESES_LABEL = [
 ];
 
 export const dynamic = "force-dynamic";
-
-function startOfDay(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function startOfMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
 
 const SECCION_TITULOS: Record<string, string> = Object.fromEntries(
   SECCIONES_UNIDAD.map((s) => [s.key, s.titulo])
@@ -66,10 +71,6 @@ function diasRestantesLabel(dias: number | null): string {
   if (dias < 0) return "Vencido";
   if (dias === 0) return "Hoy";
   return `${dias} día${dias === 1 ? "" : "s"}`;
-}
-
-function formatUSD(value: number | null): string {
-  return `USD ${(value ?? 0).toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
 }
 
 type UnidadParaGrilla = {
@@ -118,16 +119,17 @@ function toUnidadMovimiento(u: UnidadParaGrilla, resumenMap: Map<string, Resumen
 
 export default async function AdminDashboardPage() {
   const now = new Date();
-  const hace48hs = new Date(now.getTime() - 48 * 60 * 60 * 1000);
   const hace24hs = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const hace15dias = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
-  const hace7dias = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const fechaHoy = fechaKeyToDate(hoyAR());
-  const inicioMes = startOfMonth(now);
-  const inicioMesSiguiente = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const mesAnteriorFecha = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const mesAnteriorNum = mesAnteriorFecha.getMonth() + 1;
-  const anioAnterior = mesAnteriorFecha.getFullYear();
+  // Mes anterior al actual, en el calendario argentino (cierre de período).
+  const { mes: mesAnteriorNum, anio: anioAnterior } = mesAnioAR(inicioMesAR(now, -1));
+
+  const include = {
+    unidad: {
+      select: { numeroUnidad: true, modelo: true, estadoFabricacion: true, cliente: { select: { id: true, nombre: true } } },
+    },
+    cuotas: { orderBy: { vencimiento: "asc" as const } },
+    movimientos: { orderBy: { fecha: "desc" as const } },
+  };
 
   const [
     leadsHoy,
@@ -143,28 +145,24 @@ export default async function AdminDashboardPage() {
     citasHoy,
     leadsSinRespuesta,
     unidadesEntregadasMes,
-    cobradoEsteMesAgg,
-    porCobrarTotalAgg,
-    porCobrarMovidoAgg,
-    planesConVencimientos,
-    pagadoEsteMesAgg,
-    porPagarTotalAgg,
-    porPagarMovidoAgg,
+    acuerdosCobroRaw,
+    acuerdosPagoRaw,
+    costosRaw,
     unidadesEnAduanaLargas,
-    cobrosVencidos,
+    pedidosSinAnticipo,
     leadsPipelineResumen,
     mesAnteriorCierre,
     mesAnteriorTuvoMovimientos,
   ] = await Promise.all([
-    db.lead.count({ where: { createdAt: { gte: startOfDay(now) } } }),
-    db.lead.count({ where: { etapa: { in: ["nuevo", "en_contacto", "propuesta_enviada"] } } }),
-    // "Ganados este mes" usa la misma cohorte por createdAt que /admin/pipeline
-    // (Lead no tiene un timestamp de "pasó a ganado").
-    db.lead.count({ where: { etapa: "ganado", createdAt: { gte: inicioMes } } }),
+    // Cada contador usa el mismo `where` que la lista a la que linkea
+    // (src/lib/indicadores): no pueden diferir.
+    db.lead.count({ where: whereIndicadorLead("nuevos_hoy", now) }),
+    db.lead.count({ where: whereIndicadorLead("en_negociacion", now) }),
+    db.lead.count({ where: whereIndicadorLead("ganados_mes", now) }),
     db.configuracionPedido.groupBy({ by: ["estadoPedido"], _count: { _all: true } }),
     getAdminUser(),
     db.unidad.findMany({
-      where: { estadoFabricacion: { not: "entregado" } },
+      where: whereIndicadorUnidad("activas", now),
       include: {
         documentos: { select: { seccion: true } },
         cliente: { select: { nombre: true } },
@@ -206,58 +204,18 @@ export default async function AdminDashboardPage() {
       },
       orderBy: { createdAt: "desc" },
     }),
-    db.cita.findMany({ where: { fecha: fechaHoy }, orderBy: { horario: "asc" } }),
-    db.lead.count({ where: { contactado: false, createdAt: { lte: hace48hs } } }),
-    db.unidad.count({ where: { estadoFabricacion: "entregado", fechaEntrega: { gte: inicioMes } } }),
-    // Bloque Financiero del dashboard — a diferencia de las métricas de
-    // Unidad.precioCliente que usaba antes (un proxy), estas 5 salen del
-    // libro de cobranza real (AcuerdoPago/Movimiento/Cuota), igual que
-    // /admin/cobranza, y enlazan ahí con los mismos filtros aplicados.
-    // Todo en USD — el resto del dashboard también reporta solo en USD.
-    db.movimiento.aggregate({
-      _sum: { importe: true },
-      where: { fecha: { gte: inicioMes, lt: inicioMesSiguiente }, acuerdo: { tipo: "cobro", moneda: "USD" } },
-    }),
-    db.acuerdoPago.aggregate({ _sum: { totalAcordado: true }, where: { tipo: "cobro", moneda: "USD" } }),
-    db.movimiento.aggregate({
-      _sum: { importe: true },
-      where: { acuerdo: { tipo: "cobro", moneda: "USD" } },
-    }),
-    // Planes con alguna cuota que vence antes del fin de esta semana: sobre
-    // ellos se calculan las alertas de cuotas vencidas (cobro y pago) y de
-    // "vence esta semana", con el saldo real de cada cuota (sus pagos
-    // imputados), no con Cuota.estado — ver lib/dashboard/alertas-planes.ts.
-    db.acuerdoPago.findMany({
-      where: { cuotas: { some: { vencimiento: { lt: finSemanaCobranza(now) } } } },
-      select: {
-        unidadId: true,
-        tipo: true,
-        moneda: true,
-        cuotas: { select: { id: true, importe: true, vencimiento: true, createdAt: true } },
-        movimientos: { select: { cuotaId: true, importe: true } },
-      },
-    }),
-    db.movimiento.aggregate({
-      _sum: { importe: true },
-      where: { fecha: { gte: inicioMes, lt: inicioMesSiguiente }, acuerdo: { tipo: "pago", moneda: "USD" } },
-    }),
-    db.acuerdoPago.aggregate({ _sum: { totalAcordado: true }, where: { tipo: "pago", moneda: "USD" } }),
-    db.movimiento.aggregate({
-      _sum: { importe: true },
-      where: { acuerdo: { tipo: "pago", moneda: "USD" } },
-    }),
-    // Proxy: "hace más de 15 días" se mide contra updatedAt (no hay un
-    // timestamp de "entró a aduana") — mismo criterio que ya usa esta
-    // página para "unidades actualizadas (24hs)".
-    db.unidad.count({ where: { estadoFabricacion: "en_aduana", updatedAt: { lte: hace15dias } } }),
-    // Unidad no tiene campos de anticipo/cobro — este dato vive en
-    // ConfiguracionPedido (anticipo + fechaConfirmacion), así que el alert
-    // de "cobros vencidos" consulta ese modelo en vez de Unidad.
-    db.configuracionPedido.count({
-      where: { estadoPedido: "confirmado", anticipo: null, fechaConfirmacion: { lte: hace7dias } },
-    }),
+    db.cita.findMany({ where: whereCitasDelDia(now), orderBy: { horario: "asc" } }),
+    db.lead.count({ where: whereIndicadorLead("sin_atender", now) }),
+    db.unidad.count({ where: whereIndicadorUnidad("entregadas_mes", now) }),
+    // Bloque Financiero y alertas de cobros/pagos: los planes completos, para
+    // calcular con las mismas funciones que /admin/cobranza y /admin/pagos.
+    db.acuerdoPago.findMany({ where: { tipo: "cobro" }, include }),
+    db.acuerdoPago.findMany({ where: { tipo: "pago" }, include }),
+    db.costoLogistica.findMany({ include: COSTO_INCLUDE }),
+    db.unidad.count({ where: whereIndicadorUnidad("aduana_demorada", now) }),
+    db.configuracionPedido.count({ where: whereIndicadorPedido("sin_anticipo", now) }),
     db.lead.findMany({
-      where: { etapa: { notIn: ["ganado", "perdido"] } },
+      where: whereIndicadorLead("activos", now),
       orderBy: { createdAt: "desc" },
       take: 5,
       select: { id: true, nombre: true, apellido: true, etapa: true, createdAt: true },
@@ -265,22 +223,34 @@ export default async function AdminDashboardPage() {
     db.cierrePeriodo.findUnique({ where: { mes_anio: { mes: mesAnteriorNum, anio: anioAnterior } } }),
     // Solo tiene sentido avisar "sin cerrar" si el mes anterior tuvo algo
     // de actividad — un negocio recién arrancado no debería ver esta
-    // alerta desde el primer día.
-    db.movimiento.count({ where: { fecha: { gte: mesAnteriorFecha, lt: inicioMes } } }),
+    // alerta desde el primer día. Movimiento.fecha es solo fecha.
+    db.movimiento.count({ where: { fecha: { gte: inicioMesSoloFechaAR(now, -1), lt: inicioMesSoloFechaAR(now) } } }),
   ]);
 
   const rol = session?.rol ?? "vendedor";
-  const alertasDePlanes = alertasPlanes(planesConVencimientos, now, {
-    desde: inicioSemanaCobranza(now),
-    hasta: finSemanaCobranza(now),
-  });
-  const unidadesCobroVencido = alertasDePlanes.cobroVencido.unidades;
-  const unidadesPagoVencido = alertasDePlanes.pagoVencido.unidades;
-  const cuotasVencenSemanaCobro = alertasDePlanes.cobroVenceSemana.cuotas;
-  const cobradoEsteMes = cobradoEsteMesAgg._sum.importe ?? 0;
-  const porCobrar = (porCobrarTotalAgg._sum.totalAcordado ?? 0) - (porCobrarMovidoAgg._sum.importe ?? 0);
-  const pagadoEsteMes = pagadoEsteMesAgg._sum.importe ?? 0;
-  const porPagar = (porPagarTotalAgg._sum.totalAcordado ?? 0) - (porPagarMovidoAgg._sum.importe ?? 0);
+
+  // Cobros: las mismas filas por unidad que /admin/cobranza.
+  const acuerdosCobro = acuerdosCobroRaw.map(serializeAcuerdo);
+  const unidadesConCobro = new Map(
+    acuerdosCobro.map((a) => [
+      a.unidadId,
+      { id: a.unidadId, numeroUnidad: a.unidadNumero, clienteNombre: a.clienteNombre, modelo: a.unidadModelo, precioCliente: null },
+    ])
+  );
+  const filasCobro = filasPorUnidad([...unidadesConCobro.values()], acuerdosCobro, now);
+  const cobranza = metricasPlanes(filasCobro, now);
+  const cobradoEsteMes = cobradoEnRango(acuerdosCobro, calcularRangoPeriodo("mes_actual", now));
+  const cobroVencido = cobrosVencidos(filasCobro, now);
+  const cobroSemana = cobrosQueVencenEnLaSemana(filasCobro, now);
+  const unidadesCobroVencido = cobroVencido.filas.length;
+  const unidadesVencenSemanaCobro = cobroSemana.filas.length;
+
+  // Pagos: las mismas funciones que las tarjetas de /admin/pagos.
+  const acuerdosPago = acuerdosPagoRaw.map(serializeAcuerdo);
+  const costos = costosRaw.map(serializeCosto);
+  const pagos = metricasPagos(acuerdosPago, costos, now);
+  const pagosVencidosFilas = pagosVencidos(acuerdosPago, costos, now);
+
   const countByEstado = Object.fromEntries(
     estadoCounts.map((e) => [e.estadoPedido, e._count._all])
   ) as Record<string, number>;
@@ -314,7 +284,7 @@ export default async function AdminDashboardPage() {
   const enviosConDerivados = envios.map((e) => ({
     ...e,
     estado: estadoGeneralEnvio(e.unidades),
-    dias: diasHasta(e.fechaArriboEstimado, now),
+    dias: e.fechaArriboEstimado ? diasHastaSoloFecha(e.fechaArriboEstimado, now) : null,
     cantidadUnidades: e.unidades.length,
   }));
   const enviosActivos = enviosConDerivados.filter((e) => e.estado !== "entregado");
@@ -328,11 +298,11 @@ export default async function AdminDashboardPage() {
   const hayAlertas =
     leadsSinRespuesta > 0 ||
     unidadesConFaltantes.length > 0 ||
-    cobrosVencidos > 0 ||
+    pedidosSinAnticipo > 0 ||
     unidadesEnAduanaLargas > 0 ||
     unidadesCobroVencido > 0 ||
-    unidadesPagoVencido > 0 ||
-    cuotasVencenSemanaCobro > 0 ||
+    pagosVencidosFilas.length > 0 ||
+    unidadesVencenSemanaCobro > 0 ||
     (mesAnteriorCierre === null && mesAnteriorTuvoMovimientos > 0);
 
   const accesosRapidos = ADMIN_NAV_ITEMS.filter(
@@ -361,7 +331,7 @@ export default async function AdminDashboardPage() {
                   <strong>{leadsSinRespuesta}</strong> lead{leadsSinRespuesta === 1 ? "" : "s"} sin respuesta hace
                   más de 48hs
                 </span>
-                <Link href="/admin/pipeline?sinContactar=1" className={BOTON_VER_ALERTA}>
+                <Link href={hrefIndicadorLead("sin_atender")} className={BOTON_VER_ALERTA}>
                   Ver →
                 </Link>
               </li>
@@ -385,13 +355,13 @@ export default async function AdminDashboardPage() {
                 </Link>
               </li>
             )}
-            {cobrosVencidos > 0 && (
+            {pedidosSinAnticipo > 0 && (
               <li className="flex items-center justify-between gap-3">
                 <span>
-                  <strong>{cobrosVencidos}</strong> pedido{cobrosVencidos === 1 ? "" : "s"} confirmado
-                  {cobrosVencidos === 1 ? "" : "s"} sin anticipo registrado hace más de 7 días
+                  <strong>{pedidosSinAnticipo}</strong> pedido{pedidosSinAnticipo === 1 ? "" : "s"} confirmado
+                  {pedidosSinAnticipo === 1 ? "" : "s"} hace más de 7 días sin ningún cobro registrado
                 </span>
-                <Link href="/admin/configuraciones" className={BOTON_VER_ALERTA}>
+                <Link href={hrefIndicadorPedido("sin_anticipo")} className={BOTON_VER_ALERTA}>
                   Ver →
                 </Link>
               </li>
@@ -402,7 +372,7 @@ export default async function AdminDashboardPage() {
                   <strong>{unidadesEnAduanaLargas}</strong> unidad{unidadesEnAduanaLargas === 1 ? "" : "es"} en
                   aduana hace más de 15 días
                 </span>
-                <Link href="/admin/unidades?estado=en_aduana" className={BOTON_VER_ALERTA}>
+                <Link href={hrefIndicadorUnidad("aduana_demorada")} className={BOTON_VER_ALERTA}>
                   Ver →
                 </Link>
               </li>
@@ -411,30 +381,31 @@ export default async function AdminDashboardPage() {
               <li className="flex items-center justify-between gap-3">
                 <span>
                   <strong>{unidadesCobroVencido}</strong> unidad{unidadesCobroVencido === 1 ? "" : "es"} con cuotas de
-                  cobro vencidas — saldo vencido <strong>{formatSaldo(alertasDePlanes.cobroVencido.saldo)}</strong>
+                  cobro vencidas — saldo vencido <strong>{formatMontos(cobroVencido.saldo)}</strong>
                 </span>
                 <Link href="/admin/cobranza?estado=vencidas" className={BOTON_VER_ALERTA}>
                   Ver →
                 </Link>
               </li>
             )}
-            {unidadesPagoVencido > 0 && (
+            {pagosVencidosFilas.length > 0 && (
               <li className="flex items-center justify-between gap-3">
                 <span>
-                  <strong>{unidadesPagoVencido}</strong> unidad{unidadesPagoVencido === 1 ? "" : "es"} con pagos a
-                  proveedores vencidos — saldo vencido <strong>{formatSaldo(alertasDePlanes.pagoVencido.saldo)}</strong>
+                  <strong>{pagosVencidosFilas.length}</strong> pago{pagosVencidosFilas.length === 1 ? "" : "s"} a
+                  proveedores vencido{pagosVencidosFilas.length === 1 ? "" : "s"} — saldo vencido{" "}
+                  <strong>{formatMontos(totalPorMoneda(pagosVencidosFilas))}</strong>
                 </span>
-                <Link href="/admin/pagos?estado=vencidas" className={BOTON_VER_ALERTA}>
+                <Link href="/admin/pagos?estado=vencido" className={BOTON_VER_ALERTA}>
                   Ver →
                 </Link>
               </li>
             )}
-            {cuotasVencenSemanaCobro > 0 && (
+            {unidadesVencenSemanaCobro > 0 && (
               <li className="flex items-center justify-between gap-3">
                 <span>
-                  <strong>{cuotasVencenSemanaCobro}</strong> cuota{cuotasVencenSemanaCobro === 1 ? "" : "s"} de cobro vence
-                  {cuotasVencenSemanaCobro === 1 ? "" : "n"} esta semana — saldo{" "}
-                  <strong>{formatSaldo(alertasDePlanes.cobroVenceSemana.saldo)}</strong>
+                  <strong>{unidadesVencenSemanaCobro}</strong> unidad{unidadesVencenSemanaCobro === 1 ? "" : "es"} con
+                  cuotas de cobro que vencen en los próximos 7 días — saldo{" "}
+                  <strong>{formatMontos(cobroSemana.saldo)}</strong>
                 </span>
                 <Link href="/admin/cobranza?vence=semana" className={BOTON_VER_ALERTA}>
                   Ver →
@@ -493,51 +464,49 @@ export default async function AdminDashboardPage() {
         <KpiColumn
           title="💼 Ventas"
           items={[
-            { label: "Leads nuevos hoy", value: leadsHoy, href: "/admin/pipeline?etapa=nuevo&desde=hoy" },
-            {
-              label: "En negociación",
-              value: leadsEnNegociacion,
-              href: "/admin/pipeline?etapa=en_contacto,propuesta_enviada",
-            },
-            { label: "Ganados este mes", value: leadsGanadosMes, href: "/admin/pipeline?etapa=ganado&periodo=mes" },
+            { label: "Leads nuevos hoy", value: leadsHoy, href: hrefIndicadorLead("nuevos_hoy") },
+            { label: "En negociación", value: leadsEnNegociacion, href: hrefIndicadorLead("en_negociacion") },
+            { label: "Ganados este mes", value: leadsGanadosMes, href: hrefIndicadorLead("ganados_mes") },
           ]}
         />
         <KpiColumn
           title="📦 Operaciones"
           items={[
-            { label: "Unidades activas", value: unidadesActivas.length, href: "/admin/unidades?estado=activo" },
+            { label: "Unidades activas", value: unidadesActivas.length, href: hrefIndicadorUnidad("activas") },
             {
               label: "En aduana ahora",
               value: countByEstadoUnidad["en_aduana"] ?? 0,
-              href: "/admin/unidades?estado=en_aduana",
+              href: hrefIndicadorUnidad("en_aduana"),
             },
             {
               label: "Entregadas este mes",
               value: unidadesEntregadasMes,
-              href: "/admin/unidades?estado=entregado&periodo=mes",
+              href: hrefIndicadorUnidad("entregadas_mes"),
             },
           ]}
         />
         <KpiColumn
           title="💰 Financiero"
           items={[
+            // Monedas por separado, con las mismas funciones que las
+            // tarjetas de /admin/cobranza y /admin/pagos.
             {
               label: "Cobrado este mes",
-              value: formatUSD(cobradoEsteMes),
+              value: formatMontos(cobradoEsteMes, 0),
               href: "/admin/cobranza",
             },
-            { label: "Por cobrar", value: formatUSD(porCobrar), href: "/admin/cobranza?estado=con_saldo" },
+            { label: "Por cobrar", value: formatMontos(cobranza.pendiente, 0), href: "/admin/cobranza?estado=con_saldo" },
             {
               label: "Vence esta semana",
-              value: cuotasVencenSemanaCobro,
+              value: unidadesVencenSemanaCobro,
               href: "/admin/cobranza?vence=semana",
             },
             {
               label: "Pagado este mes",
-              value: formatUSD(pagadoEsteMes),
+              value: formatMontos(pagos.pagadoMes, 0),
               href: "/admin/pagos",
             },
-            { label: "Por pagar", value: formatUSD(porPagar), href: "/admin/pagos?estado=con_saldo" },
+            { label: "Por pagar", value: formatMontos(pagos.porPagar, 0), href: "/admin/pagos" },
           ]}
         />
       </div>
@@ -559,7 +528,7 @@ export default async function AdminDashboardPage() {
                     <p className="font-medium text-[#1a1a1a]">
                       {l.nombre} {l.apellido ?? ""}
                     </p>
-                    <p className="text-xs text-stone-400">{l.createdAt.toLocaleDateString("es-AR")}</p>
+                    <p className="text-xs text-stone-400">{formatearFechaAR(l.createdAt)}</p>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-bold ${ETAPA_COLORS[l.etapa as Etapa]}`}>
                     {ETAPA_LABELS[l.etapa as Etapa] ?? l.etapa}
@@ -632,7 +601,7 @@ export default async function AdminDashboardPage() {
                     <td className="px-4 py-3 text-stone-600">{e.numeroContenedor || "—"}</td>
                     <td className="px-4 py-3 text-stone-600">
                       {e.fechaArriboEstimado
-                        ? e.fechaArriboEstimado.toLocaleDateString("es-AR", { timeZone: "UTC" })
+                        ? formatearSoloFecha(e.fechaArriboEstimado)
                         : "—"}
                     </td>
                     <td className="px-4 py-3 text-stone-600">{diasRestantesLabel(e.dias)}</td>
@@ -717,10 +686,14 @@ export default async function AdminDashboardPage() {
         <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">Pedidos por estado</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {estadoPedidoOptions.map((estado) => (
-            <div key={estado} className="text-center bg-[#f5f5f5] rounded-xl py-4">
+            <Link
+              key={estado}
+              href={hrefPedidosPorEstado(estado)}
+              className="block text-center bg-[#f5f5f5] rounded-xl py-4 hover:bg-stone-200 transition-colors"
+            >
               <p className="text-2xl font-bold text-[#1a1a1a]">{countByEstado[estado] ?? 0}</p>
               <p className="text-xs text-stone-500 mt-1">{estadoPedidoLabels[estado]}</p>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

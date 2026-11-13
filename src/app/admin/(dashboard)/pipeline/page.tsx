@@ -7,20 +7,18 @@ import PaginacionLinks from "@/components/admin/PaginacionLinks";
 import NuevoLeadButton from "@/components/admin/NuevoLeadButton";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { ORIGEN_VISITA_OPTIONS, ORIGEN_VISITA_LABELS, esOrigenVisita } from "@/lib/origen-visita/clasificar";
+import {
+  INDICADORES_LEAD,
+  esIndicadorLead,
+  hrefIndicadorLead,
+  whereIndicadorLead,
+  type IndicadorLead,
+} from "@/lib/indicadores/leads";
+import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
-
-function startOfDay(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function startOfMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
 
 const TABS = ["todos", ...ETAPA_OPTIONS] as const;
 
@@ -35,6 +33,7 @@ export default async function AdminPipelinePage({
     desde?: string;
     periodo?: string;
     sinContactar?: string;
+    indicador?: string;
     leadId?: string;
     page?: string;
   }>;
@@ -66,33 +65,29 @@ export default async function AdminPipelinePage({
   const origenVisitaValido = esOrigenVisita(sp.origenVisita) ? sp.origenVisita : undefined;
 
   const now = new Date();
-  const hoyParaFiltro = startOfDay(now);
-  const inicioMesParaFiltro = startOfMonth(now);
 
-  // "desde=hoy" y "periodo=mes" filtran por createdAt — mismo criterio que
-  // usan las tarjetas del dashboard para "Leads nuevos hoy" y "Ganados este
-  // mes". Si llegaran los dos a la vez, "desde=hoy" gana (es el filtro más
-  // específico).
-  const fechaWhere =
-    sp.desde === "hoy"
-      ? { createdAt: { gte: hoyParaFiltro } }
+  // Indicadores (tarjetas de acá y del dashboard): ?indicador=… aplica el
+  // mismo `where` con el que se cuenta (src/lib/indicadores/leads.ts).
+  // Los links viejos (desde=hoy, periodo=mes, sinContactar=1) se mapean al
+  // indicador equivalente.
+  const indicador: IndicadorLead | undefined = esIndicadorLead(sp.indicador)
+    ? sp.indicador
+    : sp.desde === "hoy"
+      ? "nuevos_hoy"
       : sp.periodo === "mes"
-        ? { createdAt: { gte: inicioMesParaFiltro } }
-        : {};
+        ? "del_mes"
+        : undefined;
+  const indicadorWhere = indicador ? whereIndicadorLead(indicador, now) : {};
+  const sinContactarWhere: Prisma.LeadWhereInput = sp.sinContactar === "1" ? { contactado: false } : {};
 
-  const sinContactarWhere = sp.sinContactar === "1" ? { contactado: false } : {};
-
-  const where = {
+  const base: Prisma.LeadWhereInput = {
     ...etapaWhere,
     ...(sp.vendedorId ? { vendedorId: sp.vendedorId } : {}),
     ...(origenValido ? { origen: origenValido } : {}),
     ...(origenVisitaValido ? { origenVisita: origenVisitaValido } : {}),
-    ...fechaWhere,
     ...sinContactarWhere,
   };
-
-  const hoy = hoyParaFiltro;
-  const inicioMes = inicioMesParaFiltro;
+  const where: Prisma.LeadWhereInput = indicador ? { AND: [base, indicadorWhere] } : base;
 
   const [session, leads, totalFiltrados, vendedores, totalActivos, nuevosHoy, enPropuesta, ganadosMes, totalMes] =
     await Promise.all([
@@ -104,11 +99,11 @@ export default async function AdminPipelinePage({
         select: { id: true, nombre: true },
         orderBy: { nombre: "asc" },
       }),
-      db.lead.count({ where: { etapa: { notIn: ["ganado", "perdido"] } } }),
-      db.lead.count({ where: { createdAt: { gte: hoy } } }),
-      db.lead.count({ where: { etapa: "propuesta_enviada" } }),
-      db.lead.count({ where: { etapa: "ganado", createdAt: { gte: inicioMes } } }),
-      db.lead.count({ where: { createdAt: { gte: inicioMes } } }),
+      db.lead.count({ where: whereIndicadorLead("activos", now) }),
+      db.lead.count({ where: whereIndicadorLead("nuevos_hoy", now) }),
+      db.lead.count({ where: whereIndicadorLead("en_propuesta", now) }),
+      db.lead.count({ where: whereIndicadorLead("ganados_mes", now) }),
+      db.lead.count({ where: whereIndicadorLead("del_mes", now) }),
     ]);
 
   const totalPages = Math.max(1, Math.ceil(totalFiltrados / PAGE_SIZE));
@@ -124,8 +119,7 @@ export default async function AdminPipelinePage({
       sp.vendedorId ||
       origenValido ||
       origenVisitaValido ||
-      sp.desde === "hoy" ||
-      sp.periodo === "mes" ||
+      indicador ||
       sp.sinContactar === "1"
   );
 
@@ -133,8 +127,7 @@ export default async function AdminPipelinePage({
   // en la página) — se conservan al paginar, cambiar de tab o filtrar.
   const etapaParam = etapasValidas.join(",");
   const filtrosDashboard: [string, string][] = [
-    ...(sp.desde === "hoy" ? [["desde", "hoy"] as [string, string]] : []),
-    ...(sp.periodo === "mes" ? [["periodo", "mes"] as [string, string]] : []),
+    ...(indicador ? [["indicador", indicador] as [string, string]] : []),
     ...(sp.sinContactar === "1" ? [["sinContactar", "1"] as [string, string]] : []),
   ];
 
@@ -161,12 +154,25 @@ export default async function AdminPipelinePage({
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-        <MetricaCard label="Activos" value={totalActivos} />
-        <MetricaCard label="Nuevos hoy" value={nuevosHoy} />
-        <MetricaCard label="En propuesta" value={enPropuesta} />
-        <MetricaCard label="Ganados este mes" value={ganadosMes} />
-        <MetricaCard label="Conversión del mes" value={tasa !== null ? `${Math.round(tasa * 100)}%` : "—"} />
+        <MetricaCard label="Activos" value={totalActivos} href={hrefIndicadorLead("activos")} />
+        <MetricaCard label="Nuevos hoy" value={nuevosHoy} href={hrefIndicadorLead("nuevos_hoy")} />
+        <MetricaCard label="En propuesta" value={enPropuesta} href={hrefIndicadorLead("en_propuesta")} />
+        <MetricaCard label="Ganados este mes" value={ganadosMes} href={hrefIndicadorLead("ganados_mes")} />
+        <MetricaCard
+          label="Conversión del mes"
+          value={tasa !== null ? `${Math.round(tasa * 100)}%` : "—"}
+          href={hrefIndicadorLead("del_mes")}
+        />
       </div>
+
+      {indicador && (
+        <p className="text-sm text-stone-600" data-testid="indicador-activo">
+          Mostrando: <strong>{INDICADORES_LEAD[indicador].label}</strong> ({totalFiltrados}) ·{" "}
+          <Link href="/admin/pipeline" className="text-sage-600 hover:underline">
+            Quitar filtro
+          </Link>
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         {TABS.map((tab) => {
@@ -296,11 +302,11 @@ export default async function AdminPipelinePage({
   );
 }
 
-function MetricaCard({ label, value }: { label: string; value: number | string }) {
+function MetricaCard({ label, value, href }: { label: string; value: number | string; href: string }) {
   return (
-    <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
+    <Link href={href} className="block bg-white rounded-2xl border border-[#E5E5E5] p-5 hover:border-[#D4B36A] transition-colors">
       <p className="text-2xl font-bold text-[#2F2F2F]">{value}</p>
       <p className="text-xs text-stone-500 mt-1">{label}</p>
-    </div>
+    </Link>
   );
 }

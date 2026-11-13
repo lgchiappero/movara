@@ -1,4 +1,5 @@
 import type { EstadoCuota } from "@/lib/cobranza/constantes";
+import { esVencida } from "@/lib/fecha-ar";
 
 // Imputación de los pagos (movimientos) de un plan a sus cuotas: de acá sale
 // el estado real de cada cuota. Una cuota está pagada cuando lo imputado
@@ -57,21 +58,12 @@ function compararCuotas(a: CuotaParaImputar, b: CuotaParaImputar): number {
   return a.id < b.id ? -1 : 1; // los ids son únicos
 }
 
-/** Inicio del día de `ahora`: una cuota vence el día siguiente a su
- * vencimiento (mismo corte que la alerta del dashboard). */
-export function inicioDelDia(ahora: Date): Date {
-  const hoy = new Date(ahora);
-  hoy.setHours(0, 0, 0, 0);
-  return hoy;
-}
-
 /** Estado real de cada cuota de un plan, en el orden en que vinieron. */
 export function imputarCuotas(
   cuotas: CuotaParaImputar[],
   movimientos: MovimientoParaImputar[],
   ahora: Date
 ): CuotaImputada[] {
-  const hoy = inicioDelDia(ahora).getTime();
   const ids = new Set(cuotas.map((c) => c.id));
   const asignado = new Map<string, number>();
   let libre = 0;
@@ -100,8 +92,8 @@ export function imputarCuotas(
   return cuotas.map((c) => {
     const p = pagado.get(c.id)!;
     const restante = c.importe - p <= EPSILON ? 0 : c.importe - p;
-    const venc = tiempo(c.vencimiento);
-    const vencida = restante > 0 && venc !== null && venc < hoy;
+    // Vencida desde el día siguiente a su vencimiento, en hora argentina.
+    const vencida = restante > 0 && tiempo(c.vencimiento) !== null && esVencida(c.vencimiento, ahora);
     const estado: EstadoCuota = restante === 0 ? "pagado" : vencida ? "vencido" : "pendiente";
     return { id: c.id, importe: c.importe, pagado: p, restante, estado, vencida };
   });

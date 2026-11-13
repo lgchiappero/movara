@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { sumaImportes, estadoAcuerdo } from "@/lib/cobranza/calc";
 import { EstadoCuentaDocument, type AcuerdoParaPdf, type MovimientoParaPdf } from "@/lib/pdf/EstadoCuentaDocument";
+import { formatearFechaAR } from "@/lib/fecha-ar";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ clienteId: string }> }) {
   const session = await getAdminUser();
@@ -58,7 +59,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cli
     saldosMap.set(a.moneda, (saldosMap.get(a.moneda) ?? 0) + a.pendiente);
   }
 
-  const fechaEmision = new Date().toLocaleDateString("es-AR", { year: "numeric", month: "long", day: "numeric" });
+  const fechaEmision = formatearFechaAR(new Date(), "largo");
 
   const pdfBuffer = await renderToBuffer(
     EstadoCuentaDocument({

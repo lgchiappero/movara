@@ -5,14 +5,13 @@ import NuevaUnidadForm from "@/components/admin/NuevaUnidadForm";
 import PaginacionLinks from "@/components/admin/PaginacionLinks";
 import { proximoPasoCorto } from "@/lib/envios/timeline";
 import { resumenCobranzaPorUnidad, RESUMEN_COBRANZA_VACIO } from "@/lib/cobranza/resumen-unidad";
+import { INDICADORES_UNIDAD, esIndicadorUnidad, whereIndicadorUnidad, type IndicadorUnidad } from "@/lib/indicadores/unidades";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
+import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
-
-function startOfMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
 
 export default async function AdminUnidadesPage({
   searchParams,
@@ -23,6 +22,7 @@ export default async function AdminUnidadesPage({
     envioId?: string;
     provincia?: string;
     periodo?: string;
+    indicador?: string;
     page?: string;
   }>;
 }) {
@@ -42,15 +42,23 @@ export default async function AdminUnidadesPage({
   // "periodo=mes" filtra por fechaEntrega — pensado para combinarse con
   // estado=entregado (ej. "Entregadas este mes" del dashboard). Sin
   // unidades entregadas no tiene efecto visible, pero no rompe nada.
-  const periodoWhere = sp.periodo === "mes" ? { fechaEntrega: { gte: startOfMonth(new Date()) } } : {};
+  // Indicadores del dashboard: ?indicador=… aplica el mismo `where` con el
+  // que se cuenta (src/lib/indicadores/unidades.ts). El link viejo
+  // estado=entregado&periodo=mes equivale a "entregadas_mes".
+  const indicador: IndicadorUnidad | undefined = esIndicadorUnidad(sp.indicador)
+    ? sp.indicador
+    : sp.periodo === "mes"
+      ? "entregadas_mes"
+      : undefined;
+  const indicadorWhere = indicador ? whereIndicadorUnidad(indicador, new Date()) : {};
 
-  const where = {
+  const base: Prisma.UnidadWhereInput = {
     ...estadoWhere,
     ...(sp.clienteId ? { clienteId: sp.clienteId } : {}),
     ...(sp.envioId ? { envioId: sp.envioId } : {}),
     ...(sp.provincia ? { provinciaDestino: sp.provincia } : {}),
-    ...periodoWhere,
   };
+  const where: Prisma.UnidadWhereInput = indicador ? { AND: [base, indicadorWhere] } : base;
 
   const [unidades, totalUnidades, clientes, envios, provinciasRows] = await Promise.all([
     db.unidad.findMany({
@@ -76,7 +84,7 @@ export default async function AdminUnidadesPage({
 
   const totalPages = Math.max(1, Math.ceil(totalUnidades / PAGE_SIZE));
   const provincias = provinciasRows.map((r) => r.provinciaDestino!).filter(Boolean);
-  const hayFiltros = Boolean(sp.estado || sp.clienteId || sp.envioId || sp.provincia || sp.periodo === "mes");
+  const hayFiltros = Boolean(sp.estado || sp.clienteId || sp.envioId || sp.provincia || indicador);
 
   function buildHref(nuevaPagina: number): string {
     const params = new URLSearchParams();
@@ -84,7 +92,7 @@ export default async function AdminUnidadesPage({
     if (sp.clienteId) params.set("clienteId", sp.clienteId);
     if (sp.envioId) params.set("envioId", sp.envioId);
     if (sp.provincia) params.set("provincia", sp.provincia);
-    if (sp.periodo) params.set("periodo", sp.periodo);
+    if (indicador) params.set("indicador", indicador);
     if (nuevaPagina > 1) params.set("page", String(nuevaPagina));
     const qs = params.toString();
     return `/admin/unidades${qs ? `?${qs}` : ""}`;
@@ -200,7 +208,14 @@ export default async function AdminUnidadesPage({
             Limpiar filtros
           </Link>
         )}
+        {indicador && <input type="hidden" name="indicador" value={indicador} />}
       </form>
+
+      {indicador && (
+        <p className="mb-4 text-sm text-stone-600" data-testid="indicador-activo">
+          Mostrando: <strong>{INDICADORES_UNIDAD[indicador].label}</strong> ({totalUnidades})
+        </p>
+      )}
 
       {unidades.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#E5E5E5] p-10 text-center text-stone-500 text-sm">
@@ -247,7 +262,10 @@ export default async function AdminUnidadesPage({
                     USD {resumenDe(u.id).cobradoUSD.toLocaleString("es-AR")}
                   </td>
                   <td className="px-4 py-3 text-stone-600 whitespace-nowrap">
-                    {resumenDe(u.id).ultimoCobroFecha?.toLocaleDateString("es-AR", { timeZone: "UTC" }) ?? "—"}
+                    {(() => {
+                        const f = resumenDe(u.id).ultimoCobroFecha;
+                        return f ? formatearSoloFecha(f) : "—";
+                      })()}
                   </td>
                   <td className="px-4 py-3">
                     <Link

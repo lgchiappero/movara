@@ -26,6 +26,7 @@ vi.mock("next/link", () => ({
 vi.mock("@/components/admin/NuevaUnidadForm", () => ({ default: () => <div>NuevaUnidadForm</div> }));
 
 import AdminUnidadesPage from "../page";
+import { whereIndicadorUnidad } from "@/lib/indicadores/unidades";
 
 describe("AdminUnidadesPage", () => {
   beforeEach(() => {
@@ -83,12 +84,20 @@ describe("AdminUnidadesPage", () => {
     );
   });
 
-  it("periodo=mes agrega el filtro de fechaEntrega desde el inicio del mes", async () => {
+  it("periodo=mes (link viejo) equivale al indicador 'entregadas_mes': mismo where que el contador", async () => {
     mockFindManyUnidad.mockResolvedValueOnce([]);
     await AdminUnidadesPage({ searchParams: Promise.resolve({ estado: "entregado", periodo: "mes" }) });
     const call = mockFindManyUnidad.mock.calls[0][0];
-    expect(call.where.estadoFabricacion).toBe("entregado");
-    expect(call.where.fechaEntrega.gte).toBeInstanceOf(Date);
+    expect(call.where).toEqual({ AND: [{ estadoFabricacion: "entregado" }, whereIndicadorUnidad("entregadas_mes", new Date())] });
+  });
+
+  it("?indicador=aduana_demorada aplica el where del indicador y lo muestra", async () => {
+    mockFindManyUnidad.mockResolvedValueOnce([]);
+    render(await AdminUnidadesPage({ searchParams: Promise.resolve({ indicador: "aduana_demorada" }) }));
+    const call = mockFindManyUnidad.mock.calls[0][0];
+    expect(call.where.AND[1].estadoFabricacion).toBe("en_aduana");
+    expect(call.where.AND[1].updatedAt.lte).toBeInstanceOf(Date);
+    expect(screen.getByTestId("indicador-activo")).toHaveTextContent("En aduana hace más de 15 días");
   });
 
   it("renderiza las opciones de los 3 selectores (cliente/envío/provincia) a partir de la data real", async () => {
@@ -263,11 +272,11 @@ describe("AdminUnidadesPage", () => {
     expect(screen.getByText("Página 2 de 3")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /anterior/i })).toHaveAttribute(
       "href",
-      "/admin/unidades?estado=pendiente&clienteId=c1&envioId=e1&provincia=C%C3%B3rdoba&periodo=mes"
+      "/admin/unidades?estado=pendiente&clienteId=c1&envioId=e1&provincia=C%C3%B3rdoba&indicador=entregadas_mes"
     );
     expect(screen.getByRole("link", { name: /siguiente/i })).toHaveAttribute(
       "href",
-      "/admin/unidades?estado=pendiente&clienteId=c1&envioId=e1&provincia=C%C3%B3rdoba&periodo=mes&page=3"
+      "/admin/unidades?estado=pendiente&clienteId=c1&envioId=e1&provincia=C%C3%B3rdoba&indicador=entregadas_mes&page=3"
     );
   });
 

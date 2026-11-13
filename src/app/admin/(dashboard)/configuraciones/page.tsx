@@ -4,6 +4,16 @@ import { modeloLabelsEs } from "@/lib/pdf/pedido-labels-es";
 import { etiquetaEstadoPedido, type EstadoPedido } from "@/lib/pedido/estado-pedido";
 import type { PedidoInput } from "@/lib/validators/pedido";
 import NuevoPedidoManualForm from "@/components/admin/NuevoPedidoManualForm";
+import { estadoPedidoOptions } from "@/lib/pedido/estado-pedido";
+import { formatearFechaAR } from "@/lib/fecha-ar";
+import {
+  INDICADORES_PEDIDO,
+  esIndicadorPedido,
+  whereIndicadorPedido,
+  wherePedidoPorEstado,
+  type IndicadorPedido,
+} from "@/lib/indicadores/pedidos";
+import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +28,9 @@ const ESTADO_CLASSES: Record<EstadoPedido | "cancelado", string> = {
   cancelado: "bg-red-50 text-red-600 line-through",
 };
 
-async function getConfiguraciones() {
+async function getConfiguraciones(where: Prisma.ConfiguracionPedidoWhereInput) {
   return db.configuracionPedido.findMany({
+    where,
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -41,9 +52,23 @@ async function getVendedores() {
   });
 }
 
-export default async function AdminConfiguracionesPage() {
+export default async function AdminConfiguracionesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ indicador?: string; estado?: string }>;
+} = {}) {
+  const sp = (await searchParams) ?? {};
+  // Links del dashboard: ?indicador=… y ?estado=… aplican el mismo `where`
+  // con el que se cuenta (src/lib/indicadores/pedidos.ts).
+  const indicador: IndicadorPedido | undefined = esIndicadorPedido(sp.indicador) ? sp.indicador : undefined;
+  const estado = sp.estado && (estadoPedidoOptions as readonly string[]).concat("cancelado").includes(sp.estado) ? sp.estado : undefined;
+  const where: Prisma.ConfiguracionPedidoWhereInput = {
+    AND: [indicador ? whereIndicadorPedido(indicador, new Date()) : {}, estado ? wherePedidoPorEstado(estado) : {}],
+  };
+  const filtro = indicador ? INDICADORES_PEDIDO[indicador].label : estado ? `Estado: ${etiquetaEstadoPedido(estado)}` : null;
+
   const [configuraciones, vendedores] = await Promise.all([
-    getConfiguraciones(),
+    getConfiguraciones(where),
     getVendedores(),
   ]);
 
@@ -59,9 +84,18 @@ export default async function AdminConfiguracionesPage() {
         <NuevoPedidoManualForm vendedores={vendedores} />
       </div>
 
+      {filtro && (
+        <p className="mb-4 text-sm text-stone-600" data-testid="indicador-activo">
+          Mostrando: <strong>{filtro}</strong> ({configuraciones.length}) ·{" "}
+          <Link href="/admin/configuraciones" className="text-sage-600 hover:underline">
+            Quitar filtro
+          </Link>
+        </p>
+      )}
+
       {configuraciones.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#E5E5E5] p-10 text-center text-stone-500 text-sm">
-          Todavía no llegó ninguna consulta desde el configurador.
+          {filtro ? "Ningún pedido coincide con el filtro." : "Todavía no llegó ninguna consulta desde el configurador."}
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-[#E5E5E5] overflow-hidden">
@@ -89,7 +123,7 @@ export default async function AdminConfiguracionesPage() {
                     {c.modelo ? modeloLabelsEs[c.modelo as PedidoInput["modelo"]] : "—"}
                   </td>
                   <td className="px-5 py-3 text-stone-500">
-                    {c.createdAt.toLocaleDateString("es-AR")}
+                    {formatearFechaAR(c.createdAt)}
                   </td>
                   <td className="px-5 py-3">
                     <span

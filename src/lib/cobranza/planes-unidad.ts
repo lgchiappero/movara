@@ -1,6 +1,8 @@
 import { sumaImportes } from "@/lib/cobranza/calc";
-import { inicioSemana, finSemana, calcularRangoPeriodo } from "@/lib/cobranza/periodo";
+import { calcularRangoPeriodo } from "@/lib/cobranza/periodo";
 import type { AcuerdoConDetalle } from "@/lib/cobranza/types";
+import { claveSoloFecha, esVencida, inicioMesSoloFechaAR } from "@/lib/fecha-ar";
+import { planTieneVencidas, planVenceEnLaSemana } from "@/lib/indicadores/cuotas";
 
 // Tolerancia para comparar sumas de floats — misma que calc.ts.
 const EPSILON = 0.01;
@@ -35,27 +37,36 @@ export type UnidadParaPlanes = {
   precioCliente: number | null;
 };
 
-export type FilaPlanUnidad = {
-  /** unidadId|moneda — una unidad con planes en dos monedas (caso legado)
-   * aparece en dos filas, porque sumar USD y ARS no tiene sentido. */
-  key: string;
-  unidad: UnidadParaPlanes;
+/** Montos de la unidad en UNA moneda — USD y ARS nunca se suman. */
+export type MontosMoneda = {
   moneda: string;
-  planes: AcuerdoConDetalle[];
-  /** Suma del total acordado de los planes de la unidad (0 sin plan). */
+  /** Suma del total acordado de los planes en esta moneda. */
   totalPlan: number;
-  /** Lo efectivamente cobrado/pagado — suma de todos los pagos de los planes. */
+  /** Lo efectivamente cobrado/pagado en esta moneda. */
   pagado: number;
-  /** Saldo pendiente de la unidad completa (nunca negativo). */
+  /** Saldo pendiente (nunca negativo). */
   saldo: number;
   /** 0–100. */
   porcentaje: number;
+};
+
+/** Una fila por UNIDAD (las monedas van adentro, en `monedas`). */
+export type FilaPlanUnidad = {
+  /** unidadId */
+  key: string;
+  unidad: UnidadParaPlanes;
+  planes: AcuerdoConDetalle[];
+  /** Una entrada por moneda con plan, USD primero. Sin plan: USD en 0. */
+  monedas: MontosMoneda[];
+  /** Saldado solo si todas las monedas están saldadas. */
   estado: EstadoPlanUnidad;
   /** Fecha del pago más reciente, ISO — null si no hay pagos. */
   ultimoPagoFecha: string | null;
   /** "Anticipo + 3 cuotas" — vacío sin plan. */
   resumenPlan: string;
+  /** Alguna cuota vencida con saldo real (indicadores/cuotas.ts). */
   tieneVencidas: boolean;
+  /** Alguna cuota con saldo que vence en los próximos 7 días. */
   venceEstaSemana: boolean;
 };
 
@@ -86,13 +97,14 @@ export function resumenPlan(descripcionesCuotas: string[]): string {
   return partes.join(" + ");
 }
 
-/** Una cuota está vencida si su estado ya lo dice, o si su vencimiento ya
- * pasó y no está pagada (el barrido que persiste "vencido" solo corre al
- * entrar a Cobranza/Pagos). */
-export function cuotaVencida(c: { estado: string; vencimiento: string | null }, hoy: Date): boolean {
+/** Una cuota está vencida si su estado ya lo dice, o si su vencimiento (solo
+ * fecha) ya pasó en Argentina y no está pagada. Se usa solo para marcar
+ * cuotas sueltas en la UI; los contadores y filtros de vencidas usan el
+ * saldo real (indicadores/cuotas.ts). */
+export function cuotaVencida(c: { estado: string; vencimiento: string | null }, ahora: Date): boolean {
   if (c.estado === "pagado") return false;
   if (c.estado === "vencido") return true;
-  return c.vencimiento !== null && new Date(c.vencimiento).getTime() < hoy.getTime();
+  return esVencida(c.vencimiento, ahora);
 }
 
 function estadoDe(totalPlan: number, pagado: number, tienePlanes: boolean): EstadoPlanUnidad {
@@ -100,6 +112,18 @@ function estadoDe(totalPlan: number, pagado: number, tienePlanes: boolean): Esta
   if (pagado >= totalPlan - EPSILON) return "saldado";
   if (pagado > EPSILON) return "en_curso";
   return "pendiente";
+}
+
+function estadoUnidad(monedas: MontosMoneda[], tienePlanes: boolean): EstadoPlanUnidad {
+  const estados = monedas.map((m) => estadoDe(m.totalPlan, m.pagado, tienePlanes));
+  if (!tienePlanes) return "sin_plan";
+  if (estados.every((e) => e === "saldado")) return "saldado";
+  if (estados.some((e) => e !== "pendiente")) return "en_curso";
+  return "pendiente";
+}
+
+function ordenMonedas(a: string, b: string): number {
+  return a === "USD" ? -1 : b === "USD" ? 1 : a.localeCompare(b);
 }
 
 /** Agrupa los planes (acuerdos de un mismo tipo: cobro o pago) por unidad.
@@ -110,11 +134,6 @@ export function filasPorUnidad(
   planes: AcuerdoConDetalle[],
   ahora: Date
 ): FilaPlanUnidad[] {
-  const hoy = new Date(ahora);
-  hoy.setHours(0, 0, 0, 0);
-  const desdeSemana = inicioSemana(ahora).getTime();
-  const hastaSemana = finSemana(ahora).getTime();
-
   const planesPorUnidad = new Map<string, AcuerdoConDetalle[]>();
   for (const p of planes) {
     const lista = planesPorUnidad.get(p.unidadId) ?? [];
@@ -122,38 +141,33 @@ export function filasPorUnidad(
     planesPorUnidad.set(p.unidadId, lista);
   }
 
-  return unidades.flatMap((unidad) => {
+  return unidades.map((unidad): FilaPlanUnidad => {
     const propios = planesPorUnidad.get(unidad.id) ?? [];
-    const monedas = propios.length ? [...new Set(propios.map((p) => p.moneda))] : ["USD"];
-
-    return monedas.map((moneda): FilaPlanUnidad => {
+    const nombresMonedas = propios.length ? [...new Set(propios.map((p) => p.moneda))].sort(ordenMonedas) : ["USD"];
+    const monedas = nombresMonedas.map((moneda): MontosMoneda => {
       const delaMoneda = propios.filter((p) => p.moneda === moneda);
-      const pagos = delaMoneda.flatMap((p) => p.movimientos);
-      const cuotas = delaMoneda.flatMap((p) => p.cuotas);
       const totalPlan = delaMoneda.reduce((acc, p) => acc + p.totalAcordado, 0);
-      const pagado = sumaImportes(pagos);
-      const ultimo = pagos.reduce<string | null>((max, m) => (max === null || m.fecha > max ? m.fecha : max), null);
-
+      const pagado = sumaImportes(delaMoneda.flatMap((p) => p.movimientos));
       return {
-        key: `${unidad.id}|${moneda}`,
-        unidad,
         moneda,
-        planes: delaMoneda,
         totalPlan,
         pagado,
         saldo: Math.max(0, totalPlan - pagado),
         porcentaje: totalPlan > 0 ? Math.min(100, (pagado / totalPlan) * 100) : 0,
-        estado: estadoDe(totalPlan, pagado, delaMoneda.length > 0),
-        ultimoPagoFecha: ultimo,
-        resumenPlan: resumenPlan(cuotas.map((c) => c.descripcion)),
-        tieneVencidas: cuotas.some((c) => cuotaVencida(c, hoy)),
-        venceEstaSemana: cuotas.some((c) => {
-          if (c.estado === "pagado" || !c.vencimiento) return false;
-          const t = new Date(c.vencimiento).getTime();
-          return t >= desdeSemana && t < hastaSemana;
-        }),
       };
     });
+    const pagos = propios.flatMap((p) => p.movimientos);
+    return {
+      key: unidad.id,
+      unidad,
+      planes: propios,
+      monedas,
+      estado: estadoUnidad(monedas, propios.length > 0),
+      ultimoPagoFecha: pagos.reduce<string | null>((max, m) => (max === null || m.fecha > max ? m.fecha : max), null),
+      resumenPlan: resumenPlan(propios.flatMap((p) => p.cuotas).map((c) => c.descripcion)),
+      tieneVencidas: propios.some((p) => planTieneVencidas(p, ahora)),
+      venceEstaSemana: propios.some((p) => planVenceEnLaSemana(p, ahora)),
+    };
   });
 }
 
@@ -165,21 +179,22 @@ export type MetricasPlanes = {
 };
 
 export function metricasPlanes(filas: FilaPlanUnidad[], ahora: Date): MetricasPlanes {
-  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).getTime();
-  const inicioMesSiguiente = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 1).getTime();
+  // Mes calendario argentino, contra la fecha (sin hora) del último pago.
+  const inicioMes = claveSoloFecha(inicioMesSoloFechaAR(ahora));
+  const inicioMesSiguiente = claveSoloFecha(inicioMesSoloFechaAR(ahora, 1));
   const pendiente = { USD: 0, ARS: 0 };
   const saldadas = new Set<string>();
-  const conVencidas = new Set<string>();
 
   for (const f of filas) {
-    if (f.moneda === "USD" || f.moneda === "ARS") pendiente[f.moneda] += f.saldo;
+    for (const m of f.monedas) if (m.moneda === "USD" || m.moneda === "ARS") pendiente[m.moneda] += m.saldo;
     if (f.estado === "saldado" && f.ultimoPagoFecha) {
-      const t = new Date(f.ultimoPagoFecha).getTime();
-      if (t >= inicioMes && t < inicioMesSiguiente) saldadas.add(f.unidad.id);
+      const dia = claveSoloFecha(f.ultimoPagoFecha);
+      if (dia >= inicioMes && dia < inicioMesSiguiente) saldadas.add(f.unidad.id);
     }
-    if (f.tieneVencidas) conVencidas.add(f.unidad.id);
   }
-  return { pendiente, unidadesSaldadasMes: saldadas.size, unidadesConVencidas: conVencidas.size };
+  // Una fila por unidad: "unidades con cuotas vencidas" = filas con
+  // tieneVencidas, las mismas que muestra el filtro "vencidas".
+  return { pendiente, unidadesSaldadasMes: saldadas.size, unidadesConVencidas: filas.filter((f) => f.tieneVencidas).length };
 }
 
 /** Filtros de la grilla — "con_saldo" agrupa pendiente + en curso
@@ -258,11 +273,6 @@ export const FILTRO_PERIODO_LABELS: Record<FiltroPeriodo, string> = {
   personalizado: "Rango personalizado",
 };
 
-function claveDia(d: Date): string {
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${mm}-${dd}`;
-}
 
 /** Rango del filtro de período — null = todo el historial (o un rango
  * personalizado todavía incompleto). */
@@ -282,7 +292,7 @@ export function rangoDesdeFiltro(
  * pagos al día anterior en Argentina. */
 export function fechaEnRango(fechaIso: string, rango: { desde: Date; hasta: Date }): boolean {
   const dia = fechaIso.slice(0, 10);
-  return dia >= claveDia(rango.desde) && dia < claveDia(rango.hasta);
+  return dia >= claveSoloFecha(rango.desde) && dia < claveSoloFecha(rango.hasta);
 }
 
 /** Lo cobrado/pagado en un conjunto de planes dentro del rango. */
@@ -303,12 +313,23 @@ export function pagadoEnRangoPlanes(
   return { monto, cantidad };
 }
 
-/** Lo cobrado/pagado en la unidad dentro de [desde, hasta). */
+/** Lo cobrado/pagado en la unidad dentro de [desde, hasta), por moneda
+ * (`montos`) y cantidad total de pagos. */
 export function pagadoEnRango(
   fila: FilaPlanUnidad,
   rango: { desde: Date; hasta: Date }
-): { monto: number; cantidad: number } {
-  return pagadoEnRangoPlanes(fila.planes, rango);
+): { montos: Record<string, number>; cantidad: number } {
+  const montos: Record<string, number> = {};
+  let cantidad = 0;
+  for (const m of fila.monedas) {
+    const r = pagadoEnRangoPlanes(
+      fila.planes.filter((p) => p.moneda === m.moneda),
+      rango
+    );
+    montos[m.moneda] = r.monto;
+    cantidad += r.cantidad;
+  }
+  return { montos, cantidad };
 }
 
 /** "20/09/2026" — fecha completa (día de pago, en UTC), para exportar. */

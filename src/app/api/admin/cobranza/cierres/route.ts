@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/admin/current-user";
 import { cerrarPeriodoSchema } from "@/lib/validators/cobranza";
+import { hoyAR, soloFecha, sumarMeses } from "@/lib/fecha-ar";
 
 export async function POST(req: NextRequest) {
   const session = await getAdminUser();
@@ -23,9 +24,13 @@ export async function POST(req: NextRequest) {
   }
   const { mes, anio, notas } = parsed.data;
 
-  const desde = new Date(anio, mes - 1, 1);
-  const hasta = new Date(anio, mes, 1);
-  if (hasta.getTime() > Date.now()) {
+  // Movimiento.fecha es solo fecha: el mes va de día 1 a día 1 (medianoche
+  // UTC). Un mes terminó cuando en Argentina ya empezó el siguiente.
+  const claveDesde = `${anio}-${String(mes).padStart(2, "0")}-01`;
+  const claveHasta = sumarMeses(claveDesde, 1);
+  const desde = soloFecha(claveDesde);
+  const hasta = soloFecha(claveHasta);
+  if (claveHasta > hoyAR()) {
     return NextResponse.json({ error: "Todavía no se puede cerrar un mes que no terminó" }, { status: 400 });
   }
 

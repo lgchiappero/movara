@@ -17,7 +17,7 @@ import {
 } from "./planes-unidad";
 import type { AcuerdoConDetalle } from "./types";
 
-const AHORA = new Date("2026-10-07T12:00:00"); // miércoles
+const AHORA = new Date("2026-10-07T15:00:00Z"); // miércoles 7/10, 12:00 en Argentina
 
 const U1: UnidadParaPlanes = { id: "u1", numeroUnidad: "MOV-1", clienteNombre: "Ana", modelo: "Flex 38", precioCliente: 24700 };
 const U2: UnidadParaPlanes = { id: "u2", numeroUnidad: "MOV-2", clienteNombre: "Bruno", modelo: "Flex 18", precioCliente: 15000 };
@@ -88,7 +88,7 @@ describe("tipoDeCuota / resumenPlan", () => {
 });
 
 describe("cuotaVencida", () => {
-  const hoy = new Date("2026-10-07T00:00:00");
+  const hoy = AHORA;
   it("pagada nunca está vencida", () => {
     expect(cuotaVencida({ estado: "pagado", vencimiento: "2026-01-01T00:00:00.000Z" }, hoy)).toBe(false);
   });
@@ -96,7 +96,9 @@ describe("cuotaVencida", () => {
     expect(cuotaVencida({ estado: "vencido", vencimiento: null }, hoy)).toBe(true);
   });
   it("pendiente con vencimiento pasado (aunque el barrido no haya corrido)", () => {
-    expect(cuotaVencida({ estado: "pendiente", vencimiento: "2026-10-01T00:00:00" }, hoy)).toBe(true);
+    expect(cuotaVencida({ estado: "pendiente", vencimiento: "2026-10-01T00:00:00.000Z" }, hoy)).toBe(true);
+    // La que vence hoy (7/10) todavía no.
+    expect(cuotaVencida({ estado: "pendiente", vencimiento: "2026-10-07T00:00:00.000Z" }, hoy)).toBe(false);
   });
   it("pendiente sin vencimiento o con vencimiento futuro", () => {
     expect(cuotaVencida({ estado: "pendiente", vencimiento: null }, hoy)).toBe(false);
@@ -108,13 +110,9 @@ describe("filasPorUnidad", () => {
   it("incluye unidades sin plan, con estado 'sin_plan', moneda USD y todo en 0", () => {
     const [f] = filasPorUnidad([U1], [], AHORA);
     expect(f).toMatchObject({
-      key: "u1|USD",
-      moneda: "USD",
+      key: "u1",
       planes: [],
-      totalPlan: 0,
-      pagado: 0,
-      saldo: 0,
-      porcentaje: 0,
+      monedas: [{ moneda: "USD", totalPlan: 0, pagado: 0, saldo: 0, porcentaje: 0 }],
       estado: "sin_plan",
       ultimoPagoFecha: null,
       resumenPlan: "",
@@ -126,7 +124,7 @@ describe("filasPorUnidad", () => {
   it("plan sin pagos → pendiente, saldo = total", () => {
     const [f] = filasPorUnidad([U1], [plan({ cuotas: [cuota("q1", "Anticipo 30%", 7410), cuota("q2", "Saldo", 17290)] })], AHORA);
     expect(f.estado).toBe("pendiente");
-    expect(f.saldo).toBe(24700);
+    expect(f.monedas[0].saldo).toBe(24700);
     expect(f.resumenPlan).toBe("Anticipo + Saldo");
   });
 
@@ -142,9 +140,9 @@ describe("filasPorUnidad", () => {
       AHORA
     );
     expect(f.estado).toBe("en_curso");
-    expect(f.pagado).toBe(9410);
-    expect(f.saldo).toBe(15290);
-    expect(f.porcentaje).toBeCloseTo(38.1, 1);
+    expect(f.monedas[0].pagado).toBe(9410);
+    expect(f.monedas[0].saldo).toBe(15290);
+    expect(f.monedas[0].porcentaje).toBeCloseTo(38.1, 1);
     expect(f.ultimoPagoFecha).toBe("2026-09-20T00:00:00.000Z");
   });
 
@@ -155,10 +153,10 @@ describe("filasPorUnidad", () => {
       AHORA
     );
     expect(f.estado).toBe("saldado");
-    expect(f.porcentaje).toBe(100);
+    expect(f.monedas[0].porcentaje).toBe(100);
     const [sobre] = filasPorUnidad([U1], [plan({ totalAcordado: 100, movimientos: [pago("m1", 150, "2026-10-01")] })], AHORA);
-    expect(sobre.saldo).toBe(0);
-    expect(sobre.porcentaje).toBe(100);
+    expect(sobre.monedas[0].saldo).toBe(0);
+    expect(sobre.monedas[0].porcentaje).toBe(100);
   });
 
   it("varios planes de la misma unidad y moneda se suman (ej: pagos a varios proveedores)", () => {
@@ -171,36 +169,47 @@ describe("filasPorUnidad", () => {
       AHORA
     );
     expect(filas).toHaveLength(1);
-    expect(filas[0].totalPlan).toBe(32000);
-    expect(filas[0].pagado).toBe(9000);
+    expect(filas[0].monedas[0].totalPlan).toBe(32000);
+    expect(filas[0].monedas[0].pagado).toBe(9000);
     expect(filas[0].planes.map((p) => p.id)).toEqual(["p1", "p2"]);
   });
 
-  it("planes en dos monedas de la misma unidad → una fila por moneda", () => {
+  it("planes en dos monedas de la misma unidad → UNA fila, con las monedas adentro (USD primero, sin sumarlas)", () => {
     const filas = filasPorUnidad(
       [U1],
-      [plan({ id: "p1", moneda: "USD" }), plan({ id: "p2", moneda: "ARS", totalAcordado: 1_000_000 })],
+      [plan({ id: "p2", moneda: "ARS", totalAcordado: 1_000_000 }), plan({ id: "p1", moneda: "USD", movimientos: [pago("m", 24700, "2026-10-01")] })],
       AHORA
     );
-    expect(filas.map((f) => f.key)).toEqual(["u1|USD", "u1|ARS"]);
-    expect(filas[1].totalPlan).toBe(1_000_000);
+    expect(filas.map((f) => f.key)).toEqual(["u1"]);
+    expect(filas[0].monedas.map((m) => [m.moneda, m.totalPlan, m.saldo])).toEqual([
+      ["USD", 24700, 0],
+      ["ARS", 1_000_000, 1_000_000],
+    ]);
+    // Saldado solo si todas las monedas lo están.
+    expect(filas[0].estado).toBe("en_curso");
+  });
+
+  it("orden de monedas: USD primero y el resto alfabético", () => {
+    const [f] = filasPorUnidad([U1], [plan({ id: "a", moneda: "EUR" }), plan({ id: "b", moneda: "ARS" })], AHORA);
+    expect(f.monedas.map((m) => m.moneda)).toEqual(["ARS", "EUR"]);
+    expect(f.estado).toBe("pendiente");
   });
 
   it("cada unidad recibe solo sus propios planes", () => {
     const filas = filasPorUnidad([U1, U2], [plan({ unidadId: "u2", totalAcordado: 15000 })], AHORA);
     expect(filas[0].estado).toBe("sin_plan");
-    expect(filas[1].totalPlan).toBe(15000);
+    expect(filas[1].monedas[0].totalPlan).toBe(15000);
   });
 
-  it("detecta cuotas vencidas y cuotas que vencen esta semana (lunes a domingo)", () => {
+  it("detecta cuotas vencidas y cuotas que vencen en los próximos 7 días, por saldo real", () => {
     const [f] = filasPorUnidad(
       [U1],
       [
         plan({
           cuotas: [
-            cuota("q1", "Anticipo", 1000, "2026-09-01T00:00:00", "pendiente"),
-            cuota("q2", "Cuota 1/2", 1000, "2026-10-09T00:00:00"),
-            cuota("q3", "Cuota 2/2", 1000, "2026-10-08T00:00:00", "pagado"),
+            cuota("q1", "Anticipo", 1000, "2026-09-01T00:00:00.000Z", "pendiente"),
+            cuota("q2", "Cuota 1/2", 1000, "2026-10-09T00:00:00.000Z"),
+            cuota("q3", "Cuota 2/2", 1000, "2026-10-08T00:00:00.000Z", "pagado"),
             cuota("q4", "Saldo", 1000, null),
           ],
         }),
@@ -209,9 +218,21 @@ describe("filasPorUnidad", () => {
     );
     expect(f.tieneVencidas).toBe(true);
     expect(f.venceEstaSemana).toBe(true);
-    const [sinSemana] = filasPorUnidad([U1], [plan({ cuotas: [cuota("q3", "Cuota", 1000, "2026-10-08T00:00:00", "pagado")] })], AHORA);
+    // Pagada de verdad (su pago está registrado): ni vencida ni "vence esta semana".
+    const [sinSemana] = filasPorUnidad(
+      [U1],
+      [plan({ cuotas: [cuota("q3", "Cuota", 1000, "2026-10-08T00:00:00.000Z", "pagado")], movimientos: [pago("m", 1000, "2026-10-01", "q3")] })],
+      AHORA
+    );
     expect(sinSemana.venceEstaSemana).toBe(false);
     expect(sinSemana.tieneVencidas).toBe(false);
+    // Una cuota vencida cubierta por un pago "sin cuota específica" no cuenta como vencida.
+    const [cubierta] = filasPorUnidad(
+      [U1],
+      [plan({ cuotas: [cuota("q1", "Anticipo", 1000, "2026-09-01T00:00:00.000Z", "vencido")], movimientos: [pago("m", 1000, "2026-10-01")] })],
+      AHORA
+    );
+    expect(cubierta.tieneVencidas).toBe(false);
   });
 });
 
@@ -221,23 +242,23 @@ describe("metricasPlanes", () => {
       [U1, U2, { ...U2, id: "u3" }],
       [
         // u1: saldada con último pago este mes
-        plan({ id: "p1", totalAcordado: 1000, movimientos: [pago("m1", 1000, "2026-10-02T12:00:00")] }),
+        plan({ id: "p1", totalAcordado: 1000, movimientos: [pago("m1", 1000, "2026-10-02T00:00:00.000Z")] }),
         // u2: en curso, con cuota vencida, en ARS
         plan({
           id: "p2",
           unidadId: "u2",
           moneda: "ARS",
           totalAcordado: 500_000,
-          cuotas: [cuota("q1", "Anticipo", 100_000, "2026-09-01T00:00:00")],
-          movimientos: [pago("m2", 100_000, "2026-09-15T00:00:00")],
+          cuotas: [cuota("q1", "Anticipo", 100_000, "2026-09-01T00:00:00.000Z")],
+          movimientos: [pago("m2", 60_000, "2026-09-15T00:00:00.000Z")],
         }),
         // u3: saldada pero el mes pasado → no cuenta
-        plan({ id: "p3", unidadId: "u3", totalAcordado: 300, movimientos: [pago("m3", 300, "2026-09-28T12:00:00")] }),
+        plan({ id: "p3", unidadId: "u3", totalAcordado: 300, movimientos: [pago("m3", 300, "2026-09-28T00:00:00.000Z")] }),
       ],
       AHORA
     );
     expect(metricasPlanes(filas, AHORA)).toEqual({
-      pendiente: { USD: 0, ARS: 400_000 },
+      pendiente: { USD: 0, ARS: 440_000 },
       unidadesSaldadasMes: 1,
       unidadesConVencidas: 1,
     });
@@ -268,7 +289,7 @@ describe("filtros de estado", () => {
     const [sinPlan] = filasPorUnidad([U1], [], AHORA);
     const [enCurso] = filasPorUnidad(
       [U1],
-      [plan({ cuotas: [cuota("q1", "Anticipo", 10, "2026-01-01T00:00:00")], movimientos: [pago("m", 5, "2026-09-01")] })],
+      [plan({ cuotas: [cuota("q1", "Anticipo", 10, "2026-01-01T00:00:00.000Z")], movimientos: [pago("m", 5, "2026-09-01")] })],
       AHORA
     );
     expect(cumpleFiltroEstado(sinPlan, "todos")).toBe(true);
@@ -296,15 +317,15 @@ describe("pagadoEnRango / fechaCorta", () => {
       ["2026-09-30T00:00:00.000Z", 200],
       ["2026-10-01T00:00:00.000Z", 400],
     ]);
-    expect(pagadoEnRango(f, { desde: new Date(2026, 8, 1), hasta: new Date(2026, 9, 1) })).toEqual({ monto: 300, cantidad: 2 });
-    expect(pagadoEnRango(f, { desde: new Date(2026, 9, 1), hasta: new Date(2026, 10, 1) })).toEqual({ monto: 400, cantidad: 1 });
-    expect(pagadoEnRango(f, { desde: new Date(2025, 0, 1), hasta: new Date(2025, 1, 1) })).toEqual({ monto: 0, cantidad: 0 });
+    expect(pagadoEnRango(f, { desde: new Date(Date.UTC(2026, 8, 1)), hasta: new Date(Date.UTC(2026, 9, 1)) })).toEqual({ montos: { USD: 300 }, cantidad: 2 });
+    expect(pagadoEnRango(f, { desde: new Date(Date.UTC(2026, 9, 1)), hasta: new Date(Date.UTC(2026, 10, 1)) })).toEqual({ montos: { USD: 400 }, cantidad: 1 });
+    expect(pagadoEnRango(f, { desde: new Date(Date.UTC(2025, 0, 1)), hasta: new Date(Date.UTC(2025, 1, 1)) })).toEqual({ montos: { USD: 0 }, cantidad: 0 });
   });
 
   it("compara por día: un pago del 1/10 (medianoche UTC) cuenta en octubre aunque en Argentina sea 30/9 21hs", () => {
     const f = filaCon([["2026-10-01T00:00:00.000Z", 400]]);
-    expect(pagadoEnRango(f, { desde: new Date(2026, 9, 1), hasta: new Date(2026, 10, 1) }).cantidad).toBe(1);
-    expect(pagadoEnRango(f, { desde: new Date(2026, 8, 1), hasta: new Date(2026, 9, 1) }).cantidad).toBe(0);
+    expect(pagadoEnRango(f, { desde: new Date(Date.UTC(2026, 9, 1)), hasta: new Date(Date.UTC(2026, 10, 1)) }).cantidad).toBe(1);
+    expect(pagadoEnRango(f, { desde: new Date(Date.UTC(2026, 8, 1)), hasta: new Date(Date.UTC(2026, 9, 1)) }).cantidad).toBe(0);
   });
 
   it("fechaCorta → dd/mm (o — sin fecha)", () => {
@@ -317,12 +338,12 @@ describe("rangoDesdeFiltro / fechaEnRango / fechaLarga / pagadoEnRangoPlanes", (
   it("rangoDesdeFiltro: todo → null; personalizado incompleto → null; si no, el rango del período", () => {
     expect(rangoDesdeFiltro("todo", "", "", AHORA)).toBeNull();
     expect(rangoDesdeFiltro("personalizado", "2026-09-01", "", AHORA)).toBeNull();
-    expect(rangoDesdeFiltro("mes_anterior", "", "", AHORA)).toEqual({ desde: new Date(2026, 8, 1), hasta: new Date(2026, 9, 1) });
+    expect(rangoDesdeFiltro("mes_anterior", "", "", AHORA)).toEqual({ desde: new Date(Date.UTC(2026, 8, 1)), hasta: new Date(Date.UTC(2026, 9, 1)) });
     expect(rangoDesdeFiltro("personalizado", "2026-09-01", "2026-09-30", AHORA)!.desde).toEqual(new Date("2026-09-01"));
   });
 
   it("fechaEnRango compara por día", () => {
-    const septiembre = { desde: new Date(2026, 8, 1), hasta: new Date(2026, 9, 1) };
+    const septiembre = { desde: new Date(Date.UTC(2026, 8, 1)), hasta: new Date(Date.UTC(2026, 9, 1)) };
     expect(fechaEnRango("2026-09-30T00:00:00.000Z", septiembre)).toBe(true);
     expect(fechaEnRango("2026-10-01T00:00:00.000Z", septiembre)).toBe(false);
   });
@@ -335,6 +356,6 @@ describe("rangoDesdeFiltro / fechaEnRango / fechaLarga / pagadoEnRangoPlanes", (
   it("pagadoEnRangoPlanes suma los pagos de varios planes dentro del rango", () => {
     const p1 = plan({ movimientos: [pago("m1", 100, "2026-09-10T00:00:00.000Z"), pago("m2", 50, "2026-10-02T00:00:00.000Z")] });
     const p2 = plan({ id: "a2", movimientos: [pago("m3", 25, "2026-09-11T00:00:00.000Z")] });
-    expect(pagadoEnRangoPlanes([p1, p2], { desde: new Date(2026, 8, 1), hasta: new Date(2026, 9, 1) })).toEqual({ monto: 125, cantidad: 2 });
+    expect(pagadoEnRangoPlanes([p1, p2], { desde: new Date(Date.UTC(2026, 8, 1)), hasta: new Date(Date.UTC(2026, 9, 1)) })).toEqual({ monto: 125, cantidad: 2 });
   });
 });

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import { CONCEPTO_LABELS, MODALIDAD_LABELS, TIPO_ACUERDO_LABELS } from "@/lib/cobranza/constantes";
 import type { CierreRow } from "@/lib/cobranza/types";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -27,7 +28,7 @@ function formatMoneda(value: number, moneda: string): string {
 }
 
 function formatFecha(value: string): string {
-  return new Date(value).toLocaleDateString("es-AR", { timeZone: "UTC" });
+  return formatearSoloFecha(value);
 }
 
 export default function ResumenCierre({ cierre }: { cierre: CierreRow }) {

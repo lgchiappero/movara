@@ -159,14 +159,14 @@ describe("PlanesUnidadGrid — cobranza", () => {
     try {
       const { user, acciones: a } = renderGrid();
       await user.click(within(fila("MOV-UNIDAD-2026-001")).getByRole("button", { name: /USD 9.410/ }));
-      const d = screen.getByTestId("detalle-u1|USD");
+      const d = screen.getByTestId("detalle-u1");
       expect(within(d).getByText("Pagos recibidos")).toBeInTheDocument();
       expect(a.abrirRegistrarPago).not.toHaveBeenCalled();
       frames.splice(0).forEach((cb) => cb(0));
       expect(scroll).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
       // Un segundo click no la colapsa (sigue mostrando los pagos).
       await user.click(within(fila("MOV-UNIDAD-2026-001")).getByRole("button", { name: /USD 9.410/ }));
-      expect(screen.getByTestId("detalle-u1|USD")).toBeInTheDocument();
+      expect(screen.getByTestId("detalle-u1")).toBeInTheDocument();
     } finally {
       raf.mockRestore();
       // @ts-expect-error -- limpiar el stub
@@ -194,7 +194,7 @@ describe("PlanesUnidadGrid — cobranza", () => {
     await user.click(within(fila("MOV-UNIDAD-2026-001")).getByRole("button", { name: "Registrar pago" }));
     expect(a.abrirRegistrarPago).toHaveBeenCalledWith(PLAN_U1);
     // Las acciones no despliegan la fila.
-    expect(screen.queryByTestId("detalle-u1|USD")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("detalle-u1")).not.toBeInTheDocument();
   });
 
   it("'+ Nuevo plan de pago' sin unidad preseleccionada", async () => {
@@ -325,7 +325,7 @@ describe("PlanesUnidadGrid — cobranza", () => {
 describe("Detalle de la unidad (fila desplegada) — plan de pago unificado", () => {
   async function abrir(user: ReturnType<typeof userEvent.setup>, numero: string, cliente: string, key: string) {
     await user.click(within(fila(numero)).getByText(cliente));
-    return screen.getByTestId(`detalle-${key}|USD`);
+    return screen.getByTestId(`detalle-${key}`);
   }
   const abrirU1 = (user: ReturnType<typeof userEvent.setup>) => abrir(user, "MOV-UNIDAD-2026-001", "Ana Pérez", "u1");
 
@@ -436,6 +436,6 @@ describe("Detalle de la unidad (fila desplegada) — plan de pago unificado", ()
     const { user } = renderGrid();
     await abrirU1(user);
     await user.click(within(fila("MOV-UNIDAD-2026-001")).getByText("Ana Pérez"));
-    expect(screen.queryByTestId("detalle-u1|USD")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("detalle-u1")).not.toBeInTheDocument();
   });
 });

@@ -3,16 +3,16 @@ import { loginAsAdmin } from "./helpers/login";
 
 // Bug del 10/11/2026: después de registrar los pagos a proveedores, el
 // dashboard seguía con la alerta "N unidades con pagos a proveedores
-// vencidos". Los pagos se cargaban "Sin cuota específica" (la opción por
+// vencidos" (hoy: "N pagos a proveedores vencidos"). Los pagos se cargaban "Sin cuota específica" (la opción por
 // defecto) y la alerta miraba Cuota.estado, que solo se recalculaba para la
 // cuota elegida. Acá: plan de pago con una cuota vencida → la alerta suma
-// esa unidad; pago parcial → sigue, con el saldo que resta; pago del resto
+// ese pago; pago parcial → sigue, con el saldo que resta; pago del resto
 // desde la UI sin elegir cuota → la alerta vuelve a como estaba.
 //
 // La base de desarrollo puede tener otras unidades con pagos vencidos: se
 // compara contra la cantidad de antes, no contra cero.
 
-const ALERTA = /(\d+) unidad(?:es)? con pagos a proveedores vencidos/;
+const ALERTA = /(\d+) pagos? a proveedores vencidos?/;
 
 async function unidadesConPagoVencido(page: Page): Promise<number> {
   await page.goto("/admin");

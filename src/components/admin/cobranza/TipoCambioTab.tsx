@@ -3,16 +3,17 @@
 import { useState } from "react";
 import { useToast } from "@/components/admin/Toast";
 import type { TipoCambioRow } from "@/lib/cobranza/types";
+import { formatearSoloFecha, hoyAR } from "@/lib/fecha-ar";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
 
 function hoyISODate(): string {
-  return new Date().toISOString().slice(0, 10);
+  return hoyAR(); // hoy en Argentina (en UTC, de 21 a 24 h ya es mañana)
 }
 
 function formatFecha(value: string): string {
-  return new Date(value).toLocaleDateString("es-AR", { timeZone: "UTC" });
+  return formatearSoloFecha(value);
 }
 
 const FUENTE_LABELS: Record<string, string> = {

@@ -4,9 +4,9 @@ import { getSignedUrl, BUCKET_MOVARA } from "@/lib/admin/storage";
 import PagosPanel, { type TabPagos } from "@/components/admin/PagosPanel";
 import { serializeAcuerdo } from "@/lib/cobranza/serialize";
 import { conComprobantesFirmados } from "@/lib/cobranza/attach-signed-urls";
-import { sumaImportes } from "@/lib/cobranza/calc";
-import { estadoPagoUnidad } from "@/lib/cobranza/pagos-unidad";
-import { COSTO_INCLUDE, serializeCosto, totalesLogistica } from "@/lib/cobranza/logistica";
+import { COSTO_INCLUDE, serializeCosto } from "@/lib/cobranza/logistica";
+import { hoySoloFechaAR } from "@/lib/fecha-ar";
+import { metricasPagos, pagosVencidos } from "@/lib/indicadores/pagos";
 import type { UnidadOpcion } from "@/lib/cobranza/types";
 
 export const dynamic = "force-dynamic";
@@ -22,14 +22,11 @@ export default async function AdminPagosPage({
 }) {
   const sp = await searchParams;
   const now = new Date();
-  const hoy = new Date(now);
-  hoy.setHours(0, 0, 0, 0);
-  const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
-  const inicioMesSiguiente = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  // Mismo barrido de auto-vencimiento que /admin/cobranza.
+  // Mismo barrido de auto-vencimiento que /admin/cobranza (vencimiento:
+  // solo fecha, contra hoy en Argentina).
   await db.cuota.updateMany({
-    where: { estado: "pendiente", vencimiento: { lt: hoy } },
+    where: { estado: "pendiente", vencimiento: { lt: hoySoloFechaAR(now) } },
     data: { estado: "vencido" },
   });
 
@@ -65,27 +62,12 @@ export default async function AdminPagosPage({
     })
   );
 
-  // Métricas: pagos por unidad (movimientos) + costos de logística.
-  const enMes = (iso: string) => {
-    const t = new Date(iso).getTime();
-    return t >= inicioMes.getTime() && t < inicioMesSiguiente.getTime();
-  };
-  const pagadoMes = { USD: 0, ARS: 0 };
-  const pendiente = { USD: 0, ARS: 0 };
-  let vencidos = 0;
-  for (const p of planes) {
-    if (p.moneda !== "USD" && p.moneda !== "ARS") continue;
-    pagadoMes[p.moneda] += sumaImportes(p.movimientos.filter((m) => enMes(m.fecha)));
-    pendiente[p.moneda] += Math.max(0, p.totalAcordado - sumaImportes(p.movimientos));
-    if (estadoPagoUnidad(p, hoy) === "vencido") vencidos++;
-  }
-  const logistica = totalesLogistica(costos);
-  const logisticaPagadaMes = totalesLogistica(costos.filter((c) => enMes(c.fecha))).pagado;
-  pagadoMes.USD += logisticaPagadaMes.USD;
-  pagadoMes.ARS += logisticaPagadaMes.ARS;
-  pendiente.USD += logistica.pendiente.USD;
-  pendiente.ARS += logistica.pendiente.ARS;
-  vencidos += costos.filter((c) => c.estado === "pendiente" && new Date(c.fecha).getTime() < hoy.getTime()).length;
+  // Tarjetas: las mismas funciones que el dashboard (indicadores/pagos.ts).
+  // "Pagos vencidos" = filas de pagosVencidos(): planes con cuotas vencidas
+  // con saldo + costos de logística pendientes con fecha pasada; el link de
+  // la tarjeta muestra exactamente esas filas.
+  const { pagadoMes, porPagar } = metricasPagos(planes, costos, now);
+  const vencidos = pagosVencidos(planes, costos, now);
 
   const unidades: UnidadOpcion[] = unidadesRaw.map((u) => ({ id: u.id, numeroUnidad: u.numeroUnidad, clienteNombre: u.cliente.nombre }));
   const envios = enviosRaw.map((e) => ({
@@ -113,7 +95,8 @@ export default async function AdminPagosPage({
         unidades={unidades}
         envios={envios}
         rol={session?.rol ?? "vendedor"}
-        metricas={{ pagadoMes, pendiente, vencidos }}
+        metricas={{ pagadoMes, pendiente: porPagar }}
+        vencidos={vencidos}
         tabInicial={tabInicial}
         estadoInicial={estadoInicial}
       />

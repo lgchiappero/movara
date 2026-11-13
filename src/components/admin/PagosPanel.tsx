@@ -7,7 +7,10 @@ import { useAccionesPlanes } from "@/components/admin/planes/useAccionesPlanes";
 import LogisticaGrid from "@/components/admin/logistica/LogisticaGrid";
 import { useAccionesLogistica } from "@/components/admin/logistica/useAccionesLogistica";
 import type { EnvioOpcion } from "@/components/admin/logistica/CostoLogisticaModal";
-import type { CostoLogisticaRow, TotalesPorMoneda } from "@/lib/cobranza/logistica";
+import type { CostoLogisticaRow } from "@/lib/cobranza/logistica";
+import PagosVencidosLista from "@/components/admin/PagosVencidosLista";
+import type { PagoVencido } from "@/lib/indicadores/pagos";
+import type { MontosPorMoneda } from "@/lib/indicadores/montos";
 import type { AcuerdoConDetalle, UnidadOpcion } from "@/lib/cobranza/types";
 
 export type TabPagos = "unidad" | "logistica";
@@ -26,6 +29,7 @@ export default function PagosPanel({
   envios,
   rol,
   metricas,
+  vencidos,
   tabInicial = "unidad",
   estadoInicial,
 }: {
@@ -35,10 +39,12 @@ export default function PagosPanel({
   envios: EnvioOpcion[];
   rol: string;
   metricas: {
-    pagadoMes: TotalesPorMoneda;
-    pendiente: TotalesPorMoneda;
-    vencidos: number;
+    pagadoMes: MontosPorMoneda;
+    pendiente: MontosPorMoneda;
   };
+  /** Filas de "Pagos vencidos" (indicadores/pagos.ts): la tarjeta cuenta
+   * estas filas y ?estado=vencido las lista. */
+  vencidos: PagoVencido[];
   tabInicial?: TabPagos;
   estadoInicial?: "pendiente" | "parcial" | "pagado" | "vencido" | "con_saldo";
 }) {
@@ -50,17 +56,19 @@ export default function PagosPanel({
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Tarjeta label="Pagado este mes">
-          <p className="text-lg font-bold text-[#2F2F2F]">{formatMoneda(metricas.pagadoMes.USD, "USD")}</p>
-          <p className="text-sm font-bold text-stone-500">{formatMoneda(metricas.pagadoMes.ARS, "ARS")}</p>
+          <p className="text-lg font-bold text-[#2F2F2F]">{formatMoneda(metricas.pagadoMes.USD ?? 0, "USD")}</p>
+          <p className="text-sm font-bold text-stone-500">{formatMoneda(metricas.pagadoMes.ARS ?? 0, "ARS")}</p>
         </Tarjeta>
         <Tarjeta label="Pendiente de pagar" href="/admin/pagos?estado=con_saldo">
-          <p className="text-lg font-bold text-[#2F2F2F]">{formatMoneda(metricas.pendiente.USD, "USD")}</p>
-          <p className="text-sm font-bold text-stone-500">{formatMoneda(metricas.pendiente.ARS, "ARS")}</p>
+          <p className="text-lg font-bold text-[#2F2F2F]">{formatMoneda(metricas.pendiente.USD ?? 0, "USD")}</p>
+          <p className="text-sm font-bold text-stone-500">{formatMoneda(metricas.pendiente.ARS ?? 0, "ARS")}</p>
         </Tarjeta>
         <Tarjeta label="Pagos vencidos" href="/admin/pagos?estado=vencido">
-          <p className={`text-2xl font-bold ${metricas.vencidos > 0 ? "text-red-700" : "text-[#2F2F2F]"}`}>{metricas.vencidos}</p>
+          <p className={`text-2xl font-bold ${vencidos.length > 0 ? "text-red-700" : "text-[#2F2F2F]"}`}>{vencidos.length}</p>
         </Tarjeta>
       </div>
+
+      {estadoInicial === "vencido" && <PagosVencidosLista filas={vencidos} />}
 
       <div className="flex flex-wrap gap-2" role="tablist">
         {(

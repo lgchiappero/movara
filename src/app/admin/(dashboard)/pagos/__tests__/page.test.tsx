@@ -37,7 +37,8 @@ vi.mock("@/components/admin/PagosPanel", () => ({
     unidades: unknown[];
     envios: { id: string; cantidadUnidades: number }[];
     rol: string;
-    metricas: { pagadoMes: { USD: number; ARS: number }; pendiente: { USD: number; ARS: number }; vencidos: number };
+    metricas: { pagadoMes: { USD: number; ARS: number }; pendiente: { USD: number; ARS: number } };
+    vencidos: { key: string; tipo: string }[];
     tabInicial?: string;
     estadoInicial?: string;
   }) => (
@@ -46,15 +47,17 @@ vi.mock("@/components/admin/PagosPanel", () => ({
       {p.costos.map((c) => `${c.id}:${c.comprobanteSignedUrl ?? "sin"}`).join(",")} unidades={p.unidades.length} envios=
       {p.envios.map((e) => `${e.id}:${e.cantidadUnidades}`).join(",")} rol={p.rol} pagadoUSD={p.metricas.pagadoMes.USD}{" "}
       pagadoARS={p.metricas.pagadoMes.ARS} pendienteUSD={p.metricas.pendiente.USD} pendienteARS={p.metricas.pendiente.ARS}{" "}
-      vencidos={p.metricas.vencidos} tab={p.tabInicial ?? "none"} estado={p.estadoInicial ?? "none"}
+      vencidos={p.vencidos.length} vencidosTipos={p.vencidos.map((v) => v.tipo).join("|")} tab={p.tabInicial ?? "none"} estado={p.estadoInicial ?? "none"}
     </div>
   ),
 }));
 
 import AdminPagosPage from "../page";
+import { claveInicioMes } from "@/lib/fecha-ar";
 
-const ahora = new Date();
-const esteMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 12);
+// Día 1 del mes argentino actual, como fecha sin hora (así se guardan las
+// fechas de pagos y costos).
+const esteMes = new Date(`${claveInicioMes()}T00:00:00.000Z`);
 
 function plan(over: Record<string, unknown>) {
   return {
@@ -101,9 +104,13 @@ describe("AdminPagosPage", () => {
     mockGetAdminUser.mockResolvedValue({ rol: "admin" });
     mockUpdateManyCuota.mockResolvedValue({ count: 0 });
     mockFindManyAcuerdo.mockResolvedValue([
-      // Fábrica: 30000, pagó 15000 este mes; cuota vencida → vencido.
+      // Fábrica: 30000, pagó 15000 este mes "sin cuota específica": salda el
+      // anticipo (vence antes); el saldo sigue vencido con saldo real → vencido.
       plan({
-        cuotas: [{ id: "q1", descripcion: "Saldo 50%", importe: 15000, vencimiento: new Date("2020-01-01"), estado: "vencido" }],
+        cuotas: [
+          { id: "q0", descripcion: "Anticipo 50%", importe: 15000, vencimiento: new Date("2020-01-01"), estado: "vencido" },
+          { id: "q1", descripcion: "Saldo 50%", importe: 15000, vencimiento: new Date("2020-02-01"), estado: "vencido" },
+        ],
         movimientos: [
           { id: "m1", fecha: esteMes, importe: 15000, modalidad: "transferencia", cuotaId: null, comprobanteUrl: null, notas: null, registradoPor: "a" },
         ],
@@ -132,7 +139,8 @@ describe("AdminPagosPage", () => {
     render(await AdminPagosPage({ searchParams: Promise.resolve({}) }));
     // Pagado este mes: 15000 (fábrica) + 4000 (flete). Pendiente: 15000 fábrica + 200000 grúa ARS + 50000 VEP ARS.
     expect(screen.getByText(/pagadoUSD=19000 pagadoARS=0 pendienteUSD=15000 pendienteARS=250000/)).toBeInTheDocument();
-    expect(screen.getByText(/vencidos=2/)).toBeInTheDocument();
+    // Vencidos = filas de pagosVencidos(): el plan de fábrica y el VEP pendiente con fecha pasada.
+    expect(screen.getByText(/vencidos=2 vencidosTipos=Logística: VEP\|Fábrica/)).toBeInTheDocument();
   });
 
   it("corre el barrido de auto-vencimiento de cuotas", async () => {

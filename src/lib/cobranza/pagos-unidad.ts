@@ -1,5 +1,5 @@
 import { sumaImportes } from "@/lib/cobranza/calc";
-import { cuotaVencida } from "@/lib/cobranza/planes-unidad";
+import { planPagoVencido } from "@/lib/indicadores/pagos";
 import type { AcuerdoConDetalle } from "@/lib/cobranza/types";
 
 // Tolerancia para comparar importes — misma que calc.ts.
@@ -22,10 +22,13 @@ export const ESTADO_PAGO_UNIDAD_COLORS: Record<EstadoPagoUnidad, string> = {
   vencido: "bg-red-100 text-red-700",
 };
 
-export function estadoPagoUnidad(plan: AcuerdoConDetalle, hoy: Date): EstadoPagoUnidad {
+/** Estado de un plan de pago a proveedor. "vencido" = alguna cuota vencida
+ * con saldo real (indicadores/pagos.ts): el mismo criterio que la tarjeta
+ * "Pagos vencidos" y la alerta del dashboard. */
+export function estadoPagoUnidad(plan: AcuerdoConDetalle, ahora: Date): EstadoPagoUnidad {
   const pagado = sumaImportes(plan.movimientos);
   if (pagado >= plan.totalAcordado - EPSILON) return "pagado";
-  if (plan.cuotas.some((c) => cuotaVencida(c, hoy))) return "vencido";
+  if (planPagoVencido(plan, ahora)) return "vencido";
   return pagado > EPSILON ? "parcial" : "pendiente";
 }
 

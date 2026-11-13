@@ -14,6 +14,7 @@ import EliminarButton from "@/components/admin/EliminarButton";
 import { isAdmin } from "@/lib/admin/roles";
 import type { AcuerdoConDetalle } from "@/lib/cobranza/types";
 import type { AccionesPlanes } from "@/components/admin/planes/useAccionesPlanes";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 // Tolerancia para comparar importes — misma que calc.ts.
 const EPSILON = 0.01;
@@ -23,7 +24,7 @@ function formatMoneda(value: number, moneda: string): string {
 }
 
 function formatFecha(value: string | null): string {
-  return value ? new Date(value).toLocaleDateString("es-AR", { timeZone: "UTC" }) : "—";
+  return value ? formatearSoloFecha(value) : "—";
 }
 
 export const TEXTOS_TIPO: Record<

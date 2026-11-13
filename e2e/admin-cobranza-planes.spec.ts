@@ -96,7 +96,7 @@ test.describe("Cobranza — plan de pago por unidad", () => {
     // ── Detalle: descripción del plan, cuotas y pagos recibidos ─────────
     // Click en el monto cobrado → despliega el detalle con los pagos recibidos.
     await fila.getByRole("button", { name: /USD 7.410/ }).click();
-    const detalle = page.getByTestId(`detalle-${unidadId}|USD`);
+    const detalle = page.getByTestId(`detalle-${unidadId}`) // una fila por unidad (las monedas van adentro);
     await expect(detalle.locator("[data-pagos]")).toBeInViewport();
     await expect(detalle).toContainText("Venta Flex 38 en 3 cuotas");
     await expect(detalle).toContainText("Valor de la unidad: USD 24.700");

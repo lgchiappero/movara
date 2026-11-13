@@ -12,15 +12,11 @@ import {
   PERIODO_TIPO_OPTIONS,
   type PeriodoTipo,
 } from "@/lib/cobranza/periodo";
+import { hoySoloFechaAR } from "@/lib/fecha-ar";
+import { cobradoEnRango } from "@/lib/indicadores/cobros";
 import type { UnidadOpcion, ClienteOpcion, TipoCambioRow, CierreRow } from "@/lib/cobranza/types";
 
 export const dynamic = "force-dynamic";
-
-function startOfDay(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
 
 export default async function AdminCobranzaPage({
   searchParams,
@@ -56,7 +52,7 @@ export default async function AdminCobranzaPage({
   }
 
   const now = new Date();
-  const hoy = startOfDay(now);
+  const hoy = hoySoloFechaAR(now); // vencimientos: solo fecha, contra hoy en Argentina
 
   // "periodo=mes" (alias usado por los KPIs financieros del dashboard) no
   // es un PeriodoTipo real — como no coincide con ninguna opción válida,
@@ -97,8 +93,6 @@ export default async function AdminCobranzaPage({
     clientesRaw,
     tiposCambioRaw,
     cierresRaw,
-    cobradoUSDAgg,
-    cobradoARSAgg,
     primerMovimientoAgg,
     cierreActualRaw,
     prorrateosRaw,
@@ -119,14 +113,6 @@ export default async function AdminCobranzaPage({
     db.cliente.findMany({ select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
     db.tipoCambio.findMany({ orderBy: { fecha: "desc" }, take: 60 }),
     db.cierrePeriodo.findMany({ orderBy: [{ anio: "desc" }, { mes: "desc" }] }),
-    db.movimiento.aggregate({
-      _sum: { importe: true },
-      where: { fecha: { gte: rango.desde, lt: rango.hasta }, acuerdo: { tipo: "cobro", moneda: "USD" } },
-    }),
-    db.movimiento.aggregate({
-      _sum: { importe: true },
-      where: { fecha: { gte: rango.desde, lt: rango.hasta }, acuerdo: { tipo: "cobro", moneda: "ARS" } },
-    }),
     db.movimiento.aggregate({ _min: { fecha: true } }),
     mesUnico
       ? db.cierrePeriodo.findUnique({ where: { mes_anio: { mes: mesUnico.mes, anio: mesUnico.anio } } })
@@ -194,8 +180,11 @@ export default async function AdminCobranzaPage({
     createdAt: c.createdAt.toISOString(),
   }));
 
-  const cobradoUSD = cobradoUSDAgg._sum.importe ?? 0;
-  const cobradoARS = cobradoARSAgg._sum.importe ?? 0;
+  // Cobrado en el período: la misma función que "Cobrado este mes" del
+  // dashboard (indicadores/cobros.ts), por moneda.
+  const cobrado = cobradoEnRango(acuerdosCobro, rango);
+  const cobradoUSD = cobrado.USD ?? 0;
+  const cobradoARS = cobrado.ARS ?? 0;
 
   const periodosSinCerrar = contarPeriodosSinCerrar(
     primerMovimientoAgg._min.fecha,

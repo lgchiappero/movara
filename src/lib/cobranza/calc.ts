@@ -1,4 +1,5 @@
 import type { EstadoAcuerdo, EstadoCuota } from "@/lib/cobranza/constantes";
+import { esVencida } from "@/lib/fecha-ar";
 
 // Tolerancia para comparar sumas de floats (centavos) contra un total —
 // evita falsos "parcial" por errores de redondeo binario.
@@ -31,7 +32,7 @@ export function estadoCuota(
   hoy: Date
 ): EstadoCuota {
   if (totalPagadoCuota >= importeCuota - EPSILON) return "pagado";
-  if (vencimiento && vencimiento.getTime() < hoy.getTime()) return "vencido";
+  if (esVencida(vencimiento, hoy)) return "vencido";
   return "pendiente";
 }
 

@@ -43,6 +43,7 @@ vi.mock("@/components/admin/NuevoLeadButton", () => ({
 }));
 
 import AdminPipelinePage from "../page";
+import { whereIndicadorLead } from "@/lib/indicadores/leads";
 
 const LEAD = {
   id: "l1",
@@ -173,18 +174,32 @@ describe("AdminPipelinePage", () => {
     expect(mockFindManyLead).toHaveBeenCalledWith(expect.objectContaining({ where: { etapa: "en_contacto" } }));
   });
 
-  it("desde=hoy filtra por createdAt desde el inicio del día", async () => {
+  it("desde=hoy (link viejo) = indicador 'nuevos_hoy': createdAt desde las 00:00 argentinas", async () => {
     render(await AdminPipelinePage({ searchParams: Promise.resolve({ etapa: "nuevo", desde: "hoy" }) }));
     const call = mockFindManyLead.mock.calls[0][0];
-    expect(call.where.etapa).toBe("nuevo");
-    expect(call.where.createdAt.gte).toBeInstanceOf(Date);
+    expect(call.where).toEqual({ AND: [{ etapa: "nuevo" }, whereIndicadorLead("nuevos_hoy", new Date())] });
   });
 
-  it("periodo=mes filtra por createdAt desde el inicio del mes", async () => {
+  it("periodo=mes (link viejo) = indicador 'del_mes'", async () => {
     render(await AdminPipelinePage({ searchParams: Promise.resolve({ etapa: "ganado", periodo: "mes" }) }));
     const call = mockFindManyLead.mock.calls[0][0];
-    expect(call.where.etapa).toBe("ganado");
-    expect(call.where.createdAt.gte).toBeInstanceOf(Date);
+    expect(call.where).toEqual({ AND: [{ etapa: "ganado" }, whereIndicadorLead("del_mes", new Date())] });
+  });
+
+  it("?indicador=en_negociacion lista con el mismo where que cuenta el dashboard (sin 'nuevo')", async () => {
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({ indicador: "en_negociacion" }) }));
+    const call = mockFindManyLead.mock.calls[0][0];
+    expect(call.where).toEqual({ AND: [{}, { etapa: { in: ["en_contacto", "propuesta_enviada"] } }] });
+    expect(screen.getByTestId("indicador-activo")).toHaveTextContent("En negociación");
+  });
+
+  it("las tarjetas del pipeline linkean a su lista filtrada", async () => {
+    render(await AdminPipelinePage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByText("Activos").closest("a")).toHaveAttribute("href", "/admin/pipeline?indicador=activos");
+    expect(screen.getByText("Nuevos hoy").closest("a")).toHaveAttribute("href", "/admin/pipeline?indicador=nuevos_hoy");
+    expect(screen.getByText("En propuesta").closest("a")).toHaveAttribute("href", "/admin/pipeline?indicador=en_propuesta");
+    expect(screen.getByText("Ganados este mes").closest("a")).toHaveAttribute("href", "/admin/pipeline?indicador=ganados_mes");
+    expect(screen.getByText("Conversión del mes").closest("a")).toHaveAttribute("href", "/admin/pipeline?indicador=del_mes");
   });
 
   it("sinContactar=1 filtra por contactado: false (deep link de la alerta 'leads sin contactar')", async () => {
@@ -254,8 +269,7 @@ describe("AdminPipelinePage", () => {
     expect(href).toContain("etapa=en_contacto");
     expect(href).toContain("vendedorId=v1");
     expect(href).toContain("origen=web");
-    expect(href).toContain("desde=hoy");
-    expect(href).toContain("periodo=mes");
+    expect(href).toContain("indicador=nuevos_hoy"); // desde=hoy gana sobre periodo=mes
     expect(href).toContain("sinContactar=1");
     expect(href).toContain("page=3");
   });
@@ -298,13 +312,12 @@ describe("AdminPipelinePage", () => {
     const tabGanado = screen.getByRole("link", { name: "Ganado" }).getAttribute("href")!;
     const params = new URLSearchParams(tabGanado.split("?")[1]);
     expect(params.get("etapa")).toBe("ganado");
-    expect(params.get("desde")).toBe("hoy");
-    expect(params.get("periodo")).toBe("mes");
+    expect(params.get("indicador")).toBe("nuevos_hoy");
     expect(params.get("sinContactar")).toBe("1");
     const ocultos = Object.fromEntries(
       Array.from(container.querySelectorAll<HTMLInputElement>('form input[type="hidden"]')).map((i) => [i.name, i.value])
     );
-    expect(ocultos).toEqual({ etapa: "en_contacto,propuesta_enviada", desde: "hoy", periodo: "mes", sinContactar: "1" });
+    expect(ocultos).toEqual({ etapa: "en_contacto,propuesta_enviada", indicador: "nuevos_hoy", sinContactar: "1" });
   });
 
   it("valores desconocidos de desde/periodo/sinContactar no se propagan", async () => {

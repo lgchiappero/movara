@@ -113,8 +113,9 @@ describe("POST /api/admin/cobranza/cierres", () => {
   it("consulta movimientos acotados al rango [desde, hasta) del mes solicitado", async () => {
     await POST(makeRequest(MES_PASADO));
     const call = mockFindManyMovimiento.mock.calls[0][0];
-    expect(call.where.fecha.gte).toEqual(new Date(2020, 0, 1));
-    expect(call.where.fecha.lt).toEqual(new Date(2020, 1, 1));
+    // Movimiento.fecha es solo fecha (medianoche UTC).
+    expect(call.where.fecha.gte).toEqual(new Date("2020-01-01T00:00:00Z"));
+    expect(call.where.fecha.lt).toEqual(new Date("2020-02-01T00:00:00Z"));
   });
 
   it("totales en 0 cuando no hubo movimientos en el mes", async () => {

@@ -18,6 +18,7 @@ const {
   mockFindManyMovimiento,
   mockMovimientoAggregate,
   mockAcuerdoPagoAggregate,
+  mockCostoFindMany,
 } = vi.hoisted(() => ({
   mockLeadCount: vi.fn(),
   mockLeadFindMany: vi.fn(),
@@ -35,6 +36,7 @@ const {
   mockFindManyMovimiento: vi.fn().mockResolvedValue([]),
   mockMovimientoAggregate: vi.fn(),
   mockAcuerdoPagoAggregate: vi.fn(),
+  mockCostoFindMany: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -47,6 +49,7 @@ vi.mock("@/lib/db", () => ({
     cierrePeriodo: { findUnique: mockFindUniqueCierre },
     movimiento: { count: mockCountMovimiento, findMany: mockFindManyMovimiento, aggregate: mockMovimientoAggregate },
     acuerdoPago: { aggregate: mockAcuerdoPagoAggregate, findMany: mockAcuerdoPagoFindMany },
+    costoLogistica: { findMany: mockCostoFindMany },
   },
 }));
 vi.mock("@/lib/admin/current-user", () => ({ getAdminUser: mockGetAdminUser }));
@@ -64,6 +67,9 @@ vi.mock("@/components/admin/UnidadesEnMovimientoGrid", () => ({
 }));
 
 import AdminDashboardPage from "../page";
+import { claveInicioMes, hoyAR, soloFecha, sumarDias } from "@/lib/fecha-ar";
+import { whereIndicadorLead } from "@/lib/indicadores/leads";
+import { whereIndicadorPedido } from "@/lib/indicadores/pedidos";
 
 /** Sin datos, sin alertas — cada test override lo que necesita.
  * El orden de mockResolvedValueOnce importa: coincide con el orden
@@ -94,10 +100,18 @@ function setupDefaults() {
   mockCitaFindMany.mockResolvedValue([]);
   mockLeadFindMany.mockResolvedValue([]); // leadsPipelineResumen
 
-  // Planes con cuotas que vencen hasta fin de semana: de acá salen las
-  // alertas de cuotas vencidas (cobro/pago) y "vence esta semana".
+  // Planes de cobro y de pago (completos) y costos de logística: de acá
+  // salen el bloque Financiero y las alertas de cobros/pagos, con las
+  // mismas funciones que /admin/cobranza y /admin/pagos.
+  planesCobro = [];
+  planesPago = [];
+  costos = [];
   mockAcuerdoPagoFindMany.mockReset();
-  mockAcuerdoPagoFindMany.mockResolvedValue([]);
+  mockAcuerdoPagoFindMany.mockImplementation(async (args: { where: { tipo: string } }) =>
+    args.where.tipo === "cobro" ? planesCobro : planesPago
+  );
+  mockCostoFindMany.mockReset();
+  mockCostoFindMany.mockImplementation(async () => costos);
 
   mockFindUniqueCierre.mockResolvedValue({ id: "cierre1" }); // mes anterior YA cerrado por default
   mockCountMovimiento.mockResolvedValue(0); // mesAnteriorTuvoMovimientos
@@ -112,30 +126,95 @@ function setupDefaults() {
   mockAcuerdoPagoAggregate.mockResolvedValue({ _sum: { totalAcordado: null } });
 }
 
-/** Plan con una cuota vencida (hace 30 días) y `pagado` registrado sin
- * cuota específica. */
-function planVencido(unidadId: string, tipo: "cobro" | "pago", importe: number, pagado: number) {
+let planesCobro: ReturnType<typeof planDb>[] = [];
+let planesPago: ReturnType<typeof planDb>[] = [];
+let costos: ReturnType<typeof costoDb>[] = [];
+
+/** Fecha sin hora (medianoche UTC) a `dias` de hoy en Argentina. */
+function diaRelativo(dias: number): Date {
+  return soloFecha(sumarDias(hoyAR(), dias));
+}
+
+/** Plan como lo devuelve Prisma (con unidad, cuotas y movimientos). */
+function planDb(over: {
+  id?: string;
+  unidadId: string;
+  tipo: "cobro" | "pago";
+  moneda?: string;
+  concepto?: string;
+  totalAcordado: number;
+  cuotas: { importe: number; vencimiento: Date | null; estado?: string }[];
+  pagos?: { importe: number; fecha?: Date; cuotaIdx?: number }[];
+}) {
+  const id = over.id ?? `${over.unidadId}-${over.tipo}`;
+  const cuotas = over.cuotas.map((c, i) => ({
+    id: `${id}-q${i}`,
+    descripcion: `Cuota ${i + 1}`,
+    importe: c.importe,
+    vencimiento: c.vencimiento,
+    estado: c.estado ?? "pendiente",
+  }));
   return {
-    unidadId,
-    tipo,
-    moneda: "USD",
-    cuotas: [{ id: `${unidadId}-q1`, importe, vencimiento: new Date(Date.now() - 30 * 86400000), createdAt: new Date(0) }],
-    movimientos: pagado ? [{ cuotaId: null, importe: pagado }] : [],
+    id,
+    unidadId: over.unidadId,
+    unidad: { numeroUnidad: `MOV-${over.unidadId}`, modelo: "Flex 38", estadoFabricacion: "en_produccion", cliente: { id: "c1", nombre: "Ana" } },
+    tipo: over.tipo,
+    concepto: over.concepto ?? (over.tipo === "cobro" ? "venta" : "fabrica"),
+    descripcion: null,
+    contraparte: "X",
+    moneda: over.moneda ?? "USD",
+    totalAcordado: over.totalAcordado,
+    notas: null,
+    createdAt: new Date(0),
+    cuotas,
+    movimientos: (over.pagos ?? []).map((p, i) => ({
+      id: `${id}-m${i}`,
+      fecha: p.fecha ?? diaRelativo(-1),
+      importe: p.importe,
+      modalidad: "transferencia",
+      cuotaId: p.cuotaIdx === undefined ? null : cuotas[p.cuotaIdx].id,
+      comprobanteUrl: null,
+      notas: null,
+      registradoPor: "a",
+    })),
   };
 }
 
-/** Plan de cobro con una cuota que vence hoy al mediodía (dentro de la semana). */
-function planCobroQueVenceEstaSemana(unidadId: string, importe: number) {
-  const hoy = new Date();
-  hoy.setHours(12, 0, 0, 0);
-  return {
+/** Plan con una cuota vencida (hace 30 días) y `pagado` registrado sin cuota específica. */
+function planVencido(unidadId: string, tipo: "cobro" | "pago", importe: number, pagado: number) {
+  return planDb({
     unidadId,
-    tipo: "cobro",
-    moneda: "USD",
-    cuotas: [{ id: `${unidadId}-q1`, importe, vencimiento: hoy, createdAt: new Date(0) }],
-    movimientos: [],
+    tipo,
+    totalAcordado: importe,
+    cuotas: [{ importe, vencimiento: diaRelativo(-30), estado: "vencido" }],
+    pagos: pagado ? [{ importe: pagado }] : [],
+  });
+}
+
+/** Plan de cobro con una cuota que vence hoy (dentro de los próximos 7 días). */
+function planCobroQueVenceEstaSemana(unidadId: string, importe: number) {
+  return planDb({ unidadId, tipo: "cobro", totalAcordado: importe, cuotas: [{ importe, vencimiento: diaRelativo(0) }] });
+}
+
+function costoDb(over: { id: string; estado: string; fecha: Date; importe: number; moneda?: string; concepto?: string }) {
+  return {
+    id: over.id,
+    envioId: "e1",
+    envio: { numeroPI: "PI-1", numeroContenedor: null },
+    concepto: over.concepto ?? "flete",
+    descripcion: null,
+    moneda: over.moneda ?? "USD",
+    importe: over.importe,
+    fecha: over.fecha,
+    estado: over.estado,
+    comprobanteUrl: null,
+    notas: null,
+    prorrateado: false,
+    createdAt: new Date(0),
+    prorrateos: [],
   };
 }
+
 
 describe("AdminDashboardPage", () => {
   beforeEach(() => {
@@ -168,12 +247,12 @@ describe("AdminDashboardPage", () => {
     expect(screen.getByText("Ganados este mes").nextElementSibling?.textContent).toBe("2");
   });
 
-  it("aplica el filtro de 'en negociación' con las 3 etapas activas (nuevo/en_contacto/propuesta_enviada)", async () => {
+  it("'En negociación' cuenta con el where del indicador (en_contacto + propuesta_enviada, sin 'nuevo')", async () => {
     render(await AdminDashboardPage());
-    expect(mockLeadCount).toHaveBeenNthCalledWith(2, {
-      where: { etapa: { in: ["nuevo", "en_contacto", "propuesta_enviada"] } },
-    });
+    expect(mockLeadCount).toHaveBeenNthCalledWith(2, { where: whereIndicadorLead("en_negociacion", new Date()) });
+    expect(mockLeadCount).toHaveBeenNthCalledWith(2, { where: { etapa: { in: ["en_contacto", "propuesta_enviada"] } } });
   });
+
 
   it("KPI Operaciones muestra unidades activas, en aduana y entregadas este mes", async () => {
     mockUnidadFindMany.mockReset();
@@ -193,26 +272,36 @@ describe("AdminDashboardPage", () => {
     expect(screen.getByText("Entregadas este mes").nextElementSibling?.textContent).toBe("9");
   });
 
-  it("KPI Financiero: 5 métricas desde el libro de cobranza (AcuerdoPago/Movimiento/Cuota), formateadas en USD", async () => {
-    mockMovimientoAggregate.mockReset();
-    mockMovimientoAggregate.mockResolvedValueOnce({ _sum: { importe: 10000 } }); // cobradoEsteMes
-    mockMovimientoAggregate.mockResolvedValueOnce({ _sum: { importe: 15000 } }); // movido total cobro (para "Por cobrar")
-    mockMovimientoAggregate.mockResolvedValueOnce({ _sum: { importe: 4000 } }); // pagadoEsteMes
-    mockMovimientoAggregate.mockResolvedValueOnce({ _sum: { importe: 6000 } }); // movido total pago (para "Por pagar")
-    mockAcuerdoPagoAggregate.mockReset();
-    mockAcuerdoPagoAggregate.mockResolvedValueOnce({ _sum: { totalAcordado: 50000 } }); // total acordado cobro
-    mockAcuerdoPagoAggregate.mockResolvedValueOnce({ _sum: { totalAcordado: 20000 } }); // total acordado pago
-    mockAcuerdoPagoFindMany.mockResolvedValueOnce(
-      Array.from({ length: 7 }, (_, i) => planCobroQueVenceEstaSemana(`u${i}`, 1000))
-    ); // cuotasVencenSemanaCobro
+  it("KPI Financiero: mismas funciones que Cobranza y Pagos, cada moneda por separado", async () => {
+    planesCobro = [
+      // 50.000 acordados, 10.000 cobrados este mes y 5.000 el mes pasado.
+      planDb({
+        unidadId: "u1",
+        tipo: "cobro",
+        totalAcordado: 50000,
+        cuotas: [{ importe: 50000, vencimiento: diaRelativo(40) }],
+        pagos: [{ importe: 10000, fecha: soloFecha(claveInicioMes()) }, { importe: 5000, fecha: soloFecha(claveInicioMes(new Date(), -1)) }],
+      }),
+      // ARS: 1.000.000, sin pagos.
+      planDb({ unidadId: "u2", tipo: "cobro", moneda: "ARS", totalAcordado: 1_000_000, cuotas: [{ importe: 1_000_000, vencimiento: diaRelativo(40) }] }),
+      ...Array.from({ length: 3 }, (_, i) => planCobroQueVenceEstaSemana(`s${i}`, 1000)),
+    ];
+    planesPago = [
+      planDb({ unidadId: "u1", tipo: "pago", totalAcordado: 20000, cuotas: [{ importe: 20000, vencimiento: diaRelativo(40) }], pagos: [{ importe: 6000, fecha: soloFecha(claveInicioMes()) }] }),
+    ];
+    costos = [
+      costoDb({ id: "c1", estado: "pagado", fecha: soloFecha(claveInicioMes()), importe: 4000 }),
+      costoDb({ id: "c2", estado: "pendiente", fecha: diaRelativo(10), importe: 300000, moneda: "ARS" }),
+    ];
     render(await AdminDashboardPage());
     expect(screen.getByText("💰 Financiero")).toBeInTheDocument();
     expect(screen.getByText("Cobrado este mes").nextElementSibling?.textContent).toBe("USD 10.000");
-    expect(screen.getByText("Por cobrar").nextElementSibling?.textContent).toBe("USD 35.000"); // 50000 - 15000
-    expect(screen.getByText("Vence esta semana").nextElementSibling?.textContent).toBe("7");
-    expect(screen.getByText("Pagado este mes").nextElementSibling?.textContent).toBe("USD 4.000");
-    expect(screen.getByText("Por pagar").nextElementSibling?.textContent).toBe("USD 14.000"); // 20000 - 6000
+    expect(screen.getByText("Por cobrar").nextElementSibling?.textContent).toBe("USD 38.000 + ARS 1.000.000"); // 35.000 + 3 × 1.000
+    expect(screen.getByText("Vence esta semana").nextElementSibling?.textContent).toBe("3"); // unidades
+    expect(screen.getByText("Pagado este mes").nextElementSibling?.textContent).toBe("USD 10.000"); // 6.000 plan + 4.000 flete
+    expect(screen.getByText("Por pagar").nextElementSibling?.textContent).toBe("USD 14.000 + ARS 300.000");
   });
+
 
   it("montos financieros en null (sin movimientos/acuerdos todavía) se muestran como USD 0", async () => {
     render(await AdminDashboardPage());
@@ -224,42 +313,26 @@ describe("AdminDashboardPage", () => {
 
   // ── KPIs clickeables ──────────────────────────────────────────────────
 
-  it("los KPIs de Ventas y Operaciones navegan a la sección filtrada correspondiente", async () => {
+  it("los KPIs de Ventas y Operaciones linkean a la lista filtrada por el mismo indicador", async () => {
     render(await AdminDashboardPage());
-    expect(screen.getByText("Leads nuevos hoy").closest("a")).toHaveAttribute(
-      "href",
-      "/admin/pipeline?etapa=nuevo&desde=hoy"
-    );
-    expect(screen.getByText("En negociación").closest("a")).toHaveAttribute(
-      "href",
-      "/admin/pipeline?etapa=en_contacto,propuesta_enviada"
-    );
-    expect(screen.getByText("Ganados este mes").closest("a")).toHaveAttribute(
-      "href",
-      "/admin/pipeline?etapa=ganado&periodo=mes"
-    );
-    expect(screen.getByText("Unidades activas").closest("a")).toHaveAttribute(
-      "href",
-      "/admin/unidades?estado=activo"
-    );
-    expect(screen.getByText("En aduana ahora").closest("a")).toHaveAttribute(
-      "href",
-      "/admin/unidades?estado=en_aduana"
-    );
-    expect(screen.getByText("Entregadas este mes").closest("a")).toHaveAttribute(
-      "href",
-      "/admin/unidades?estado=entregado&periodo=mes"
-    );
+    expect(screen.getByText("Leads nuevos hoy").closest("a")).toHaveAttribute("href", "/admin/pipeline?indicador=nuevos_hoy");
+    expect(screen.getByText("En negociación").closest("a")).toHaveAttribute("href", "/admin/pipeline?indicador=en_negociacion");
+    expect(screen.getByText("Ganados este mes").closest("a")).toHaveAttribute("href", "/admin/pipeline?indicador=ganados_mes");
+    expect(screen.getByText("Unidades activas").closest("a")).toHaveAttribute("href", "/admin/unidades?indicador=activas");
+    expect(screen.getByText("En aduana ahora").closest("a")).toHaveAttribute("href", "/admin/unidades?indicador=en_aduana");
+    expect(screen.getByText("Entregadas este mes").closest("a")).toHaveAttribute("href", "/admin/unidades?indicador=entregadas_mes");
   });
 
-  it("los 5 KPIs Financieros navegan a /admin/cobranza o /admin/pagos con el filtro correspondiente aplicado", async () => {
+
+  it("los 5 KPIs Financieros navegan a /admin/cobranza o /admin/pagos", async () => {
     render(await AdminDashboardPage());
     expect(screen.getByText("Cobrado este mes").closest("a")).toHaveAttribute("href", "/admin/cobranza");
     expect(screen.getByText("Por cobrar").closest("a")).toHaveAttribute("href", "/admin/cobranza?estado=con_saldo");
     expect(screen.getByText("Vence esta semana").closest("a")).toHaveAttribute("href", "/admin/cobranza?vence=semana");
     expect(screen.getByText("Pagado este mes").closest("a")).toHaveAttribute("href", "/admin/pagos");
-    expect(screen.getByText("Por pagar").closest("a")).toHaveAttribute("href", "/admin/pagos?estado=con_saldo");
+    expect(screen.getByText("Por pagar").closest("a")).toHaveAttribute("href", "/admin/pagos");
   });
+
 
   // ── Grilla de operaciones (activas + entregadas) ─────────────────────
 
@@ -356,17 +429,15 @@ describe("AdminDashboardPage", () => {
     expect(screen.queryByText(/alertas y acciones urgentes/i)).not.toBeInTheDocument();
   });
 
-  it("alerta: unidades en aduana hace más de 15 días, con botón Ver hacia /admin/unidades filtrado", async () => {
+  it("alerta: unidades en aduana hace más de 15 días, con botón Ver hacia la lista del mismo indicador", async () => {
     mockUnidadCount.mockReset();
     mockUnidadCount.mockResolvedValueOnce(0).mockResolvedValueOnce(2);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("2 unidades en aduana hace más de 15 días");
-    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute(
-      "href",
-      "/admin/unidades?estado=en_aduana"
-    );
+    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/unidades?indicador=aduana_demorada");
   });
+
 
   it("consulta 'en aduana hace más de 15 días' contra updatedAt de Unidad", async () => {
     render(await AdminDashboardPage());
@@ -375,20 +446,25 @@ describe("AdminDashboardPage", () => {
     expect(call.where.updatedAt.lte).toBeInstanceOf(Date);
   });
 
-  it("alerta: cobros vencidos (pedidos confirmados sin anticipo hace más de 7 días), con botón Ver", async () => {
+  it("alerta: pedidos confirmados hace más de 7 días sin ningún cobro registrado, con botón Ver a la lista filtrada", async () => {
     mockConfigCount.mockResolvedValueOnce(5);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
-    expect(alertBox.textContent).toContain("5 pedidos confirmados sin anticipo registrado hace más de 7 días");
-    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/configuraciones");
+    expect(alertBox.textContent).toContain("5 pedidos confirmados hace más de 7 días sin ningún cobro registrado");
+    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/configuraciones?indicador=sin_anticipo");
   });
 
-  it("alerta: leads sin contactar tiene botón Ver hacia /admin/pipeline?sinContactar=1", async () => {
+
+  it("alerta: leads sin respuesta hace más de 48hs, con botón Ver a la lista del mismo indicador", async () => {
     mockLeadCount.mockReset();
     mockLeadCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(3);
     render(await AdminDashboardPage());
-    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/pipeline?sinContactar=1");
+    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/pipeline?indicador=sin_atender");
+    const where = mockLeadCount.mock.calls[3][0].where;
+    expect(where.contactado).toBe(false);
+    expect(Date.now() - where.createdAt.lte.getTime()).toBeGreaterThanOrEqual(48 * 3600 * 1000);
   });
+
 
   it("alerta: documentación faltante con una sola unidad linkea directo a /admin/unidades/[id]", async () => {
     mockUnidadFindMany.mockReset();
@@ -413,21 +489,22 @@ describe("AdminDashboardPage", () => {
     expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "#documentacion-faltante");
   });
 
-  it("singular correcto para 1 pedido con cobro vencido", async () => {
+  it("singular correcto para 1 pedido sin cobro", async () => {
     mockConfigCount.mockResolvedValueOnce(1);
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
-    expect(alertBox.textContent).toContain("1 pedido confirmado sin anticipo registrado hace más de 7 días");
+    expect(alertBox.textContent).toContain("1 pedido confirmado hace más de 7 días sin ningún cobro registrado");
   });
 
-  it("consulta cobros vencidos contra ConfiguracionPedido (Unidad no tiene anticipo)", async () => {
+
+  it("'sin anticipo' mira los cobros reales de Cobranza, no el campo manual anticipo", async () => {
     render(await AdminDashboardPage());
-    expect(mockConfigCount).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ estadoPedido: "confirmado", anticipo: null }),
-      })
-    );
+    const where = mockConfigCount.mock.calls[0][0].where;
+    expect(where).toEqual(whereIndicadorPedido("sin_anticipo", new Date()));
+    expect(where).not.toHaveProperty("anticipo");
+    expect(where.NOT.cliente.unidades.some.acuerdosPago.some).toEqual({ tipo: "cobro", movimientos: { some: {} } });
   });
+
 
   it("alerta: leads sin respuesta hace más de 48hs", async () => {
     mockLeadCount.mockReset();
@@ -447,66 +524,79 @@ describe("AdminDashboardPage", () => {
   });
 
   it("alerta: unidades con cuotas de cobro vencidas y su saldo vencido, con botón Ver hacia /admin/cobranza?estado=vencidas", async () => {
-    mockAcuerdoPagoFindMany.mockResolvedValueOnce([
+    planesCobro = [
       planVencido("u1", "cobro", 5000, 2000),
       planVencido("u2", "cobro", 5000, 0),
       planVencido("u3", "cobro", 1000, 0),
-    ]);
+    ];
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("3 unidades con cuotas de cobro vencidas — saldo vencido USD 9.000");
     expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/cobranza?estado=vencidas");
   });
 
-  it("alerta: unidades con pagos a proveedores vencidos, con botón Ver hacia /admin/pagos?estado=vencidas", async () => {
-    mockAcuerdoPagoFindMany.mockResolvedValueOnce([planVencido("u1", "pago", 15000, 5000)]);
+  it("alerta: pagos a proveedores vencidos (planes + logística), con saldo por moneda y botón Ver a la lista de vencidos", async () => {
+    planesPago = [planVencido("u1", "pago", 15000, 5000)];
+    costos = [
+      costoDb({ id: "c1", estado: "pendiente", fecha: diaRelativo(-3), importe: 200000, moneda: "ARS", concepto: "despachante" }),
+      costoDb({ id: "c2", estado: "pendiente", fecha: diaRelativo(0), importe: 999 }), // vence hoy: todavía no
+      costoDb({ id: "c3", estado: "pagado", fecha: diaRelativo(-30), importe: 999 }),
+    ];
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
-    expect(alertBox.textContent).toContain("1 unidad con pagos a proveedores vencidos — saldo vencido USD 10.000");
-    expect(alertBox.textContent).not.toContain("1 unidades");
-    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/pagos?estado=vencidas");
+    expect(alertBox.textContent).toContain("2 pagos a proveedores vencidos — saldo vencido USD 10.000 + ARS 200.000");
+    expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/pagos?estado=vencido");
   });
+
+  it("singular: 1 pago a proveedores vencido", async () => {
+    planesPago = [planVencido("u1", "pago", 15000, 0)];
+    render(await AdminDashboardPage());
+    const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
+    expect(alertBox.textContent).toContain("1 pago a proveedores vencido — saldo vencido USD 15.000");
+  });
+
 
   it("un pago a proveedor registrado sin cuota específica que cubre la cuota vencida: no hay alerta (el bug)", async () => {
     // La cuota sigue guardada como "vencido" en la base: la alerta no mira
     // ese campo sino el saldo real.
-    mockAcuerdoPagoFindMany.mockResolvedValueOnce([planVencido("u1", "pago", 15000, 15000)]);
+    planesPago = [planVencido("u1", "pago", 15000, 15000)];
     render(await AdminDashboardPage());
     expect(screen.queryByText(/alertas y acciones urgentes/i)).not.toBeInTheDocument();
   });
 
   it("singular correcto para 1 unidad con cobro vencido", async () => {
-    mockAcuerdoPagoFindMany.mockResolvedValueOnce([planVencido("u1", "cobro", 5000, 0)]);
+    planesCobro = [planVencido("u1", "cobro", 5000, 0)];
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
     expect(alertBox.textContent).toContain("1 unidad con cuotas de cobro vencidas");
   });
 
-  it("trae los planes con cuotas que vencen antes del fin de semana, con cuotas y movimientos", async () => {
+  it("trae todos los planes de cobro y de pago (con cuotas y movimientos) y los costos de logística", async () => {
     render(await AdminDashboardPage());
-    const call = mockAcuerdoPagoFindMany.mock.calls[0][0];
-    expect(call.where.cuotas.some.vencimiento.lt).toBeInstanceOf(Date);
-    expect(call.select.cuotas.select).toEqual({ id: true, importe: true, vencimiento: true, createdAt: true });
-    expect(call.select.movimientos.select).toEqual({ cuotaId: true, importe: true });
+    const tipos = mockAcuerdoPagoFindMany.mock.calls.map((c) => c[0].where.tipo);
+    expect(tipos).toEqual(["cobro", "pago"]);
+    expect(mockAcuerdoPagoFindMany.mock.calls[0][0].include).toMatchObject({ cuotas: expect.any(Object), movimientos: expect.any(Object) });
+    expect(mockCostoFindMany).toHaveBeenCalledTimes(1);
   });
 
-  it("alerta: cuotas de cobro que vencen esta semana, con su saldo y botón Ver hacia /admin/cobranza?vence=semana", async () => {
-    mockAcuerdoPagoFindMany.mockResolvedValueOnce(
-      Array.from({ length: 4 }, (_, i) => planCobroQueVenceEstaSemana(`u${i}`, 1500))
-    );
+
+  it("alerta: unidades con cuotas de cobro que vencen en los próximos 7 días, con su saldo y botón Ver", async () => {
+    planesCobro = Array.from({ length: 4 }, (_, i) => planCobroQueVenceEstaSemana(`u${i}`, 1500));
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
-    expect(alertBox.textContent).toContain("4 cuotas de cobro vencen esta semana — saldo USD 6.000");
+    expect(alertBox.textContent).toContain("4 unidades con cuotas de cobro que vencen en los próximos 7 días — saldo USD 6.000");
     expect(screen.getByRole("link", { name: "Ver →" })).toHaveAttribute("href", "/admin/cobranza?vence=semana");
   });
 
-  it("singular correcto para 1 cuota que vence esta semana", async () => {
-    mockAcuerdoPagoFindMany.mockResolvedValueOnce([planCobroQueVenceEstaSemana("u1", 1000)]);
+
+  it("singular correcto para 1 unidad con cuotas que vencen en la semana", async () => {
+    planesCobro = [planCobroQueVenceEstaSemana("u1", 1000)];
     render(await AdminDashboardPage());
     const alertBox = screen.getByText(/alertas y acciones urgentes/i).closest("div")!;
-    expect(alertBox.textContent).toContain("1 cuota de cobro vence esta semana");
-    expect(alertBox.textContent).not.toContain("vencen");
+    expect(alertBox.textContent).toContain("1 unidad con cuotas de cobro que vencen");
+    expect(alertBox.textContent).not.toContain("1 unidades");
   });
+
 
   it("alerta: mes anterior sin cerrar (con movimientos), con botón Ver hacia /admin/cobranza?tab=cierres", async () => {
     mockFindUniqueCierre.mockResolvedValueOnce(null);
@@ -531,16 +621,16 @@ describe("AdminDashboardPage", () => {
     expect(screen.queryByText(/sin cerrar/)).not.toBeInTheDocument();
   });
 
-  it("consulta el cierre y los movimientos del mes calendario anterior al actual", async () => {
-    const now = new Date();
-    const mesAnteriorFecha = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  it("consulta el cierre y los movimientos del mes calendario argentino anterior al actual", async () => {
+    const anterior = claveInicioMes(new Date(), -1);
+    const [anio, mes] = anterior.split("-").map(Number);
     render(await AdminDashboardPage());
-    expect(mockFindUniqueCierre).toHaveBeenCalledWith({
-      where: { mes_anio: { mes: mesAnteriorFecha.getMonth() + 1, anio: mesAnteriorFecha.getFullYear() } },
-    });
+    expect(mockFindUniqueCierre).toHaveBeenCalledWith({ where: { mes_anio: { mes, anio } } });
     const call = mockCountMovimiento.mock.calls[0][0];
-    expect(call.where.fecha.gte).toEqual(mesAnteriorFecha);
+    expect(call.where.fecha.gte).toEqual(soloFecha(anterior));
+    expect(call.where.fecha.lt).toEqual(soloFecha(claveInicioMes()));
   });
+
 
   // ── Agenda del día ────────────────────────────────────────────────────
 

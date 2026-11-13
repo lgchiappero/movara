@@ -51,6 +51,18 @@ const FLETE: CostoLogisticaRow = {
   createdAt: "2026-09-01T00:00:00.000Z",
 };
 
+const VENCIDO_FLETE = {
+  key: "logistica|c1",
+  origen: "logistica" as const,
+  tipo: "Logística: Flete",
+  referencia: "Envío PI-001",
+  contraparte: "Maersk",
+  vencimiento: "2026-10-01",
+  moneda: "USD",
+  saldo: 3200,
+  href: "/admin/envios/e1",
+};
+
 function renderPanel(props: Partial<Parameters<typeof PagosPanel>[0]> = {}) {
   const user = userEvent.setup();
   render(
@@ -61,7 +73,8 @@ function renderPanel(props: Partial<Parameters<typeof PagosPanel>[0]> = {}) {
         unidades={[{ id: "u1", numeroUnidad: "MOV-UNIDAD-2026-001", clienteNombre: "Ana" }]}
         envios={[{ id: "e1", numeroPI: "PI-001", numeroContenedor: "MSCU1234567", cantidadUnidades: 2 }]}
         rol="admin"
-        metricas={{ pagadoMes: { USD: 9000, ARS: 150000 }, pendiente: { USD: 21000, ARS: 0 }, vencidos: 1 }}
+        metricas={{ pagadoMes: { USD: 9000, ARS: 150000 }, pendiente: { USD: 21000, ARS: 0 } }}
+        vencidos={[VENCIDO_FLETE]}
         {...props}
       />
     </ToastProvider>
@@ -70,6 +83,34 @@ function renderPanel(props: Partial<Parameters<typeof PagosPanel>[0]> = {}) {
 }
 
 describe("PagosPanel", () => {
+  it("?estado=vencido: lista exactamente las filas que cuenta la tarjeta, con tipo y saldo por moneda", () => {
+    renderPanel({
+      estadoInicial: "vencido",
+      vencidos: [
+        VENCIDO_FLETE,
+        { ...VENCIDO_FLETE, key: "plan|a1", origen: "plan", tipo: "Fábrica", referencia: "MOV-UNIDAD-2026-001", moneda: "ARS", saldo: 50000 },
+      ],
+    });
+    const lista = screen.getByTestId("pagos-vencidos");
+    expect(within(lista).getByRole("heading")).toHaveTextContent("Pagos vencidos (2)");
+    expect(within(lista).getAllByRole("row")).toHaveLength(3); // encabezado + 2
+    expect(within(lista).getByText("Logística: Flete")).toBeInTheDocument();
+    expect(within(lista).getByText("Fábrica")).toBeInTheDocument();
+    expect(within(lista).getAllByText("1/10/2026")).toHaveLength(2);
+    expect(lista).toHaveTextContent("Saldo vencido: USD 3.200 + ARS 50.000");
+    expect(screen.getByText("Pagos vencidos").parentElement).toHaveTextContent("2");
+  });
+
+  it("?estado=vencido sin vencidos: mensaje vacío", () => {
+    renderPanel({ estadoInicial: "vencido", vencidos: [] });
+    expect(within(screen.getByTestId("pagos-vencidos")).getByText("No hay pagos vencidos.")).toBeInTheDocument();
+  });
+
+  it("sin el filtro de vencidos no se muestra la lista", () => {
+    renderPanel();
+    expect(screen.queryByTestId("pagos-vencidos")).not.toBeInTheDocument();
+  });
+
   it("métricas con links a la grilla filtrada", () => {
     renderPanel();
     const pagado = screen.getByText("Pagado este mes").parentElement!;

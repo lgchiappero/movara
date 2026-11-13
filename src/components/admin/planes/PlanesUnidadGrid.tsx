@@ -99,7 +99,7 @@ export default function PlanesUnidadGrid({
   const filtradas = useMemo(() => {
     const q = busquedaDebounced.trim().toLowerCase();
     return filas.flatMap((f) => {
-      if (filtroMoneda !== "todos" && f.moneda !== filtroMoneda) return [];
+      if (filtroMoneda !== "todos" && !f.monedas.some((m) => m.moneda === filtroMoneda)) return [];
       if (!cumpleFiltroEstado(f, filtroEstado)) return [];
       if (q) {
         const proveedores = f.planes.map((p) => p.contraparte).join(" ");
@@ -144,22 +144,25 @@ export default function PlanesUnidadGrid({
   }
 
   function exportarExcel() {
-    const rows = filtradas.map(({ fila: f, enPeriodo }) => ({
-      Unidad: f.unidad.numeroUnidad ?? "Sin número",
-      Cliente: f.unidad.clienteNombre,
-      Modelo: f.unidad.modelo ?? "—",
-      ...(esCobro
-        ? { "Valor unidad (USD)": f.unidad.precioCliente ?? "", "Plan de pago": f.resumenPlan || "Sin plan" }
-        : { Proveedores: f.planes.map((p) => p.contraparte).join(", ") || "—" }),
-      Moneda: f.moneda,
-      Total: f.totalPlan,
-      [labelPagado]: f.pagado,
-      ...(enPeriodo ? { [`${labelPagado} en el período`]: enPeriodo.monto } : {}),
-      [labelSaldo]: f.saldo,
-      "%": Math.round(f.porcentaje),
-      Estado: ESTADO_LABELS[f.estado],
-      "Último pago": fechaCorta(f.ultimoPagoFecha),
-    }));
+    // Una fila del Excel por unidad y moneda: sumar USD con ARS no tiene sentido.
+    const rows = filtradas.flatMap(({ fila: f, enPeriodo }) =>
+      f.monedas.map((m) => ({
+        Unidad: f.unidad.numeroUnidad ?? "Sin número",
+        Cliente: f.unidad.clienteNombre,
+        Modelo: f.unidad.modelo ?? "—",
+        ...(esCobro
+          ? { "Valor unidad (USD)": f.unidad.precioCliente ?? "", "Plan de pago": f.resumenPlan || "Sin plan" }
+          : { Proveedores: f.planes.map((p) => p.contraparte).join(", ") || "—" }),
+        Moneda: m.moneda,
+        Total: m.totalPlan,
+        [labelPagado]: m.pagado,
+        ...(enPeriodo ? { [`${labelPagado} en el período`]: enPeriodo.montos[m.moneda] ?? 0 } : {}),
+        [labelSaldo]: m.saldo,
+        "%": Math.round(m.porcentaje),
+        Estado: ESTADO_LABELS[f.estado],
+        "Último pago": fechaCorta(f.ultimoPagoFecha),
+      }))
+    );
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, esCobro ? "Cobranza" : "Pagos");
@@ -279,7 +282,6 @@ export default function PlanesUnidadGrid({
                       >
                         {f.unidad.numeroUnidad ?? "Sin número"}
                       </Link>
-                      {f.moneda !== "USD" && <span className="ml-1 text-xs text-stone-400">({f.moneda})</span>}
                       {f.unidad.modelo && <span className="block text-xs text-stone-400">{f.unidad.modelo}</span>}
                     </td>
                     <td className={`${td} text-stone-600 max-w-[12rem] truncate`} title={f.unidad.clienteNombre}>
@@ -287,7 +289,11 @@ export default function PlanesUnidadGrid({
                     </td>
                     <td className={`${td} ${soloDesktop} text-right whitespace-nowrap`}>
                       {!sinPlan ? (
-                        <span className="text-stone-600">{formatMoneda(f.totalPlan, f.moneda)}</span>
+                        f.monedas.map((m) => (
+                          <span key={m.moneda} className="block text-stone-600">
+                            {formatMoneda(m.totalPlan, m.moneda)}
+                          </span>
+                        ))
                       ) : esCobro && f.unidad.precioCliente != null ? (
                         <span className="text-stone-400" title="Valor de la unidad (todavía sin plan de pago)">
                           {formatMoneda(f.unidad.precioCliente, "USD")}
@@ -309,7 +315,11 @@ export default function PlanesUnidadGrid({
                           title={esCobro ? "Ver pagos recibidos" : "Ver pagos"}
                           className="text-right text-stone-700 hover:text-sage-700 underline decoration-dotted underline-offset-2"
                         >
-                          {formatMoneda(enPeriodo ? enPeriodo.monto : f.pagado, f.moneda)}
+                          {f.monedas.map((m) => (
+                            <span key={m.moneda} className="block">
+                              {formatMoneda(enPeriodo ? (enPeriodo.montos[m.moneda] ?? 0) : m.pagado, m.moneda)}
+                            </span>
+                          ))}
                           <span className="block text-xs text-stone-400">
                             {enPeriodo
                               ? `${enPeriodo.cantidad} pago${enPeriodo.cantidad === 1 ? "" : "s"}`
@@ -320,23 +330,38 @@ export default function PlanesUnidadGrid({
                         </button>
                       )}
                     </td>
-                    <td className={`${td} text-right whitespace-nowrap ${f.saldo > 0 ? "text-red-700 font-medium" : "text-stone-500"}`}>
-                      {sinPlan ? <span className="text-stone-300">—</span> : formatMoneda(f.saldo, f.moneda)}
+                    <td className={`${td} text-right whitespace-nowrap`}>
+                      {sinPlan ? (
+                        <span className="text-stone-300">—</span>
+                      ) : (
+                        f.monedas.map((m) => (
+                          <span key={m.moneda} className={`block ${m.saldo > 0 ? "text-red-700 font-medium" : "text-stone-500"}`}>
+                            {formatMoneda(m.saldo, m.moneda)}
+                          </span>
+                        ))
+                      )}
                     </td>
                     <td className={`${td} ${soloDesktop} w-24`}>
-                      <div
-                        className="h-1.5 bg-stone-100 rounded-full overflow-hidden"
-                        role="progressbar"
-                        aria-valuenow={Math.round(f.porcentaje)}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                      >
-                        <div
-                          className={`h-full ${f.estado === "saldado" ? "bg-emerald-500" : "bg-[#D4B36A]"}`}
-                          style={{ width: `${f.porcentaje}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-stone-500">{Math.round(f.porcentaje)}%</span>
+                      {f.monedas.map((m) => (
+                        <div key={m.moneda}>
+                          <div
+                            className="h-1.5 bg-stone-100 rounded-full overflow-hidden"
+                            role="progressbar"
+                            aria-label={f.monedas.length > 1 ? m.moneda : undefined}
+                            aria-valuenow={Math.round(m.porcentaje)}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                          >
+                            <div
+                              className={`h-full ${m.porcentaje >= 100 ? "bg-emerald-500" : "bg-[#D4B36A]"}`}
+                              style={{ width: `${m.porcentaje}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-stone-500">
+                            {Math.round(m.porcentaje)}%{f.monedas.length > 1 ? ` ${m.moneda}` : ""}
+                          </span>
+                        </div>
+                      ))}
                     </td>
                     <td className={`${td} whitespace-nowrap`}>
                       <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-bold ${ESTADO_PLAN_UNIDAD_COLORS[f.estado]}`}>

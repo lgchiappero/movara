@@ -46,8 +46,8 @@ describe("GET /api/admin/cobranza/cierres/[id]/pagos", () => {
   it("consulta movimientos acotados al rango [desde, hasta) del mes del cierre", async () => {
     await GET(makeRequest(), { params: Promise.resolve({ id: "c1" }) });
     const call = mockFindManyMovimiento.mock.calls[0][0];
-    expect(call.where.fecha.gte).toEqual(new Date(2026, 5, 1));
-    expect(call.where.fecha.lt).toEqual(new Date(2026, 6, 1));
+    expect(call.where.fecha.gte).toEqual(new Date("2026-06-01T00:00:00Z"));
+    expect(call.where.fecha.lt).toEqual(new Date("2026-07-01T00:00:00Z"));
   });
 
   it("200 y devuelve los pagos con los datos del acuerdo aplanados", async () => {
