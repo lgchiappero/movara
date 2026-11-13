@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { buildLeadsWhere } from "@/lib/admin/leads-filtro";
 import MarcarContactadoButton from "@/components/admin/MarcarContactadoButton";
 import PaginacionLinks from "@/components/admin/PaginacionLinks";
+import { formatearFechaAR } from "@/lib/fecha-ar";
 
 export const dynamic = "force-dynamic";
 
@@ -136,7 +137,7 @@ export default async function AdminLeadsPage({
                   <td className="px-5 py-3 text-stone-600 whitespace-nowrap">{lead.telefono}</td>
                   <td className="px-5 py-3 text-stone-600">{lead.provincia || "—"}</td>
                   <td className="px-5 py-3 text-stone-500 whitespace-nowrap">
-                    {lead.createdAt.toLocaleDateString("es-AR")}
+                    {formatearFechaAR(lead.createdAt)}
                   </td>
                   <td className="px-5 py-3 text-stone-600 max-w-xs">{lead.mensaje || "—"}</td>
                   <td className="px-5 py-3">

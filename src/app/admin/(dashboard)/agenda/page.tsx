@@ -5,6 +5,7 @@ import AgendaVistaPanel, { type CitaAdmin } from "@/components/admin/AgendaVista
 import DisponibilidadPanel, { type DiaDisponibilidad } from "@/components/admin/DisponibilidadPanel";
 import { getAdminUser } from "@/lib/admin/current-user";
 import PaginacionLinks from "@/components/admin/PaginacionLinks";
+import { mesAnioAR } from "@/lib/fecha-ar";
 
 // Vista lista: todas las citas (no solo las del mes), paginadas de a 50.
 const PAGE_SIZE_LISTA = 50;
@@ -16,21 +17,22 @@ function parseMesParam(mes?: string): { anio: number; mesIdx0: number } {
     const [y, m] = mes.split("-").map(Number);
     if (m >= 1 && m <= 12) return { anio: y, mesIdx0: m - 1 };
   }
-  const now = new Date();
-  return { anio: now.getFullYear(), mesIdx0: now.getMonth() };
+  const { anio, mes: mesActual } = mesAnioAR();
+  return { anio, mesIdx0: mesActual - 1 };
 }
 
 /** Como el pasado no se gestiona, un dispDesde anterior al mes actual se
  * ignora y vuelve al default — sin tope hacia adelante. */
 function parseDispDesdeParam(dispDesde: string | undefined, now: Date): { anio: number; mesIdx0: number } {
-  const nowTotal = now.getFullYear() * 12 + now.getMonth();
+  const actual = mesAnioAR(now);
+  const nowTotal = actual.anio * 12 + (actual.mes - 1);
   if (dispDesde && /^\d{4}-\d{2}$/.test(dispDesde)) {
     const [y, m] = dispDesde.split("-").map(Number);
     if (m >= 1 && m <= 12 && y * 12 + (m - 1) >= nowTotal) {
       return { anio: y, mesIdx0: m - 1 };
     }
   }
-  return { anio: now.getFullYear(), mesIdx0: now.getMonth() };
+  return { anio: actual.anio, mesIdx0: actual.mes - 1 };
 }
 
 function serializeCita(c: {

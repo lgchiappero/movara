@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { buildLeadsCsv } from "@/lib/admin/leads-csv";
 import { buildLeadsWhere } from "@/lib/admin/leads-filtro";
+import { hoyAR } from "@/lib/fecha-ar";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="leads-movara-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Content-Disposition": `attachment; filename="leads-movara-${hoyAR()}.csv"`,
     },
   });
 }

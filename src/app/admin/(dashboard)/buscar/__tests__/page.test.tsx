@@ -73,9 +73,17 @@ describe("AdminBuscarPage", () => {
 
   it("aplica el filtro de rango de fechas a las 3 entidades", async () => {
     await AdminBuscarPage({ searchParams: Promise.resolve({ desde: "2026-01-01", hasta: "2026-01-31" }) });
-    const rango = { gte: new Date("2026-01-01T00:00:00"), lte: new Date("2026-01-31T23:59:59") };
+    // Días argentinos (UTC−3), sin depender de la zona de la máquina.
+    const rango = { gte: new Date("2026-01-01T03:00:00Z"), lte: new Date("2026-02-01T02:59:59.999Z") };
     expect(mockFindManyCliente).toHaveBeenCalledWith(
       expect.objectContaining({ where: { createdAt: rango } })
+    );
+  });
+
+  it("una fecha mal formada en el filtro se ignora", async () => {
+    await AdminBuscarPage({ searchParams: Promise.resolve({ desde: "no-es-fecha", hasta: "2026-01-31" }) });
+    expect(mockFindManyCliente).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { createdAt: { lte: new Date("2026-02-01T02:59:59.999Z") } } })
     );
   });
 

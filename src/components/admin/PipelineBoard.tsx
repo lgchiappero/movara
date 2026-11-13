@@ -6,6 +6,7 @@ import { ETAPA_LABELS, ETAPA_COLORS, ORIGEN_LABELS, ORIGEN_COLORS, type Etapa, t
 import { buildWhatsAppLeadUrl } from "@/lib/leads/calc";
 import PipelineDetailPanel from "@/components/admin/PipelineDetailPanel";
 import OrigenVisitaChip from "@/components/admin/OrigenVisitaChip";
+import { formatearFechaAR } from "@/lib/fecha-ar";
 
 export type LeadPipeline = {
   id: string;
@@ -133,7 +134,7 @@ export default function PipelineBoard({
                   </span>
                 </td>
                 <td className="px-4 py-3 text-stone-500 whitespace-nowrap">
-                  {lead.contactadoEn ? new Date(lead.contactadoEn).toLocaleDateString("es-AR") : "—"}
+                  {lead.contactadoEn ? formatearFechaAR(lead.contactadoEn) : "—"}
                 </td>
                 <td className="px-4 py-3 max-w-[180px]" onClick={(e) => e.stopPropagation()}>
                   <NotasInline leadId={lead.id} notasVenta={lead.notasVenta} onSaved={() => router.refresh()} />

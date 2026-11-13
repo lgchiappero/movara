@@ -1,10 +1,11 @@
 import type { Prisma } from "@prisma/client";
+import { anioAR } from "@/lib/fecha-ar";
 
 /** REC-{AÑO}-{NRO 3 dígitos}. Mismo patrón que generateNumeroUnidad: se
  * genera dentro de la misma transacción que el create(). Cuenta también los
  * anulados — un número no se reutiliza nunca. */
 export async function generateNumeroRecibo(tx: Prisma.TransactionClient, ahora: Date = new Date()): Promise<string> {
-  const prefix = `REC-${ahora.getFullYear()}-`;
+  const prefix = `REC-${anioAR(ahora)}-`;
   const existentes = await tx.reciboConformidad.findMany({
     where: { numeroRecibo: { startsWith: prefix } },
     select: { numeroRecibo: true },

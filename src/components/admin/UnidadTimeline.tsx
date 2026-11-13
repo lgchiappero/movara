@@ -1,8 +1,9 @@
 import type { PasoInfo, AccionItem } from "@/lib/envios/timeline";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 function formatFecha(value: Date | null): string | null {
   if (!value) return null;
-  return value.toLocaleDateString("es-AR", { timeZone: "UTC" });
+  return formatearSoloFecha(value);
 }
 
 /** Traduce la clave semántica de una acción a un href real. Las secciones

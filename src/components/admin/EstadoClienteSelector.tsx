@@ -9,6 +9,7 @@ import {
   ESTADO_CLIENTE_COLORS,
   esEstadoCliente,
 } from "@/lib/clientes/estado";
+import { formatearFechaAR } from "@/lib/fecha-ar";
 
 /** Estado del cliente en la ficha: selector para fijarlo a mano y botón para
  * volver al cálculo automático. */
@@ -96,7 +97,7 @@ export default function EstadoClienteSelector({
         <p className="text-xs text-stone-500">
           Fijado a mano
           {estadoManualPor && ` por ${estadoManualPor}`}
-          {estadoManualEn && ` el ${new Date(estadoManualEn).toLocaleDateString("es-AR")}`}. Por los pedidos
+          {estadoManualEn && ` el ${formatearFechaAR(estadoManualEn)}`}. Por los pedidos
           correspondería «{esEstadoCliente(estadoAutomatico) ? ESTADO_CLIENTE_LABELS[estadoAutomatico] : estadoAutomatico}»; si
           avanzan más allá del manual, se actualiza solo.
         </p>

@@ -4,6 +4,7 @@ import { buscarPedidoTolerante } from "@/lib/admin/pedido-tolerante";
 import { PedidoDocumentCliente } from "@/lib/pdf/PedidoDocumentCliente";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
 import { parseDesgloseEstimado } from "@/lib/precio-configurador";
+import { formatearFechaAR } from "@/lib/fecha-ar";
 
 export async function GET(
   _req: NextRequest,
@@ -17,11 +18,7 @@ export async function GET(
     return NextResponse.json({ error: "Configuración no encontrada" }, { status: 404 });
   }
 
-  const fechaEs = config.updatedAt.toLocaleDateString("es-AR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const fechaEs = formatearFechaAR(config.updatedAt, "largo");
 
   const pdfBuffer = await renderToBuffer(
     PedidoDocumentCliente({

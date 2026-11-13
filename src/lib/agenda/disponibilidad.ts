@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
-import { fechaKeyToDate, dateToFechaKey, hoyFechaKey } from "@/lib/agenda/fecha";
+import { fechaKeyToDate, dateToFechaKey } from "@/lib/agenda/fecha";
+import { hoyAR } from "@/lib/fecha-ar";
 
 /** Horarios habilitados de un día y cuáles ya están ocupados por una cita
  * activa — para poder mostrar los ocupados en gris (no solo omitirlos).
@@ -7,7 +8,7 @@ import { fechaKeyToDate, dateToFechaKey, hoyFechaKey } from "@/lib/agenda/fecha"
 export async function getEstadoHorariosDelDia(
   fechaKey: string
 ): Promise<{ habilitados: string[]; ocupados: string[] }> {
-  if (fechaKey < hoyFechaKey()) return { habilitados: [], ocupados: [] };
+  if (fechaKey < hoyAR()) return { habilitados: [], ocupados: [] };
   const fecha = fechaKeyToDate(fechaKey);
 
   const [disponibilidad, citas] = await Promise.all([
@@ -59,7 +60,7 @@ export async function getEstadoDiasDelMes(
     ocupadosPorDia.get(key)!.add(c.horario);
   }
 
-  const hoy = hoyFechaKey();
+  const hoy = hoyAR();
   const resultado: Record<string, EstadoDiaMes> = {};
   for (const d of disponibilidades) {
     const key = dateToFechaKey(d.fecha);

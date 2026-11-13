@@ -1,4 +1,5 @@
 import type { EstadoPedido } from "@/lib/pedido/estado-pedido";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 export type EstadoEmailData = {
   clienteNombre: string;
@@ -12,7 +13,7 @@ export type EstadoEmailData = {
 
 function fechaEs(value: Date | null): string {
   if (!value) return "a confirmar";
-  return value.toLocaleDateString("es-AR", { year: "numeric", month: "long", day: "numeric" });
+  return formatearSoloFecha(value, "largo"); // solo fecha: sin correr el día
 }
 
 export function linkSeguimiento(token: string): string {

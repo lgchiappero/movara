@@ -15,7 +15,8 @@ import {
 import { ETAPA_LABELS, ETAPA_COLORS, type Etapa } from "@/lib/leads/constantes";
 import { estadoGeneralEnvio } from "@/lib/envios/estado-general";
 import { diasHasta, seccionesFaltantes } from "@/lib/dashboard/calc";
-import { hoyFechaKey, fechaKeyToDate } from "@/lib/agenda/fecha";
+import { fechaKeyToDate } from "@/lib/agenda/fecha";
+import { hoyAR } from "@/lib/fecha-ar";
 import UnidadesEnMovimientoGrid, {
   type UnidadMovimiento,
 } from "@/components/admin/UnidadesEnMovimientoGrid";
@@ -121,7 +122,7 @@ export default async function AdminDashboardPage() {
   const hace24hs = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const hace15dias = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
   const hace7dias = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const fechaHoy = fechaKeyToDate(hoyFechaKey());
+  const fechaHoy = fechaKeyToDate(hoyAR());
   const inicioMes = startOfMonth(now);
   const inicioMesSiguiente = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const mesAnteriorFecha = new Date(now.getFullYear(), now.getMonth() - 1, 1);

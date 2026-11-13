@@ -26,6 +26,7 @@ import { isAdmin } from "@/lib/admin/roles";
 import { buscarPedidoTolerante } from "@/lib/admin/pedido-tolerante";
 import SeccionSegura from "@/components/admin/SeccionSegura";
 import { seccionSegura } from "@/components/admin/DatoNoDisponible";
+import { formatearFechaAR } from "@/lib/fecha-ar";
 
 export const dynamic = "force-dynamic";
 
@@ -156,7 +157,7 @@ export default async function ConfiguracionDetailPage({
         <div className="flex justify-between">
           <span className="text-stone-500">Creado</span>
           <span className="text-[#2F2F2F] font-medium">
-            {config.createdAt.toLocaleDateString("es-AR")}
+            {formatearFechaAR(config.createdAt)}
           </span>
         </div>
       </div>

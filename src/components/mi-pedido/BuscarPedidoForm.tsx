@@ -8,6 +8,7 @@ import {
   type EstadoPedido,
 } from "@/lib/pedido/estado-pedido";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 type Pedido = {
   numeroConsulta: string | null;
@@ -35,11 +36,8 @@ const FECHA_POR_ESTADO: Record<EstadoPedido, keyof Pedido | null> = {
 
 function formatFecha(value: string | null): string | null {
   if (!value) return null;
-  return new Date(value).toLocaleDateString("es-AR", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  // Fechas del pedido: solo fecha (medianoche UTC), sin correr el día.
+  return formatearSoloFecha(value, { year: "numeric", month: "short", day: "numeric" });
 }
 
 /** Vista de seguimiento: solo se accede con el token secreto del link

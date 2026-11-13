@@ -3,6 +3,7 @@ import Image from "next/image";
 import LinkInterno from "@/components/ui/LinkInterno";
 import { client } from "@/sanity/lib/client";
 import { SITE_CONFIG_QUERY } from "@/sanity/lib/queries";
+import { anioAR } from "@/lib/fecha-ar";
 
 type FooterNavLink = { label?: string | null; url?: string | null };
 
@@ -73,7 +74,7 @@ export default async function Footer() {
   const config = await getSiteConfig();
 
   const phoneHref = `tel:${config.phone.replace(/[\s\-()]/g, "")}`;
-  const year = new Date().getFullYear();
+  const year = anioAR();
 
   const contactLinks = [
     { label: config.email, href: `mailto:${config.email}` },

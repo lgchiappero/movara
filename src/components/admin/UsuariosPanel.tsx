@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
 import { adminRoles, type AdminRole } from "@/lib/admin/roles";
 import { MAX_USUARIOS } from "@/lib/validators/admin-usuarios";
+import { formatearFechaHoraAR } from "@/lib/fecha-ar";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
@@ -26,7 +27,7 @@ type Usuario = {
 
 function formatFecha(value: string | null): string {
   if (!value) return "Nunca";
-  return new Date(value).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
+  return formatearFechaHoraAR(value);
 }
 
 export default function UsuariosPanel({ initialUsuarios }: { initialUsuarios: Usuario[] }) {

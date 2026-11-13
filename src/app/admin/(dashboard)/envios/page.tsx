@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { estadoFabricacionLabels } from "@/lib/envios/constantes";
 import { estadoGeneralEnvio } from "@/lib/envios/estado-general";
 import NuevoEnvioButton from "@/components/admin/NuevoEnvioButton";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ export default async function AdminEnviosPage() {
                     <td className="px-4 py-3 text-stone-600">{e.numeroContenedor || "—"}</td>
                     <td className="px-4 py-3 text-stone-600">
                       {e.fechaArriboEstimado
-                        ? e.fechaArriboEstimado.toLocaleDateString("es-AR", { timeZone: "UTC" })
+                        ? formatearSoloFecha(e.fechaArriboEstimado)
                         : "—"}
                     </td>
                     <td className="px-4 py-3 text-stone-600">{e.unidades.length}</td>

@@ -1,9 +1,10 @@
 import type { Prisma } from "@prisma/client";
+import { anioAR } from "@/lib/fecha-ar";
 
 /** Mismo patrón que generateNumeroConsulta (numero-consulta.ts) — se genera
  * dentro de la misma transacción que el create() de la unidad. */
 export async function generateNumeroUnidad(tx: Prisma.TransactionClient): Promise<string> {
-  const anio = new Date().getFullYear();
+  const anio = anioAR();
   const prefix = `MOV-UNIDAD-${anio}-`;
 
   const existentes = await tx.unidad.findMany({

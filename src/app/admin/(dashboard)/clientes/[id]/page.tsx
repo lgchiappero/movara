@@ -11,12 +11,13 @@ import EstadoClienteSelector from "@/components/admin/EstadoClienteSelector";
 import OrigenVisitaChip from "@/components/admin/OrigenVisitaChip";
 import { etiquetaEstadoPedido } from "@/lib/pedido/estado-pedido";
 import { ETAPA_LABELS, type Etapa } from "@/lib/leads/constantes";
+import { formatearFechaAR, formatearSoloFecha } from "@/lib/fecha-ar";
 
 const tarjeta = "bg-white rounded-2xl border border-[#E5E5E5] p-5";
 const tituloTarjeta = "text-sm font-bold uppercase tracking-widest text-sage-600 mb-4";
 const fila =
   "flex items-center justify-between gap-3 text-sm py-2 px-3 rounded-lg border border-[#F0F0F0] hover:bg-stone-50 transition-colors";
-const fecha = (d: Date) => d.toLocaleDateString("es-AR");
+const fecha = (d: Date) => formatearFechaAR(d);
 
 export const dynamic = "force-dynamic";
 
@@ -158,7 +159,7 @@ export default async function ClienteDetailPage({
             {citas.map((c) => (
               <div key={c.id} className={fila}>
                 <span className="font-medium text-[#2F2F2F]">
-                  Visita al showroom · {c.fecha.toLocaleDateString("es-AR", { timeZone: "UTC" })} {c.horario}hs
+                  Visita al showroom · {formatearSoloFecha(c.fecha)} {c.horario}hs
                 </span>
                 <span className="px-2 py-1 rounded-full text-xs font-bold bg-stone-100 text-stone-600">{c.estado}</span>
               </div>

@@ -3,6 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { buscarPedidoTolerante } from "@/lib/admin/pedido-tolerante";
 import { PedidoDocumentBilingual } from "@/lib/pdf/PedidoDocumentBilingual";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
+import { claveAR, formatearFechaAR } from "@/lib/fecha-ar";
 
 export async function GET(
   _req: NextRequest,
@@ -16,12 +17,8 @@ export async function GET(
     return NextResponse.json({ error: "Configuración no encontrada" }, { status: 404 });
   }
 
-  const fechaEs = config.updatedAt.toLocaleDateString("es-AR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const fechaIso = config.updatedAt.toISOString().slice(0, 10);
+  const fechaEs = formatearFechaAR(config.updatedAt, "largo");
+  const fechaIso = claveAR(config.updatedAt);
 
   const pdfBuffer = await renderToBuffer(
     PedidoDocumentBilingual({

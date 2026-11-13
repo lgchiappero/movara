@@ -16,6 +16,7 @@ import ComoLlegarLink from "./ComoLlegarLink";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 import { trackSchedule } from "@/lib/meta-pixel";
 import { leerOrigen } from "@/lib/origen-visita/navegador";
+import { formatearSoloFecha, hoyAR, mesAnioAR } from "@/lib/fecha-ar";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-base sm:text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
@@ -53,16 +54,16 @@ function fechaKey(anio: number, mesIdx0: number, dia: number) {
 }
 
 function hoyKey() {
-  const now = new Date();
-  return fechaKey(now.getFullYear(), now.getMonth(), now.getDate());
+  return hoyAR();
 }
 
 type Paso = "calendario" | "horario" | "form" | "confirmado";
 
 export default function AgendaBooking() {
-  const now = new Date();
-  const [anio, setAnio] = useState(now.getFullYear());
-  const [mesIdx0, setMesIdx0] = useState(now.getMonth());
+  // Mes actual en Argentina (no el del navegador).
+  const actual = mesAnioAR();
+  const [anio, setAnio] = useState(actual.anio);
+  const [mesIdx0, setMesIdx0] = useState(actual.mes - 1);
   const mesKey = `${anio}-${mesIdx0}`;
   const [diasPorMes, setDiasPorMes] = useState<Record<string, Record<string, "disponible" | "completo">>>({});
   const estadoDiasMes = diasPorMes[mesKey] ?? {};
@@ -117,7 +118,7 @@ export default function AgendaBooking() {
 
   const diasEnMes = useMemo(() => new Date(Date.UTC(anio, mesIdx0 + 1, 0)).getUTCDate(), [anio, mesIdx0]);
 
-  const esMesPasado = anio === now.getFullYear() ? mesIdx0 < now.getMonth() : anio < now.getFullYear();
+  const esMesPasado = anio === actual.anio ? mesIdx0 < actual.mes - 1 : anio < actual.anio;
 
   async function seleccionarDia(key: string) {
     setFechaSel(key);
@@ -205,14 +206,7 @@ export default function AgendaBooking() {
   }
 
   if (paso === "confirmado" && fechaSel && horarioSel) {
-    const [y, m, d] = fechaSel.split("-").map(Number);
-    const fechaTexto = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("es-AR", {
-      timeZone: "UTC",
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const fechaTexto = formatearSoloFecha(fechaSel, "largoConDia");
     return (
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-8 text-center">
         <p className="text-4xl mb-3">✅</p>

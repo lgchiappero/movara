@@ -1,4 +1,5 @@
 import { calcularGarantiaFechaFin, GARANTIA_MESES } from "@/lib/pedido/garantia";
+import { formatearFechaHoraAR, formatearSoloFecha } from "@/lib/fecha-ar";
 
 /** Versión del texto. Si el texto cambia, se sube la versión: los recibos ya
  * confirmados guardan su `textoConfirmado` y no se ven afectados. */
@@ -28,19 +29,12 @@ export type TextoRecibo = {
 /** "8 de octubre de 2026". Las fechas de entrega se guardan a medianoche UTC
  * (input type="date"), así que se formatean en UTC para no correr el día. */
 export function fechaLargaUTC(fecha: Date): string {
-  return fecha.toLocaleDateString("es-AR", { timeZone: "UTC", day: "numeric", month: "long", year: "numeric" });
+  return formatearSoloFecha(fecha, "largo");
 }
 
 /** "8/10/2026, 14:32" en hora de Argentina — para la fecha de confirmación. */
 export function fechaHoraAR(fecha: Date): string {
-  return fecha.toLocaleString("es-AR", {
-    timeZone: "America/Argentina/Buenos_Aires",
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatearFechaHoraAR(fecha);
 }
 
 export function fechaFinGarantia(fechaEntrega: Date): Date {

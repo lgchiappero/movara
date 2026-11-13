@@ -31,7 +31,7 @@ describe("buildLeadsCsv", () => {
         email: null,
         telefono: "123",
         provincia: null,
-        createdAt: new Date("2026-01-01"),
+        createdAt: new Date("2026-01-01T12:00:00Z"),
         mensaje: null,
       },
     ]);
@@ -45,7 +45,7 @@ describe("buildLeadsCsv", () => {
         email: null,
         telefono: "123",
         provincia: null,
-        createdAt: new Date("2026-01-01"),
+        createdAt: new Date("2026-01-01T12:00:00Z"),
         mensaje: null,
       },
     ]);
@@ -59,7 +59,7 @@ describe("buildLeadsCsv", () => {
         email: null,
         telefono: "123",
         provincia: null,
-        createdAt: new Date("2026-01-01"),
+        createdAt: new Date("2026-01-01T12:00:00Z"),
         mensaje: "Hola\ncómo estás",
       },
     ]);
@@ -73,10 +73,17 @@ describe("buildLeadsCsv", () => {
         email: null,
         telefono: "123",
         provincia: null,
-        createdAt: new Date("2026-01-01"),
+        createdAt: new Date("2026-01-01T12:00:00Z"),
         mensaje: null,
       },
     ]);
     expect(csv.split("\r\n")[1]).toBe("Juan,,123,,2026-01-01,");
+  });
+
+  it("la fecha es el día argentino del alta (a las 22:00 del 31/12 en Argentina, en UTC ya es 1/1)", () => {
+    const csv = buildLeadsCsv([
+      { nombre: "Ana", email: null, telefono: "1", provincia: null, createdAt: new Date("2027-01-01T01:00:00Z"), mensaje: null },
+    ]);
+    expect(csv.split("\r\n")[1]).toBe("Ana,,1,,2026-12-31,");
   });
 });

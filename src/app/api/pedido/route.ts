@@ -15,6 +15,7 @@ import { SITE_CONFIG_QUERY } from "@/sanity/lib/queries";
 import { detalleConsultaHtml } from "@/lib/email/nueva-consulta";
 import { conSavepoint, registrarContacto } from "@/lib/clientes/servicio";
 import { origenDelBody } from "@/lib/origen-visita/clasificar";
+import { formatearFechaHoraAR } from "@/lib/fecha-ar";
 
 async function sendNotificationEmail(clienteNombre: string, modelo: string, numeroConsulta: string, detalle: string) {
   const contactEmail = process.env.CONTACT_EMAIL || "lucianogchiappero@gmail.com";
@@ -55,7 +56,7 @@ async function avisarPedidoNoGuardado(data: { clienteNombre: string; clienteWhat
     subject: `⚠️ Consulta NO guardada — recontactar a ${data.clienteNombre}`,
     html: `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;padding:20px;">
 <p style="font-size:16px;font-weight:bold;color:#9a3412;">El configurador no pudo guardar esta consulta (error de base de datos). No figura en el admin: hay que recontactarla.</p>
-<table>${fila("Fecha", new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" }))}${fila("Nombre", data.clienteNombre)}${fila("WhatsApp", data.clienteWhatsapp)}${fila("Email", data.clienteEmail)}${fila("Modelo", modeloLabelsEs[data.modelo as keyof typeof modeloLabelsEs] ?? data.modelo)}${fila("Ubicación", `${data.localidad}, ${data.provincia}`)}</table>
+<table>${fila("Fecha", formatearFechaHoraAR(new Date()))}${fila("Nombre", data.clienteNombre)}${fila("WhatsApp", data.clienteWhatsapp)}${fila("Email", data.clienteEmail)}${fila("Modelo", modeloLabelsEs[data.modelo as keyof typeof modeloLabelsEs] ?? data.modelo)}${fila("Ubicación", `${data.localidad}, ${data.provincia}`)}</table>
 </body></html>`,
   });
   if (!resultado.ok) console.error(`[pedido] Falló el email de consulta no guardada: ${resultado.error}`);

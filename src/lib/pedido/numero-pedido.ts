@@ -1,11 +1,12 @@
 import { db } from "@/lib/db";
+import { anioAR } from "@/lib/fecha-ar";
 
 export async function ensureNumeroPedido(id: string): Promise<string> {
   return db.$transaction(async (tx) => {
     const config = await tx.configuracionPedido.findUniqueOrThrow({ where: { id } });
     if (config.numeroPedido) return config.numeroPedido;
 
-    const anio = new Date().getFullYear();
+    const anio = anioAR();
     const prefix = `MOV-${anio}-`;
 
     const existentes = await tx.configuracionPedido.findMany({

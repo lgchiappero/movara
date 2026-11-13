@@ -10,6 +10,7 @@ import {
   MODELOS_UNIDAD,
   type EstadoFabricacion,
 } from "@/lib/envios/constantes";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-sage-500";
@@ -254,9 +255,7 @@ export default function UnidadDetailForm({
               <p className="text-xs text-stone-500">Arribo estimado</p>
               <p className="font-medium text-[#2F2F2F]">
                 {envioSeleccionado.fechaArriboEstimado
-                  ? new Date(envioSeleccionado.fechaArriboEstimado).toLocaleDateString("es-AR", {
-                      timeZone: "UTC",
-                    })
+                  ? formatearSoloFecha(envioSeleccionado.fechaArriboEstimado)
                   : "—"}
               </p>
             </div>
@@ -407,7 +406,7 @@ export default function UnidadDetailForm({
             <span className={labelClass}>Fecha fin (calculada)</span>
             <p className={readonlyClass}>
               {initial.garantiaFin
-                ? new Date(initial.garantiaFin).toLocaleDateString("es-AR", { timeZone: "UTC" })
+                ? formatearSoloFecha(initial.garantiaFin)
                 : "—"}
             </p>
           </label>

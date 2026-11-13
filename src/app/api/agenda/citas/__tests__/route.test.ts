@@ -20,7 +20,8 @@ vi.mock("@/lib/clientes/servicio", () => ({ registrarContacto: mockRegistrar }))
 
 import { POST } from "../route";
 import { NextRequest } from "next/server";
-import { addDiasFechaKey, hoyFechaKey } from "@/lib/agenda/fecha";
+import { addDiasFechaKey } from "@/lib/agenda/fecha";
+import { hoyAR } from "@/lib/fecha-ar";
 import { HORARIOS_AGENDA } from "@/lib/agenda/horarios";
 
 function req(body: unknown) {
@@ -32,7 +33,7 @@ function req(body: unknown) {
 }
 
 const CITA = {
-  fecha: addDiasFechaKey(hoyFechaKey(), 3),
+  fecha: addDiasFechaKey(hoyAR(), 3),
   horario: HORARIOS_AGENDA[0],
   tipoCliente: "particular",
   nombre: "Atacante",

@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { citaSchema, consultaSchema } from "@/lib/validators/cita";
-import { hoyFechaKey, addDiasFechaKey } from "@/lib/agenda/fecha";
+import { addDiasFechaKey } from "@/lib/agenda/fecha";
+import { hoyAR } from "@/lib/fecha-ar";
 
-const manana = addDiasFechaKey(hoyFechaKey(), 1);
+const manana = addDiasFechaKey(hoyAR(), 1);
 
 const valid = {
   fecha: manana,
@@ -24,12 +25,12 @@ describe("citaSchema", () => {
   });
 
   it("rechaza fecha pasada", () => {
-    const ayer = addDiasFechaKey(hoyFechaKey(), -1);
+    const ayer = addDiasFechaKey(hoyAR(), -1);
     expect(citaSchema.safeParse({ ...valid, fecha: ayer }).success).toBe(false);
   });
 
   it("acepta fecha de hoy", () => {
-    expect(citaSchema.safeParse({ ...valid, fecha: hoyFechaKey() }).success).toBe(true);
+    expect(citaSchema.safeParse({ ...valid, fecha: hoyAR() }).success).toBe(true);
   });
 
   it("rechaza fecha con formato inválido", () => {

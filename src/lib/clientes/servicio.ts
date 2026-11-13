@@ -3,6 +3,7 @@ import { claveEmail, claveTelefono } from "@/lib/clientes/normalizar";
 import { calcularEstadoAutomatico, resolverEstado } from "@/lib/clientes/estado";
 import type { OrigenClasificado } from "@/lib/origen-visita/clasificar";
 import { ESTADO_PEDIDO_CANCELADO } from "@/lib/pedido/estado-pedido";
+import { formatearFechaAR } from "@/lib/fecha-ar";
 
 /** Alta o reutilización automática de Cliente y Lead (configurador,
  * pedido manual, contacto, dossier y agenda) y recálculo del estado del
@@ -96,7 +97,7 @@ function completarVacios<T extends Record<string, unknown>>(actual: T, nuevos: P
 }
 
 function fechaCorta(d: Date): string {
-  return d.toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric" });
+  return formatearFechaAR(d, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 export function agregarNota(notas: string | null, nota: string, ahora: Date = new Date()): string {

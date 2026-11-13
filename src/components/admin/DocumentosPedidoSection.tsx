@@ -8,6 +8,7 @@ import FileUpload from "@/components/admin/ui/FileUpload";
 import { useSubidaArchivos } from "@/components/admin/ui/useSubidaArchivos";
 import EliminarDocumentoButton from "@/components/admin/EliminarDocumentoButton";
 import { tipoDocumentoOptions, tipoDocumentoLabels, type TipoDocumento } from "@/lib/validators/documentos";
+import { formatearFechaAR } from "@/lib/fecha-ar";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-sage-500";
@@ -106,7 +107,7 @@ export default function DocumentosPedidoSection({
                     {tipoDocumentoLabels[d.tipo as TipoDocumento] ?? d.tipo}
                   </td>
                   <td className="py-2 pr-3 text-stone-500">
-                    {new Date(d.createdAt).toLocaleDateString("es-AR")}
+                    {formatearFechaAR(d.createdAt)}
                   </td>
                   <td className="py-2 pr-3 text-stone-500">{d.subidoPor}</td>
                   <td className="py-2 pr-3">

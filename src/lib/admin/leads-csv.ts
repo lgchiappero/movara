@@ -1,3 +1,5 @@
+import { claveAR } from "@/lib/fecha-ar";
+
 export type LeadCsvRow = {
   nombre: string;
   email: string | null;
@@ -23,7 +25,7 @@ export function buildLeadsCsv(leads: LeadCsvRow[]): string {
       lead.email ?? "",
       lead.telefono,
       lead.provincia ?? "",
-      lead.createdAt.toISOString().slice(0, 10),
+      claveAR(lead.createdAt),
       lead.mensaje ?? "",
     ]
       .map(escapeCsvField)

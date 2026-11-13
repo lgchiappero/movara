@@ -9,6 +9,7 @@ import { resumenError } from "@/lib/log-seguro";
 import { MENSAJE_LEAD_NO_GUARDADO } from "@/lib/leads/enviar-lead";
 import { registrarContacto } from "@/lib/clientes/servicio";
 import { origenDelBody } from "@/lib/origen-visita/clasificar";
+import { formatearFechaHoraAR } from "@/lib/fecha-ar";
 
 // Formulario público que dispara emails (incluido uno a la dirección que se
 // ingresa): tope estricto por IP para que no sirva de relay de spam.
@@ -122,11 +123,7 @@ function buildClientHtml(lead: LeadData) {
 async function sendEmails(lead: LeadData, leadId: string): Promise<boolean> {
   const contactEmail = process.env.CONTACT_EMAIL;
   const nombreCompleto = [lead.nombre, lead.apellido].filter(Boolean).join(" ");
-  const now = new Date().toLocaleString("es-AR", {
-    timeZone: "America/Argentina/Buenos_Aires",
-    dateStyle: "full",
-    timeStyle: "short",
-  });
+  const now = formatearFechaHoraAR(new Date());
 
   let sent = false;
 

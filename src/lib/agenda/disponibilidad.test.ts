@@ -18,13 +18,14 @@ import {
   getHorariosDisponibles,
   getEstadoDiasDelMes,
 } from "@/lib/agenda/disponibilidad";
-import { hoyFechaKey, addDiasFechaKey } from "@/lib/agenda/fecha";
+import { addDiasFechaKey } from "@/lib/agenda/fecha";
+import { hoyAR } from "@/lib/fecha-ar";
 
 describe("getEstadoHorariosDelDia", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("vacío si la fecha ya pasó — ni siquiera consulta la DB", async () => {
-    const ayer = addDiasFechaKey(hoyFechaKey(), -1);
+    const ayer = addDiasFechaKey(hoyAR(), -1);
     const res = await getEstadoHorariosDelDia(ayer);
     expect(res).toEqual({ habilitados: [], ocupados: [] });
     expect(mockFindUnique).not.toHaveBeenCalled();
@@ -33,7 +34,7 @@ describe("getEstadoHorariosDelDia", () => {
   it("vacío si el día no tiene fila de disponibilidad", async () => {
     mockFindUnique.mockResolvedValueOnce(null);
     mockFindManyCita.mockResolvedValueOnce([]);
-    const manana = addDiasFechaKey(hoyFechaKey(), 1);
+    const manana = addDiasFechaKey(hoyAR(), 1);
     const res = await getEstadoHorariosDelDia(manana);
     expect(res).toEqual({ habilitados: [], ocupados: [] });
   });
@@ -41,7 +42,7 @@ describe("getEstadoHorariosDelDia", () => {
   it("vacío si el día existe pero está deshabilitado", async () => {
     mockFindUnique.mockResolvedValueOnce({ habilitada: false, horarios: ["10:00"] });
     mockFindManyCita.mockResolvedValueOnce([]);
-    const manana = addDiasFechaKey(hoyFechaKey(), 1);
+    const manana = addDiasFechaKey(hoyAR(), 1);
     const res = await getEstadoHorariosDelDia(manana);
     expect(res).toEqual({ habilitados: [], ocupados: [] });
   });
@@ -49,7 +50,7 @@ describe("getEstadoHorariosDelDia", () => {
   it("devuelve habilitados y ocupados cuando el día está habilitado", async () => {
     mockFindUnique.mockResolvedValueOnce({ habilitada: true, horarios: ["10:00", "11:00", "12:00"] });
     mockFindManyCita.mockResolvedValueOnce([{ horario: "11:00" }]);
-    const manana = addDiasFechaKey(hoyFechaKey(), 1);
+    const manana = addDiasFechaKey(hoyAR(), 1);
     const res = await getEstadoHorariosDelDia(manana);
     expect(res).toEqual({ habilitados: ["10:00", "11:00", "12:00"], ocupados: ["11:00"] });
   });
@@ -61,13 +62,13 @@ describe("getHorariosDisponibles", () => {
   it("excluye los horarios ocupados de los habilitados", async () => {
     mockFindUnique.mockResolvedValueOnce({ habilitada: true, horarios: ["10:00", "11:00", "12:00"] });
     mockFindManyCita.mockResolvedValueOnce([{ horario: "11:00" }]);
-    const manana = addDiasFechaKey(hoyFechaKey(), 1);
+    const manana = addDiasFechaKey(hoyAR(), 1);
     const res = await getHorariosDisponibles(manana);
     expect(res).toEqual(["10:00", "12:00"]);
   });
 
   it("vacío si el día ya pasó", async () => {
-    const ayer = addDiasFechaKey(hoyFechaKey(), -1);
+    const ayer = addDiasFechaKey(hoyAR(), -1);
     expect(await getHorariosDisponibles(ayer)).toEqual([]);
   });
 });
@@ -76,7 +77,7 @@ describe("getEstadoDiasDelMes", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("marca 'disponible' un día habilitado con horarios libres", async () => {
-    const manana = addDiasFechaKey(hoyFechaKey(), 1);
+    const manana = addDiasFechaKey(hoyAR(), 1);
     mockFindManyDisp.mockResolvedValueOnce([
       { fecha: new Date(`${manana}T00:00:00.000Z`), horarios: ["10:00", "11:00"] },
     ]);
@@ -88,7 +89,7 @@ describe("getEstadoDiasDelMes", () => {
   });
 
   it("marca 'completo' un día habilitado con todos los horarios ocupados", async () => {
-    const manana = addDiasFechaKey(hoyFechaKey(), 1);
+    const manana = addDiasFechaKey(hoyAR(), 1);
     mockFindManyDisp.mockResolvedValueOnce([
       { fecha: new Date(`${manana}T00:00:00.000Z`), horarios: ["10:00"] },
     ]);
@@ -100,7 +101,7 @@ describe("getEstadoDiasDelMes", () => {
   });
 
   it("omite un día habilitado pero sin ningún horario cargado", async () => {
-    const manana = addDiasFechaKey(hoyFechaKey(), 1);
+    const manana = addDiasFechaKey(hoyAR(), 1);
     mockFindManyDisp.mockResolvedValueOnce([
       { fecha: new Date(`${manana}T00:00:00.000Z`), horarios: [] },
     ]);
@@ -112,7 +113,7 @@ describe("getEstadoDiasDelMes", () => {
   });
 
   it("omite un día ya pasado aunque venga habilitado en la respuesta de la DB", async () => {
-    const ayer = addDiasFechaKey(hoyFechaKey(), -1);
+    const ayer = addDiasFechaKey(hoyAR(), -1);
     mockFindManyDisp.mockResolvedValueOnce([
       { fecha: new Date(`${ayer}T00:00:00.000Z`), horarios: ["10:00"] },
     ]);

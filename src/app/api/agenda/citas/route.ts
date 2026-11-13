@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { citaSchema } from "@/lib/validators/cita";
-import { fechaKeyToDate, hoyFechaKey } from "@/lib/agenda/fecha";
+import { fechaKeyToDate } from "@/lib/agenda/fecha";
+import { formatearSoloFecha, hoyAR } from "@/lib/fecha-ar";
 import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
 import {
   buildConfirmacionClienteEmail,
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
   // es la confirmación explícita de "sí, cancelá la anterior".
   if (!reemplazarCitaId) {
     const citaFuturaExistente = await db.cita.findFirst({
-      where: { email: data.email, estado: "confirmada", fecha: { gt: fechaKeyToDate(hoyFechaKey()) } },
+      where: { email: data.email, estado: "confirmada", fecha: { gt: fechaKeyToDate(hoyAR()) } },
       orderBy: { fecha: "asc" },
     });
     if (citaFuturaExistente) {
@@ -143,12 +144,7 @@ export async function POST(req: NextRequest) {
     // Crea o reutiliza el lead y el cliente ("interesado"). Si falla, la
     // visita ya quedó agendada: solo se registra el error.
     try {
-      const fechaEs = fecha.toLocaleDateString("es-AR", {
-        timeZone: "UTC",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
+      const fechaEs = formatearSoloFecha(fecha, "largo");
       await db.$transaction((tx) =>
         registrarContacto(
           tx,

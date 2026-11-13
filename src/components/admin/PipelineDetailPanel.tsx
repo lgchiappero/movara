@@ -9,6 +9,7 @@ import EliminarButton from "@/components/admin/EliminarButton";
 import { isAdmin } from "@/lib/admin/roles";
 import type { LeadPipeline, Vendedor } from "@/components/admin/PipelineBoard";
 import OrigenVisitaChip from "@/components/admin/OrigenVisitaChip";
+import { formatearFechaAR } from "@/lib/fecha-ar";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-sage-500";
@@ -144,7 +145,7 @@ export default function PipelineDetailPanel({
             <p>
               <span className="text-stone-500">Recibido: </span>
               <span className="text-[#2F2F2F] font-medium">
-                {new Date(lead.createdAt).toLocaleDateString("es-AR")}
+                {formatearFechaAR(lead.createdAt)}
               </span>
             </p>
             <div className="flex items-start gap-2">

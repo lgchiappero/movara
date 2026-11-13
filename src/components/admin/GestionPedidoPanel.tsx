@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
 import { estadoPedidoOptions, estadoPedidoLabels, ESTADO_PEDIDO_CANCELADO } from "@/lib/pedido/estado-pedido";
 import DocumentUploadField from "@/components/admin/DocumentUploadField";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-sage-500";
@@ -713,7 +714,7 @@ export default function GestionPedidoPanel({ id, numeroPedido, initial, document
             <span className={labelClass}>Fecha fin (calculada)</span>
             <p className={readonlyClass}>
               {initial.garantiaFechaFin
-                ? new Date(initial.garantiaFechaFin).toLocaleDateString("es-AR", { timeZone: "UTC" })
+                ? formatearSoloFecha(initial.garantiaFechaFin)
                 : "—"}
             </p>
           </label>

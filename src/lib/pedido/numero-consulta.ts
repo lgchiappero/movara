@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { anioAR } from "@/lib/fecha-ar";
 
 /**
  * A diferencia de numeroPedido (generado después, al confirmar), numeroConsulta
@@ -6,7 +7,7 @@ import type { Prisma } from "@prisma/client";
  * transacción que el create().
  */
 export async function generateNumeroConsulta(tx: Prisma.TransactionClient): Promise<string> {
-  const anio = new Date().getFullYear();
+  const anio = anioAR();
   const prefix = `MOV-CONSULTA-${anio}-`;
 
   const existentes = await tx.configuracionPedido.findMany({

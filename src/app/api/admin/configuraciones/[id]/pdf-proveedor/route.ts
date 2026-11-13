@@ -3,6 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { buscarPedidoTolerante } from "@/lib/admin/pedido-tolerante";
 import { PedidoDocumentProveedor } from "@/lib/pdf/PedidoDocumentProveedor";
 import type { PedidoRecord } from "@/lib/pdf/pedido-record";
+import { claveAR } from "@/lib/fecha-ar";
 
 export async function GET(
   _req: NextRequest,
@@ -16,7 +17,7 @@ export async function GET(
     return NextResponse.json({ error: "Configuración no encontrada" }, { status: 404 });
   }
 
-  const fechaIso = config.updatedAt.toISOString().slice(0, 10);
+  const fechaIso = claveAR(config.updatedAt);
 
   const pdfBuffer = await renderToBuffer(
     PedidoDocumentProveedor({

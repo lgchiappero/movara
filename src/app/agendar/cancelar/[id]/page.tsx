@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import CitaCancelarView from "@/components/agenda/CitaCancelarView";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 export const dynamic = "force-dynamic";
 
@@ -13,13 +14,7 @@ export const metadata: Metadata = {
 };
 
 function fechaEs(fecha: Date): string {
-  return fecha.toLocaleDateString("es-AR", {
-    timeZone: "UTC",
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return formatearSoloFecha(fecha, "largoConDia");
 }
 
 export default async function CancelarCitaPage({

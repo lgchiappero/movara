@@ -1,4 +1,5 @@
 import { fechaKeyToDate, dateToFechaKey, addDiasFechaKey } from "@/lib/agenda/fecha";
+import { hoyAR, instanteAR } from "@/lib/fecha-ar";
 
 // El cron corre dos veces por día (9:00 y 21:00 hora Argentina, ver
 // vercel.json) y manda el recordatorio a las citas que empiezan dentro de
@@ -9,19 +10,17 @@ export const VENTANA_RECORDATORIO_MAX_HORAS = 36;
 export const MAX_INTENTOS_RECORDATORIO = 2;
 
 const HORA_MS = 60 * 60 * 1000;
-// Argentina es UTC-3 todo el año (sin horario de verano).
-const OFFSET_ARGENTINA_HORAS = 3;
 
 /** Instante de inicio de la cita: la fecha se guarda a medianoche UTC y el
  * horario ("10:00") es hora de Argentina. */
 export function inicioCita(fecha: Date, horario: string): Date {
   const [hh, mm] = horario.split(":").map(Number);
-  return new Date(Date.UTC(fecha.getUTCFullYear(), fecha.getUTCMonth(), fecha.getUTCDate(), hh + OFFSET_ARGENTINA_HORAS, mm || 0));
+  return instanteAR(dateToFechaKey(fecha), hh, mm || 0);
 }
 
 /** Fechas (date-only) que pueden tener citas dentro de la ventana. */
 export function fechasPosiblesVentana(ahora: Date): Date[] {
-  const hoy = dateToFechaKey(ahora);
+  const hoy = hoyAR(ahora);
   return [0, 1, 2].map((d) => fechaKeyToDate(addDiasFechaKey(hoy, d)));
 }
 

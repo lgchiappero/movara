@@ -4,6 +4,7 @@ import { db } from "@/lib/db/index";
 import { enviarEmail } from "@/lib/email/enviar";
 import { escapeHtml } from "@/lib/email/escape-html";
 import { resumenError } from "@/lib/log-seguro";
+import { formatearFechaHoraAR } from "@/lib/fecha-ar";
 
 const Schema = z.object({
   email: z.string().email(),
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
       <table style="width:100%;border-collapse:collapse;font-size:14px;">
         <tr><td style="padding:10px 0;color:#888;width:100px">Email</td><td style="padding:10px 0;color:#222;font-weight:600">${escapeHtml(email)}</td></tr>
         <tr><td style="padding:10px 0;color:#888">Fuente</td><td style="padding:10px 0;color:#222">${escapeHtml(source)}</td></tr>
-        <tr><td style="padding:10px 0;color:#888">Fecha</td><td style="padding:10px 0;color:#222">${new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}</td></tr>
+        <tr><td style="padding:10px 0;color:#888">Fecha</td><td style="padding:10px 0;color:#222">${formatearFechaHoraAR(new Date())}</td></tr>
       </table>
     </div>
   </div>

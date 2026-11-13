@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { estadoFabricacionLabels, estadoFabricacionColors, type EstadoFabricacion } from "@/lib/envios/constantes";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 export type UnidadMovimiento = {
   id: string;
@@ -32,7 +33,7 @@ function formatUSD(value: number): string {
 }
 
 function formatFecha(value: string | null): string {
-  return value ? new Date(value).toLocaleDateString("es-AR", { timeZone: "UTC" }) : "—";
+  return value ? formatearSoloFecha(value) : "—";
 }
 
 export default function UnidadesEnMovimientoGrid({

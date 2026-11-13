@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
 import EliminarButton from "@/components/admin/EliminarButton";
 import { isAdmin } from "@/lib/admin/roles";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 export type CitaAdmin = {
   id: string;
@@ -56,14 +57,7 @@ function mesParam(anio: number, mesIdx0: number) {
 }
 
 function fechaEsDesdeKey(key: string): string {
-  const [y, m, d] = key.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("es-AR", {
-    timeZone: "UTC",
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return formatearSoloFecha(key, "largoConDia");
 }
 
 function fechaConDiaYHora(fechaKey: string, horario: string): string {

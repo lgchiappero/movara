@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import SearchableSelect from "@/components/admin/SearchableSelect";
+import { hoyAR } from "@/lib/fecha-ar";
 
 export type UnidadParaRecibo = {
   id: string;
@@ -17,8 +18,7 @@ const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
 
 function hoyISO(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return hoyAR();
 }
 
 /** Faltantes para emitir el recibo — mismos requisitos que el servidor. */

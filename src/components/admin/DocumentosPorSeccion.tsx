@@ -8,6 +8,7 @@ import FileUpload from "@/components/admin/ui/FileUpload";
 import { useSubidaArchivos } from "@/components/admin/ui/useSubidaArchivos";
 import type { SeccionInfo } from "@/lib/envios/constantes";
 import EliminarDocumentoButton from "@/components/admin/EliminarDocumentoButton";
+import { formatearFechaAR } from "@/lib/fecha-ar";
 
 export type DocumentoSeccionConUrl = {
   id: string;
@@ -122,7 +123,7 @@ function SeccionCard({
               <div className="min-w-0">
                 <p className="font-medium text-[#2F2F2F] break-words [overflow-wrap:anywhere]">{d.nombre}</p>
                 <p className="text-xs text-stone-400">
-                  {new Date(d.createdAt).toLocaleDateString("es-AR")} · {d.subidoPor}
+                  {formatearFechaAR(d.createdAt)} · {d.subidoPor}
                   {d.descripcion ? ` · ${d.descripcion}` : ""}
                 </p>
               </div>

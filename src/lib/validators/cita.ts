@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { nombreSchema, razonSocialSchema, telefonoSchema, emailSchema } from "@/lib/validators/configurador";
 import { HORARIOS_AGENDA } from "@/lib/agenda/horarios";
-import { isFechaKeyValida, hoyFechaKey } from "@/lib/agenda/fecha";
+import { isFechaKeyValida } from "@/lib/agenda/fecha";
+import { hoyAR } from "@/lib/fecha-ar";
 
 export const tipoClienteAgendaOptions = ["particular", "empresa"] as const;
 
@@ -10,7 +11,7 @@ export const consultaSchema = z.string().max(1000, "Máximo 1000 caracteres").op
 export const citaSchema = z
   .object({
     fecha: z.string().refine(isFechaKeyValida, "Fecha inválida").refine(
-      (v) => v >= hoyFechaKey(),
+      (v) => v >= hoyAR(),
       "No se puede agendar en una fecha pasada"
     ),
     horario: z.enum(HORARIOS_AGENDA),

@@ -43,7 +43,7 @@ describe("GET /api/admin/leads/export", () => {
     await GET(new NextRequest("http://localhost/api/admin/leads/export?desde=2026-01-01&hasta=2026-01-31"));
     expect(mockFindMany).toHaveBeenCalledWith({
       where: {
-        createdAt: { gte: new Date("2026-01-01T00:00:00"), lte: new Date("2026-01-31T23:59:59") },
+        createdAt: { gte: new Date("2026-01-01T03:00:00Z"), lte: new Date("2026-02-01T02:59:59.999Z") },
       },
       orderBy: { createdAt: "desc" },
     });

@@ -7,17 +7,22 @@ import {
   type EstadoFabricacion,
 } from "@/lib/envios/constantes";
 import { estadoGeneralEnvio } from "@/lib/envios/estado-general";
+import { esClaveFechaValida, finDiaAR, instanteAR } from "@/lib/fecha-ar";
 
 export const dynamic = "force-dynamic";
 
 const inputClass =
   "w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm text-[#1a1a1a] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
 
+/** Días del filtro = días argentinos: desde las 00:00 hasta las 23:59:59.999
+ * en Argentina. Una fecha mal formada se ignora. */
 function fechaWhere(desde?: string, hasta?: string): Prisma.DateTimeFilter | undefined {
-  if (!desde && !hasta) return undefined;
+  const d = desde && esClaveFechaValida(desde) ? desde : undefined;
+  const h = hasta && esClaveFechaValida(hasta) ? hasta : undefined;
+  if (!d && !h) return undefined;
   const filtro: Prisma.DateTimeFilter = {};
-  if (desde) filtro.gte = new Date(`${desde}T00:00:00`);
-  if (hasta) filtro.lte = new Date(`${hasta}T23:59:59`);
+  if (d) filtro.gte = instanteAR(d);
+  if (h) filtro.lte = finDiaAR(instanteAR(h, 12));
   return filtro;
 }
 

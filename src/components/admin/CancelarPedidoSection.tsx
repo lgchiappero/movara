@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
 import { etiquetaEstadoPedido } from "@/lib/pedido/estado-pedido";
+import { formatearFechaAR } from "@/lib/fecha-ar";
 
 /** Cancelar un pedido (con motivo opcional) o reactivarlo si ya está
  * cancelado. Un pedido cancelado no cuenta para el estado del cliente ni se
@@ -58,7 +59,7 @@ export default function CancelarPedidoSection({
       <div className="bg-red-50 border border-red-200 rounded-2xl p-5 space-y-2 text-sm">
         <p className="font-bold text-red-700">Pedido cancelado</p>
         <p className="text-red-700/80">
-          {fechaCancelacion && `El ${new Date(fechaCancelacion).toLocaleDateString("es-AR")}`}
+          {fechaCancelacion && `El ${formatearFechaAR(fechaCancelacion)}`}
           {canceladoPor && ` por ${canceladoPor}`}.{" "}
           {motivoCancelacion ? `Motivo: ${motivoCancelacion}` : "Sin motivo cargado."}
         </p>

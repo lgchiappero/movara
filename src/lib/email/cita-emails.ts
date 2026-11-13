@@ -1,5 +1,5 @@
 import { SHOWROOM_DIRECCION, SHOWROOM_MAPS_URL, SHOWROOM_WHATSAPP } from "@/lib/agenda/showroom";
-import { fechaKeyToDate, dateToFechaKey } from "@/lib/agenda/fecha";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 export type CitaEmailData = {
   id: string;
@@ -18,13 +18,7 @@ export type CitaEmailData = {
 function fechaEs(fecha: Date): string {
   // `fecha` viene de Prisma como Date a medianoche UTC — se re-normaliza
   // por la key para no correr el día si el server no corre en UTC.
-  return fechaKeyToDate(dateToFechaKey(fecha)).toLocaleDateString("es-AR", {
-    timeZone: "UTC",
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return formatearSoloFecha(fecha, "largoConDia");
 }
 
 function cancelUrl(id: string): string {

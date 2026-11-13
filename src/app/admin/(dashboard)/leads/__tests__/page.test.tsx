@@ -52,7 +52,7 @@ describe("AdminLeadsPage", () => {
     mockFindMany.mockResolvedValueOnce([]);
     await AdminLeadsPage({ searchParams: Promise.resolve({ desde: "2026-01-01", hasta: "2026-01-31" }) });
     expect(mockFindMany).toHaveBeenCalledWith({
-      where: { createdAt: { gte: new Date("2026-01-01T00:00:00"), lte: new Date("2026-01-31T23:59:59") } },
+      where: { createdAt: { gte: new Date("2026-01-01T03:00:00Z"), lte: new Date("2026-02-01T02:59:59.999Z") } }, // días argentinos
       orderBy: { createdAt: "desc" },
       take: 50,
       skip: 0,
@@ -83,7 +83,7 @@ describe("AdminLeadsPage", () => {
     mockFindMany.mockResolvedValueOnce([]);
     await AdminLeadsPage({ searchParams: Promise.resolve({ desde: "2026-01-01", sinResponder: "1" }) });
     const where = mockFindMany.mock.calls[0][0].where;
-    expect(where.createdAt.gte).toEqual(new Date("2026-01-01T00:00:00"));
+    expect(where.createdAt.gte).toEqual(new Date("2026-01-01T03:00:00Z"));
     expect(where.createdAt.lte).toBeInstanceOf(Date);
   });
 

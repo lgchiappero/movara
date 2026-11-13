@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
 import { HORARIOS_AGENDA, esDiaHabil } from "@/lib/agenda/horarios";
+import { formatearSoloFecha, hoyAR, mesAnioAR } from "@/lib/fecha-ar";
 
 export type DiaDisponibilidad = {
   fechaKey: string;
@@ -22,25 +23,13 @@ function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
-function hoyFechaKeyLocal() {
-  const now = new Date();
-  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
-}
-
 function esDomingoKey(key: string): boolean {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay() === 0;
 }
 
 function fechaEsDesdeKey(key: string): string {
-  const [y, m, d] = key.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("es-AR", {
-    timeZone: "UTC",
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatearSoloFecha(key, { weekday: "short", year: "numeric", month: "short", day: "numeric" });
 }
 
 type EstadoVisual = "pasado" | "con-citas" | "sin-citas" | "domingo" | "deshabilitado";
@@ -86,7 +75,7 @@ function MesGrid({
 }) {
   const primerDiaSemana = (new Date(Date.UTC(anio, mesIdx0, 1)).getUTCDay() + 6) % 7;
   const diasEnMes = new Date(Date.UTC(anio, mesIdx0 + 1, 0)).getUTCDate();
-  const hoy = hoyFechaKeyLocal();
+  const hoy = hoyAR();
 
   return (
     <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5">
@@ -295,8 +284,8 @@ export default function DisponibilidadPanel({
   // Navegación mes a mes de la ventana de 3 meses — sin tope hacia
   // adelante; hacia atrás no se puede pasar del mes actual (no tiene
   // sentido gestionar disponibilidad de fechas ya pasadas).
-  const hoy = new Date();
-  const esMesActual = anioInicial === hoy.getFullYear() && mesInicial === hoy.getMonth();
+  const hoy = mesAnioAR();
+  const esMesActual = anioInicial === hoy.anio && mesInicial === hoy.mes - 1;
   const totalActual = anioInicial * 12 + mesInicial;
   const prevTotal = totalActual - 1;
   const nextTotal = totalActual + 1;

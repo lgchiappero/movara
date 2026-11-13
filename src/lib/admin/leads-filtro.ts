@@ -1,13 +1,14 @@
 import type { Prisma } from "@prisma/client";
+import { esClaveFechaValida, finDiaAR, instanteAR } from "@/lib/fecha-ar";
 
 export type FiltrosLeads = { desde?: string; hasta?: string; provincia?: string; sinResponder?: string };
 
-/** "YYYY-MM-DD" válido → Date a esa hora local; cualquier otra cosa → null
- * (una fecha mal formada en la URL se ignora en vez de romper la query). */
-function fechaValida(valor: string | undefined, hora: string): Date | null {
-  if (!valor || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) return null;
-  const d = new Date(`${valor}T${hora}`);
-  return Number.isNaN(d.getTime()) ? null : d;
+/** "YYYY-MM-DD" válido → inicio (00:00) o fin (23:59:59.999) de ese día en
+ * Argentina; cualquier otra cosa → null (una fecha mal formada en la URL se
+ * ignora en vez de romper la query). */
+function fechaValida(valor: string | undefined, extremo: "inicio" | "fin"): Date | null {
+  if (!valor || !esClaveFechaValida(valor)) return null;
+  return extremo === "inicio" ? instanteAR(valor) : finDiaAR(instanteAR(valor, 12));
 }
 
 /** Filtro de /admin/leads — lo usan la página y la exportación CSV, así el
@@ -17,8 +18,8 @@ function fechaValida(valor: string | undefined, hora: string): Date | null {
  * fecha más temprana de las dos. */
 export function buildLeadsWhere(f: FiltrosLeads, ahora: Date = new Date()): Prisma.LeadWhereInput {
   const where: Prisma.LeadWhereInput = {};
-  const desde = fechaValida(f.desde, "00:00:00");
-  let hasta = fechaValida(f.hasta, "23:59:59");
+  const desde = fechaValida(f.desde, "inicio");
+  let hasta = fechaValida(f.hasta, "fin");
 
   if (f.sinResponder === "1") {
     where.contactado = false;

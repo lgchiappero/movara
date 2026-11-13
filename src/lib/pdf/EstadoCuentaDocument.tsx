@@ -2,6 +2,7 @@ import path from "path";
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { GOLD, DARK } from "@/lib/pdf/pedido-pdf-styles";
 import { CONCEPTO_LABELS, ESTADO_ACUERDO_LABELS, type EstadoAcuerdo } from "@/lib/cobranza/constantes";
+import { formatearSoloFecha } from "@/lib/fecha-ar";
 
 const logoPath = path.join(process.cwd(), "public", "Logo.jpeg");
 
@@ -69,7 +70,7 @@ function formatMoneda(value: number, moneda: string): string {
 }
 
 function formatFecha(value: string): string {
-  return new Date(value).toLocaleDateString("es-AR", { timeZone: "UTC" });
+  return formatearSoloFecha(value);
 }
 
 export type AcuerdoParaPdf = {
