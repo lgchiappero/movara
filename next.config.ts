@@ -51,6 +51,10 @@ const STUDIO_SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // El indicador de desarrollo de Next (la "N" abajo a la izquierda) tapa
+  // botones del sitio en los e2e (ej. "Atrás" del configurador en el
+  // celular). Playwright levanta el servidor con E2E_SIN_INDICADOR=1.
+  ...(process.env.E2E_SIN_INDICADOR === "1" ? { devIndicators: false as const } : {}),
   images: {
     // 85: la foto del Hero (Next 16 solo permite 75 por defecto).
     qualities: [75, 85],

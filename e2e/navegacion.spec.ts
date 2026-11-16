@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 
 const DESKTOP = { width: 1280, height: 800 };
 const CELULAR = { width: 390, height: 844 };
@@ -98,24 +98,36 @@ test.describe("Botón volver arriba", () => {
   const CASOS = [
     ["desktop, home", DESKTOP, "/"],
     ["celular, home", CELULAR, "/"],
-    ["celular, configurador (panel de precio abajo)", CELULAR, "/configurador?modelo=40ft"],
     ["desktop, configurador", DESKTOP, "/configurador?modelo=40ft"],
   ] as const;
+
+  /** El botón entra con una animación de opacidad y escala (framer-motion):
+   * se mide cuando terminó, si no la caja sale achicada. */
+  async function cajaQuieta(boton: Locator) {
+    await expect(boton).toHaveCSS("opacity", "1");
+    await expect(boton).toHaveCSS("transform", "none");
+    return (await boton.boundingBox())!;
+  }
 
   for (const [nombre, vp, ruta] of CASOS) {
     test(`${nombre}: aparece al bajar, no queda tapado y sube`, async ({ page }) => {
       await page.setViewportSize(vp);
       await page.goto(ruta);
+      // El configurador, al hidratar y aplicar ?modelo=, vuelve la vista a su
+      // inicio: si se baja antes, ese salto sube la página y el botón se va.
+      if (ruta.startsWith("/configurador")) await expect(page.locator('[data-configurador="listo"]')).toHaveCount(1);
       const boton = page.getByRole("button", { name: "Volver al inicio" });
       await expect(boton).toHaveCount(0);
       await bajar(page, ruta === "/" ? 2500 : 1500);
       await expect(boton).toBeVisible();
 
-      const caja = (await boton.boundingBox())!;
+      const caja = await cajaQuieta(boton);
       expect(caja.y + caja.height).toBeLessThanOrEqual(vp.height);
+      // Mismo criterio que el componente (altoBarraInferior): solo cuentan las
+      // barras fijas abajo; la del configurador es fija solo en el celular.
       const barras = await page.evaluate(() =>
         [...document.querySelectorAll<HTMLElement>("[data-barra-inferior]")]
-          .filter((b) => b.offsetHeight > 0)
+          .filter((b) => b.offsetHeight > 0 && getComputedStyle(b).position === "fixed")
           .map((b) => window.innerHeight - b.offsetHeight)
       );
       for (const topeBarra of barras) expect(caja.y + caja.height).toBeLessThanOrEqual(topeBarra - 8);
@@ -130,6 +142,17 @@ test.describe("Botón volver arriba", () => {
       await expect.poll(() => scrollY(page)).toBe(0);
     });
   }
+
+  test("celular, configurador: no aparece, para no tapar la barra fija de Atrás/Siguiente", async ({ page }) => {
+    await page.setViewportSize(CELULAR);
+    await page.goto("/configurador?modelo=40ft");
+    await expect(page.locator('[data-configurador="listo"]')).toHaveCount(1);
+    await bajar(page, 1500);
+    // Ya bajó lo suficiente para que en otra página apareciera.
+    await expect.poll(() => scrollY(page)).toBeGreaterThan(400);
+    await expect(page.getByRole("button", { name: "Volver al inicio" })).toBeHidden();
+    await expect(page.locator("[data-cfg-navegacion]")).toBeInViewport();
+  });
 });
 
 test.describe("Links del menú a secciones de la home", () => {

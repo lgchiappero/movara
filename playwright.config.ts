@@ -36,7 +36,11 @@ export default defineConfig({
   ],
 
   webServer: {
+    // Sin el indicador de desarrollo de Next, que tapa botones (ver
+    // next.config.ts). Si reutilizás un `npm run dev` propio, levantalo con
+    // E2E_SIN_INDICADOR=1 para que los e2e del configurador no fallen.
     command: "npm run dev",
+    env: { E2E_SIN_INDICADOR: "1" },
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
