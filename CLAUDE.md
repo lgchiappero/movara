@@ -2,6 +2,8 @@
 
 # Reglas de desarrollo MOVARA
 
+Antes de cualquier cambio en el sitio, leer docs/base-del-sitio.md y reutilizar lo que ya existe.
+
 ## Antes de cada commit
 - Correr tsc --noEmit — cero errores
 - Correr eslint — cero errores

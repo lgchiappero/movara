@@ -28,7 +28,7 @@ const TITLE_DEFAULT = "MOVARA Flex";
 const CTA_PRIMARIO_DEFAULT = "Quiero este modelo";
 
 const DESCRIPCION_DEFAULT =
-  "El MOVARA Flex es una unidad plegable y expandible que se transporta cerrada y se despliega en destino. Vivienda, inversión turística u oficina rural: llega en 90 días en adelante desde el anticipo y se despliega en destino, sin meses de obra.";
+  "El MOVARA Flex es una unidad expandible que se transporta cerrada y se despliega en destino. Vivienda, inversión turística u oficina rural: llega en 90 días en adelante desde el anticipo y se despliega en destino, sin meses de obra.";
 
 const PRECIO_POR_M2_DEFAULT = 594;
 const PRECIO_NOTA_DEFAULT =
@@ -88,7 +88,7 @@ export default function FlexPageClient({
         />
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         {/* Precio por m² */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -135,7 +135,7 @@ export default function FlexPageClient({
             ))}
           </div>
 
-          {/* Especificaciones técnicas completas — desplegable, misma página */}
+          {/* Especificaciones técnicas completas — se abre en la misma página */}
           <div className="mt-6">
             <button
               type="button"
@@ -217,7 +217,7 @@ export default function FlexPageClient({
             {ctaPrimario}
           </a>
         </motion.div>
-      </main>
+      </div>
     </>
   );
 }

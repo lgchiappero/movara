@@ -12,7 +12,7 @@ async function abrirConfigurador(page: Page) {
     route.fulfill({ status: 201, json: { numeroConsulta: "C-E2E", tokenSeguimiento: "e2e" } })
   );
   await page.goto("/configurador");
-  const cfg = page.locator('main[data-configurador="listo"]');
+  const cfg = page.locator('[data-configurador="listo"]');
   await expect(cfg).toHaveCount(1);
   await expect(cfg.getByText("Paso 1 de 6", { exact: true })).toBeVisible();
 }

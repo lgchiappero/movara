@@ -9,7 +9,7 @@ describe("rutasARevalidar", () => {
   });
 
   it("las rutas con [slug] llevan type page; todo el sitio es el layout raíz", () => {
-    expect(rutasARevalidar("modelo")).toContainEqual({ path: "/modelos/[slug]", type: "page" });
+    expect(rutasARevalidar("modelo")).toContainEqual({ path: "/(sitio)/modelos/[slug]", type: "page" });
     expect(rutasARevalidar("siteConfig")).toEqual([{ path: "/", type: "layout" }]);
   });
 

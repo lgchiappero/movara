@@ -1,13 +1,10 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 
-vi.mock("@/components/home/Navbar", () => ({ default: () => <nav>Navbar</nav> }));
-vi.mock("@/components/home/Footer", () => ({ default: () => <footer>Footer</footer> }));
-
 import PaginaLegal from "../PaginaLegal";
 import AvisoPrivacidad from "../AvisoPrivacidad";
-import PrivacidadPage, { metadata as metaPrivacidad } from "@/app/privacidad/page";
-import TerminosPage, { metadata as metaTerminos } from "@/app/terminos/page";
+import PrivacidadPage, { metadata as metaPrivacidad } from "@/app/(sitio)/privacidad/page";
+import TerminosPage, { metadata as metaTerminos } from "@/app/(sitio)/terminos/page";
 import type { DocumentoLegal } from "@/lib/legal/campos";
 
 afterEach(() => vi.unstubAllEnvs());
@@ -23,10 +20,10 @@ const DOC: DocumentoLegal = {
 };
 
 describe("PaginaLegal", () => {
-  it("navbar, título, fecha, índice con anclas a cada sección y footer", () => {
-    render(<PaginaLegal doc={DOC} otro={{ href: "/terminos", label: "Términos" }} />);
-    expect(screen.getByText("Navbar")).toBeInTheDocument();
-    expect(screen.getByText("Footer")).toBeInTheDocument();
+  it("solo arma el contenido: título, fecha, índice con anclas a cada sección (sin header, main ni footer propios)", () => {
+    const { container } = render(<PaginaLegal doc={DOC} otro={{ href: "/terminos", label: "Términos" }} />);
+    // Header, <main> y footer los pone app/(sitio)/layout.tsx una sola vez.
+    expect(container.querySelector("header, main, footer")).toBeNull();
     expect(screen.getByRole("heading", { level: 1, name: "Doc de prueba" })).toBeInTheDocument();
     expect(screen.getByText("Última actualización: 8 de octubre de 2026")).toBeInTheDocument();
     const indice = screen.getByRole("navigation", { name: "Índice" });

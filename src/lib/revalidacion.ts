@@ -24,7 +24,9 @@ const RUTAS_POR_TIPO: Record<string, RutaARevalidar[]> = {
     { path: "/" },
     { path: "/modelos" },
     { path: "/modelos/flex" },
-    { path: "/modelos/[slug]", type: "page" },
+    // Con patrón dinámico, Next pide la ruta de archivos: incluye el route
+    // group (sitio). Sin él no regenera ninguna ficha.
+    { path: "/(sitio)/modelos/[slug]", type: "page" },
     { path: "/sitemap.xml" },
   ],
   quienesSomos: [{ path: "/nosotros" }],

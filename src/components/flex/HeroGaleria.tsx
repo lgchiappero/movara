@@ -14,7 +14,7 @@ type GalleryItem =
   | { kind: "image"; src: string; isSanity: boolean; alt: string }
   | { kind: "video"; url: string; embedUrl: string; label: string; videoId: string | null };
 
-// Fotos reales de unidades MOVARA (recortes del catálogo del proveedor Heshi
+// Fotos reales de unidades MOVARA (recortes del catálogo del proveedor
 // verificados a mano — hay archivos mal nombrados en /public/configurador
 // así que estas rutas se eligieron por contenido, no por nombre de archivo).
 const FALLBACK_PHOTOS = [

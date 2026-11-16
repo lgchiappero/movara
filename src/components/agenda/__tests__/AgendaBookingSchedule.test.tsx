@@ -43,6 +43,10 @@ describe("AgendaBooking — Schedule", () => {
     respuestaCita = async () => ({ ok: true, status: 201, json: async () => ({ id: "c1" }) });
     await confirmar();
     await vi.waitFor(() => expect(trackSchedule).toHaveBeenCalledTimes(1));
+    // La confirmación no trae un "Volver al inicio" propio: el Volver es el
+    // del header (BotonVolver), igual en todo el sitio.
+    expect(await screen.findByText("¡Tu visita está confirmada!")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /volver/i })).toBeNull();
   });
 
   it.each([

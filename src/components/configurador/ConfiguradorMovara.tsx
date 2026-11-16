@@ -39,6 +39,7 @@ import {
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 import { leerOrigen } from "@/lib/origen-visita/navegador";
 import { scrollInstantaneoA } from "@/lib/scroll";
+import { marcarSalidaProtegida } from "@/lib/navegacion/salida-protegida";
 
 // ─────────────────────────────────────────────────────────
 // Constants
@@ -258,6 +259,20 @@ export default function ConfiguradorMovara({
   const localidadValida = !validateField(localidadSchema, localidad.trim());
 
   const modeloSeleccionado = modelo ? MOVARA_MODELS.find((m) => m.key === modelo)! : null;
+
+  // Con datos cargados y sin enviar, el Volver del header pide confirmación
+  // (src/lib/navegacion/salida-protegida.ts). La barra Atrás/Siguiente no.
+  const hayDatosSinEnviar =
+    !showResult &&
+    (step > 1 ||
+      !!finalidad ||
+      [localidad, provincia, notas, nombre, razonSocial, nombreContacto, telefono, email].some((v) => v.trim() !== ""));
+  useEffect(() => {
+    marcarSalidaProtegida(
+      hayDatosSinEnviar ? "Tenés una configuración sin enviar. Si salís ahora, se pierde lo que cargaste." : null
+    );
+  }, [hayDatosSinEnviar]);
+  useEffect(() => () => marcarSalidaProtegida(null), []);
   // InitiateCheckout una sola vez por visita, aunque vuelva al paso 1.
   const inicioMedido = useRef(false);
 
@@ -423,7 +438,7 @@ export default function ConfiguradorMovara({
 
   if (showResult) {
     return (
-      <main className="min-h-screen bg-stone-50 pt-16">
+      <div className="min-h-screen bg-stone-50 pt-16">
         <div className="bg-[#2F2F2F] px-4 sm:px-6 pt-5 pb-5 sm:pt-14 sm:pb-10 text-center">
           <span ref={(el) => { inicioRef.current = el; }} data-cfg-inicio className="block text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Paso {TOTAL_PASOS} de {TOTAL_PASOS} — Tu configuración</span>
           <h1 className="text-2xl sm:text-3xl font-bold text-white mt-1 sm:mt-2">{cms.resultado.title}</h1>
@@ -457,14 +472,14 @@ export default function ConfiguradorMovara({
             />
           </motion.div>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
     // data-configurador="listo": ya hidratado e interactivo (los e2e lo esperan
     // antes de hacer clic; durante la carga hay una copia oculta del HTML).
-    <main data-configurador={hydrated ? "listo" : "cargando"} className="min-h-screen bg-stone-50 pt-16">
+    <div data-configurador={hydrated ? "listo" : "cargando"} className="min-h-screen bg-stone-50 pt-16">
       {/* En el celular, encabezado e indicador compactos (~15 % de la pantalla). */}
       <div className="bg-[#2F2F2F] px-4 sm:px-6 pt-4 pb-3 sm:pt-14 sm:pb-10 text-center">
         <span className="text-sage-400 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em]">Configurador</span>
@@ -541,7 +556,7 @@ export default function ConfiguradorMovara({
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 

@@ -19,6 +19,14 @@ describe("CitaCancelarView", () => {
     expect(link).toHaveClass("text-[13px]", "text-[#D4B36A]");
   });
 
+  it("el email, el botón y el aviso van dentro de la tarjeta blanca de la visita (la página tiene fondo oscuro)", () => {
+    render(<CitaCancelarView cita={CITA} />);
+    const tarjeta = screen.getByText("Juan").closest(".bg-white")!;
+    expect(tarjeta).toContainElement(screen.getByLabelText("Email con el que agendaste"));
+    expect(tarjeta).toContainElement(screen.getByRole("button", { name: "Cancelar mi visita" }));
+    expect(tarjeta).toContainElement(screen.getByRole("link", { name: /Política de Privacidad|privacidad/i }));
+  });
+
   it("el botón queda deshabilitado hasta ingresar un email válido", async () => {
     render(<CitaCancelarView cita={CITA} />);
     const boton = screen.getByRole("button", { name: "Cancelar mi visita" });

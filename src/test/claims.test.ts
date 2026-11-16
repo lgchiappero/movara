@@ -58,3 +58,52 @@ describe("claims prohibidos (producción nacional, 'fabricamos', casas entregada
     expect(CLAIMS.test(texto)).toBe(false);
   });
 });
+
+/** Guarda de marca: el cliente nunca ve el nombre del proveedor ni que la
+ * unidad es "plegable" (se dice "expandible"). Cubre todo el texto público
+ * de src: páginas, componentes, metadata, alt de imágenes, emails, PDF del
+ * cliente y datos de respaldo. Quedan afuera solo las pantallas internas
+ * (admin, studio) y el PDF que se le manda al proveedor. Los comentarios no
+ * se publican, así que no cuentan. Ver docs/base-del-sitio.md (Marca). */
+const PROVEEDOR_O_PLEGABLE = /\bplegables?\b|\bfoldable\b|\bfolding\b|\bheshi\b|\bhoshi\b/i;
+
+const SOLO_INTERNO = [
+  /^src\/app\/admin\//,
+  /^src\/app\/api\/admin\//,
+  /^src\/components\/admin\//,
+  /^src\/app\/studio\//,
+  // PDF bilingüe para el proveedor (códigos de modelo del fabricante).
+  /^src\/lib\/pdf\/model-codes\.ts$/,
+];
+
+const esComentario = (linea: string) => /^\s*(\/\/|\/\*|\*)/.test(linea);
+
+describe("nombre del proveedor y 'plegable' fuera del texto público", () => {
+  it("no aparecen en el código público del sitio", () => {
+    const encontrados = archivos(path.join(process.cwd(), "src"))
+      .map((f) => path.relative(process.cwd(), f))
+      .filter((f) => !SOLO_INTERNO.some((r) => r.test(f)))
+      .flatMap((f) =>
+        readFileSync(f, "utf8")
+          .split("\n")
+          .map((linea, i) => ({ i: i + 1, linea }))
+          .filter(({ linea }) => PROVEEDOR_O_PLEGABLE.test(linea) && !esComentario(linea))
+          .map(({ i, linea }) => `${f}:${i}: ${linea.trim()}`)
+      );
+    expect(encontrados).toEqual([]);
+  });
+
+  it.each(["unidad plegable", "Plegables", "foldable house", "Folding container", "Heshi house", "HOSHI"])("bloquea %s", (texto) => {
+    expect(PROVEEDOR_O_PLEGABLE.test(texto)).toBe(true);
+  });
+
+  it.each(["lista desplegable", "unidad expandible", "se despliega en destino"])("no confunde %s", (texto) => {
+    expect(PROVEEDOR_O_PLEGABLE.test(texto)).toBe(false);
+  });
+
+  it("sí ve el texto dentro de JSX y strings, aunque la línea tenga código", () => {
+    expect(esComentario('  description: "una unidad plegable",')).toBe(false);
+    expect(esComentario("  // catálogo del proveedor Heshi")).toBe(true);
+    expect(esComentario(" * la palabra plegable")).toBe(true);
+  });
+});

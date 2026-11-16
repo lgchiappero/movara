@@ -18,6 +18,6 @@ describe("ConfiguradorMovara — marca de hidratación", () => {
 
   it('en el cliente queda data-configurador="listo"', () => {
     const { container } = render(<ConfiguradorMovara />);
-    expect(container.querySelector("main")).toHaveAttribute("data-configurador", "listo");
+    expect(container.querySelector("[data-configurador]")).toHaveAttribute("data-configurador", "listo");
   });
 });

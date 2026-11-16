@@ -79,7 +79,7 @@ for (const ancho of [360, 390]) {
     test("configurador: sin scroll horizontal y con Siguiente a la vista en cada paso", async ({ page }) => {
       await page.route("**/api/pedido", (r) => r.fulfill({ status: 201, json: { numeroConsulta: "C-E2E", tokenSeguimiento: "e2e" } }));
       await page.goto("/configurador");
-      const cfg = page.locator('main[data-configurador="listo"]');
+      const cfg = page.locator('[data-configurador="listo"]');
       await expect(cfg).toHaveCount(1);
       const siguiente = () => page.getByRole("button", { name: "Siguiente" }).click();
 

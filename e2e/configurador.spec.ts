@@ -8,7 +8,7 @@ import { loginAsAdmin } from "./helpers/login";
  * de hidratar se pierden: por eso se espera la marca y se busca adentro. */
 async function abrirConfigurador(page: Page, url = "/configurador") {
   await page.goto(url);
-  const cfg = page.locator('main[data-configurador="listo"]');
+  const cfg = page.locator('[data-configurador="listo"]');
   await expect(cfg).toHaveCount(1);
   await expect(cfg.getByText("Paso 1 de 6", { exact: true })).toBeVisible();
   return cfg;

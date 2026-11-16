@@ -51,63 +51,67 @@ export default function CitaCancelarView({ cita }: { cita: CitaCancelarData }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-stone-500">Nombre</span>
-          <span className="text-[#2F2F2F] font-medium">{cita.nombre}</span>
+      {/* Una sola tarjeta: datos de la visita y, si sigue confirmada, el
+          formulario para cancelarla. Nada queda suelto sobre el fondo oscuro. */}
+      <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 text-sm">
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span className="text-stone-500">Nombre</span>
+            <span className="text-[#1A1A1A] font-medium">{cita.nombre}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-stone-500">Fecha</span>
+            <span className="text-[#1A1A1A] font-medium">{cita.fechaEs}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-stone-500">Horario</span>
+            <span className="text-[#1A1A1A] font-medium">{cita.horario} hs</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-stone-500">Dónde</span>
+            <span className="flex flex-col items-end">
+              <span className="text-[#1A1A1A] font-medium">{SHOWROOM_DIRECCION}</span>
+              <ComoLlegarLink />
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-stone-500">Estado</span>
+            <span className="text-[#1A1A1A] font-medium">{ESTADO_LABEL[estado] ?? estado}</span>
+          </div>
         </div>
-        <div className="flex justify-between">
-          <span className="text-stone-500">Fecha</span>
-          <span className="text-[#2F2F2F] font-medium">{cita.fechaEs}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-stone-500">Horario</span>
-          <span className="text-[#2F2F2F] font-medium">{cita.horario} hs</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-stone-500">Dónde</span>
-          <span className="flex flex-col items-end">
-            <span className="text-[#2F2F2F] font-medium">{SHOWROOM_DIRECCION}</span>
-            <ComoLlegarLink />
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-stone-500">Estado</span>
-          <span className="text-[#2F2F2F] font-medium">{ESTADO_LABEL[estado] ?? estado}</span>
-        </div>
-      </div>
 
-      {estado === "confirmada" && (
-        <div className="space-y-3">
-          {/* Confirma que quien cancela es el dueño de la visita. */}
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-[#2F2F2F]">Email con el que agendaste</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              placeholder="tu@email.com"
-              className="w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-base sm:text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-          </label>
-          {error && <p className="text-xs text-red-600">{error}</p>}
-          <button
-            type="button"
-            disabled={accion === "cancelando" || !emailValido}
-            onClick={cancelar}
-            className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-sm rounded-xl transition-colors"
-          >
-            {accion === "cancelando" ? "Cancelando..." : "Cancelar mi visita"}
-          </button>
-          <AvisoPrivacidad accion="Al continuar" className="text-center" />
-        </div>
-      )}
+        {estado === "confirmada" && (
+          <div className="mt-5 pt-5 border-t border-[#E5E5E5] space-y-3">
+            {/* Confirma que quien cancela es el dueño de la visita. */}
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-[#1A1A1A]">Email con el que agendaste</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                placeholder="tu@email.com"
+                className="w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-base sm:text-sm text-[#1A1A1A] bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </label>
+            {error && <p className="text-xs text-red-600">{error}</p>}
+            <button
+              type="button"
+              disabled={accion === "cancelando" || !emailValido}
+              onClick={cancelar}
+              className="w-full min-h-11 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-sm rounded-xl transition-colors"
+            >
+              {accion === "cancelando" ? "Cancelando..." : "Cancelar mi visita"}
+            </button>
+            <AvisoPrivacidad accion="Al continuar" className="text-center" />
+          </div>
+        )}
+      </div>
 
       {estado === "cancelada" && (
         <div className="bg-white rounded-2xl border border-[#E5E5E5] p-6 text-center">
           <p className="text-3xl mb-2">✅</p>
-          <p className="font-bold text-[#2F2F2F] mb-1">Tu visita fue cancelada</p>
+          <p className="font-bold text-[#1A1A1A] mb-1">Tu visita fue cancelada</p>
           <p className="text-sm text-stone-500">Te enviamos un email confirmándolo.</p>
         </div>
       )}

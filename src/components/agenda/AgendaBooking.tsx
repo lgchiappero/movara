@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { HORARIOS_AGENDA } from "@/lib/agenda/horarios";
 import { tipoClienteAgendaOptions, consultaSchema } from "@/lib/validators/cita";
 import {
@@ -13,14 +12,16 @@ import {
 } from "@/lib/validators/configurador";
 import { SHOWROOM_DIRECCION } from "@/lib/agenda/showroom";
 import ComoLlegarLink from "./ComoLlegarLink";
+import AvisoProximamente from "./AvisoProximamente";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 import { trackSchedule } from "@/lib/meta-pixel";
 import { leerOrigen } from "@/lib/origen-visita/navegador";
 import { formatearSoloFecha, hoyAR, mesAnioAR } from "@/lib/fecha-ar";
+import { claveMes, hayDiaDisponibleEnVentana, mesesDeLaVentana, type EstadoDia } from "@/lib/agenda/ventana-agenda";
 
 const inputClass =
-  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-base sm:text-sm text-[#2F2F2F] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
-const labelClass = "text-sm font-medium text-[#2F2F2F]";
+  "w-full rounded-lg border border-[#E5E5E5] px-3 py-2.5 text-base sm:text-sm text-[#1A1A1A] bg-white focus:outline-none focus:ring-2 focus:ring-[#D4B36A]";
+const labelClass = "text-sm font-medium text-[#1A1A1A]";
 
 function inputClassFor(error: string | null, isTouched: boolean): string {
   if (!isTouched) return inputClass;
@@ -64,8 +65,8 @@ export default function AgendaBooking() {
   const actual = mesAnioAR();
   const [anio, setAnio] = useState(actual.anio);
   const [mesIdx0, setMesIdx0] = useState(actual.mes - 1);
-  const mesKey = `${anio}-${mesIdx0}`;
-  const [diasPorMes, setDiasPorMes] = useState<Record<string, Record<string, "disponible" | "completo">>>({});
+  const mesKey = claveMes(anio, mesIdx0);
+  const [diasPorMes, setDiasPorMes] = useState<Record<string, Record<string, EstadoDia>>>({});
   const estadoDiasMes = diasPorMes[mesKey] ?? {};
   const cargandoMes = !(mesKey in diasPorMes);
 
@@ -96,19 +97,38 @@ export default function AgendaBooking() {
     setTouched((prev) => ({ ...prev, [field]: true }));
   }
 
+  // Meses pedidos (o en camino) a /api/agenda/disponibilidad: cada uno se
+  // pide una sola vez, sea el que se está mirando o uno de la ventana de 60
+  // días que decide si se muestra el aviso "Próximamente".
+  const pedidos = useRef(new Set<string>());
+  const montado = useRef(true);
   useEffect(() => {
-    if (mesKey in diasPorMes) return;
-    let cancelado = false;
-    fetch(`/api/agenda/disponibilidad?anio=${anio}&mes=${mesIdx0 + 1}`)
-      .then((r) => r.json())
-      .then((json) => {
-        if (cancelado) return;
-        setDiasPorMes((prev) => ({ ...prev, [mesKey]: json.dias ?? {} }));
-      });
+    montado.current = true;
     return () => {
-      cancelado = true;
+      montado.current = false;
     };
-  }, [anio, mesIdx0, mesKey, diasPorMes]);
+  }, []);
+
+  const hoy = hoyKey();
+  const ventana = useMemo(() => mesesDeLaVentana(hoy), [hoy]);
+
+  useEffect(() => {
+    for (const m of [{ anio, mesIdx0 }, ...ventana]) {
+      const clave = claveMes(m.anio, m.mesIdx0);
+      if (clave in diasPorMes || pedidos.current.has(clave)) continue;
+      pedidos.current.add(clave);
+      fetch(`/api/agenda/disponibilidad?anio=${m.anio}&mes=${m.mesIdx0 + 1}`)
+        .then((r) => r.json())
+        .then((json) => {
+          if (!montado.current) return;
+          setDiasPorMes((prev) => ({ ...prev, [clave]: json.dias ?? {} }));
+        });
+    }
+  }, [anio, mesIdx0, ventana, diasPorMes]);
+
+  // null = todavía cargando la ventana: se ve el calendario con su "Cargando
+  // disponibilidad…", nunca el aviso de golpe.
+  const hayDiasProximos = hayDiaDisponibleEnVentana(diasPorMes, hoy);
 
   const primerDiaSemana = useMemo(() => {
     // 0=domingo → lo convertimos a 0=lunes para que la grilla arranque en lunes
@@ -210,7 +230,7 @@ export default function AgendaBooking() {
     return (
       <div className="bg-white rounded-2xl border border-[#E5E5E5] p-8 text-center">
         <p className="text-4xl mb-3">✅</p>
-        <h2 className="text-xl font-bold text-[#2F2F2F] mb-2">¡Tu visita está confirmada!</h2>
+        <h2 className="text-xl font-bold text-[#1A1A1A] mb-2">¡Tu visita está confirmada!</h2>
         <p className="text-stone-600 text-sm mb-1">
           {fechaTexto} a las {horarioSel} hs
         </p>
@@ -225,15 +245,11 @@ export default function AgendaBooking() {
             Código de referencia: <span className="font-mono">{citaId}</span>
           </p>
         )}
-        <Link
-          href="/"
-          className="inline-block mt-6 px-6 py-3 bg-[#D4B36A] hover:bg-[#c1a25a] text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
-        >
-          Volver al inicio
-        </Link>
       </div>
     );
   }
+
+  if (hayDiasProximos === false && paso === "calendario") return <AvisoProximamente />;
 
   return (
     <div className="space-y-6">
@@ -255,7 +271,7 @@ export default function AgendaBooking() {
           >
             ‹
           </button>
-          <p className="font-bold text-[#2F2F2F]">
+          <p className="font-bold text-[#1A1A1A]">
             {MESES[mesIdx0]} {anio}
           </p>
           <button
@@ -296,9 +312,9 @@ export default function AgendaBooking() {
             let clases: string;
             let title: string | undefined;
             if (seleccionado) {
-              clases = "border-2 border-[#D4B36A] bg-[#D4B36A]/20 text-[#2F2F2F] font-bold";
+              clases = "border-2 border-[#D4B36A] bg-[#D4B36A]/20 text-[#1A1A1A] font-bold";
             } else if (disponible) {
-              clases = "bg-[#D4B36A] text-[#2F2F2F] hover:bg-[#c1a25a] cursor-pointer";
+              clases = "bg-[#D4B36A] text-[#1A1A1A] hover:bg-[#c1a25a] cursor-pointer";
             } else if (completo) {
               clases = "bg-stone-300 text-stone-500 cursor-not-allowed";
               title = "Sin turnos disponibles";
@@ -322,7 +338,9 @@ export default function AgendaBooking() {
             );
           })}
         </div>
-        {cargandoMes && <p className="text-xs text-stone-400 mt-3">Cargando disponibilidad…</p>}
+        {(cargandoMes || hayDiasProximos === null) && (
+          <p className="text-xs text-stone-400 mt-3">Cargando disponibilidad…</p>
+        )}
       </div>
 
       {paso !== "calendario" && fechaSel && (
@@ -348,9 +366,9 @@ export default function AgendaBooking() {
                     onClick={() => seleccionarHorario(h)}
                     className={`py-2.5 rounded-lg text-sm font-bold transition-colors ${
                       seleccionado
-                        ? "bg-[#2F2F2F] text-white"
+                        ? "bg-[#1A1A1A] text-white"
                         : disponible
-                          ? "border border-[#D4B36A] text-[#8a6d2e] hover:bg-[#D4B36A] hover:text-[#2F2F2F]"
+                          ? "border border-[#D4B36A] text-[#8a6d2e] hover:bg-[#D4B36A] hover:text-[#1A1A1A]"
                           : "bg-stone-100 text-stone-300 cursor-not-allowed"
                     }`}
                   >
@@ -470,7 +488,7 @@ export default function AgendaBooking() {
               type="button"
               disabled={enviando}
               onClick={() => confirmarVisita()}
-              className="w-full py-3 bg-[#D4B36A] hover:bg-[#c1a25a] disabled:opacity-50 text-[#2F2F2F] font-bold text-sm rounded-xl transition-colors"
+              className="w-full py-3 bg-[#D4B36A] hover:bg-[#c1a25a] disabled:opacity-50 text-[#1A1A1A] font-bold text-sm rounded-xl transition-colors"
             >
               {enviando ? "Confirmando..." : "Confirmar visita"}
             </button>

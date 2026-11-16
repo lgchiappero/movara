@@ -71,7 +71,7 @@ describe("POST /api/revalidate (webhook de Sanity)", () => {
       ["/", undefined],
       ["/modelos", undefined],
       ["/modelos/flex", undefined],
-      ["/modelos/[slug]", "page"],
+      ["/(sitio)/modelos/[slug]", "page"],
       ["/sitemap.xml", undefined],
     ]);
   });

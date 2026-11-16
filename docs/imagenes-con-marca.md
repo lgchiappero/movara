@@ -1,5 +1,7 @@
 # Imágenes con marca de agua del proveedor (HESHI)
 
+Parte de la [base del sitio](base-del-sitio.md) (regla de imágenes).
+
 Relevamiento del 22/10/2026 sobre `public/configurador/`. Las fotos del
 proveedor traen la marca "HESHI" repetida en varias partes de la imagen (no
 solo en una esquina), así que recortarlas no alcanza: hay que reemplazarlas
