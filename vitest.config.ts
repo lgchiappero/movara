@@ -76,6 +76,7 @@ export default defineConfig({
         "src/app/[(]sitio[)]/terminos/**/*.tsx",
         "src/app/[(]sitio[)]/layout.tsx",
         "src/app/not-found.tsx",
+        "src/app/[(]sitio[)]/not-found.tsx",
         "src/components/layout/**/*.tsx",
         "src/lib/navegacion/**/*.ts",
         "src/components/ui/ModalConfirmacion.tsx",

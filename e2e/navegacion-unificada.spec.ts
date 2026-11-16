@@ -26,6 +26,10 @@ const RUTAS_FIJAS = [
   "/privacidad",
   "/terminos",
   "/esta-pagina-no-existe",
+  // notFound() desde páginas del grupo: la 404 va dentro del layout (sitio)
+  // y no puede duplicar el header ni el footer.
+  "/modelos/modelo-que-no-existe",
+  "/agendar/cancelar/id-inexistente",
 ];
 
 /** El primer modelo del catálogo (los slugs vienen de Sanity). */

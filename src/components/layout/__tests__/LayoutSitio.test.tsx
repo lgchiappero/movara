@@ -7,6 +7,7 @@ vi.mock("../Footer", () => ({ default: () => <footer>Footer</footer> }));
 import LayoutSitio from "../LayoutSitio";
 import SitioLayout from "@/app/(sitio)/layout";
 import NotFound, { metadata } from "@/app/not-found";
+import NotFoundSitio, { metadata as metadataSitio } from "@/app/(sitio)/not-found";
 
 describe("LayoutSitio", () => {
   it("header, un solo main con el contenido y footer, en ese orden", () => {
@@ -34,5 +35,17 @@ describe("404", () => {
     expect(screen.getByRole("link", { name: "Ir al inicio" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: "Ver modelos" })).toHaveAttribute("href", "/modelos");
     expect(metadata.robots).toEqual({ index: false, follow: false });
+  });
+});
+
+describe("404 de notFound() dentro del sitio", () => {
+  it("solo el contenido: el header y el footer ya los pone el layout (sitio), no se duplican", () => {
+    const { container } = render(<SitioLayout><NotFoundSitio /></SitioLayout>);
+    expect(container.querySelectorAll("header")).toHaveLength(1);
+    expect(container.querySelectorAll("main")).toHaveLength(1);
+    expect(container.querySelectorAll("footer")).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("No encontramos esta página");
+    expect(screen.getByRole("link", { name: "Ver modelos" })).toHaveAttribute("href", "/modelos");
+    expect(metadataSitio.robots).toEqual({ index: false, follow: false });
   });
 });

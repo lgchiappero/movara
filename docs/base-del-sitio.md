@@ -13,7 +13,7 @@ Documentos relacionados: [Imágenes con marca de agua del proveedor](imagenes-co
 | Todas las rutas públicas (home, modelos, configurador, producto, nosotros, faq, agendar, recibo, mi-pedido, privacidad, términos) viven en el route group `(sitio)` y comparten un solo layout: Navbar + `<main>` + Footer. Las URLs no llevan el grupo. | `src/app/(sitio)/layout.tsx` → `src/components/layout/LayoutSitio.tsx` |
 | Las páginas **no** agregan Navbar, Footer ni `<main>` propios: solo su contenido, con aire arriba para el header fijo de 64 px (`pt-16` o más; las páginas de texto usan `pt-28`). | cada `page.tsx` de `src/app/(sitio)` |
 | `admin` y `studio` quedan fuera del grupo, con sus propios layouts. | `src/app/admin`, `src/app/studio` |
-| 404 con el mismo marco (se renderiza bajo el layout raíz, por eso usa `LayoutSitio` directo), con links a la home y a `/modelos`. | `src/app/not-found.tsx` |
+| 404 con links a la home y a `/modelos`, contenido único en `NoEncontrado`. Dos entradas: URLs inexistentes → `app/not-found.tsx` (bajo el layout raíz, arma el marco con `LayoutSitio`); `notFound()` de una página del sitio → `app/(sitio)/not-found.tsx` (solo el contenido, el marco ya está). Si se usara la raíz para las dos, el header y el footer saldrían dobles. | `src/components/layout/NoEncontrado.tsx`, `src/app/not-found.tsx`, `src/app/(sitio)/not-found.tsx` |
 | Header fijo: logo → home, menú (en el celular, hamburguesa), CTA "Ver modelos". | `src/components/layout/Navbar.tsx` |
 | Footer con datos de Sanity (`siteConfig`) y respaldo fijo; links legales y "Agendar visita". | `src/components/layout/Footer.tsx` |
 | Links internos: `/` en la home sube arriba; `/#seccion` baja a la sección compensando el header, desde cualquier página. | `src/components/ui/LinkInterno.tsx`, `src/lib/scroll.ts`, `src/components/home/HomeHashScroll.tsx` |
@@ -101,6 +101,7 @@ Antes de crear un componente, fijate si ya está acá.
 | Componente | Para qué |
 | --- | --- |
 | `components/layout/LayoutSitio` | Marco de página pública (Navbar + main + Footer). |
+| `components/layout/NoEncontrado` | Contenido de la 404. |
 | `components/layout/Navbar` | Header fijo del sitio, con Volver fuera de la home. |
 | `components/layout/Footer` | Footer del sitio (datos de Sanity con respaldo). |
 | `components/layout/BotonVolver` | Volver con historial interno o página padre. |
