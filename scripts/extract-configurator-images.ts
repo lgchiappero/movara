@@ -3,7 +3,7 @@ import sharp, { type Sharp } from "sharp";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
-const PDF_PATH = path.join(process.cwd(), "public/heshi-catalogue.pdf");
+const PDF_PATH = path.join(process.cwd(), "assets-origen/proveedor/heshi-catalogue.pdf");
 const OUTPUT_ROOT = path.join(process.cwd(), "public/configurador");
 
 // Ancho al que se normaliza cada página renderizada antes de recortar.
@@ -15,7 +15,7 @@ const RENDER_DENSITY = 300;
 type Crop = { top: number; left: number; width: number; height: number };
 type PageMapEntry = { page: number; crop: Crop; output: string };
 
-// Mapeo reconstruido a partir del contenido real de public/heshi-catalogue.pdf (20 páginas).
+// Mapeo reconstruido a partir del contenido real de assets-origen/proveedor/heshi-catalogue.pdf (20 páginas).
 // El PAGE_MAP original tenía los números de página corridos y subestimaba la cantidad
 // de imágenes por sección (ver hallazgos reportados en la conversación).
 const PAGE_MAP: PageMapEntry[] = [

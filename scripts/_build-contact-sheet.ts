@@ -211,7 +211,7 @@ async function main() {
 <body>
   <header class="top">
     <h1>Revisión de recortes — Catálogo Heshi</h1>
-    <p class="sub">${totalCount} imágenes generadas por <code>scripts/extract-configurator-images.ts</code> a partir de <code>public/heshi-catalogue.pdf</code> (20 páginas). Candidatos de "exterior" marcados <span class="tag tag--muted" style="display:inline">candidato</span> todavía no reemplazan a los recortes manuales — están para comparar. Los marcados <span class="tag tag--warn" style="display:inline">revisar</span> vienen de una foto con varias muestras superpuestas y probablemente necesiten recorte individual a mano.</p>
+    <p class="sub">${totalCount} imágenes generadas por <code>scripts/extract-configurator-images.ts</code> a partir de <code>assets-origen/proveedor/heshi-catalogue.pdf</code> (20 páginas). Candidatos de "exterior" marcados <span class="tag tag--muted" style="display:inline">candidato</span> todavía no reemplazan a los recortes manuales — están para comparar. Los marcados <span class="tag tag--warn" style="display:inline">revisar</span> vienen de una foto con varias muestras superpuestas y probablemente necesiten recorte individual a mano.</p>
     <nav class="jump">${navItems.join("")}</nav>
   </header>
   <main>${sections.join("")}</main>

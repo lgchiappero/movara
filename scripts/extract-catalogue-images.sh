@@ -5,7 +5,7 @@
 # Uso: scripts/extract-catalogue-images.sh [pdf] [carpeta-destino] [dpi]
 set -euo pipefail
 
-PDF="${1:-public/heshi-catalogue.pdf}"
+PDF="${1:-assets-origen/proveedor/heshi-catalogue.pdf}"
 OUT_DIR="${2:-docs/heshi-catalogue}"
 DPI="${3:-200}"
 

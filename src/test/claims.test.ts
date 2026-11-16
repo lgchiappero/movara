@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "fs";
 import path from "path";
+import { execFileSync } from "child_process";
 
 /** Guarda: ningún texto del sitio afirma producción o fabricación nacional,
  * que MOVARA fabrica (el producto se fabrica fuera del país), cifras de
@@ -105,5 +106,16 @@ describe("nombre del proveedor y 'plegable' fuera del texto público", () => {
     expect(esComentario('  description: "una unidad plegable",')).toBe(false);
     expect(esComentario("  // catálogo del proveedor Heshi")).toBe(true);
     expect(esComentario(" * la palabra plegable")).toBe(true);
+  });
+});
+
+describe("archivos del proveedor fuera de public/", () => {
+  // Todo lo versionado en public/ se publica y se sirve por URL: catálogos y
+  // PDFs del proveedor van en assets-origen/ (ver docs/base-del-sitio.md,
+  // Marca). Se miran los archivos de git, que son los que se despliegan.
+  it("ningún archivo de public/ en git lleva el nombre del proveedor", () => {
+    const publicos = execFileSync("git", ["ls-files", "public"], { encoding: "utf8" }).split("\n").filter(Boolean);
+    expect(publicos.length).toBeGreaterThan(0);
+    expect(publicos.filter((p) => /heshi|hoshi/i.test(p))).toEqual([]);
   });
 });

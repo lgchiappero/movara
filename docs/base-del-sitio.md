@@ -28,6 +28,7 @@ Documentos relacionados: [Imágenes con marca de agua del proveedor](imagenes-co
 
 - Colores: negro `#1A1A1A` y dorado `#D4B36A` (logo en `Navbar`/`Footer`, fondos de `/modelos`, recibo, 404).
 - Nunca el nombre del proveedor ni "plegable" (se dice "expandible"), ni "foldable"/"folding"; nada de "producción nacional". Lo controla `src/test/claims.test.ts` sobre todo el texto público de `src` (afuera solo admin, studio y el PDF al proveedor); el texto cargado en Sanity no lo cubre el test: revisarlo en el Studio.
+- Todo lo de `public/` se sirve por URL: catálogos, PDFs y material del proveedor van en `assets-origen/proveedor/` (los scripts de `scripts/extract-*` leen de ahí). Lo controla `src/test/claims.test.ts`. El configurador anterior quedó archivado en `assets-origen/configurador-viejo/`.
 - Se dice: llave en mano, garantía de 1 año (12 meses), certificación CE, DVH, RPT (`src/data/precio-incluye.ts`, `src/data/faq.ts`, `src/data/configurador-catalog.ts`).
 
 ## Precios
