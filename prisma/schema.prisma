@@ -689,3 +689,93 @@ model ReciboConformidad {
   @@index([estado, fechaEntrega])
   @@map("recibos_conformidad")
 }
+
+// ─── Bot de WhatsApp (etapa 1: base de datos + panel) ────────────────
+// Valores de los campos de texto con opciones: src/lib/bot-whatsapp/constantes.ts.
+
+// Registro único (id = "unico"): se crea con los valores por defecto la
+// primera vez que se lee (src/lib/bot-whatsapp/config.ts).
+model ConfigBot {
+  id                   String   @id @default("unico")
+  activo               Boolean  @default(false)
+  // Si está activo, el bot responde solo fuera del horario de atención.
+  modoHorario          Boolean  @default(false)
+  // { lun: [{ desde: "08:00", hasta: "18:00" }], ..., dom: [] } — hora de Córdoba.
+  horarioAtencion      Json
+  // MENSAJE_BIENVENIDA | NINGUNO: qué hace si está pausado o sin saldo.
+  modoRespaldo         String   @default("MENSAJE_BIENVENIDA")
+  mensajeBienvenida    String
+  topeGastoMensualUsd  Float    @default(5)
+  emailAviso           String?
+  whatsappAviso        String?
+  maxRespuestasPorLead Int      @default(6)
+  actualizadoEn        DateTime @updatedAt
+  actualizadoPor       String? // email del AdminUser
+
+  @@map("config_bot")
+}
+
+model LeadWhatsapp {
+  id              String    @id @default(cuid())
+  // Normalizado como lo manda WhatsApp, con código de país (ej. 5493493667214).
+  telefono        String    @unique
+  nombre          String?
+  uso             String?
+  zona            String?
+  terreno         String?
+  personas        String?
+  plazo           String?
+  origen          String? // RUTA_SHOWROOM | WEB | INSTAGRAM_FACEBOOK | RECOMENDACION | OTRO
+  origenDetalle   String?
+  estado          String    @default("NUEVO")
+  // true = el bot no le responde más; lo atiende el equipo.
+  controlHumano   Boolean   @default(false)
+  respuestasBot   Int       @default(0)
+  notas           String?
+  proximoContacto DateTime?
+  creadoEn        DateTime  @default(now())
+  actualizadoEn   DateTime  @updatedAt
+  ultimoMensajeEn DateTime?
+
+  mensajes MensajeWhatsapp[]
+
+  @@index([estado])
+  @@index([ultimoMensajeEn])
+  @@map("leads_whatsapp")
+}
+
+model MensajeWhatsapp {
+  id        String       @id @default(cuid())
+  leadId    String
+  lead      LeadWhatsapp @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  direccion String // ENTRANTE | SALIENTE
+  autor     String // CLIENTE | BOT | EQUIPO
+  tipo      String       @default("TEXTO") // TEXTO | AUDIO | OTRO
+  contenido String
+  creadoEn  DateTime     @default(now())
+
+  @@index([leadId, creadoEn])
+  @@map("mensajes_whatsapp")
+}
+
+// El bot nunca les responde (amigos, familia, proveedores).
+model ContactoExcluido {
+  id        String   @id @default(cuid())
+  telefono  String   @unique // mismo formato que LeadWhatsapp.telefono
+  etiqueta  String // AMIGO | FAMILIA | PROVEEDOR | OTRO
+  creadoEn  DateTime @default(now())
+  creadoPor String? // email del AdminUser
+
+  @@map("contactos_excluidos")
+}
+
+model UsoBot {
+  id            String   @id @default(cuid())
+  mes           String   @unique // YYYY-MM, hora argentina
+  tokensEntrada Int      @default(0)
+  tokensSalida  Int      @default(0)
+  costoUsd      Float    @default(0)
+  actualizadoEn DateTime @updatedAt
+
+  @@map("uso_bot")
+}

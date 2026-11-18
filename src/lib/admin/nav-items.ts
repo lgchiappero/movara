@@ -9,6 +9,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin/pagos", label: "Pagos", icon: "🏦" },
   { href: "/admin/configuraciones", label: "Pedidos", icon: "📦" },
   { href: "/admin/agenda", label: "Agenda", icon: "📅" },
+  { href: "/admin/bot-whatsapp", label: "Bot WhatsApp", icon: "💬" },
   { href: "/admin/clientes", label: "Clientes", icon: "👤" },
   { href: "/admin/envios", label: "Envíos", icon: "🚢" },
   { href: "/admin/unidades", label: "Unidades", icon: "🏗️" },

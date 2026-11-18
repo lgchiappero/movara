@@ -82,6 +82,18 @@ Documentos relacionados: [Imágenes con marca de agua del proveedor](imagenes-co
 - **CSP** (`next.config.ts`): sin `'unsafe-eval'` en producción; `/admin` no se puede embeber (`frame-ancestors 'none'`, `X-Frame-Options: DENY`) y lleva `Cross-Origin-Opener-Policy`. Lo fija `src/test/next-config-headers.test.ts`.
 - **Incidentes**: [seguridad-incidentes.md](seguridad-incidentes.md).
 
+## Bot de WhatsApp (etapa 1: base de datos + panel)
+
+- **Panel**: `/admin/bot-whatsapp` (estado, leads, contactos excluidos y configuración) y `/admin/bot-whatsapp/[id]` (detalle con la conversación). Entrada "Bot WhatsApp" en `src/lib/admin/nav-items.ts`.
+- **El bot arranca APAGADO** (`ConfigBot.activo = false`). La configuración es un registro único que se crea solo la primera vez (`src/lib/bot-whatsapp/config.ts`).
+- **Rutas**: `/api/admin/bot-whatsapp/{config, leads, leads/[id], excluidos, excluidos/[id]}`, route handlers como el resto del admin (no tRPC). Validación Zod estricta en `src/lib/validators/bot-whatsapp.ts`: un campo que no viene **no se toca**; `null` o vacío lo borra.
+- **Permisos validados en el servidor** (`exigirSesion` en `src/lib/bot-whatsapp/permisos.ts`): el vendedor ve y trabaja leads, toma control, agrega leads y excluidos y ve el gasto; **solo el administrador** prende/apaga el bot, cambia la configuración y borra leads o excluidos (403 al vendedor). Escrituras con el rate limit compartido (120 por minuto por usuario) y body de hasta 16 KB.
+- **Teléfono** en formato de WhatsApp (`5493493667214`): `telefonoWhatsapp` en `src/lib/bot-whatsapp/telefono.ts`, que reusa `claveTelefono`.
+- **Opciones** (estados, orígenes, autores, etiquetas, días): un solo lugar, `src/lib/bot-whatsapp/constantes.ts`.
+- **Coincidencias**: el detalle avisa si el teléfono ya figura en Leads o Pedidos (`src/lib/bot-whatsapp/coincidencias.ts`), solo lectura.
+- **Pendiente futuro**: unificar `Lead` (formularios y pipeline) y `LeadWhatsapp` en un solo CRM. Hoy son tablas separadas y solo se cruzan por teléfono para el aviso.
+- **Etapa 2** (sin hacer): conectar WhatsApp y la API de Claude, registrar el uso en `UsoBot` y respetar el horario, el tope de gasto, los excluidos y el control humano.
+
 ## Datos
 
 - Cambios de esquema: generar el SQL, revisarlo y correrlo a mano en Supabase (`sql/`, `prisma/`). Nunca `prisma migrate deploy` sin ver el diff.
@@ -118,6 +130,7 @@ Antes de crear un componente, fijate si ya está acá.
 | `components/ui/LinkInterno` | Link a `/` o `/#seccion` que resuelve el scroll con header fijo. |
 | `components/ui/ModalConfirmacion` | Confirmación con la marca (en lugar de `confirm()`). |
 | `components/ui/CampoTrampa` | Honeypot de los formularios públicos (con `useCampoTrampa`). |
+| `components/admin/bot-whatsapp/*` | Panel del bot: `EstadoBot` (interruptor y gasto), `ConfigBotForm`, `TablaLeadsWhatsapp`, `NuevoLeadWhatsapp`, `ContactosExcluidos`, `ChatLead`, `DatosLeadForm`, `AccionesLead`. |
 | `components/ui/BackToTop` | Botón para volver arriba (layout raíz). |
 | `components/ui/WhatsAppStickyBar` | Barra fija de WhatsApp con cupos (se oculta en configurador, recibo, admin, studio). |
 | `components/ui/CuposBar` | Barra de unidades reservadas / disponibles. |
@@ -133,12 +146,15 @@ Antes de crear un componente, fijate si ya está acá.
 | `lib/agenda/ventana-agenda` | Meses de los próximos 60 días y si hay algún día disponible. |
 | `lib/agenda/showroom` | Dirección, Maps y WhatsApp del showroom. |
 | `lib/meta-pixel` | Eventos del píxel (`trackContact`, `trackLead`, `trackSchedule`…). |
+| `e2e/helpers/esperar-quieto` | `clicQuieto`: espera fuentes y animaciones antes de cada clic en los e2e. |
 | `components/recibo/MarcaMovara` | Marca del Recibo en Conformidad. |
 | `components/configurador/FotoAmpliada` | Foto a pantalla completa. |
 | `lib/fecha-ar` | Fechas en hora argentina. |
 | `lib/seguridad/publico` | Rate limit compartido, límite de body y honeypot de los endpoints públicos. |
 | `lib/seguridad/login` | Bloqueo de intentos fallidos del login (IP y email). |
 | `lib/seguridad/igual-seguro` | Comparar secretos en tiempo constante. |
+| `lib/bot-whatsapp/telefono` | Teléfono en formato de WhatsApp, clave para cruzar con Leads y formato para mostrar. |
+| `lib/bot-whatsapp/permisos` | `exigirSesion`: sesión, solo administrador y rate limit de escrituras del panel. |
 | `lib/whatsapp` | URL de WhatsApp con mensaje. |
 | `lib/navegacion/pagina-padre` | Tabla de páginas padre. |
 | `sanity/lib/image` | `urlImagenCompleta`, `posicionHotspot`. |
