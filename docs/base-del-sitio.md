@@ -4,7 +4,7 @@
 que ya existe.** Cada regla dice en qué archivo está implementada: si hace
 falta cambiarla, se cambia ahí, no se crea una versión paralela.
 
-Documentos relacionados: [Imágenes con marca de agua del proveedor](imagenes-con-marca.md).
+Documentos relacionados: [Imágenes con marca de agua del proveedor](imagenes-con-marca.md) · [Respuesta a incidentes de seguridad](seguridad-incidentes.md).
 
 ## Navegación
 
@@ -73,6 +73,15 @@ Documentos relacionados: [Imágenes con marca de agua del proveedor](imagenes-co
 - Si no hay ningún día "disponible" en los próximos 60 días (hora argentina), `/agendar` muestra el aviso "Próximamente" en lugar del calendario, con la misma consulta por mes a `/api/agenda/disponibilidad`. Cuando se habilitan días en el admin, vuelve el calendario solo. Mientras carga se ve el calendario con "Cargando disponibilidad…", nunca el aviso de golpe. Ventana y regla: `src/lib/agenda/ventana-agenda.ts`; aviso: `src/components/agenda/AvisoProximamente.tsx`; lo usa `src/components/agenda/AgendaBooking.tsx`.
 - `/agendar` usa la marca: fondo `#1A1A1A`, eyebrow `#D4B36A`, título en Playfair (`font-playfair`), tarjetas blancas con texto `#1A1A1A`. Sobre el fondo oscuro no queda texto oscuro suelto: todo formulario va adentro de su tarjeta (ej. `/agendar/cancelar/[id]`, `CitaCancelarView`).
 
+## Seguridad
+
+- **Endpoints públicos** (sin sesión): rate limit **compartido** por IP en Postgres (tabla `rate_limit_hits`, `src/lib/rate-limit-db.ts`; nunca un `Map` en memoria, que en Vercel no limita), límite de tamaño del body y campo trampa (honeypot). Todo en `src/lib/seguridad/publico.ts`: `permitirIP`, `leerJsonLimitado`, `esTrampa`, con los límites de cada endpoint en `LIMITES` y `MAX_BODY`. Un endpoint público nuevo usa ese helper.
+- **Formularios públicos**: `<CampoTrampa>` + `useCampoTrampa()` (`src/components/ui/CampoTrampa.tsx`), y `...trampa.valor()` en el JSON que se manda.
+- **Login del admin**: bloqueo por IP (5 fallos) y por email (10 fallos) en 15 minutos, compartido (`src/lib/seguridad/login.ts`).
+- **Secretos**: comparar siempre con `igualSeguro` (`src/lib/seguridad/igual-seguro.ts`), nunca con `===`. IP del cliente: `ipCliente` (`src/lib/seguridad/ip.ts`).
+- **CSP** (`next.config.ts`): sin `'unsafe-eval'` en producción; `/admin` no se puede embeber (`frame-ancestors 'none'`, `X-Frame-Options: DENY`) y lleva `Cross-Origin-Opener-Policy`. Lo fija `src/test/next-config-headers.test.ts`.
+- **Incidentes**: [seguridad-incidentes.md](seguridad-incidentes.md).
+
 ## Datos
 
 - Cambios de esquema: generar el SQL, revisarlo y correrlo a mano en Supabase (`sql/`, `prisma/`). Nunca `prisma migrate deploy` sin ver el diff.
@@ -108,6 +117,7 @@ Antes de crear un componente, fijate si ya está acá.
 | `components/layout/BotonVolver` | Volver con historial interno o página padre. |
 | `components/ui/LinkInterno` | Link a `/` o `/#seccion` que resuelve el scroll con header fijo. |
 | `components/ui/ModalConfirmacion` | Confirmación con la marca (en lugar de `confirm()`). |
+| `components/ui/CampoTrampa` | Honeypot de los formularios públicos (con `useCampoTrampa`). |
 | `components/ui/BackToTop` | Botón para volver arriba (layout raíz). |
 | `components/ui/WhatsAppStickyBar` | Barra fija de WhatsApp con cupos (se oculta en configurador, recibo, admin, studio). |
 | `components/ui/CuposBar` | Barra de unidades reservadas / disponibles. |
@@ -126,6 +136,9 @@ Antes de crear un componente, fijate si ya está acá.
 | `components/recibo/MarcaMovara` | Marca del Recibo en Conformidad. |
 | `components/configurador/FotoAmpliada` | Foto a pantalla completa. |
 | `lib/fecha-ar` | Fechas en hora argentina. |
+| `lib/seguridad/publico` | Rate limit compartido, límite de body y honeypot de los endpoints públicos. |
+| `lib/seguridad/login` | Bloqueo de intentos fallidos del login (IP y email). |
+| `lib/seguridad/igual-seguro` | Comparar secretos en tiempo constante. |
 | `lib/whatsapp` | URL de WhatsApp con mensaje. |
 | `lib/navegacion/pagina-padre` | Tabla de páginas padre. |
 | `sanity/lib/image` | `urlImagenCompleta`, `posicionHotspot`. |

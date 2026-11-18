@@ -133,7 +133,7 @@ function dirnameLocal(archivo: string): string {
 const SUBIDA_LOCAL_TTL_MS = 2 * 60 * 60 * 1000; // 2 horas, como Supabase
 
 function secretoSubidaLocal(): string {
-  return process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "storage-local-dev";
+  return process.env.AUTH_SECRET || "storage-local-dev";
 }
 
 /** Firma de la URL de subida del storage local (solo desarrollo y e2e). */

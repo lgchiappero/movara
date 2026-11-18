@@ -53,3 +53,6 @@ next-env.d.ts
 
 # Storage local de desarrollo/tests (ver src/lib/admin/storage.ts)
 /.storage-local/
+
+# Borradores y revisiones locales (no se versionan)
+/.scratch/

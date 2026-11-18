@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { citaSchema } from "@/lib/validators/cita";
 import { fechaKeyToDate } from "@/lib/agenda/fecha";
 import { formatearSoloFecha, hoyAR } from "@/lib/fecha-ar";
-import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
+import { LIMITES, MAX_BODY, demasiadosPedidos, esTrampa, leerJsonLimitado, permitirIP, respuestaTrampa } from "@/lib/seguridad/publico";
 import {
   buildConfirmacionClienteEmail,
   buildNuevaVisitaAdminEmail,
@@ -55,13 +55,11 @@ async function enviarEmailsReagendacion(
 }
 
 export async function POST(req: NextRequest) {
-  const ip = getClientIP(req);
-  const { allowed } = checkRateLimit(ip);
-  if (!allowed) {
-    return NextResponse.json({ error: "Demasiadas solicitudes" }, { status: 429 });
-  }
-
-  const body = await req.json().catch(() => null);
+  if (!(await permitirIP(req, "citas", LIMITES.citas))) return demasiadosPedidos();
+  const lectura = await leerJsonLimitado(req, MAX_BODY.citas);
+  if (!lectura.ok) return lectura.respuesta;
+  const body = lectura.datos;
+  if (esTrampa(body)) return respuestaTrampa();
   const reemplazarCitaId =
     body && typeof body === "object" && typeof (body as Record<string, unknown>).reemplazarCitaId === "string"
       ? ((body as Record<string, unknown>).reemplazarCitaId as string)

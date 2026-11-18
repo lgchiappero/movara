@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHash, timingSafeEqual } from "crypto";
+import { igualSeguro } from "@/lib/seguridad/igual-seguro";
 import { db } from "@/lib/db";
 import { buildRecordatorioEmail, type CitaEmailData } from "@/lib/email/cita-emails";
 import { enviarEmail } from "@/lib/email/enviar";
@@ -9,13 +9,6 @@ import {
   fechasPosiblesVentana,
   inicioCita,
 } from "@/lib/agenda/recordatorios";
-
-/** Compara en tiempo constante (los hashes igualan el largo). */
-function igualSeguro(a: string, b: string): boolean {
-  const ha = createHash("sha256").update(a).digest();
-  const hb = createHash("sha256").update(b).digest();
-  return timingSafeEqual(ha, hb);
-}
 
 // Vercel Cron llama este endpoint por GET (ver vercel.json) y, si la variable
 // CRON_SECRET existe en el proyecto, agrega automáticamente

@@ -158,10 +158,21 @@ describe("POST /api/leads", () => {
     expect(mockSend.mock.calls[0][0].to).toBe("ana@example.com");
   });
 
-  it("500 si el body no es JSON", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+  it("400 si el body no es JSON", async () => {
     const res = await POST(new NextRequest("http://localhost/api/leads", { method: "POST", body: "x" }));
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
+  });
+
+  it("413 con un body de más de 8 KB, sin consumir cupo", async () => {
+    const res = await POST(new NextRequest("http://localhost/api/leads", { method: "POST", body: JSON.stringify({ nombre: "x".repeat(9000) }) }));
+    expect(res.status).toBe(413);
+    expect(mockConsumir).not.toHaveBeenCalled();
+  });
+
+  it("campo trampa completo: 200 sin consumir cupo ni guardar", async () => {
+    const res = await POST(new NextRequest("http://localhost/api/leads", { method: "POST", body: JSON.stringify({ nombre: "Bot", telefono: "1", empresa_web: "spam" }) }));
+    expect(res.status).toBe(200);
+    expect(mockConsumir).not.toHaveBeenCalled();
   });
 
   it("los logs solo registran id, origen y resultado — nunca nombre, DNI, email ni teléfono", async () => {

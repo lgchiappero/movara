@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const rl = vi.hoisted(() => ({ consumir: vi.fn().mockResolvedValue(true) }));
+vi.mock("@/lib/rate-limit-db", async (orig) => ({
+  ...(await orig<typeof import("@/lib/rate-limit-db")>()),
+  consumirRateLimit: rl.consumir,
+}));
+
 const { mockFindUnique, mockUpdate, mockSend } = vi.hoisted(() => ({
   mockFindUnique: vi.fn(),
   mockUpdate: vi.fn(),
@@ -118,5 +124,21 @@ describe("POST /api/agenda/citas/[id]/cancelar", () => {
     expect(JSON.stringify(log.mock.calls).toLowerCase()).not.toContain("juan@example.com");
     delete process.env.RESEND_API_KEY;
     delete process.env.CONTACT_EMAIL;
+  });
+
+  it("429 por IP (10 por hora) o por visita (5 por hora), sin consultar la base", async () => {
+    rl.consumir.mockResolvedValueOnce(false);
+    expect((await POST(req({ email: "juan@example.com" }), params)).status).toBe(429);
+    expect(rl.consumir).toHaveBeenLastCalledWith(expect.stringMatching(/^cancelar-cita:/), 10, 3_600_000);
+
+    rl.consumir.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    expect((await POST(req({ email: "juan@example.com" }), params)).status).toBe(429);
+    expect(rl.consumir).toHaveBeenLastCalledWith(expect.stringMatching(/^cancelar-cita-id:/), 5, 3_600_000);
+    expect(mockFindUnique).not.toHaveBeenCalled();
+  });
+
+  it("413 con un body de más de 2 KB", async () => {
+    expect((await POST(req({ email: "x".repeat(3000) }), params)).status).toBe(413);
+    expect(mockFindUnique).not.toHaveBeenCalled();
   });
 });

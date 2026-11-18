@@ -6,6 +6,7 @@ import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 import { enviarLead, mensajeWhatsAppConsulta } from "@/lib/leads/enviar-lead";
 import { trackLead } from "@/lib/meta-pixel";
 import LeadNoGuardado from "./LeadNoGuardado";
+import CampoTrampa, { useCampoTrampa } from "@/components/ui/CampoTrampa";
 
 const PROVINCIAS = [
   "Buenos Aires", "Ciudad Autónoma de Buenos Aires", "Catamarca", "Chaco",
@@ -39,6 +40,7 @@ export default function ContactoForm({
   content?: ContactoContent | null;
 }) {
   const [form, setForm] = useState<FormState>(EMPTY);
+  const trampa = useCampoTrampa();
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error" | "no-guardado">("idle");
 
   const set = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -48,7 +50,7 @@ export default function ContactoForm({
     e.preventDefault();
     if (!form.nombre.trim() || !form.telefono.trim()) return;
     setStatus("sending");
-    const resultado = await enviarLead({ ...form, formulario: "contacto" });
+    const resultado = await enviarLead({ ...form, formulario: "contacto", ...trampa.valor() });
     if (resultado === "ok") {
       trackLead("contacto", { provincia: form.provincia });
       localStorage.setItem("movara_exit_popup_submitted", "true");
@@ -128,6 +130,7 @@ export default function ContactoForm({
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+                <CampoTrampa inputRef={trampa.ref} />
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-stone-400 text-xs font-semibold uppercase tracking-wider block mb-1.5">

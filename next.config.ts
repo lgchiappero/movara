@@ -3,17 +3,24 @@ import type { NextConfig } from "next";
 // El resto de la política (script-src, style-src, etc.) es igual en todas
 // las rutas — solo frame-ancestors varía, así que se arma con un builder en
 // vez de duplicar todo el array por cada excepción de ruta.
-function buildCsp(frameAncestors: string): string {
+// 'unsafe-eval' solo en desarrollo: React lo usa para reconstruir los
+// errores del servidor en el navegador; en producción ni React ni Next usan
+// eval (node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md).
+// 'unsafe-inline' sigue en script-src: las páginas públicas son estáticas
+// (ISR) y un nonce obligaría a renderizarlas en cada request (fase 3 de
+// seguridad: nonces solo en las rutas que ya son dinámicas).
+const EVAL_SOLO_DEV = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
+
+function buildCsp(frameAncestors: string, extraScript = ""): string {
   return [
     "default-src 'self'",
-    // Next.js requires unsafe-eval/unsafe-inline for client-side hydration
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com https://core.sanity-cdn.com",
+    `script-src 'self'${EVAL_SOLO_DEV}${extraScript} 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com https://core.sanity-cdn.com`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
     "media-src 'self' https://www.youtube-nocookie.com https://www.youtube.com",
     "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://youtube.com https://*.youtube.com https://maps.google.com https://www.google.com https://www.facebook.com",
-    "connect-src 'self' https://api.mercadopago.com https://www.facebook.com https://connect.facebook.net https://*.supabase.co https://api.sanity.io https://*.sanity.io",
+    "connect-src 'self' https://www.facebook.com https://connect.facebook.net https://*.supabase.co https://api.sanity.io https://*.sanity.io",
     "form-action 'self' https://www.facebook.com",
     `frame-ancestors ${frameAncestors}`,
   ].join("; ");
@@ -24,9 +31,9 @@ function buildCsp(frameAncestors: string): string {
 // externos — sigue cubriendo la protección contra clickjacking.
 const CSP = buildCsp("'self'");
 
-// X-Frame-Options se eliminó: frame-ancestors en el CSP ya cubre la
-// protección contra clickjacking, y evita el conflicto con los iframes
-// externos (YouTube, Maps) que sí queremos poder embeber via frame-src.
+// Sin X-Frame-Options en el sitio público: frame-ancestors en el CSP ya
+// cubre el clickjacking (los iframes externos de YouTube y Maps los regula
+// frame-src). En /admin sí va, ver ADMIN_SECURITY_HEADERS.
 const SECURITY_HEADERS = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -48,6 +55,16 @@ const SECURITY_HEADERS = [
 const STUDIO_SECURITY_HEADERS = [
   ...SECURITY_HEADERS.filter((h) => h.key !== "Content-Security-Policy"),
   { key: "Content-Security-Policy", value: buildCsp("'self'") },
+];
+
+// El panel admin no se embebe en ningún lado (ni en el propio sitio):
+// frame-ancestors 'none' + X-Frame-Options para navegadores viejos. COOP
+// aísla la ventana del admin de cualquier otra que la haya abierto.
+const ADMIN_SECURITY_HEADERS = [
+  ...SECURITY_HEADERS.filter((h) => h.key !== "Content-Security-Policy"),
+  { key: "Content-Security-Policy", value: buildCsp("'none'") },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 
 const nextConfig: NextConfig = {
@@ -74,6 +91,14 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: SECURITY_HEADERS,
+      },
+      {
+        source: "/admin/:path*",
+        headers: ADMIN_SECURITY_HEADERS,
+      },
+      {
+        source: "/admin",
+        headers: ADMIN_SECURITY_HEADERS,
       },
       {
         // Excepción de frame-ancestors para que /studio pueda embeberse

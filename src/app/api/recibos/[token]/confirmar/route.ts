@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { confirmarReciboSchema, tokenReciboSchema } from "@/lib/validators/recibo";
 import { claveIP, consumirRateLimit } from "@/lib/rate-limit-db";
-import { getClientIP } from "@/lib/rate-limit";
+import { ipCliente } from "@/lib/seguridad/ip";
+import { MAX_BODY, leerJsonLimitado } from "@/lib/seguridad/publico";
 import { confirmarRecibo, despuesDeConfirmar } from "@/lib/recibos/servicio";
 import { evidenciaRequest } from "@/lib/recibos/http";
 import { fechaFinGarantia, fechaHoraAR, fechaLargaUTC } from "@/lib/recibos/texto";
@@ -18,11 +19,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   if (!tokenReciboSchema.safeParse(token).success) {
     return NextResponse.json({ error: LINK_INVALIDO }, { status: 404 });
   }
-  if (!confirmarReciboSchema.safeParse(await req.json().catch(() => null)).success) {
+  const lectura = await leerJsonLimitado(req, MAX_BODY.chico);
+  if (!lectura.ok) return lectura.respuesta;
+  if (!confirmarReciboSchema.safeParse(lectura.datos).success) {
     return NextResponse.json({ error: "Confirmación inválida" }, { status: 400 });
   }
 
-  const permitido = await consumirRateLimit(claveIP("recibo-confirmar", getClientIP(req)), CONFIRMACIONES_POR_HORA, 60 * 60_000);
+  const permitido = await consumirRateLimit(claveIP("recibo-confirmar", ipCliente(req)), CONFIRMACIONES_POR_HORA, 60 * 60_000);
   if (!permitido) {
     return NextResponse.json({ error: "Demasiados intentos. Probá de nuevo en una hora." }, { status: 429 });
   }

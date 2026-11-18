@@ -45,33 +45,40 @@ test.describe("Login /admin/login", () => {
     expect(json.error).toBe("Email o contraseña incorrectos");
   });
 
-  test("Test 4: 5 intentos fallidos bloquean el login por un rato", async ({ page }, testInfo) => {
+  test("Test 4: 5 intentos fallidos desde una IP la bloquean, aunque después acierte", async ({ page }, testInfo) => {
     await loginAsAdmin(page); // asegura que el usuario exista
 
-    // IP de test dentro del bloque reservado TEST-NET-3 (RFC 5737), con un
-    // sufijo derivado del proyecto — chromium y firefox corren contra el
-    // MISMO dev server (mismo Map en memoria), así que una IP fija
-    // colisionaría: si chromium bloquea 203.0.113.77 y firefox corre este
-    // mismo test poco después contra la misma IP, arranca ya bloqueado.
-    const suffix = testInfo.project.name === "firefox" ? 78 : 77;
-    const testIp = `203.0.113.${suffix}`;
-    const headers = { "x-forwarded-for": testIp };
-    const email = process.env.ADMIN_INITIAL_EMAIL!;
+    // El bloqueo vive en la base (rate_limit_hits) y dura 15 minutos: cada
+    // corrida y cada navegador mandan su propio x-forwarded-for (el servidor
+    // solo lo hashea), así no arrancan bloqueados por una corrida anterior.
+    // Los fallos van con un email inexistente para no bloquear por email al
+    // admin real, que usan los demás tests.
+    const headers = { "x-forwarded-for": `e2e-ip-${testInfo.project.name}-${Date.now()}` };
+    const emailFalso = `bloqueo-ip-${testInfo.project.name}-${Date.now()}@example.com`;
 
     for (let i = 0; i < 5; i++) {
-      const res = await page.request.post("/api/admin/auth/login", {
-        headers,
-        data: { email, password: "mal" },
-      });
+      const res = await page.request.post("/api/admin/auth/login", { headers, data: { email: emailFalso, password: "mal" } });
       expect(res.status()).toBe(401);
     }
 
-    // Un 6to intento, esta vez con la contraseña CORRECTA, debe seguir
-    // bloqueado — confirma que el lockout no distingue "por fin acertó".
+    // 6to intento desde la misma IP, ahora con el admin real y la contraseña
+    // CORRECTA: sigue bloqueado — el bloqueo no distingue "por fin acertó".
     const res = await page.request.post("/api/admin/auth/login", {
       headers,
-      data: { email, password: process.env.ADMIN_INITIAL_PASSWORD! },
+      data: { email: process.env.ADMIN_INITIAL_EMAIL!, password: process.env.ADMIN_INITIAL_PASSWORD! },
     });
+    expect(res.status()).toBe(429);
+  });
+
+  test("Test 4b: 10 intentos fallidos contra un email lo bloquean aunque vengan de IPs distintas", async ({ page }, testInfo) => {
+    const email = `bloqueo-email-${testInfo.project.name}-${Date.now()}@example.com`;
+    const ipDe = (n: number) => ({ "x-forwarded-for": `e2e-email-${n}-${testInfo.project.name}-${Date.now()}` });
+
+    for (let i = 0; i < 10; i++) {
+      const res = await page.request.post("/api/admin/auth/login", { headers: ipDe(i), data: { email, password: "mal" } });
+      expect(res.status()).toBe(401);
+    }
+    const res = await page.request.post("/api/admin/auth/login", { headers: ipDe(99), data: { email, password: "mal" } });
     expect(res.status()).toBe(429);
   });
 

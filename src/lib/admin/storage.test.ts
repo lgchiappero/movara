@@ -213,12 +213,11 @@ describe("subida directa — storage local (dev/e2e)", () => {
     vi.unstubAllEnvs();
   });
 
-  it("sin AUTH_SECRET firma igual con NEXTAUTH_SECRET o el secreto de desarrollo", async () => {
+  it("sin AUTH_SECRET firma con el secreto de desarrollo; con AUTH_SECRET, con ese", async () => {
     const { firmaSubidaLocal } = await import("@/lib/admin/storage");
     vi.stubEnv("AUTH_SECRET", "");
-    vi.stubEnv("NEXTAUTH_SECRET", "");
     const dev = firmaSubidaLocal("b", "p", 1);
-    vi.stubEnv("NEXTAUTH_SECRET", "otro");
+    vi.stubEnv("AUTH_SECRET", "otro");
     expect(firmaSubidaLocal("b", "p", 1)).not.toBe(dev);
     vi.unstubAllEnvs();
   });

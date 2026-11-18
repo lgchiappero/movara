@@ -8,6 +8,7 @@ import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 import { enviarLead, mensajeWhatsAppConsulta } from "@/lib/leads/enviar-lead";
 import { trackLead } from "@/lib/meta-pixel";
 import LeadNoGuardado from "./LeadNoGuardado";
+import CampoTrampa, { useCampoTrampa } from "@/components/ui/CampoTrampa";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -151,6 +152,7 @@ export default function DossierForm({
   waNumber?: string | null;
   content?: DossierContent | null;
 }) {
+  const trampa = useCampoTrampa();
   const [form, setForm] = useState<Form>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error" | "no-guardado">("idle");
@@ -219,6 +221,7 @@ export default function DossierForm({
       provincia: form.provincia || undefined,
       mensaje: buildMensaje(),
       formulario: "dossier",
+      ...trampa.valor(),
     });
     if (resultado !== "ok") {
       setStatus(resultado);
@@ -249,6 +252,7 @@ export default function DossierForm({
       provincia: form.provincia || undefined,
       mensaje: buildMensaje("Prefiere que lo llamen (no completó el formulario completo)"),
       formulario: "dossier-llamada",
+      ...trampa.valor(),
     });
     if (resultado !== "ok") {
       setStatus(resultado);
@@ -409,6 +413,7 @@ export default function DossierForm({
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  <CampoTrampa inputRef={trampa.ref} />
                   {/* Paso 1 — uso + provincia (sin datos personales) */}
                   {step === 1 && (
                     <div className="space-y-4">

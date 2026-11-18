@@ -3,26 +3,26 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const {
   mockFindUnique,
   mockUpdate,
-  mockIsLockedOut,
-  mockRecordFailedAttempt,
-  mockResetAttempts,
+  mockBloqueado,
+  mockRegistrarFallo,
+  mockLimpiarFallos,
   mockVerifyPassword,
   mockCreateSessionToken,
 } = vi.hoisted(() => ({
   mockFindUnique: vi.fn(),
   mockUpdate: vi.fn().mockResolvedValue({}),
-  mockIsLockedOut: vi.fn().mockReturnValue(false),
-  mockRecordFailedAttempt: vi.fn(),
-  mockResetAttempts: vi.fn(),
+  mockBloqueado: vi.fn().mockResolvedValue(false),
+  mockRegistrarFallo: vi.fn().mockResolvedValue(undefined),
+  mockLimpiarFallos: vi.fn().mockResolvedValue(undefined),
   mockVerifyPassword: vi.fn(),
   mockCreateSessionToken: vi.fn().mockResolvedValue("jwt-token"),
 }));
 
 vi.mock("@/lib/db", () => ({ db: { adminUser: { findUnique: mockFindUnique, update: mockUpdate } } }));
-vi.mock("@/lib/admin/login-rate-limit", () => ({
-  isLockedOut: mockIsLockedOut,
-  recordFailedAttempt: mockRecordFailedAttempt,
-  resetAttempts: mockResetAttempts,
+vi.mock("@/lib/seguridad/login", () => ({
+  loginBloqueado: mockBloqueado,
+  registrarFalloLogin: mockRegistrarFallo,
+  limpiarFallosLogin: mockLimpiarFallos,
 }));
 vi.mock("@/lib/admin/password", () => ({ verifyPassword: mockVerifyPassword }));
 vi.mock("@/lib/admin/session", () => ({
@@ -47,11 +47,31 @@ const USER = { id: "u1", email: "admin@movara.com.ar", password: "hash", activo:
 describe("POST /api/admin/auth/login", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("429 si la IP está bloqueada por intentos fallidos", async () => {
-    mockIsLockedOut.mockReturnValueOnce(true);
+  it("429 si la IP o el email están bloqueados por intentos fallidos, sin tocar la base ni bcrypt", async () => {
+    mockBloqueado.mockResolvedValueOnce(true);
     const res = await POST(makeRequest({ email: "x@x.com", password: "x" }));
     expect(res.status).toBe(429);
+    expect(mockBloqueado).toHaveBeenCalledWith("127.0.0.1", "x@x.com");
     expect(mockFindUnique).not.toHaveBeenCalled();
+    expect(mockVerifyPassword).not.toHaveBeenCalled();
+  });
+
+  it("413 si el body es demasiado grande", async () => {
+    const res = await POST(makeRequest({ email: "x@x.com", password: "x".repeat(3000) }));
+    expect(res.status).toBe(413);
+    expect(mockBloqueado).not.toHaveBeenCalled();
+  });
+
+  it("usa la IP del cliente que pone la plataforma (x-real-ip)", async () => {
+    mockFindUnique.mockResolvedValueOnce(null);
+    mockVerifyPassword.mockResolvedValueOnce(false);
+    const req = new NextRequest("http://localhost/api/admin/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: "x@x.com", password: "x" }),
+      headers: { "content-type": "application/json", "x-real-ip": "200.1.2.3" },
+    });
+    await POST(req);
+    expect(mockRegistrarFallo).toHaveBeenCalledWith("200.1.2.3", "x@x.com");
   });
 
   it("400 con mensaje genérico si el body no es JSON válido", async () => {
@@ -75,7 +95,7 @@ describe("POST /api/admin/auth/login", () => {
     mockVerifyPassword.mockResolvedValueOnce(false);
     const res = await POST(makeRequest({ email: USER.email, password: "mal" }));
     expect(res.status).toBe(401);
-    expect(mockRecordFailedAttempt).toHaveBeenCalled();
+    expect(mockRegistrarFallo).toHaveBeenCalledWith("127.0.0.1", USER.email);
   });
 
   it("401 cuando el email no existe (verifica igual contra el hash dummy)", async () => {
@@ -99,7 +119,7 @@ describe("POST /api/admin/auth/login", () => {
     const res = await POST(makeRequest({ email: USER.email, password: "ok" }));
 
     expect(res.status).toBe(200);
-    expect(mockResetAttempts).toHaveBeenCalled();
+    expect(mockLimpiarFallos).toHaveBeenCalled();
     expect(mockUpdate).toHaveBeenCalledWith({ where: { id: "u1" }, data: { ultimoLogin: expect.any(Date) } });
     expect(mockCreateSessionToken).toHaveBeenCalledWith("u1");
     expect(res.cookies.get("movara_admin_session")?.value).toBe("jwt-token");

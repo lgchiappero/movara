@@ -13,6 +13,7 @@ import {
 import { SHOWROOM_DIRECCION } from "@/lib/agenda/showroom";
 import ComoLlegarLink from "./ComoLlegarLink";
 import AvisoProximamente from "./AvisoProximamente";
+import CampoTrampa, { useCampoTrampa } from "@/components/ui/CampoTrampa";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 import { trackSchedule } from "@/lib/meta-pixel";
 import { leerOrigen } from "@/lib/origen-visita/navegador";
@@ -79,6 +80,7 @@ export default function AgendaBooking() {
   const [paso, setPaso] = useState<Paso>("calendario");
   const [citaId, setCitaId] = useState<string | null>(null);
 
+  const trampa = useCampoTrampa();
   const [form, setForm] = useState({
     tipoCliente: "particular" as (typeof tipoClienteAgendaOptions)[number],
     nombre: "",
@@ -199,6 +201,7 @@ export default function AgendaBooking() {
           razonSocial: form.razonSocial.trim() || undefined,
           consulta: form.consulta.trim(),
           origen: leerOrigen(),
+          ...trampa.valor(),
         }),
       });
       const json = await res.json();
@@ -384,6 +387,7 @@ export default function AgendaBooking() {
       {paso === "form" && (
         <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-4">
           <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Tus datos</p>
+          <CampoTrampa inputRef={trampa.ref} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="block space-y-1.5">

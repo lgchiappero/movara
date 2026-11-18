@@ -20,6 +20,11 @@ describe("http de recibos", () => {
     expect(evidenciaRequest(new NextRequest("http://x/"))).toEqual({ ip: null, userAgent: null });
   });
 
+  it("evidenciaRequest prefiere x-real-ip (la pone Vercel) cuando viene", () => {
+    const req = new NextRequest("http://x/", { headers: { "x-real-ip": "200.5.6.7", "x-forwarded-for": "190.1.2.3" } });
+    expect(evidenciaRequest(req).ip).toBe("200.5.6.7");
+  });
+
   it("respuestaPdf arma los headers de descarga privada", async () => {
     const res = respuestaPdf(Buffer.from("%PDF"), "Recibo en Conformidad REC-2026-001.pdf");
     expect(res.headers.get("content-type")).toBe("application/pdf");

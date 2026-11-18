@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import CampoTrampa, { useCampoTrampa } from "@/components/ui/CampoTrampa";
 import Image from "next/image";
 import { trackExitIntentLead } from "@/lib/meta-pixel";
 import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
@@ -22,6 +23,7 @@ function isValidEmail(v: string) {
 export default function ExitIntentPopup() {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
+  const trampa = useCampoTrampa();
   const [touched, setTouched] = useState(false);
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const readyRef = useRef(false);
@@ -126,7 +128,7 @@ export default function ExitIntentPopup() {
       await fetch("/api/leads-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), source: "exit_intent" }),
+        body: JSON.stringify({ email: email.trim(), source: "exit_intent", ...trampa.valor() }),
       });
     } catch {
       // fail silently — success screen regardless
@@ -240,6 +242,7 @@ export default function ExitIntentPopup() {
 
               {/* Form */}
               <form onSubmit={handleSubmit} noValidate>
+                <CampoTrampa inputRef={trampa.ref} />
                 <div className="mb-4">
                   <input
                     type="email"

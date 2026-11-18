@@ -40,6 +40,7 @@ import AvisoPrivacidad from "@/components/legal/AvisoPrivacidad";
 import { leerOrigen } from "@/lib/origen-visita/navegador";
 import { scrollInstantaneoA } from "@/lib/scroll";
 import { marcarSalidaProtegida } from "@/lib/navegacion/salida-protegida";
+import CampoTrampa, { useCampoTrampa } from "@/components/ui/CampoTrampa";
 
 // ─────────────────────────────────────────────────────────
 // Constants
@@ -246,6 +247,7 @@ export default function ConfiguradorMovara({
   const [nombreContacto, setNombreContacto] = useState("");
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
+  const trampa = useCampoTrampa();
 
   // Result
   const [showResult, setShowResult] = useState(false);
@@ -349,6 +351,7 @@ export default function ConfiguradorMovara({
           notasConfiguracion: notas,
           precioEstimado: precioResumen.total,
           origen: leerOrigen(),
+          ...trampa.valor(),
         }),
       });
       const json = await res.json().catch(() => null);
@@ -439,6 +442,7 @@ export default function ConfiguradorMovara({
   if (showResult) {
     return (
       <div className="min-h-screen bg-stone-50 pt-16">
+        <CampoTrampa inputRef={trampa.ref} />
         <div className="bg-[#2F2F2F] px-4 sm:px-6 pt-5 pb-5 sm:pt-14 sm:pb-10 text-center">
           <span ref={(el) => { inicioRef.current = el; }} data-cfg-inicio className="block text-sage-400 text-xs font-semibold uppercase tracking-[0.2em]">Paso {TOTAL_PASOS} de {TOTAL_PASOS} — Tu configuración</span>
           <h1 className="text-2xl sm:text-3xl font-bold text-white mt-1 sm:mt-2">{cms.resultado.title}</h1>
@@ -480,6 +484,7 @@ export default function ConfiguradorMovara({
     // data-configurador="listo": ya hidratado e interactivo (los e2e lo esperan
     // antes de hacer clic; durante la carga hay una copia oculta del HTML).
     <div data-configurador={hydrated ? "listo" : "cargando"} className="min-h-screen bg-stone-50 pt-16">
+      <CampoTrampa inputRef={trampa.ref} />
       {/* En el celular, encabezado e indicador compactos (~15 % de la pantalla). */}
       <div className="bg-[#2F2F2F] px-4 sm:px-6 pt-4 pb-3 sm:pt-14 sm:pb-10 text-center">
         <span className="text-sage-400 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em]">Configurador</span>

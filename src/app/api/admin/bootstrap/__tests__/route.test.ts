@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+const rl = vi.hoisted(() => ({ consumir: vi.fn().mockResolvedValue(true) }));
+vi.mock("@/lib/rate-limit-db", async (orig) => ({
+  ...(await orig<typeof import("@/lib/rate-limit-db")>()),
+  consumirRateLimit: rl.consumir,
+}));
+
 const { mockCount, mockCreate, mockHashPassword } = vi.hoisted(() => ({
   mockCount: vi.fn(),
   mockCreate: vi.fn(),
@@ -65,5 +71,20 @@ describe("POST /api/admin/bootstrap", () => {
     expect(mockCreate).toHaveBeenCalledWith({
       data: { nombre: "Admin", email: "admin@movara.com.ar", password: "hashed-pw", rol: "admin", activo: true },
     });
+  });
+
+  it("401 con un secreto de otro largo o sin header (comparación en tiempo constante)", async () => {
+    expect((await POST(makeRequest({ "x-bootstrap-secret": "corto" }))).status).toBe(401);
+    expect((await POST(makeRequest({ "x-bootstrap-secret": SECRET + "x" }))).status).toBe(401);
+    expect((await POST(makeRequest())).status).toBe(401);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("429 al superar 5 intentos por hora por IP, antes de mirar el secreto", async () => {
+    rl.consumir.mockResolvedValueOnce(false);
+    const res = await POST(makeRequest({ "x-bootstrap-secret": SECRET }));
+    expect(res.status).toBe(429);
+    expect(rl.consumir).toHaveBeenCalledWith(expect.stringMatching(/^bootstrap:/), 5, 3_600_000);
+    expect(mockCount).not.toHaveBeenCalled();
   });
 });

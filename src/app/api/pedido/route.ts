@@ -4,7 +4,7 @@ import { escapeHtml } from "@/lib/email/escape-html";
 import { db } from "@/lib/db";
 import { pedidoSchema } from "@/lib/validators/pedido";
 import { modeloLabelsEs } from "@/lib/pdf/pedido-labels-es";
-import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
+import { LIMITES, MAX_BODY, demasiadosPedidos, esTrampa, leerJsonLimitado, permitirIP, respuestaTrampa } from "@/lib/seguridad/publico";
 import { generateNumeroConsulta } from "@/lib/pedido/numero-consulta";
 import { resumenError } from "@/lib/log-seguro";
 import { calcularPrecio, toDesgloseEstimado } from "@/lib/precio-configurador";
@@ -65,7 +65,9 @@ async function avisarPedidoNoGuardado(data: { clienteNombre: string; clienteWhat
 /** Precios de Sanity; si no responde, el cálculo usa el fallback del código. */
 async function getPrecios(): Promise<PreciosConfig | null> {
   try {
-    return await client.fetch<PreciosConfig | null>(SITE_CONFIG_QUERY);
+    // Con tope: si Sanity no responde, se calcula con los precios del código
+    // en vez de dejar el pedido colgado.
+    return await client.fetch<PreciosConfig | null>(SITE_CONFIG_QUERY, {}, { signal: AbortSignal.timeout(8_000) });
   } catch (err) {
     console.error(`[pedido] No se pudieron leer los precios de Sanity: ${resumenError(err)}`);
     return null;
@@ -73,16 +75,15 @@ async function getPrecios(): Promise<PreciosConfig | null> {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = getClientIP(req);
-  const { allowed } = checkRateLimit(ip);
-  if (!allowed) {
-    return NextResponse.json({ error: "Demasiadas solicitudes" }, { status: 429 });
-  }
+  if (!(await permitirIP(req, "pedido", LIMITES.pedido))) return demasiadosPedidos();
+  const lectura = await leerJsonLimitado(req, MAX_BODY.pedido);
+  if (!lectura.ok) return lectura.respuesta;
+  if (esTrampa(lectura.datos)) return respuestaTrampa();
 
   // Solo se avisa "no guardada" si falló antes de guardar el pedido.
   let datosContacto: Parameters<typeof avisarPedidoNoGuardado>[0] | null = null;
   try {
-    const body = await req.json();
+    const body = lectura.datos;
     const parsed = pedidoSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(

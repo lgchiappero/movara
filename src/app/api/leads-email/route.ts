@@ -5,6 +5,7 @@ import { enviarEmail } from "@/lib/email/enviar";
 import { escapeHtml } from "@/lib/email/escape-html";
 import { resumenError } from "@/lib/log-seguro";
 import { formatearFechaHoraAR } from "@/lib/fecha-ar";
+import { LIMITES, MAX_BODY, demasiadosPedidos, esTrampa, leerJsonLimitado, permitirIP, respuestaTrampa } from "@/lib/seguridad/publico";
 
 const Schema = z.object({
   email: z.string().email(),
@@ -13,7 +14,13 @@ const Schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    // Cada envío guarda una fila y manda un email: sin límite, un script
+    // llena la tabla, la bandeja y la cuota de Resend.
+    if (!(await permitirIP(req, "leads-email", LIMITES.leadsEmail))) return demasiadosPedidos();
+    const lectura = await leerJsonLimitado(req, MAX_BODY.leadsEmail);
+    if (!lectura.ok) return lectura.respuesta;
+    const body = lectura.datos;
+    if (esTrampa(body)) return respuestaTrampa();
     const parsed = Schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Email inválido" }, { status: 400 });

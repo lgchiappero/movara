@@ -10,7 +10,7 @@ vi.mock("@/lib/db", () => ({
   db: { rateLimitHit: { deleteMany: mockDeleteMany, count: mockCount, create: mockCreate } },
 }));
 
-import { claveIP, consumirRateLimit } from "./rate-limit-db";
+import { borrarHits, claveDe, claveIP, consumirRateLimit, contarHits, registrarHit } from "./rate-limit-db";
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -53,5 +53,26 @@ describe("consumirRateLimit", () => {
     expect(borrado.key).toBe("k");
     expect(borrado.createdAt.lt.getTime()).toBeGreaterThanOrEqual(antes - 60_000);
     expect(contado.createdAt.gte).toEqual(borrado.createdAt.lt);
+  });
+});
+
+describe("claveDe", () => {
+  it("sirve para cualquier valor (ej. email) con el mismo HMAC que claveIP", () => {
+    process.env.AUTH_SECRET = "secreto-de-test";
+    expect(claveDe("login-email", "ana@x.com")).toMatch(/^login-email:[a-f0-9]{64}$/);
+    expect(claveDe("login-email", "ana@x.com")).not.toContain("ana");
+    expect(claveIP("s", "1.1.1.1")).toBe(claveDe("s", "1.1.1.1"));
+  });
+});
+
+describe("contarHits / registrarHit / borrarHits", () => {
+  it("cuenta sin consumir, registra un hit y borra todos los de la clave", async () => {
+    mockCount.mockResolvedValue(4);
+    await expect(contarHits("k", 1000)).resolves.toBe(4);
+    expect(mockCreate).not.toHaveBeenCalled();
+    await registrarHit("k");
+    expect(mockCreate).toHaveBeenCalledWith({ data: { key: "k" } });
+    await borrarHits("k");
+    expect(mockDeleteMany).toHaveBeenLastCalledWith({ where: { key: "k" } });
   });
 });

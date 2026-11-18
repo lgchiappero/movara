@@ -1,30 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getClientIP } from "@/lib/rate-limit";
-import { isLockedOut, recordFailedAttempt, resetAttempts } from "@/lib/admin/login-rate-limit";
+import { ipCliente } from "@/lib/seguridad/ip";
+import { MAX_BODY, leerJsonLimitado } from "@/lib/seguridad/publico";
+import { limpiarFallosLogin, loginBloqueado, registrarFalloLogin } from "@/lib/seguridad/login";
 import { verifyPassword } from "@/lib/admin/password";
 import { createSessionToken, sessionCookieOptions, SESSION_COOKIE_NAME } from "@/lib/admin/session";
 import { adminLoginSchema } from "@/lib/validators/admin-login";
 
 const GENERIC_ERROR = "Email o contraseña incorrectos";
+const BLOQUEADO = "Demasiados intentos. Probá de nuevo en unos minutos.";
 
 export async function POST(req: NextRequest) {
-  const ip = getClientIP(req);
+  const ip = ipCliente(req);
 
-  if (isLockedOut(ip)) {
-    return NextResponse.json(
-      { error: "Demasiados intentos. Probá de nuevo en unos minutos." },
-      { status: 429 }
-    );
-  }
-
-  const body = await req.json().catch(() => null);
-  const parsed = adminLoginSchema.safeParse(body);
+  const lectura = await leerJsonLimitado(req, MAX_BODY.chico);
+  if (!lectura.ok) return lectura.respuesta;
+  const parsed = adminLoginSchema.safeParse(lectura.datos);
   if (!parsed.success) {
     return NextResponse.json({ error: GENERIC_ERROR }, { status: 400 });
   }
 
   const { email, password } = parsed.data;
+
+  // Bloqueo compartido entre instancias (src/lib/seguridad/login.ts): por IP
+  // y por email. Se chequea antes de tocar bcrypt: un bloqueado no consume
+  // CPU ni puede seguir probando.
+  if (await loginBloqueado(ip, email)) {
+    return NextResponse.json({ error: BLOQUEADO }, { status: 429 });
+  }
+
   const user = await db.adminUser.findUnique({ where: { email } });
 
   // verifyPassword corre bcrypt.compare incluso cuando `user` es null (hash
@@ -34,11 +38,11 @@ export async function POST(req: NextRequest) {
   const validLogin = validPassword && user !== null && user.activo;
 
   if (!validLogin) {
-    recordFailedAttempt(ip);
+    await registrarFalloLogin(ip, email);
     return NextResponse.json({ error: GENERIC_ERROR }, { status: 401 });
   }
 
-  resetAttempts(ip);
+  await limpiarFallosLogin(ip, email);
   await db.adminUser.update({ where: { id: user.id }, data: { ultimoLogin: new Date() } });
 
   const token = await createSessionToken(user.id);

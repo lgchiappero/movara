@@ -11,7 +11,7 @@ vi.mock("fs/promises", () => {
   return { ...fs, default: fs };
 });
 
-import { enviarEmail, esEmailDePrueba } from "./enviar";
+import { TIMEOUT_EMAIL_MS, enviarEmail, esEmailDePrueba } from "./enviar";
 
 const EMAIL = {
   to: "ana@movara.test",
@@ -44,6 +44,18 @@ describe("esEmailDePrueba", () => {
 });
 
 describe("enviarEmail", () => {
+  it("si Resend no responde en 10 s, devuelve timeout en vez de colgar el request", async () => {
+    vi.useFakeTimers();
+    process.env.RESEND_API_KEY = "re_test";
+    mockSend.mockReturnValueOnce(new Promise(() => {}));
+    const resultado = enviarEmail({ ...EMAIL, to: "x@movara.com.ar" });
+    await vi.advanceTimersByTimeAsync(TIMEOUT_EMAIL_MS);
+    await expect(resultado).resolves.toEqual({ ok: false, error: "timeout" });
+    expect(TIMEOUT_EMAIL_MS).toBe(10_000);
+    vi.useRealTimers();
+    delete process.env.RESEND_API_KEY;
+  });
+
   it("prueba: guarda el email y los adjuntos en la bandeja local, sin Resend", async () => {
     expect(await enviarEmail(EMAIL, { prueba: true })).toEqual({ ok: true });
     expect(mockSend).not.toHaveBeenCalled();

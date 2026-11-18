@@ -107,4 +107,20 @@ describe("GET /api/recibos/[token]/pdf", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("application/pdf");
   });
+
+describe("límites de los recibos", () => {
+  it("confirmar: 413 con un body de más de 2 KB, sin consumir cupo", async () => {
+    const res = await confirmarRoute.POST(post({ confirmo: true, x: "y".repeat(3000) }), params());
+    expect(res.status).toBe(413);
+    expect(m.consumir).not.toHaveBeenCalled();
+  });
+
+  it("PDF: 429 al superar 30 por hora por IP, sin buscar el recibo", async () => {
+    m.consumir.mockResolvedValueOnce(false);
+    const res = await PDF(new NextRequest(`http://localhost/api/recibos/${TOKEN}/pdf`, { headers: { "x-forwarded-for": "190.1.2.3" } }), params());
+    expect(res.status).toBe(429);
+    expect(m.consumir).toHaveBeenCalledWith("recibo-pdf:190.1.2.3", 30, 3_600_000);
+    expect(m.porToken).not.toHaveBeenCalled();
+  });
+});
 });

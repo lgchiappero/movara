@@ -1,4 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+const rl = vi.hoisted(() => ({ consumir: vi.fn().mockResolvedValue(true) }));
+vi.mock("@/lib/rate-limit-db", async (orig) => ({
+  ...(await orig<typeof import("@/lib/rate-limit-db")>()),
+  consumirRateLimit: rl.consumir,
+}));
 import { NextRequest } from "next/server";
 import { encodeSignatureHeader, SIGNATURE_HEADER_NAME } from "@sanity/webhook";
 
@@ -111,9 +117,11 @@ describe("POST /api/revalidate (webhook de Sanity)", () => {
     expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 
-  it("429 al superar el límite por IP", async () => {
-    let ultimo = 0;
-    for (let i = 0; i < 61; i++) ultimo = (await enviar(req({ _type: "testimonio" }, { ip: "10.9.9.9" }))).status;
-    expect(ultimo).toBe(429);
+  it("429 al superar el límite compartido por IP (120 por minuto)", async () => {
+    rl.consumir.mockResolvedValueOnce(false);
+    const res = await enviar(req({ _type: "testimonio" }, { ip: "10.9.9.9" }));
+    expect(res.status).toBe(429);
+    expect(rl.consumir).toHaveBeenCalledWith(expect.stringMatching(/^revalidate:/), 120, 60_000);
+    expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 });

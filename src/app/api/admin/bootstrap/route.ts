@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/admin/password";
+import { igualSeguro } from "@/lib/seguridad/igual-seguro";
+import { LIMITES, demasiadosPedidos, permitirIP } from "@/lib/seguridad/publico";
 
 // Crea el primer admin una sola vez, protegido por un secreto de header —
 // pensado para llamarse contra la app ya desplegada (no requiere conectarse
@@ -12,8 +14,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Bootstrap no configurado" }, { status: 503 });
   }
 
-  const suppliedSecret = req.headers.get("x-bootstrap-secret");
-  if (suppliedSecret !== expectedSecret) {
+  if (!(await permitirIP(req, "bootstrap", LIMITES.bootstrap))) return demasiadosPedidos("Demasiados intentos");
+
+  // Tiempo constante: no deja adivinar el secreto midiendo respuestas.
+  const suppliedSecret = req.headers.get("x-bootstrap-secret") ?? "";
+  if (!igualSeguro(suppliedSecret, expectedSecret)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

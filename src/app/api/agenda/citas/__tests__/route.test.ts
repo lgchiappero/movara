@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const rl = vi.hoisted(() => ({ consumir: vi.fn().mockResolvedValue(true) }));
+vi.mock("@/lib/rate-limit-db", async (orig) => ({
+  ...(await orig<typeof import("@/lib/rate-limit-db")>()),
+  consumirRateLimit: rl.consumir,
+}));
+
 const { mockFindFirst, mockSend, tx, mockRegistrar } = vi.hoisted(() => ({
   mockFindFirst: vi.fn(),
   mockRegistrar: vi.fn().mockResolvedValue({ clienteId: "c1", leadId: "l1" }),
@@ -118,5 +124,22 @@ describe("POST /api/agenda/citas — lead y cliente", () => {
     const res = await POST(req(CITA));
     expect(res.status).toBe(201);
     expect(log).toHaveBeenCalledWith("[agenda/citas] cita=cita1 No se pudo guardar el lead: Error");
+  });
+
+  it("429 al superar 10 por hora por IP, sin tocar la base", async () => {
+    rl.consumir.mockResolvedValueOnce(false);
+    const res = await POST(req(CITA));
+    expect(res.status).toBe(429);
+    expect(rl.consumir).toHaveBeenCalledWith(expect.stringMatching(/^citas:/), 10, 3_600_000);
+  });
+
+  it("413 con un body de más de 16 KB", async () => {
+    expect((await POST(req({ ...CITA, consulta: "x".repeat(17 * 1024) }))).status).toBe(413);
+  });
+
+  it("campo trampa completo: 200 sin agendar", async () => {
+    const res = await POST(req({ ...CITA, empresa_web: "spam" }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
   });
 });

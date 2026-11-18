@@ -33,9 +33,14 @@ async function guardarEnOutbox(email: Email): Promise<void> {
   );
 }
 
+/** Tiempo máximo de espera a Resend: si no contesta, el request (ej. un
+ * pedido ya guardado) no se queda colgado; el email cuenta como fallido. */
+export const TIMEOUT_EMAIL_MS = 10_000;
+
 /** Único punto de envío de emails. Resend v6 no lanza ante errores de la API
  * — devuelve `{ error }` —, así que se revisa explícitamente; el try/catch
- * cubre los errores de red. Nunca lanza: el resultado indica si salió. */
+ * cubre los errores de red. Nunca lanza ni espera más de TIMEOUT_EMAIL_MS:
+ * el resultado indica si salió. */
 export async function enviarEmail(email: Email, opciones: { prueba?: boolean } = {}): Promise<ResultadoEmail> {
   if (opciones.prueba) {
     try {
@@ -51,7 +56,11 @@ export async function enviarEmail(email: Email, opciones: { prueba?: boolean } =
   const from = process.env.RESEND_FROM_EMAIL ?? "MOVARA <onboarding@resend.dev>";
 
   try {
-    const { error } = await new Resend(apiKey).emails.send({
+    let corte: ReturnType<typeof setTimeout> | undefined;
+    const vencido = new Promise<"timeout">((ok) => {
+      corte = setTimeout(() => ok("timeout"), TIMEOUT_EMAIL_MS);
+    });
+    const envio = new Resend(apiKey).emails.send({
       from,
       to: email.to,
       subject: email.subject,
@@ -59,6 +68,9 @@ export async function enviarEmail(email: Email, opciones: { prueba?: boolean } =
       ...(email.replyTo ? { replyTo: email.replyTo } : {}),
       ...(email.attachments ? { attachments: email.attachments.map((a) => ({ filename: a.filename, content: a.content })) } : {}),
     });
+    const respuesta = await Promise.race([envio, vencido]).finally(() => clearTimeout(corte));
+    if (respuesta === "timeout") return { ok: false, error: "timeout" };
+    const { error } = respuesta;
     if (error) {
       return { ok: false, error: `${error.name || "error"}${typeof error.statusCode === "number" ? ` (${error.statusCode})` : ""}` };
     }

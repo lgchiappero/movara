@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { parseBody } from "next-sanity/webhook";
-import { checkRateLimit, getClientIP } from "@/lib/rate-limit";
+import { LIMITES, demasiadosPedidos, permitirIP } from "@/lib/seguridad/publico";
 import { rutasARevalidar } from "@/lib/revalidacion";
 
 // Webhook de Sanity (sanity.io/manage → API → Webhooks): al publicar un
@@ -13,8 +13,7 @@ import { rutasARevalidar } from "@/lib/revalidacion";
 type CuerpoWebhook = { _type?: unknown; slug?: unknown };
 
 export async function POST(req: NextRequest) {
-  const { allowed } = checkRateLimit(`revalidate:${getClientIP(req)}`);
-  if (!allowed) return NextResponse.json({ error: "Demasiadas solicitudes" }, { status: 429 });
+  if (!(await permitirIP(req, "revalidate", LIMITES.revalidate))) return demasiadosPedidos("Demasiadas solicitudes");
 
   const secret = process.env.SANITY_REVALIDATE_SECRET;
   if (!secret) {

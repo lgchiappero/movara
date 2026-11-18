@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { enviarEmail } from "@/lib/email/enviar";
-import { getClientIP } from "@/lib/rate-limit";
+import { ipCliente } from "@/lib/seguridad/ip";
+import { MAX_BODY, esTrampa, leerJsonLimitado, respuestaTrampa } from "@/lib/seguridad/publico";
 import { claveIP, consumirRateLimit } from "@/lib/rate-limit-db";
 import { escapeHtml } from "@/lib/email/escape-html";
 import { resumenError } from "@/lib/log-seguro";
@@ -153,7 +154,10 @@ async function sendEmails(lead: LeadData, leadId: string): Promise<boolean> {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const lectura = await leerJsonLimitado(req, MAX_BODY.leads);
+    if (!lectura.ok) return lectura.respuesta;
+    const body = lectura.datos;
+    if (esTrampa(body)) return respuestaTrampa();
     const parsed = LeadSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
@@ -162,7 +166,7 @@ export async function POST(req: NextRequest) {
     // Solo cuentan los envíos válidos: un error de tipeo no consume cupo.
     // Si la tabla del rate limit no responde se deja pasar (con log); si
     // tampoco se puede guardar el lead, más abajo se responde 503.
-    const permitido = await consumirRateLimit(claveIP("leads", getClientIP(req)), LEADS_MAX_POR_HORA, UNA_HORA_MS)
+    const permitido = await consumirRateLimit(claveIP("leads", ipCliente(req)), LEADS_MAX_POR_HORA, UNA_HORA_MS)
       .catch((err) => {
         console.error(`[leads] Rate limit no disponible — se permite el envío: ${resumenError(err)}`);
         return true;

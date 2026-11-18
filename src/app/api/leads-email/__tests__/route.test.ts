@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+const rl = vi.hoisted(() => ({ consumir: vi.fn().mockResolvedValue(true) }));
+vi.mock("@/lib/rate-limit-db", async (orig) => ({
+  ...(await orig<typeof import("@/lib/rate-limit-db")>()),
+  consumirRateLimit: rl.consumir,
+}));
+
 const { mockExecuteRaw, mockSend } = vi.hoisted(() => ({
   mockExecuteRaw: vi.fn().mockResolvedValue(1),
   mockSend: vi.fn().mockResolvedValue({ data: { id: "e1" }, error: null }),
@@ -54,8 +60,28 @@ describe("POST /api/leads-email", () => {
     expect(JSON.stringify(log.mock.calls)).not.toContain("ana@example.com");
   });
 
-  it("500 si el body no es JSON", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    expect((await POST(req("x"))).status).toBe(500);
+  it("400 si el body no es JSON", async () => {
+    expect((await POST(req("x"))).status).toBe(400);
+  });
+
+  it("429 al superar 5 por hora por IP: ni guarda ni manda email", async () => {
+    rl.consumir.mockResolvedValueOnce(false);
+    const res = await POST(req({ email: "ana@example.com" }));
+    expect(res.status).toBe(429);
+    expect(rl.consumir).toHaveBeenCalledWith(expect.stringMatching(/^leads-email:/), 5, 3_600_000);
+    expect(mockExecuteRaw).not.toHaveBeenCalled();
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it("413 con un body de más de 4 KB", async () => {
+    expect((await POST(req({ email: "ana@example.com", source: "x".repeat(5000) }))).status).toBe(413);
+    expect(mockExecuteRaw).not.toHaveBeenCalled();
+  });
+
+  it("campo trampa completo: 200 sin guardar ni mandar email", async () => {
+    const res = await POST(req({ email: "ana@example.com", empresa_web: "x" }));
+    expect(res.status).toBe(200);
+    expect(mockExecuteRaw).not.toHaveBeenCalled();
+    expect(mockSend).not.toHaveBeenCalled();
   });
 });

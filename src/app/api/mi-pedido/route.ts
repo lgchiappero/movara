@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { modeloLabelsEs } from "@/lib/pdf/pedido-labels-es";
 import type { PedidoInput } from "@/lib/validators/pedido";
 import { ESTADO_PEDIDO_CANCELADO } from "@/lib/pedido/estado-pedido";
+import { LIMITES, MAX_BODY, demasiadosPedidos, leerJsonLimitado, permitirIP } from "@/lib/seguridad/publico";
 
 // Solo el token secreto del link de seguimiento da acceso: los números de
 // consulta/pedido son correlativos y se podían recorrer para ver pedidos
@@ -16,8 +17,10 @@ const Schema = z.object({
 const LINK_INVALIDO = "El link de seguimiento no es válido. Pedinos uno nuevo por WhatsApp.";
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  const parsed = Schema.safeParse(body);
+  if (!(await permitirIP(req, "mi-pedido", LIMITES.miPedido))) return demasiadosPedidos();
+  const lectura = await leerJsonLimitado(req, MAX_BODY.chico);
+  if (!lectura.ok) return lectura.respuesta;
+  const parsed = Schema.safeParse(lectura.datos);
   if (!parsed.success) {
     return NextResponse.json({ error: LINK_INVALIDO }, { status: 404 });
   }

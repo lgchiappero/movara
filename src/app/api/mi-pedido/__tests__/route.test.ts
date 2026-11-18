@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const rl = vi.hoisted(() => ({ consumir: vi.fn().mockResolvedValue(true) }));
+vi.mock("@/lib/rate-limit-db", async (orig) => ({
+  ...(await orig<typeof import("@/lib/rate-limit-db")>()),
+  consumirRateLimit: rl.consumir,
+}));
+
 const { mockFindUnique } = vi.hoisted(() => ({ mockFindUnique: vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: { configuracionPedido: { findUnique: mockFindUnique } } }));
 
@@ -75,5 +81,17 @@ describe("POST /api/mi-pedido", () => {
     mockFindUnique.mockResolvedValue({ clienteNombre: "Ana", modelo: null, estadoPedido: "consulta" });
     const json = await (await POST(req({ token: TOKEN }))).json();
     expect(json.modelo).toBeNull();
+  });
+
+  it("429 al superar 30 por hora por IP, sin consultar la base", async () => {
+    rl.consumir.mockResolvedValueOnce(false);
+    expect((await POST(req({ token: TOKEN }))).status).toBe(429);
+    expect(rl.consumir).toHaveBeenCalledWith(expect.stringMatching(/^mi-pedido:/), 30, 3_600_000);
+    expect(mockFindUnique).not.toHaveBeenCalled();
+  });
+
+  it("413 con un body de más de 2 KB", async () => {
+    expect((await POST(req({ token: TOKEN, x: "y".repeat(3000) }))).status).toBe(413);
+    expect(mockFindUnique).not.toHaveBeenCalled();
   });
 });

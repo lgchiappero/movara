@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { URL_PUBLICA } from "./constantes";
-import { getClientIP } from "@/lib/rate-limit";
+import { ipCliente } from "@/lib/seguridad/ip";
 
 /** Base de los links que van por email: en producción siempre el dominio
  * público; en dev/tests, el host que atendió el request (así el e2e abre el
@@ -10,12 +10,13 @@ export function baseUrlLinks(req: NextRequest): string {
 }
 
 /** IP y dispositivo, siempre desde los headers del request (en Vercel,
- * x-forwarded-for lo completa la plataforma) — nunca del body. */
+ * x-real-ip y x-forwarded-for los completa la plataforma) — nunca del body.
+ * Sin esos headers no se inventa una IP: queda null. */
 export function evidenciaRequest(req: NextRequest): { ip: string | null; userAgent: string | null } {
-  const forwarded = req.headers.get("x-forwarded-for");
+  const conIP = req.headers.has("x-real-ip") || req.headers.has("x-forwarded-for");
   const ua = req.headers.get("user-agent");
   return {
-    ip: forwarded ? getClientIP(req) : null,
+    ip: conIP ? ipCliente(req) : null,
     userAgent: ua ? ua.slice(0, 500) : null,
   };
 }

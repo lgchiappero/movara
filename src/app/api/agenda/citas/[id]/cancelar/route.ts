@@ -7,6 +7,8 @@ import {
   type CitaEmailData,
 } from "@/lib/email/cita-emails";
 import { enviarEmail } from "@/lib/email/enviar";
+import { claveDe } from "@/lib/rate-limit-db";
+import { LIMITES, MAX_BODY, demasiadosPedidos, leerJsonLimitado, permitirClave, permitirIP } from "@/lib/seguridad/publico";
 
 async function enviarEmailsCancelacion(cita: CitaEmailData) {
   const contactEmail = process.env.CONTACT_EMAIL;
@@ -30,7 +32,14 @@ export async function POST(
 ) {
   const { id } = await params;
 
-  const parsed = CancelarSchema.safeParse(await req.json().catch(() => null));
+  // Por IP y por visita: así nadie prueba emails contra una misma visita
+  // aunque reparta los intentos entre muchas conexiones.
+  if (!(await permitirIP(req, "cancelar-cita", LIMITES.cancelarCitaIP))) return demasiadosPedidos();
+  if (!(await permitirClave(claveDe("cancelar-cita-id", id), "cancelar-cita-id", LIMITES.cancelarCitaId))) return demasiadosPedidos();
+  const lectura = await leerJsonLimitado(req, MAX_BODY.chico);
+  if (!lectura.ok) return lectura.respuesta;
+
+  const parsed = CancelarSchema.safeParse(lectura.datos);
   if (!parsed.success) {
     return NextResponse.json({ error: "Ingresá el email con el que agendaste la visita" }, { status: 400 });
   }

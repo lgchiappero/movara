@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const rl = vi.hoisted(() => ({ consumir: vi.fn().mockResolvedValue(true) }));
+vi.mock("@/lib/rate-limit-db", async (orig) => ({
+  ...(await orig<typeof import("@/lib/rate-limit-db")>()),
+  consumirRateLimit: rl.consumir,
+}));
+
 const { mockCreate, mockFindMany, mockSend, mockRegistrar, mockSanityFetch } = vi.hoisted(() => ({
   mockSanityFetch: vi.fn().mockResolvedValue(null),
   mockRegistrar: vi.fn().mockResolvedValue({ clienteId: "c1", leadId: "l1" }),
@@ -266,6 +272,21 @@ describe("POST /api/pedido", () => {
     expect((await POST(req(BASE, "10.0.0.5"))).status).toBe(500);
   });
 
+  it("si no hay conexión libre a la base (timeout del pool), responde un error controlado en vez de quedar esperando", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mockCreate.mockRejectedValueOnce(new Error("timeout exceeded when trying to connect"));
+    const res = await POST(req(BASE, "10.0.0.7"));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Error al procesar la solicitud" });
+  });
+
+  it("los precios de Sanity se piden con tope de tiempo (si no responde, usa los del código)", async () => {
+    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
+    await POST(req(BASE, "10.0.0.8"));
+    const opciones = mockSanityFetch.mock.calls.at(-1)![2];
+    expect(opciones.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("si no se puede guardar (columna faltante, como el 3/11), igual llega a MOVARA un email para recontactar, sin datos en los logs", async () => {
     process.env.RESEND_API_KEY = "re_test";
     const errores = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -298,10 +319,23 @@ describe("POST /api/pedido", () => {
     delete process.env.RESEND_API_KEY;
   });
 
-  it("429 al superar el límite por IP", async () => {
-    mockCreate.mockResolvedValue({ tokenSeguimiento: "f".repeat(64) });
-    let ultimo = 0;
-    for (let i = 0; i < 61; i++) ultimo = (await POST(req(BASE, "10.0.0.99"))).status;
-    expect(ultimo).toBe(429);
+  it("429 al superar el límite compartido por IP (10 por hora), sin guardar", async () => {
+    rl.consumir.mockResolvedValueOnce(false);
+    const res = await POST(req(BASE, "10.0.0.99"));
+    expect(res.status).toBe(429);
+    expect(rl.consumir).toHaveBeenCalledWith(expect.stringMatching(/^pedido:[a-f0-9]{64}$/), 10, 3_600_000);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("413 si el body pasa los 64 KB", async () => {
+    const res = await POST(req({ ...BASE, notasConfiguracion: "x".repeat(70 * 1024) }, "10.0.0.98"));
+    expect(res.status).toBe(413);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("campo trampa completo (bot): responde ok sin guardar ni mandar emails", async () => {
+    const res = await POST(req({ ...BASE, empresa_web: "spam.com" }, "10.0.0.97"));
+    expect(res.status).toBe(200);
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 });

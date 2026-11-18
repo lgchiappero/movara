@@ -72,3 +72,31 @@ test.describe("Formularios de consulta — /api/leads no guarda (503)", () => {
     await expect(dossier.getByText("¡Consulta recibida!")).toBeVisible();
   });
 });
+
+test.describe("Campo trampa (honeypot) de los formularios públicos", () => {
+  test("contacto: el campo existe pero no se ve ni se llega con el teclado, y viaja vacío", async ({ page }) => {
+    const pedidos = await responderLeads(page, 200);
+    await page.goto("/#contacto");
+    const form = page.locator("#contacto form");
+    const trampa = form.locator('input[name="empresa_web"]');
+    await expect(trampa).toHaveCount(1);
+    await expect(trampa).not.toBeInViewport();
+    await expect(trampa).toHaveAttribute("tabindex", "-1");
+
+    await form.getByPlaceholder("Tu nombre").fill("Ana E2E");
+    await form.getByPlaceholder("+54 9 11...").fill("+54 9 11 5555 4444");
+    await form.locator("select").selectOption("Santa Fe");
+    await form.getByPlaceholder(/Qué tipo de espacio/).fill("Consulta");
+    await form.getByRole("button", { name: /Solicitar asesoramiento/ }).click();
+    await expect.poll(() => pedidos.length).toBe(1);
+    expect(pedidos[0]).toMatchObject({ nombre: "Ana E2E", empresa_web: "" });
+  });
+
+  test("un bot que completa el campo trampa recibe 200 y no se guarda nada", async ({ page }) => {
+    const res = await page.request.post("/api/leads-email", {
+      data: { email: "bot@example.com", empresa_web: "http://spam.example" },
+    });
+    expect(res.status()).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+  });
+});
