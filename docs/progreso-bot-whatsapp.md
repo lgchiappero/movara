@@ -112,8 +112,15 @@ El bot sigue **apagado** en producción hasta que Luciano lo active.
    nombra la causa real.
 2. Luciano corre `sql/20261119_bot_whatsapp_etapa2.sql` en producción antes
    del push.
-3. Con la clave real de Claude (con OK, gasta plata): probar el prompt con
-   los 3 ejemplos y casos difíciles.
+3. HECHO el 19/11: prompt probado con la clave real (clave aparte de pruebas
+   en `.env.local`) con `npx tsx scripts/probar-prompt-bot.ts`: 16 casos
+   (familia, precio, recomendado, plazo y pagos, técnico, no leads,
+   enojado, visita, pide persona, ¿sos un bot?, constructora, audio) con
+   control automático de reglas (una pregunta, sin emojis/listas/precios/
+   plazos/cuotas/materiales, sin relleno, saludo una sola vez,
+   "personalmente" máximo una vez, nombre al final, no repreguntar datos,
+   DERIVAR sin preguntas, CALIFICADO en 2 oraciones). Cuesta unos
+   USD 0,003 por corrida. Las 2 últimas corridas, sin incumplimientos.
 4. Cargar las variables en Vercel, configurar el webhook en Meta y recién
    ahí prender el bot desde el panel.
 
