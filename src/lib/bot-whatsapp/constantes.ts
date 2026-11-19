@@ -46,8 +46,10 @@ export const TIPOS_MENSAJE = ["TEXTO", "AUDIO", "OTRO"] as const;
 export const MODOS_RESPALDO = ["MENSAJE_BIENVENIDA", "NINGUNO"] as const;
 export type ModoRespaldo = (typeof MODOS_RESPALDO)[number];
 
+/** Solo para cuando se alcanzó el tope de gasto con el bot activo. Pausado
+ * manualmente (activo = false) el bot no responde nada. */
 export const ETIQUETA_MODO_RESPALDO: Record<ModoRespaldo, string> = {
-  MENSAJE_BIENVENIDA: "Mandar el mensaje de bienvenida",
+  MENSAJE_BIENVENIDA: "Mandar el mensaje de bienvenida (una vez, solo a números nuevos que pasen el filtro de palabras)",
   NINGUNO: "No responder",
 };
 
@@ -93,3 +95,37 @@ export const MENSAJE_BIENVENIDA_POR_DEFECTO =
 
 /** Porcentaje del tope desde el que la barra de gasto se pone amarilla. */
 export const AVISO_GASTO = 0.8;
+
+/** Filtro SIN IA para el mensaje de bienvenida cuando se alcanzó el tope de
+ * gasto: el primer mensaje de un número nuevo tiene que contener alguna de
+ * estas palabras (sin distinguir mayúsculas ni tildes, palabra completa) o
+ * empezar con un texto precargado de la web. Editable. */
+export const PALABRAS_CLAVE_BIENVENIDA = [
+  "movara",
+  "casa",
+  "casas",
+  "modular",
+  "modulares",
+  "prefabricada",
+  "contenedor",
+  "showroom",
+  "ruta",
+  "cartel",
+  "info",
+  "información",
+  "precio",
+  "presupuesto",
+  "cotización",
+] as const;
+
+/** Los textos precargados de los botones de WhatsApp de la web empiezan así. */
+export const PREFIJOS_PRECARGADOS_WEB = ["hola movara"] as const;
+
+/** Respuesta fija a audios y otros mensajes que no son texto. */
+export const MENSAJE_SIN_AUDIO = "¡Gracias! Ahora no puedo escuchar audios, ¿me lo contás por escrito?";
+
+/** Cierre al llegar al máximo de respuestas sin calificar. */
+export const MENSAJE_CIERRE_MAXIMO = "Gracias por contarme todo. Le paso tu consulta a Luciano y te escribe personalmente.";
+
+/** Ventana de WhatsApp para responder sin plantillas. */
+export const VENTANA_24H_MS = 24 * 60 * 60 * 1000;

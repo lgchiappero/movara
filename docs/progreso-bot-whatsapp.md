@@ -10,6 +10,109 @@ por defecto.
   La migración está aplicada en la base local (localhost); en producción la
   corre Luciano a mano con `sql/20261118_bot_whatsapp.sql`.
 
+## Etapa 2 — conexión con WhatsApp Cloud API y Claude (en curso)
+
+Rama `feat/bot-whatsapp-etapa2` (sale de `main` en `1e1a12e`). **Sin commit.**
+El bot sigue **apagado** en producción hasta que Luciano lo active.
+
+### Decisiones (19/11)
+
+1. Segunda migración aprobada; SQL aparte, lo corre Luciano en producción
+   **antes** del push.
+2. Tras CALIFICADO o DERIVADO: primero el mensaje de cierre del bot y
+   después `controlHumano = true`.
+3. Dos casos separados:
+   - **Pausado** (`activo = false`): no responde nada, solo guarda los mensajes.
+   - **Sin saldo** (tope alcanzado) con el bot activo: el mensaje de
+     bienvenida, **una sola vez**, solo a números nuevos cuyo primer mensaje
+     pase el filtro de palabras sin IA. `modoRespaldo` queda solo para este
+     caso (`MENSAJE_BIENVENIDA` o `NINGUNO`).
+4. Al llegar al máximo de respuestas sin calificar: "Gracias por contarme
+   todo. Le paso tu consulta a Luciano y te escribe personalmente.", estado
+   DERIVADO, `controlHumano = true` y aviso.
+- Modelo `claude-haiku-5-5` (USD 0,10 / 0,50 por MTok; caché: escritura
+  1,25×, lectura 0,1×), `effort: "low"`, salida estructurada con
+  `client.messages.parse()` + `zodOutputFormat`, caché del prompt de
+  sistema. Avisos solo por email (Resend); `whatsappAviso` sin uso.
+- Demoras: el webhook responde 200 enseguida y procesa en `after()`
+  (`maxDuration = 60`): espera 6 s para juntar mensajes seguidos, toma un
+  bloqueo atómico del lead (`bloqueoHasta`), marca leído + "escribiendo…",
+  llama a Claude y completa una demora de 5 a 20 s (el indicador de Meta
+  dura hasta 25 s).
+
+### Hecho
+
+- **Dependencia** `@anthropic-ai/sdk` 1.10.0.
+- **Migración 2** `prisma/migrations/20261119120000_bot_whatsapp_etapa2`
+  (+ `sql/20261119_bot_whatsapp_etapa2.sql` para Supabase, en `.gitignore`:
+  va con `git add -f`). Solo agrega: `leads_whatsapp.ultimoEntranteEn`,
+  `bloqueoHasta`, `bienvenidaEnviadaEn`; `mensajes_whatsapp.waMessageId`
+  (único) y `estadoEntrega`; `uso_bot.llamadas` y `avisoOchentaEn`.
+  Aplicada en la base local; **en producción, sin ejecutar**.
+- **`src/lib/whatsapp-cloud/`**:
+  - `firma.ts`: `X-Hub-Signature-256` = `sha256=` + HMAC-SHA256 del body
+    crudo con el App Secret, comparación en tiempo constante; sin App Secret
+    rechaza todo.
+  - `payload.ts`: esquema Zod del webhook (mensajes de texto / audio / otro
+    y estados de entrega) → `leerWebhook()`.
+  - `cliente.ts`: Graph API **v26.0** (última del changelog oficial al
+    19/11; los ejemplos de WhatsApp ya usan v27.0, por eso es una constante
+    editable). `marcarLeidoYEscribiendo` (`status: "read"` +
+    `typing_indicator`) y `enviarTexto` (id del enviado en
+    `messages[0].id`), con timeout de 10 s; versión **simulada** con
+    `WHATSAPP_SIMULADO=1`, ignorada en producción.
+- **`leerTextoLimitado`** en `src/lib/seguridad/publico.ts`: body crudo con
+  límite de tamaño (la firma se calcula sobre el texto tal cual);
+  `leerJsonLimitado` ahora lo usa por dentro (sus 19 tests siguen verdes).
+- **Constantes** (`constantes.ts`): `PALABRAS_CLAVE_BIENVENIDA` y
+  `PREFIJOS_PRECARGADOS_WEB` (editables), `MENSAJE_SIN_AUDIO`,
+  `MENSAJE_CIERRE_MAXIMO`, `VENTANA_24H_MS`, y la etiqueta nueva de
+  `modoRespaldo` (solo sin saldo).
+- **`horario.ts`**: `dentroDeHorario()` en hora de Córdoba (incluye la
+  apertura, excluye el cierre).
+- **`palabras-clave.ts`**: `pasaFiltroPalabras()` sin mayúsculas ni tildes,
+  palabra completa, o texto que empieza con "Hola MOVARA".
+
+### Hecho después de la suspensión (19/11)
+
+- `respuesta.ts` (esquema Zod de la salida) y `prompt.ts` (identidad, tono,
+  datos, límites, derivación y los 3 ejemplos; texto fijo para la caché).
+- `ia.ts`: Haiku 5.5 con `messages.parse` + `zodOutputFormat`, caché del
+  sistema, `effort: "low"`; negativa, JSON inválido o error → no responde.
+  IA simulada por reglas (`BOT_IA_SIMULADA=1`, con `#invalido`,
+  `#negativa`, `#error` para probar fallas).
+- `gasto.ts` (`PRECIOS_MODELO`, `registrarUso`, aviso del 80 % una vez con
+  update condicional) y `avisos.ts` (emails; `@example.*` a la bandeja local).
+- `reglas.ts` (`decidir`, demora) y `procesar.ts` (agrupar 6 s, bloqueo,
+  leído + escribiendo, demora, estados, control humano). `E2E_BOT_RAPIDO=1`
+  acorta las esperas al 5 % (nunca en producción).
+- Webhook `src/app/api/whatsapp/webhook/route.ts` (GET verificación, POST
+  firma, rate limit por IP y número, idempotencia, horas crecientes por lote,
+  `after()`, `maxDuration = 60`).
+- Panel: el selector de respaldo dice "Si se alcanza el tope de gasto" y
+  aclara que pausado no responde nada.
+- `scripts/simular-whatsapp.ts`.
+- Tests: `whatsapp-cloud.test.ts`, `reglas.test.ts`, `ia-gasto-avisos.test.ts`,
+  `procesar.test.ts` (con `base-falsa.ts`, base en memoria), `route.test.ts`
+  del webhook; e2e `e2e/bot-whatsapp-webhook.spec.ts` (simulado).
+
+### Falta
+
+1. Chequeos completos: HECHOS el 19/11 con la Mac despierta. tsc y eslint
+   sin errores, build limpio, unit 2646 en verde (cobertura 99,77 / 97,5 /
+   99,72 / 99,9) y test:tz en las 4 zonas, e2e 387/390: las 3 que fallaron
+   pasan corridas solas (las 2 de Firefox del configurador, ya pendientes, y
+   `clientes-automaticos.spec.ts:139`, ver Pendientes). Fallas reales
+   arregladas: el prompt nombraba palabras prohibidas por
+   `src/test/claims.test.ts` (reformulado, sin tocar el test) y el test de
+   `MAX_BODY` (se agregó el límite del webhook). Falta el OK para el commit.
+2. Luciano corre `sql/20261119_bot_whatsapp_etapa2.sql` en producción antes
+   del push.
+3. Con la clave real de Claude (con OK, gasta plata): probar el prompt con
+   los 3 ejemplos y casos difíciles.
+4. Cargar las variables en Vercel, configurar el webhook en Meta y recién
+   ahí prender el bot desde el panel.
+
 ## Decisiones tomadas
 
 - **Rutas**: route handlers en `/api/admin/bot-whatsapp/...`, igual que el
@@ -210,6 +313,11 @@ vinieron; email y WhatsApp de aviso, lo mismo.
   pisa). Las tandas siguientes (36 de 36 y 4 de 4) pasaron.
 
 ## Pendientes (fuera de la etapa 1)
+
+- **e2e inestable (nuevo, 19/11)**: `e2e/clientes-automaticos.spec.ts:139`
+  busca `getByText("Pedido cancelado")` y a veces lo encuentra dos veces (el
+  texto de la página y el aviso emergente). Arreglo sugerido: buscarlo dentro
+  de `getByRole("main")`. No es del bot; corrido solo pasa 3 de 3.
 
 1. **Bucle de recarga de `next dev` en las páginas del admin.** Con
    `npm run dev` levantado a mano, las páginas del admin (también

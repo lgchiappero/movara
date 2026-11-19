@@ -702,7 +702,8 @@ model ConfigBot {
   modoHorario          Boolean  @default(false)
   // { lun: [{ desde: "08:00", hasta: "18:00" }], ..., dom: [] } — hora de Córdoba.
   horarioAtencion      Json
-  // MENSAJE_BIENVENIDA | NINGUNO: qué hace si está pausado o sin saldo.
+  // MENSAJE_BIENVENIDA | NINGUNO: qué hace si se alcanzó el tope de gasto
+  // con el bot activo (pausado manualmente no responde nada).
   modoRespaldo         String   @default("MENSAJE_BIENVENIDA")
   mensajeBienvenida    String
   topeGastoMensualUsd  Float    @default(5)
@@ -716,26 +717,33 @@ model ConfigBot {
 }
 
 model LeadWhatsapp {
-  id              String    @id @default(cuid())
+  id                  String    @id @default(cuid())
   // Normalizado como lo manda WhatsApp, con código de país (ej. 5493493667214).
-  telefono        String    @unique
-  nombre          String?
-  uso             String?
-  zona            String?
-  terreno         String?
-  personas        String?
-  plazo           String?
-  origen          String? // RUTA_SHOWROOM | WEB | INSTAGRAM_FACEBOOK | RECOMENDACION | OTRO
-  origenDetalle   String?
-  estado          String    @default("NUEVO")
+  telefono            String    @unique
+  nombre              String?
+  uso                 String?
+  zona                String?
+  terreno             String?
+  personas            String?
+  plazo               String?
+  origen              String? // RUTA_SHOWROOM | WEB | INSTAGRAM_FACEBOOK | RECOMENDACION | OTRO
+  origenDetalle       String?
+  estado              String    @default("NUEVO")
   // true = el bot no le responde más; lo atiende el equipo.
-  controlHumano   Boolean   @default(false)
-  respuestasBot   Int       @default(0)
-  notas           String?
-  proximoContacto DateTime?
-  creadoEn        DateTime  @default(now())
-  actualizadoEn   DateTime  @updatedAt
-  ultimoMensajeEn DateTime?
+  controlHumano       Boolean   @default(false)
+  respuestasBot       Int       @default(0)
+  notas               String?
+  proximoContacto     DateTime?
+  creadoEn            DateTime  @default(now())
+  actualizadoEn       DateTime  @updatedAt
+  ultimoMensajeEn     DateTime?
+  // Último mensaje del CLIENTE: define la ventana de 24 h de WhatsApp.
+  ultimoEntranteEn    DateTime?
+  // Bloqueo para que dos mensajes seguidos no generen dos respuestas
+  // (se toma con un update condicional; ver src/lib/bot-whatsapp/procesar.ts).
+  bloqueoHasta        DateTime?
+  // El mensaje de bienvenida (sin saldo) sale una sola vez por lead.
+  bienvenidaEnviadaEn DateTime?
 
   mensajes MensajeWhatsapp[]
 
@@ -745,14 +753,18 @@ model LeadWhatsapp {
 }
 
 model MensajeWhatsapp {
-  id        String       @id @default(cuid())
-  leadId    String
-  lead      LeadWhatsapp @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  direccion String // ENTRANTE | SALIENTE
-  autor     String // CLIENTE | BOT | EQUIPO
-  tipo      String       @default("TEXTO") // TEXTO | AUDIO | OTRO
-  contenido String
-  creadoEn  DateTime     @default(now())
+  id            String       @id @default(cuid())
+  leadId        String
+  lead          LeadWhatsapp @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  direccion     String // ENTRANTE | SALIENTE
+  autor         String // CLIENTE | BOT | EQUIPO
+  tipo          String       @default("TEXTO") // TEXTO | AUDIO | OTRO
+  contenido     String
+  creadoEn      DateTime     @default(now())
+  // id del mensaje en WhatsApp: idempotencia (Meta reintenta los webhooks).
+  waMessageId   String?      @unique
+  // sent | delivered | read | failed (solo salientes, para registro).
+  estadoEntrega String?
 
   @@index([leadId, creadoEn])
   @@map("mensajes_whatsapp")
@@ -770,12 +782,15 @@ model ContactoExcluido {
 }
 
 model UsoBot {
-  id            String   @id @default(cuid())
-  mes           String   @unique // YYYY-MM, hora argentina
-  tokensEntrada Int      @default(0)
-  tokensSalida  Int      @default(0)
-  costoUsd      Float    @default(0)
-  actualizadoEn DateTime @updatedAt
+  id             String    @id @default(cuid())
+  mes            String    @unique // YYYY-MM, hora argentina
+  tokensEntrada  Int       @default(0)
+  tokensSalida   Int       @default(0)
+  costoUsd       Float     @default(0)
+  llamadas       Int       @default(0)
+  // El aviso del 80 % del tope sale una sola vez por mes.
+  avisoOchentaEn DateTime?
+  actualizadoEn  DateTime  @updatedAt
 
   @@map("uso_bot")
 }

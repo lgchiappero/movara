@@ -34,6 +34,8 @@ export default defineConfig({
         "src/lib/rate-limit-db.ts",
         "src/lib/seguridad/**/*.ts",
         "src/lib/bot-whatsapp/**/*.ts",
+        "src/lib/whatsapp-cloud/**/*.ts",
+        "src/app/api/whatsapp/**/*.ts",
         "src/lib/validators/bot-whatsapp.ts",
         "src/components/admin/bot-whatsapp/**/*.{ts,tsx}",
         "src/components/ui/CampoTrampa.tsx",
@@ -101,6 +103,7 @@ export default defineConfig({
       ],
       exclude: [
         "src/**/*.test.{ts,tsx}",
+        "src/**/__tests__/base-falsa.ts",
         "src/test/**",
       ],
       thresholds: {
