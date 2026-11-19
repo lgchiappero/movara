@@ -77,6 +77,7 @@ function incumplimientos(texto: string): string[] {
   if (/plegab/i.test(texto)) f.push("plegable");
   if (/producci[oó]n nacional|fabricaci[oó]n (nacional|argentina)|hech[oa] en argentina/i.test(texto)) f.push("producción nacional");
   if (/\b(cuotas?|materiales|tasa|descuentos?|flete)\b/i.test(texto)) f.push("nombra cuotas/materiales/descuento/flete");
+  if (/habitual|com[uú]nmente|solemos|hicimos|hemos hecho|muchos clientes|nuestros clientes|clientes suelen|experiencia|trayectoria|a[nñ]os haciendo/i.test(texto)) f.push("afirma experiencia o casos anteriores");
   if (/qu[eé] lindo|zona linda|lugar lindo|qu[eé] buena idea|excelente elecci[oó]n|qu[eé] lindo proyecto/i.test(texto)) f.push("relleno o elogio genérico");
   return f;
 }
@@ -105,7 +106,7 @@ function incumplimientosDeContexto(caso: Caso, accion: string, texto: string, da
   const oracionesTotales = texto.replace(/^\s*¡?hola!?[,.]?\s*/i, "").split(/[.!?]+/).filter((s) => s.trim()).length;
   if (oracionesTotales > 3) f.push(`${oracionesTotales} oraciones (máximo 3)`);
   const pregunta = texto.includes("?") ? texto.slice(texto.lastIndexOf(".", texto.indexOf("?")) + 1) : "";
-  if (datos.uso && /para (vivir|alquilar)|para qu[eé] (la|lo|uso)|\buso\b/i.test(pregunta)) f.push("vuelve a preguntar el uso");
+  if (datos.uso && /para qu[eé] (la|lo|uso|tipo)|\buso\b|(vivir|alquilar),? o |o para (vivir|alquilar)|pens[aá]s usar|como vivienda/i.test(pregunta)) f.push("vuelve a preguntar el uso");
   if (datos.zona && /zona|d[oó]nde/i.test(pregunta)) f.push("vuelve a preguntar la zona");
   if (caso.empiezaCon && !texto.trim().replace(/^¡?hola!?[,.]?\s*/i, "").startsWith(caso.empiezaCon)) f.push(`no empieza con "${caso.empiezaCon}"`);
   return f;
