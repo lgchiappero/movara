@@ -131,7 +131,7 @@ describe("ConfigBotForm", () => {
     const hastaLunes = screen.getByLabelText("Lunes: hasta");
     await userEvent.clear(hastaLunes);
     await userEvent.type(hastaLunes, "17:00");
-    await userEvent.selectOptions(screen.getByLabelText("Si el bot está pausado o sin saldo"), "NINGUNO");
+    await userEvent.selectOptions(screen.getByLabelText("Si se alcanza el tope de gasto"), "NINGUNO");
     const mensaje = screen.getByLabelText("Mensaje de bienvenida");
     await userEvent.clear(mensaje);
     await userEvent.type(mensaje, "Ya te respondemos");

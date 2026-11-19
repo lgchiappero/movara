@@ -115,9 +115,9 @@ export default function ConfigBotForm({ inicial }: { inicial: ConfigEditable }) 
       </fieldset>
 
       <fieldset className="space-y-3">
-        <legend className="text-sm font-bold text-[#1A1A1A]">Si el bot está pausado o sin saldo</legend>
+        <legend className="text-sm font-bold text-[#1A1A1A]">Si se alcanza el tope de gasto</legend>
         <select
-          aria-label="Si el bot está pausado o sin saldo"
+          aria-label="Si se alcanza el tope de gasto"
           className={input}
           value={c.modoRespaldo}
           onChange={(e) => set("modoRespaldo", e.target.value as ModoRespaldo)}
@@ -128,6 +128,7 @@ export default function ConfigBotForm({ inicial }: { inicial: ConfigEditable }) 
             </option>
           ))}
         </select>
+        <p className="text-xs text-stone-500">Con el bot pausado no responde nada: solo guarda los mensajes.</p>
         <label className={label}>
           Mensaje de bienvenida
           <textarea

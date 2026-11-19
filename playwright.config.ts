@@ -38,12 +38,24 @@ export default defineConfig({
   webServer: {
     // Sin el indicador de desarrollo de Next, que tapa botones (ver
     // next.config.ts). Si reutilizás un `npm run dev` propio, levantalo con
-    // E2E_SIN_INDICADOR=1 E2E_LIMITES_ALTOS=1 para que los e2e no fallen.
+    // E2E_SIN_INDICADOR=1 E2E_LIMITES_ALTOS=1 (y las variables del bot de
+    // abajo) para que los e2e no fallen.
     command: "npm run dev",
     // E2E_LIMITES_ALTOS: los specs crean muchos pedidos desde la misma IP;
     // multiplica los límites públicos (nunca en producción, ver
     // src/lib/seguridad/publico.ts). El bloqueo del login queda real.
-    env: { E2E_SIN_INDICADOR: "1", E2E_LIMITES_ALTOS: "1" },
+    // Bot de WhatsApp: IA y WhatsApp simulados (sin Claude ni Meta), esperas
+    // al 5 % y secretos de prueba que solo existen acá (nunca en producción:
+    // ver src/lib/bot-whatsapp/procesar.ts y src/lib/whatsapp-cloud/cliente.ts).
+    env: {
+      E2E_SIN_INDICADOR: "1",
+      E2E_LIMITES_ALTOS: "1",
+      BOT_IA_SIMULADA: "1",
+      WHATSAPP_SIMULADO: "1",
+      E2E_BOT_RAPIDO: "1",
+      WHATSAPP_APP_SECRET: "e2e-app-secret-local",
+      WHATSAPP_VERIFY_TOKEN: "e2e-verify-token-local",
+    },
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

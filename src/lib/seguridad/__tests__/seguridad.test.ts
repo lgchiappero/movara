@@ -138,7 +138,7 @@ describe("leerJsonLimitado", () => {
   });
 
   it("los tamaños por formulario", () => {
-    expect(MAX_BODY).toEqual({ leadsEmail: 4096, leads: 8192, citas: 16384, pedido: 65536, chico: 2048 });
+    expect(MAX_BODY).toEqual({ leadsEmail: 4096, leads: 8192, citas: 16384, pedido: 65536, whatsapp: 65536, chico: 2048 });
   });
 });
 

@@ -82,7 +82,7 @@ Documentos relacionados: [Imágenes con marca de agua del proveedor](imagenes-co
 - **CSP** (`next.config.ts`): sin `'unsafe-eval'` en producción; `/admin` no se puede embeber (`frame-ancestors 'none'`, `X-Frame-Options: DENY`) y lleva `Cross-Origin-Opener-Policy`. Lo fija `src/test/next-config-headers.test.ts`.
 - **Incidentes**: [seguridad-incidentes.md](seguridad-incidentes.md).
 
-## Bot de WhatsApp (etapa 1: base de datos + panel)
+## Bot de WhatsApp (etapa 1: panel · etapa 2: WhatsApp + Claude)
 
 - **Panel**: `/admin/bot-whatsapp` (estado, leads, contactos excluidos y configuración) y `/admin/bot-whatsapp/[id]` (detalle con la conversación). Entrada "Bot WhatsApp" en `src/lib/admin/nav-items.ts`.
 - **El bot arranca APAGADO** (`ConfigBot.activo = false`). La configuración es un registro único que se crea solo la primera vez (`src/lib/bot-whatsapp/config.ts`).
@@ -92,7 +92,12 @@ Documentos relacionados: [Imágenes con marca de agua del proveedor](imagenes-co
 - **Opciones** (estados, orígenes, autores, etiquetas, días): un solo lugar, `src/lib/bot-whatsapp/constantes.ts`.
 - **Coincidencias**: el detalle avisa si el teléfono ya figura en Leads o Pedidos (`src/lib/bot-whatsapp/coincidencias.ts`), solo lectura.
 - **Pendiente futuro**: unificar `Lead` (formularios y pipeline) y `LeadWhatsapp` en un solo CRM. Hoy son tablas separadas y solo se cruzan por teléfono para el aviso.
-- **Etapa 2** (sin hacer): conectar WhatsApp y la API de Claude, registrar el uso en `UsoBot` y respetar el horario, el tope de gasto, los excluidos y el control humano.
+- **Webhook** `POST/GET /api/whatsapp/webhook` (público, fuera de `/api/admin`): GET verifica con `WHATSAPP_VERIFY_TOKEN`; POST exige la firma `X-Hub-Signature-256` con `WHATSAPP_APP_SECRET` (401 si no valida), guarda **todo** mensaje entrante (idempotente por `waMessageId`), registra los estados de entrega, responde 200 y procesa en `after()` (`maxDuration = 60`). Rate limit por IP y por número (30 cada 10 min; más allá guarda sin responder y avisa una vez).
+- **Cuándo responde** (`decidir` en `src/lib/bot-whatsapp/reglas.ts`, función pura): activo (pausado no responde nada); con modo horario, solo fuera de horario; no excluido; sin control humano; no descartado; dentro de las 24 h del último mensaje del cliente (**nunca inicia conversaciones ni usa plantillas**); con saldo (sin saldo: bienvenida una vez a números nuevos que pasan `PALABRAS_CLAVE_BIENVENIDA`, sin IA); al llegar al máximo, cierre y DERIVADO; audio sin texto, respuesta fija.
+- **Orquestador** `src/lib/bot-whatsapp/procesar.ts`: espera 6 s para juntar mensajes seguidos, bloqueo atómico por lead (`bloqueoHasta`), leído + "escribiendo…", demora de 5 a 20 s. CALIFICADO / DERIVAR / máximo / error de IA → estado, `controlHumano = true` y aviso.
+- **Claude** (`ia.ts`, `prompt.ts`, `respuesta.ts`): `claude-haiku-5-5`, prompt de sistema fijo y cacheado, `effort: "low"`, salida estructurada validada con Zod; inválida o negativa → deriva sin responder. Gasto en `UsoBot` con `PRECIOS_MODELO` editable (`gasto.ts`), aviso del 80 % una vez por mes.
+- **Avisos** solo por email (`avisos.ts`, Resend) con link al lead; `whatsappAviso` sin uso (un mensaje iniciado por la empresa cuesta).
+- **Simulados** (nunca en producción): `BOT_IA_SIMULADA=1`, `WHATSAPP_SIMULADO=1`, `E2E_BOT_RAPIDO=1`. Para chatear en local: `scripts/simular-whatsapp.ts`.
 
 ## Datos
 

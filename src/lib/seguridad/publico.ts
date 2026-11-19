@@ -24,6 +24,11 @@ export const LIMITES = {
   reciboPdf: { max: 30, ventanaMs: HORA },
   revalidate: { max: 120, ventanaMs: MINUTO },
   bootstrap: { max: 5, ventanaMs: HORA },
+  // Webhook de WhatsApp: Meta manda desde pocas IPs (red de contención) y
+  // cada número tiene su propio cupo (más allá se guarda pero no se responde).
+  whatsappIP: { max: 600, ventanaMs: MINUTO },
+  whatsappNumero: { max: 30, ventanaMs: 10 * MINUTO },
+  whatsappAvisoNumero: { max: 1, ventanaMs: 10 * MINUTO },
 } satisfies Record<string, Limite>;
 
 /** Tamaño máximo del body (bytes) de cada formulario público. */
@@ -32,6 +37,7 @@ export const MAX_BODY = {
   leads: 8 * 1024,
   citas: 16 * 1024,
   pedido: 64 * 1024,
+  whatsapp: 64 * 1024,
   chico: 2 * 1024, // mi-pedido, cancelar cita, confirmar recibo, login
 } as const;
 
@@ -70,17 +76,17 @@ export function demasiadosPedidos(mensaje = RESPUESTA_429): NextResponse {
 }
 
 export type LecturaJson = { ok: true; datos: unknown } | { ok: false; respuesta: NextResponse };
+export type LecturaTexto = { ok: true; texto: string } | { ok: false; respuesta: NextResponse };
 
-/** Lee el body como JSON sin pasar de `maxBytes`: rechaza con 413 por el
- * Content-Length declarado y, si no viene o miente, corta la lectura apenas
- * se pasa. Un JSON mal formado da `datos: null` (que lo rechace el esquema
- * de la ruta, con su mensaje de siempre). */
-export async function leerJsonLimitado(req: Request, maxBytes: number): Promise<LecturaJson> {
+/** Lee el body como texto crudo sin pasar de `maxBytes`: rechaza con 413 por
+ * el Content-Length declarado y, si no viene o miente, corta la lectura
+ * apenas se pasa. Para verificar firmas (se calculan sobre el body tal cual). */
+export async function leerTextoLimitado(req: Request, maxBytes: number): Promise<LecturaTexto> {
   const muyGrande = () => ({ ok: false as const, respuesta: NextResponse.json({ error: "El envío es demasiado grande." }, { status: 413 }) });
 
   const declarado = Number(req.headers.get("content-length"));
   if (Number.isFinite(declarado) && declarado > maxBytes) return muyGrande();
-  if (!req.body) return { ok: true, datos: null };
+  if (!req.body) return { ok: true, texto: "" };
 
   const lector = req.body.getReader();
   const partes: Uint8Array[] = [];
@@ -95,9 +101,18 @@ export async function leerJsonLimitado(req: Request, maxBytes: number): Promise<
     }
     partes.push(value);
   }
-  const texto = new TextDecoder().decode(Buffer.concat(partes));
+  return { ok: true, texto: new TextDecoder().decode(Buffer.concat(partes)) };
+}
+
+/** Lee el body como JSON sin pasar de `maxBytes` (ver leerTextoLimitado). Un
+ * JSON mal formado da `datos: null` (que lo rechace el esquema de la ruta,
+ * con su mensaje de siempre). */
+export async function leerJsonLimitado(req: Request, maxBytes: number): Promise<LecturaJson> {
+  const lectura = await leerTextoLimitado(req, maxBytes);
+  if (!lectura.ok) return lectura;
+  if (!lectura.texto) return { ok: true, datos: null };
   try {
-    return { ok: true, datos: JSON.parse(texto) };
+    return { ok: true, datos: JSON.parse(lectura.texto) };
   } catch {
     return { ok: true, datos: null };
   }
