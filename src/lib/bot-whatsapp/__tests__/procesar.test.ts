@@ -10,7 +10,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import { procesarMensajeEntrante, datosNuevos, ESPERA_AGRUPAR_MS, dependenciasReales, factorEsperas, type Dependencias } from "../procesar";
-import { motorSimulado, type MotorIA, type ResultadoIA } from "../ia";
+import { motorSimulado, motorSinClave, type MotorIA, type ResultadoIA } from "../ia";
 import { MENSAJE_CIERRE_MAXIMO, MENSAJE_SIN_AUDIO } from "../constantes";
 import type { RespuestaBot } from "../respuesta";
 import type { LeadWhatsapp } from "@prisma/client";
@@ -229,6 +229,21 @@ describe("procesarMensajeEntrante", () => {
     expect(deps.avisos).toEqual(["ERROR", "ERROR", "ERROR"]);
     // Las llamadas que se hicieron igual se cobran.
     expect(b.tablas.uso[0].llamadas).toBe(2);
+  });
+
+  it("sin clave de la IA: deriva sin responder y el aviso dice \"Falta la clave de la IA\"", async () => {
+    const detalles: (string | undefined)[] = [];
+    deps.ia = motorSinClave;
+    deps.avisar = async (av) => {
+      detalles.push(av.detalle);
+      return true;
+    };
+    const l = lead();
+    expect(await procesarMensajeEntrante(l.id, await entra(l.id, "Hola, info de las casas"), deps)).toBe("ERROR_IA");
+    expect(leadDe(l.id)).toMatchObject({ estado: "DERIVADO", controlHumano: true, respuestasBot: 0 });
+    expect(deps.enviados).toEqual([]);
+    expect(detalles).toEqual(["Falta la clave de la IA (ANTHROPIC_API_KEY en Vercel)."]);
+    expect(b.tablas.uso).toEqual([]);
   });
 
   it("si WhatsApp no acepta el envío: no cuenta la respuesta y avisa", async () => {

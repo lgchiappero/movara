@@ -106,6 +106,10 @@ El bot sigue **apagado** en producción hasta que Luciano lo active.
    arregladas: el prompt nombraba palabras prohibidas por
    `src/test/claims.test.ts` (reformulado, sin tocar el test) y el test de
    `MAX_BODY` (se agregó el límite del webhook). Falta el OK para el commit.
+   Commits en la rama: `2564feb` (etapa 2) y uno aparte con el aviso
+   "Falta la clave de la IA": sin ANTHROPIC_API_KEY no se llama a la API
+   (`motorSinClave`), el lead queda DERIVADO con control humano y el email
+   nombra la causa real.
 2. Luciano corre `sql/20261119_bot_whatsapp_etapa2.sql` en producción antes
    del push.
 3. Con la clave real de Claude (con OK, gasta plata): probar el prompt con

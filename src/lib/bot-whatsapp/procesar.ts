@@ -96,6 +96,14 @@ async function tomarBloqueo(leadId: string, deps: Dependencias): Promise<boolean
   }
 }
 
+/** Detalle del email cuando la IA no da una respuesta usable. */
+export const DETALLE_ERROR_IA = {
+  INVALIDO: "La respuesta de la IA no fue válida.",
+  NEGATIVA: "La IA no quiso responder.",
+  ERROR: "Falló la llamada a la IA.",
+  SIN_CLAVE: "Falta la clave de la IA (ANTHROPIC_API_KEY en Vercel).",
+} as const;
+
 const CAMPOS: (keyof DatosExtraidos)[] = ["nombre", "uso", "zona", "terreno", "personas", "plazo", "origen", "origenDetalle"];
 
 function datosDelLead(lead: LeadWhatsapp): DatosLead {
@@ -203,7 +211,7 @@ async function procesarConBloqueo(leadId: string, deps: Dependencias): Promise<R
   if (!resultado.ok) {
     // JSON inválido, negativa o error: deriva a Luciano y NO responde.
     await derivar("DERIVADO");
-    await avisar("ERROR", resultado.motivo === "INVALIDO" ? "La respuesta de la IA no fue válida." : resultado.motivo === "NEGATIVA" ? "La IA no quiso responder." : "Falló la llamada a la IA.");
+    await avisar("ERROR", DETALLE_ERROR_IA[resultado.motivo]);
     return "ERROR_IA";
   }
 

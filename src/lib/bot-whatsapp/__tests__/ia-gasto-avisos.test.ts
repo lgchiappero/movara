@@ -6,7 +6,7 @@ const m = vi.hoisted(() => ({ upsert: vi.fn(), updateMany: vi.fn(), enviarEmail:
 vi.mock("@/lib/db", () => ({ db: { usoBot: { upsert: m.upsert, updateMany: m.updateMany } } }));
 vi.mock("@/lib/email/enviar", () => ({ enviarEmail: m.enviarEmail, esEmailDePrueba: (e: string) => e.endsWith("@example.com") }));
 
-import { armarMensajes, crearMotorClaude, motorSimulado, motorIA, iaSimulada, MODELO_BOT, type MensajeHistorial } from "../ia";
+import { armarMensajes, crearMotorClaude, motorSimulado, motorSinClave, motorIA, iaSimulada, MODELO_BOT, type MensajeHistorial } from "../ia";
 import { costoDeLlamada, registrarUso, PRECIOS_MODELO } from "../gasto";
 import { enviarAviso, htmlAviso, destinoAvisos, linkLead } from "../avisos";
 import { respuestaBotSchema, respuestaUtilizable, type RespuestaBot } from "../respuesta";
@@ -130,6 +130,15 @@ describe("IA simulada", () => {
     expect(iaSimulada()).toBe(false);
     vi.stubEnv("ANTHROPIC_API_KEY", "clave-falsa");
     expect(motorIA()).not.toBe(motorSimulado);
+    expect(motorIA()).not.toBe(motorSinClave);
+  });
+
+  it("sin ANTHROPIC_API_KEY (o vacía): no llama a la API y devuelve SIN_CLAVE", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    expect(motorIA()).toBe(motorSinClave);
+    vi.stubEnv("ANTHROPIC_API_KEY", "   ");
+    expect(motorIA()).toBe(motorSinClave);
+    expect(await motorSinClave.responder([cliente("info")], {})).toEqual({ ok: false, motivo: "SIN_CLAVE", uso: null });
   });
 
   it("conversación completa hasta CALIFICADO", async () => {

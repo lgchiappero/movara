@@ -21,7 +21,7 @@ export type DatosLead = Partial<Record<keyof DatosExtraidos, string | null>>;
 
 export type ResultadoIA =
   | { ok: true; respuesta: RespuestaBot; uso: UsoLlamada }
-  | { ok: false; motivo: "INVALIDO" | "NEGATIVA" | "ERROR"; uso: UsoLlamada | null };
+  | { ok: false; motivo: "INVALIDO" | "NEGATIVA" | "ERROR" | "SIN_CLAVE"; uso: UsoLlamada | null };
 
 export interface MotorIA {
   responder(historial: MensajeHistorial[], datos: DatosLead): Promise<ResultadoIA>;
@@ -141,6 +141,15 @@ export const motorSimulado: MotorIA = {
   },
 };
 
+/** Sin ANTHROPIC_API_KEY no se llama a la API: el lead se deriva con un
+ * aviso que nombra la causa real. */
+export const motorSinClave: MotorIA = {
+  async responder() {
+    return { ok: false, motivo: "SIN_CLAVE", uso: null };
+  },
+};
+
 export function motorIA(): MotorIA {
-  return iaSimulada() ? motorSimulado : crearMotorClaude();
+  if (iaSimulada()) return motorSimulado;
+  return process.env.ANTHROPIC_API_KEY?.trim() ? crearMotorClaude() : motorSinClave;
 }
