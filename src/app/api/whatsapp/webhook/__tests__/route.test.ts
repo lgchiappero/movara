@@ -89,6 +89,26 @@ describe("POST (mensajes)", () => {
     expect(vi.mocked(console.error).mock.calls.flat().join(" ")).not.toContain(SECRETO);
   });
 
+  it("firma inválida: registra el diagnóstico (largos y prefijos) sin el secreto ni la firma completa", async () => {
+    const body = payload([texto("wamid.1", "info")]);
+    const recibida = firmar(body, "otro");
+    expect((await POST(post(body, recibida))).status).toBe(401);
+    const log = vi.mocked(console.error).mock.calls.flat().join(" ");
+    expect(log).toContain("firma inválida");
+    expect(log).toContain(`"secretoLargo":${SECRETO.length}`);
+    expect(log).toContain(`"recibida":"${recibida.slice(7, 15)}"`);
+    expect(log).toContain(`"calculada":"${firmar(body, SECRETO).slice(7, 15)}"`);
+    expect(log).not.toContain(SECRETO);
+    expect(log).not.toContain(recibida.slice(7));
+    expect(log).not.toContain(firmar(body, SECRETO).slice(7));
+  });
+
+  it("App Secret con espacios o salto de línea en los bordes: igual acepta la firma", async () => {
+    vi.stubEnv("WHATSAPP_APP_SECRET", ` ${SECRETO}\n`);
+    const body = payload([texto("wamid.1", "info")]);
+    expect((await POST(post(body, firmar(body, SECRETO)))).status).toBe(200);
+  });
+
   it("guarda el mensaje y el lead, responde 200 y procesa después", async () => {
     const r = await POST(post(payload([texto("wamid.1", "Hola, quería info")])));
     expect(r.status).toBe(200);
