@@ -10,7 +10,7 @@ import EstadoBot from "../EstadoBot";
 import ConfigBotForm, { type ConfigEditable } from "../ConfigBotForm";
 import NuevoLeadWhatsapp from "../NuevoLeadWhatsapp";
 import ContactosExcluidos from "../ContactosExcluidos";
-import ImportarExcluidos, { MAX_VCF_BYTES, textoSalteados } from "../ImportarExcluidos";
+import ImportarExcluidos, { MAX_VCF_BYTES, textoSalteados, textoResumen } from "../ImportarExcluidos";
 import ChatLead from "../ChatLead";
 import AccionesLead from "../AccionesLead";
 import DatosLeadForm, { type DatosLead } from "../DatosLeadForm";
@@ -470,7 +470,8 @@ describe("TablaLeadsWhatsapp", () => {
 describe("ImportarExcluidos", () => {
   const VCF = ["BEGIN:VCARD", "FN:Sofía Martínez", "TEL:+54 9 3493 66-7214", "TEL:3493 111111", "END:VCARD", "BEGIN:VCARD", "FN:Juan", "TEL:667214", "END:VCARD"].join("\r\n");
   const archivoVcf = (texto = VCF) => new File([texto], "contactos.vcf", { type: "text/vcard" });
-  const RESUMEN = { agregar: 1, saltear: 2, repetidos: 0, yaExcluidos: 1, invalidos: 1 };
+  const SIN = { completados: 0, caracteristica: "3493" };
+  const RESUMEN = { agregar: 1, saltear: 2, repetidos: 0, yaExcluidos: 1, invalidos: 1, ...SIN };
   const subir = (f: File) => userEvent.upload(screen.getByLabelText("Archivo de contactos (.vcf)"), f);
 
   it("solo el administrador ve el botón en la lista de excluidos", () => {
@@ -501,15 +502,15 @@ describe("ImportarExcluidos", () => {
       { telefono: "667214", nombre: "Juan" },
     ];
     expect(ultimaLlamada()).toEqual(["/api/admin/bot-whatsapp/excluidos/importar", "POST"]);
-    expect(ultimoBody()).toEqual({ contactos, confirmar: false });
+    expect(ultimoBody()).toEqual({ contactos, caracteristica: "3493", confirmar: false });
     await userEvent.click(within(modal).getByRole("button", { name: "Importar" }));
     await waitFor(() => expect(m.exito).toHaveBeenCalledWith("1 contacto agregado a excluidos"));
-    expect(ultimoBody()).toEqual({ contactos, confirmar: true });
+    expect(ultimoBody()).toEqual({ contactos, caracteristica: "3493", confirmar: true });
     expect(m.refresh).toHaveBeenCalled();
   });
 
   it("Cancelar no importa; plural en el mensaje de éxito", async () => {
-    const r = { agregar: 3, saltear: 0, repetidos: 0, yaExcluidos: 0, invalidos: 0 };
+    const r = { agregar: 3, saltear: 0, repetidos: 0, yaExcluidos: 0, invalidos: 0, ...SIN };
     responder({ json: { resumen: r, agregados: 0 } }, { json: { resumen: r, agregados: 0 } }, { json: { resumen: r, agregados: 3 } });
     render(<ImportarExcluidos />);
     await subir(archivoVcf());
@@ -525,7 +526,7 @@ describe("ImportarExcluidos", () => {
 
   it("sin contactos nuevos, archivo vacío, demasiado grande o error del servidor: avisa y no importa", async () => {
     responder(
-      { json: { resumen: { agregar: 0, saltear: 2, repetidos: 1, yaExcluidos: 1, invalidos: 0 }, agregados: 0 } },
+      { json: { resumen: { agregar: 0, saltear: 2, repetidos: 1, yaExcluidos: 1, invalidos: 0, ...SIN }, agregados: 0 } },
       { ok: false, status: 403, json: { error: "Solo un administrador puede hacer esto" } },
     );
     render(<ImportarExcluidos />);
@@ -554,9 +555,33 @@ describe("ImportarExcluidos", () => {
     expect(m.refresh).not.toHaveBeenCalled();
   });
 
+  it("característica por defecto: precargada con 3493, se puede cambiar y el resumen cuenta los completados", async () => {
+    const r = { agregar: 2, saltear: 0, repetidos: 0, yaExcluidos: 0, invalidos: 0, completados: 1, caracteristica: "3492" };
+    responder({ json: { resumen: r, agregados: 0 } }, { json: { resumen: r, agregados: 2 } });
+    render(<ImportarExcluidos />);
+    const campo = screen.getByLabelText("Característica por defecto");
+    expect(campo).toHaveValue("3493");
+    await userEvent.clear(campo);
+    await userEvent.type(campo, "3492");
+    await subir(archivoVcf());
+    const modal = await screen.findByRole("alertdialog");
+    expect(modal).toHaveTextContent("Se agregan 2 contactos, con su nombre como etiqueta. De esos, 1 se completó con la característica 3492. No se saltea ninguno.");
+    expect(ultimoBody()).toMatchObject({ caracteristica: "3492", confirmar: false });
+    await userEvent.clear(campo); // cambiarla después del resumen no cambia lo que se confirma
+    await userEvent.click(within(modal).getByRole("button", { name: "Importar" }));
+    await waitFor(() => expect(m.exito).toHaveBeenCalledWith("2 contactos agregados a excluidos"));
+    expect(ultimoBody()).toMatchObject({ caracteristica: "3492", confirmar: true });
+  });
+
+  it("textoResumen: plural de completados", () => {
+    expect(textoResumen({ agregar: 1, saltear: 0, repetidos: 0, yaExcluidos: 0, invalidos: 0, completados: 5, caracteristica: "11" })).toBe(
+      "Se agrega 1 contacto, con su nombre como etiqueta. De esos, 5 se completaron con la característica 11. No se saltea ninguno.",
+    );
+  });
+
   it("textoSalteados: singular y plural de cada motivo", () => {
-    expect(textoSalteados({ agregar: 0, saltear: 1, repetidos: 0, yaExcluidos: 0, invalidos: 1 })).toBe("Se saltea 1: 1 sin teléfono válido.");
-    expect(textoSalteados({ agregar: 0, saltear: 6, repetidos: 2, yaExcluidos: 3, invalidos: 1 })).toBe(
+    expect(textoSalteados({ agregar: 0, saltear: 1, repetidos: 0, yaExcluidos: 0, invalidos: 1, ...SIN })).toBe("Se saltea 1: 1 sin teléfono válido.");
+    expect(textoSalteados({ agregar: 0, saltear: 6, repetidos: 2, yaExcluidos: 3, invalidos: 1, ...SIN })).toBe(
       "Se saltean 6: 2 repetidos en el archivo, 3 que ya estaban excluidos, 1 sin teléfono válido.",
     );
   });

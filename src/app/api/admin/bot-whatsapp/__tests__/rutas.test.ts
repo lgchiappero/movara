@@ -339,10 +339,10 @@ describe("importar excluidos (.vcf, administrador)", () => {
     { telefono: "+54 9 3493 66-7214", nombre: "Sofía Martínez" },
     { telefono: "03493 15 667214", nombre: "Sofía repetida" },
     { telefono: "3493 111111", nombre: "Ya estaba" },
-    { telefono: "667214", nombre: "Sin área" },
+    { telefono: "15 555123", nombre: "Sin área" },
     { telefono: "3493 222222", nombre: null },
   ];
-  const RESUMEN = { agregar: 2, saltear: 3, repetidos: 1, yaExcluidos: 1, invalidos: 1 };
+  const RESUMEN = { agregar: 2, saltear: 3, repetidos: 1, yaExcluidos: 1, invalidos: 1, completados: 0, caracteristica: null };
   beforeEach(() => m.exclFindMany.mockResolvedValue([{ telefono: "5493493111111" }]));
 
   it("sin confirmar: devuelve el resumen y no guarda nada", async () => {
@@ -350,7 +350,7 @@ describe("importar excluidos (.vcf, administrador)", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ resumen: RESUMEN, agregados: 0 });
     expect(m.exclFindMany).toHaveBeenCalledWith({
-      where: { telefono: { in: ["5493493667214", "5493493111111", "5493493222222"] } },
+      where: { telefono: { in: ["5493493667214", "5493493111111", "5493493222222"] } }, // "15 555123" sin característica no es válido
       select: { telefono: true },
     });
     expect(m.exclCreateMany).not.toHaveBeenCalled();
@@ -372,8 +372,29 @@ describe("importar excluidos (.vcf, administrador)", () => {
 
   it("confirmado sin nada nuevo: no llama a la base para insertar", async () => {
     const res = await importar.POST(req("/excluidos/importar", "POST", { contactos: [CONTACTOS[2]], confirmar: true }));
-    expect(await res.json()).toEqual({ resumen: { agregar: 0, saltear: 1, repetidos: 0, yaExcluidos: 1, invalidos: 0 }, agregados: 0 });
+    expect(await res.json()).toEqual({ resumen: { agregar: 0, saltear: 1, repetidos: 0, yaExcluidos: 1, invalidos: 0, completados: 0, caracteristica: null }, agregados: 0 });
     expect(m.exclCreateMany).not.toHaveBeenCalled();
+  });
+
+  it("con característica por defecto: completa los números sin código de área y los cuenta", async () => {
+    m.exclCreateMany.mockResolvedValue({ count: 3 });
+    const res = await importar.POST(req("/excluidos/importar", "POST", { contactos: CONTACTOS, caracteristica: " 03493 ", confirmar: true }));
+    expect(await res.json()).toEqual({
+      resumen: { agregar: 3, saltear: 2, repetidos: 1, yaExcluidos: 1, invalidos: 0, completados: 1, caracteristica: "3493" },
+      agregados: 3,
+    });
+    expect(m.exclCreateMany.mock.calls[0][0].data.map((d: { telefono: string }) => d.telefono)).toEqual(["5493493667214", "5493493555123", "5493493222222"]);
+    expect(m.exclCreateMany.mock.calls[0][0].data[1]).toMatchObject({ etiqueta: "Sin área" });
+  });
+
+  it("característica vacía no completa; inválida: 400", async () => {
+    const vacia = await importar.POST(req("/excluidos/importar", "POST", { contactos: CONTACTOS, caracteristica: "  ", confirmar: false }));
+    expect((await vacia.json()).resumen).toEqual(RESUMEN);
+    for (const c of ["0", "12345", "abc", "0011"]) {
+      const res = await importar.POST(req("/excluidos/importar", "POST", { contactos: CONTACTOS, caracteristica: c, confirmar: false }));
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: "Característica inválida: de 2 a 4 dígitos, ej. 3493" });
+    }
   });
 
   it("valida: lista vacía, demasiados, campos de más, body enorme y rate limit", async () => {

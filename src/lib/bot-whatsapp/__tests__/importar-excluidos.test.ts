@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { leerVcf, telefonosDeVcf } from "../vcard";
-import { prepararImportacion, telefonosValidos, MAX_ETIQUETA_IMPORTADA } from "../importar-excluidos";
+import { prepararImportacion, telefonosValidos, normalizarImportado, limpiarCaracteristica, MAX_ETIQUETA_IMPORTADA } from "../importar-excluidos";
 
 const vcf = (...lineas: string[]) => lineas.join("\r\n");
 
@@ -97,6 +97,7 @@ describe("prepararImportacion", () => {
       repetidos: 1,
       yaExcluidos: 1,
       invalidos: 1,
+      completados: 0,
     });
   });
 
@@ -104,5 +105,47 @@ describe("prepararImportacion", () => {
     expect(telefonosValidos([{ telefono: "3493667214", nombre: null }, { telefono: "+54 9 3493 66-7214", nombre: null }, { telefono: "abc", nombre: null }])).toEqual([
       "5493493667214",
     ]);
+  });
+});
+
+describe("característica por defecto", () => {
+  it("limpiarCaracteristica: 2 a 4 dígitos, sin el 0 de adelante", () => {
+    expect(limpiarCaracteristica("3493")).toBe("3493");
+    expect(limpiarCaracteristica(" 0 3493 ")).toBe("3493");
+    expect(limpiarCaracteristica("011")).toBe("11");
+    for (const x of ["", "0", "1", "12345", "abc", "0011"]) expect(limpiarCaracteristica(x)).toBeNull();
+  });
+
+  it("completa solo números locales que con la característica dan 10 dígitos", () => {
+    expect(normalizarImportado("66-7214", "3493")).toEqual({ telefono: "5493493667214", completado: true });
+    expect(normalizarImportado("15 667214", "3493")).toEqual({ telefono: "5493493667214", completado: true });
+    expect(normalizarImportado("4567-8901", "11")).toEqual({ telefono: "5491145678901", completado: true });
+    expect(normalizarImportado("155 1234", "3493")).toBeNull(); // 7 dígitos con 4 de área: no cierra
+    expect(normalizarImportado("12345", "3493")).toBeNull();
+    expect(normalizarImportado("+667214", "3493")).toBeNull(); // internacional: no se toca
+    expect(normalizarImportado("00667214", "3493")).toBeNull();
+    expect(normalizarImportado("667214", null)).toBeNull();
+    // Un número completo nunca se completa (se normaliza como siempre).
+    expect(normalizarImportado("3492 123456", "3493")).toEqual({ telefono: "5493492123456", completado: false });
+  });
+
+  it("prepararImportacion cuenta los completados entre los nuevos", () => {
+    const filas = [
+      { telefono: "66-7214", nombre: "Ana" },
+      { telefono: "3493 667214", nombre: "Ana repetida" },
+      { telefono: "15 111111", nombre: "Ya estaba" },
+      { telefono: "15 222222", nombre: "Beto" },
+    ];
+    expect(prepararImportacion(filas, new Set(["5493493111111"]), "3493")).toEqual({
+      nuevos: [
+        { telefono: "5493493667214", etiqueta: "Ana" },
+        { telefono: "5493493222222", etiqueta: "Beto" },
+      ],
+      repetidos: 1,
+      yaExcluidos: 1,
+      invalidos: 0,
+      completados: 2,
+    });
+    expect(telefonosValidos(filas, "3493")).toEqual(["5493493667214", "5493493111111", "5493493222222"]);
   });
 });

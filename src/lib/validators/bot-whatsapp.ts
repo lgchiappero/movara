@@ -7,6 +7,7 @@ import {
   ORIGENES,
 } from "@/lib/bot-whatsapp/constantes";
 import { telefonoWhatsapp } from "@/lib/bot-whatsapp/telefono";
+import { limpiarCaracteristica } from "@/lib/bot-whatsapp/importar-excluidos";
 
 /** Validación de las rutas /api/admin/bot-whatsapp/*. Los esquemas son
  * estrictos: un campo que no existe es un error (el panel no lo manda). */
@@ -151,6 +152,20 @@ export const importarExcluidosSchema = z
       .array(z.object({ telefono: z.string().max(60), nombre: z.string().max(300).nullable() }).strict())
       .min(1, "El archivo no tiene contactos con teléfono")
       .max(MAX_IMPORTAR_EXCLUIDOS, `Máximo ${MAX_IMPORTAR_EXCLUIDOS} teléfonos por importación`),
+    /** Para los números agendados sin código de área; vacía = no completar. */
+    caracteristica: z
+      .string()
+      .max(10)
+      .default("")
+      .transform((v, ctx) => {
+        if (!v.trim()) return null;
+        const c = limpiarCaracteristica(v);
+        if (!c) {
+          ctx.addIssue({ code: "custom", message: "Característica inválida: de 2 a 4 dígitos, ej. 3493" });
+          return z.NEVER;
+        }
+        return c;
+      }),
     confirmar: z.boolean(),
   })
   .strict();
