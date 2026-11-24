@@ -7,6 +7,7 @@ import ModalConfirmacion from "@/components/ui/ModalConfirmacion";
 import { ETIQUETA_EXCLUIDO, ETIQUETAS_EXCLUIDO, type EtiquetaExcluido } from "@/lib/bot-whatsapp/constantes";
 import { formatearTelefonoWhatsapp } from "@/lib/bot-whatsapp/telefono";
 import { llamarApi } from "./api";
+import ImportarExcluidos from "./ImportarExcluidos";
 
 export type Excluido = { id: string; telefono: string; etiqueta: string };
 
@@ -51,9 +52,12 @@ export default function ContactosExcluidos({ excluidos, esAdmin }: { excluidos: 
 
   return (
     <section aria-labelledby="titulo-excluidos" className="space-y-4">
-      <div>
-        <h2 id="titulo-excluidos" className="text-lg font-bold text-[#1A1A1A]">Contactos excluidos</h2>
-        <p className="text-sm text-stone-500">El bot nunca les responde (amigos, familia, proveedores).</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 id="titulo-excluidos" className="text-lg font-bold text-[#1A1A1A]">Contactos excluidos</h2>
+          <p className="text-sm text-stone-500">El bot nunca les responde (amigos, familia, proveedores).</p>
+        </div>
+        {esAdmin && <ImportarExcluidos />}
       </div>
       <form onSubmit={agregar} aria-label="Agregar contacto excluido" className="grid gap-3 rounded-2xl border border-[#E5E5E5] bg-white p-4 sm:grid-cols-[1fr_12rem_auto]">
         <input

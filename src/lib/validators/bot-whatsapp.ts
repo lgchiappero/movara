@@ -136,6 +136,25 @@ export const excluidoCreateSchema = z
   .object({ telefono: telefonoSchema, etiqueta: z.enum(ETIQUETAS_EXCLUIDO) })
   .strict();
 
+/** Máximo de teléfonos por importación (una agenda grande entra de sobra). */
+export const MAX_IMPORTAR_EXCLUIDOS = 5000;
+/** Body de la importación: 5000 renglones de teléfono + nombre. */
+export const MAX_BODY_IMPORTAR = 768 * 1024;
+
+/** Importación desde un .vcf: el navegador lee el archivo y manda solo
+ * teléfono y nombre de cada contacto; el servidor normaliza y valida. Un
+ * teléfono que no se puede interpretar no es un error: se cuenta como
+ * salteado. */
+export const importarExcluidosSchema = z
+  .object({
+    contactos: z
+      .array(z.object({ telefono: z.string().max(60), nombre: z.string().max(300).nullable() }).strict())
+      .min(1, "El archivo no tiene contactos con teléfono")
+      .max(MAX_IMPORTAR_EXCLUIDOS, `Máximo ${MAX_IMPORTAR_EXCLUIDOS} teléfonos por importación`),
+    confirmar: z.boolean(),
+  })
+  .strict();
+
 export const leadsQuerySchema = z.object({
   estado: z.enum(ESTADOS_LEAD).optional(),
   q: z.string().trim().max(100).optional(),

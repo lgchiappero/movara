@@ -10,6 +10,7 @@ import EstadoBot from "../EstadoBot";
 import ConfigBotForm, { type ConfigEditable } from "../ConfigBotForm";
 import NuevoLeadWhatsapp from "../NuevoLeadWhatsapp";
 import ContactosExcluidos from "../ContactosExcluidos";
+import ImportarExcluidos, { MAX_VCF_BYTES, textoSalteados } from "../ImportarExcluidos";
 import ChatLead from "../ChatLead";
 import AccionesLead from "../AccionesLead";
 import DatosLeadForm, { type DatosLead } from "../DatosLeadForm";
@@ -463,5 +464,100 @@ describe("TablaLeadsWhatsapp", () => {
   it("sin leads", () => {
     render(<TablaLeadsWhatsapp leads={[]} />);
     expect(screen.getByText("No hay leads con ese filtro.")).toBeInTheDocument();
+  });
+});
+
+describe("ImportarExcluidos", () => {
+  const VCF = ["BEGIN:VCARD", "FN:Sofía Martínez", "TEL:+54 9 3493 66-7214", "TEL:3493 111111", "END:VCARD", "BEGIN:VCARD", "FN:Juan", "TEL:667214", "END:VCARD"].join("\r\n");
+  const archivoVcf = (texto = VCF) => new File([texto], "contactos.vcf", { type: "text/vcard" });
+  const RESUMEN = { agregar: 1, saltear: 2, repetidos: 0, yaExcluidos: 1, invalidos: 1 };
+  const subir = (f: File) => userEvent.upload(screen.getByLabelText("Archivo de contactos (.vcf)"), f);
+
+  it("solo el administrador ve el botón en la lista de excluidos", () => {
+    const { rerender } = render(<ContactosExcluidos excluidos={[]} esAdmin={false} />);
+    expect(screen.queryByRole("button", { name: "Importar excluidos" })).toBeNull();
+    rerender(<ContactosExcluidos excluidos={[]} esAdmin />);
+    expect(screen.getByRole("button", { name: "Importar excluidos" })).toBeInTheDocument();
+  });
+
+  it("el botón abre el selector de archivos", async () => {
+    render(<ImportarExcluidos />);
+    const input = screen.getByLabelText("Archivo de contactos (.vcf)") as HTMLInputElement;
+    const click = vi.spyOn(input, "click");
+    await userEvent.click(screen.getByRole("button", { name: "Importar excluidos" }));
+    expect(click).toHaveBeenCalled();
+    expect(input).toHaveAttribute("accept", ".vcf,text/vcard,text/x-vcard");
+  });
+
+  it("lee el archivo en el navegador, muestra el resumen y al confirmar importa", async () => {
+    responder({ json: { resumen: RESUMEN, agregados: 0 } }, { json: { resumen: RESUMEN, agregados: 1 } });
+    render(<ImportarExcluidos />);
+    await subir(archivoVcf());
+    const modal = await screen.findByRole("alertdialog", { name: "¿Importar excluidos?" });
+    expect(modal).toHaveTextContent("Se agrega 1 contacto, con su nombre como etiqueta. Se saltean 2: 1 que ya estaba excluido, 1 sin teléfono válido.");
+    const contactos = [
+      { telefono: "+54 9 3493 66-7214", nombre: "Sofía Martínez" },
+      { telefono: "3493 111111", nombre: "Sofía Martínez" },
+      { telefono: "667214", nombre: "Juan" },
+    ];
+    expect(ultimaLlamada()).toEqual(["/api/admin/bot-whatsapp/excluidos/importar", "POST"]);
+    expect(ultimoBody()).toEqual({ contactos, confirmar: false });
+    await userEvent.click(within(modal).getByRole("button", { name: "Importar" }));
+    await waitFor(() => expect(m.exito).toHaveBeenCalledWith("1 contacto agregado a excluidos"));
+    expect(ultimoBody()).toEqual({ contactos, confirmar: true });
+    expect(m.refresh).toHaveBeenCalled();
+  });
+
+  it("Cancelar no importa; plural en el mensaje de éxito", async () => {
+    const r = { agregar: 3, saltear: 0, repetidos: 0, yaExcluidos: 0, invalidos: 0 };
+    responder({ json: { resumen: r, agregados: 0 } }, { json: { resumen: r, agregados: 0 } }, { json: { resumen: r, agregados: 3 } });
+    render(<ImportarExcluidos />);
+    await subir(archivoVcf());
+    const modal = await screen.findByRole("alertdialog");
+    expect(modal).toHaveTextContent("Se agregan 3 contactos, con su nombre como etiqueta. No se saltea ninguno.");
+    await userEvent.click(within(modal).getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await subir(archivoVcf());
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Importar" }));
+    await waitFor(() => expect(m.exito).toHaveBeenCalledWith("3 contactos agregados a excluidos"));
+  });
+
+  it("sin contactos nuevos, archivo vacío, demasiado grande o error del servidor: avisa y no importa", async () => {
+    responder(
+      { json: { resumen: { agregar: 0, saltear: 2, repetidos: 1, yaExcluidos: 1, invalidos: 0 }, agregados: 0 } },
+      { ok: false, status: 403, json: { error: "Solo un administrador puede hacer esto" } },
+    );
+    render(<ImportarExcluidos />);
+    await subir(archivoVcf());
+    await waitFor(() =>
+      expect(m.error).toHaveBeenCalledWith("No hay contactos nuevos para agregar. Se saltean 2: 1 repetido en el archivo, 1 que ya estaba excluido."),
+    );
+    await subir(archivoVcf("BEGIN:VCARD\nFN:Sin teléfono\nEND:VCARD"));
+    await waitFor(() => expect(m.error).toHaveBeenCalledWith("El archivo no tiene contactos con teléfono"));
+    const grande = archivoVcf();
+    Object.defineProperty(grande, "size", { value: MAX_VCF_BYTES + 1 });
+    await subir(grande);
+    expect(m.error).toHaveBeenCalledWith("El archivo es demasiado grande (máximo 30 MB)");
+    await subir(archivoVcf());
+    await waitFor(() => expect(m.error).toHaveBeenCalledWith("Solo un administrador puede hacer esto"));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("error al confirmar", async () => {
+    responder({ json: { resumen: RESUMEN, agregados: 0 } }, { ok: false, status: 429, json: { error: "Demasiados cambios seguidos. Esperá un minuto." } });
+    render(<ImportarExcluidos />);
+    await subir(archivoVcf());
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Importar" }));
+    await waitFor(() => expect(m.error).toHaveBeenCalledWith("Demasiados cambios seguidos. Esperá un minuto."));
+    expect(m.refresh).not.toHaveBeenCalled();
+  });
+
+  it("textoSalteados: singular y plural de cada motivo", () => {
+    expect(textoSalteados({ agregar: 0, saltear: 1, repetidos: 0, yaExcluidos: 0, invalidos: 1 })).toBe("Se saltea 1: 1 sin teléfono válido.");
+    expect(textoSalteados({ agregar: 0, saltear: 6, repetidos: 2, yaExcluidos: 3, invalidos: 1 })).toBe(
+      "Se saltean 6: 2 repetidos en el archivo, 3 que ya estaban excluidos, 1 sin teléfono válido.",
+    );
   });
 });

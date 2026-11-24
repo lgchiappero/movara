@@ -15,6 +15,7 @@ const m = vi.hoisted(() => ({
   exclFindMany: vi.fn(),
   exclCreate: vi.fn(),
   exclDelete: vi.fn(),
+  exclCreateMany: vi.fn(),
   leadsFormFind: vi.fn(),
   clientesFind: vi.fn(),
   pedidosFind: vi.fn(),
@@ -37,7 +38,7 @@ vi.mock("@/lib/db", () => ({
       update: m.leadUpdate,
       delete: m.leadDelete,
     },
-    contactoExcluido: { findMany: m.exclFindMany, create: m.exclCreate, delete: m.exclDelete },
+    contactoExcluido: { findMany: m.exclFindMany, create: m.exclCreate, delete: m.exclDelete, createMany: m.exclCreateMany },
     lead: { findMany: m.leadsFormFind },
     cliente: { findMany: m.clientesFind },
     configuracionPedido: { findMany: m.pedidosFind },
@@ -49,6 +50,8 @@ import * as leads from "../leads/route";
 import * as lead from "../leads/[id]/route";
 import * as excluidos from "../excluidos/route";
 import * as excluido from "../excluidos/[id]/route";
+import * as importar from "../excluidos/importar/route";
+import { MAX_IMPORTAR_EXCLUIDOS } from "@/lib/validators/bot-whatsapp";
 
 const ADMIN = { id: "a1", nombre: "Luciano", email: "luciano@movara.com.ar", rol: "admin" as const };
 const VENDEDOR = { id: "v1", nombre: "Vera", email: "vera@movara.com.ar", rol: "vendedor" as const };
@@ -99,11 +102,12 @@ describe("sin sesión: todas las rutas responden 401 y no tocan la base", () => 
     ["GET excluidos", () => excluidos.GET()],
     ["POST excluidos", () => excluidos.POST(req("/excluidos", "POST", { telefono: "3493667214", etiqueta: "AMIGO" }))],
     ["DELETE excluido", () => excluido.DELETE(req("/excluidos/e1", "DELETE"), ctx("e1"))],
+    ["POST importar excluidos", () => importar.POST(req("/excluidos/importar", "POST", { contactos: [{ telefono: "3493667214", nombre: "Ana" }], confirmar: true }))],
   ];
   it.each(llamadas)("%s", async (_, llamar) => {
     m.sesion.mockResolvedValue(null);
     expect((await llamar()).status).toBe(401);
-    for (const fn of [m.configUpsert, m.configUpdate, m.leadFindMany, m.leadCreate, m.leadUpdate, m.leadDelete, m.exclCreate, m.exclDelete]) {
+    for (const fn of [m.configUpsert, m.configUpdate, m.leadFindMany, m.leadCreate, m.leadUpdate, m.leadDelete, m.exclCreate, m.exclDelete, m.exclFindMany, m.exclCreateMany]) {
       expect(fn).not.toHaveBeenCalled();
     }
   });
@@ -132,6 +136,15 @@ describe("vendedor: lo que NO puede hacer (403, validado en el servidor)", () =>
   it("borrar un contacto excluido", async () => {
     expect((await excluido.DELETE(req("/excluidos/e1", "DELETE"), ctx("e1"))).status).toBe(403);
     expect(m.exclDelete).not.toHaveBeenCalled();
+  });
+
+  it("importar excluidos desde un .vcf (ni el resumen)", async () => {
+    for (const confirmar of [false, true]) {
+      const res = await importar.POST(req("/excluidos/importar", "POST", { contactos: [{ telefono: "3493667214", nombre: "Ana" }], confirmar }));
+      expect(res.status).toBe(403);
+    }
+    expect(m.exclFindMany).not.toHaveBeenCalled();
+    expect(m.exclCreateMany).not.toHaveBeenCalled();
   });
 
   it("el 403 llega antes de leer el body (ni lo valida ni consume rate limit)", async () => {
@@ -318,5 +331,63 @@ describe("casos de cada ruta", () => {
     expect((await excluido.DELETE(req("/excluidos/x", "DELETE"), ctx("x"))).status).toBe(404);
     m.exclDelete.mockRejectedValueOnce(new Error("otro"));
     await expect(excluido.DELETE(req("/excluidos/x", "DELETE"), ctx("x"))).rejects.toThrow("otro");
+  });
+});
+
+describe("importar excluidos (.vcf, administrador)", () => {
+  const CONTACTOS = [
+    { telefono: "+54 9 3493 66-7214", nombre: "Sofía Martínez" },
+    { telefono: "03493 15 667214", nombre: "Sofía repetida" },
+    { telefono: "3493 111111", nombre: "Ya estaba" },
+    { telefono: "667214", nombre: "Sin área" },
+    { telefono: "3493 222222", nombre: null },
+  ];
+  const RESUMEN = { agregar: 2, saltear: 3, repetidos: 1, yaExcluidos: 1, invalidos: 1 };
+  beforeEach(() => m.exclFindMany.mockResolvedValue([{ telefono: "5493493111111" }]));
+
+  it("sin confirmar: devuelve el resumen y no guarda nada", async () => {
+    const res = await importar.POST(req("/excluidos/importar", "POST", { contactos: CONTACTOS, confirmar: false }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ resumen: RESUMEN, agregados: 0 });
+    expect(m.exclFindMany).toHaveBeenCalledWith({
+      where: { telefono: { in: ["5493493667214", "5493493111111", "5493493222222"] } },
+      select: { telefono: true },
+    });
+    expect(m.exclCreateMany).not.toHaveBeenCalled();
+    expect(m.consumir).toHaveBeenCalled();
+  });
+
+  it("confirmado: agrega los nuevos con el nombre como etiqueta y saltea duplicados", async () => {
+    m.exclCreateMany.mockResolvedValue({ count: 2 });
+    const res = await importar.POST(req("/excluidos/importar", "POST", { contactos: CONTACTOS, confirmar: true }));
+    expect(await res.json()).toEqual({ resumen: RESUMEN, agregados: 2 });
+    expect(m.exclCreateMany).toHaveBeenCalledWith({
+      data: [
+        { telefono: "5493493667214", etiqueta: "Sofía Martínez", creadoPor: ADMIN.email },
+        { telefono: "5493493222222", etiqueta: "OTRO", creadoPor: ADMIN.email },
+      ],
+      skipDuplicates: true,
+    });
+  });
+
+  it("confirmado sin nada nuevo: no llama a la base para insertar", async () => {
+    const res = await importar.POST(req("/excluidos/importar", "POST", { contactos: [CONTACTOS[2]], confirmar: true }));
+    expect(await res.json()).toEqual({ resumen: { agregar: 0, saltear: 1, repetidos: 0, yaExcluidos: 1, invalidos: 0 }, agregados: 0 });
+    expect(m.exclCreateMany).not.toHaveBeenCalled();
+  });
+
+  it("valida: lista vacía, demasiados, campos de más, body enorme y rate limit", async () => {
+    const vacia = await importar.POST(req("/excluidos/importar", "POST", { contactos: [], confirmar: false }));
+    expect(vacia.status).toBe(400);
+    expect(await vacia.json()).toEqual({ error: "El archivo no tiene contactos con teléfono" });
+    const muchos = Array.from({ length: MAX_IMPORTAR_EXCLUIDOS + 1 }, () => ({ telefono: "1", nombre: null }));
+    expect((await importar.POST(req("/excluidos/importar", "POST", { contactos: muchos, confirmar: false }))).status).toBe(400);
+    expect((await importar.POST(req("/excluidos/importar", "POST", { contactos: [{ telefono: "1", nombre: null, foto: "x" }], confirmar: false }))).status).toBe(400);
+    expect((await importar.POST(req("/excluidos/importar", "POST", { contactos: CONTACTOS }))).status).toBe(400);
+    const enorme = JSON.stringify({ contactos: [{ telefono: "1", nombre: "x".repeat(800 * 1024) }], confirmar: false });
+    expect((await importar.POST(req("/excluidos/importar", "POST", enorme))).status).toBe(413);
+    m.consumir.mockResolvedValue(false);
+    expect((await importar.POST(req("/excluidos/importar", "POST", { contactos: CONTACTOS, confirmar: false }))).status).toBe(429);
+    expect(m.exclCreateMany).not.toHaveBeenCalled();
   });
 });

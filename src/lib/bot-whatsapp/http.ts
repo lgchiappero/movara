@@ -9,8 +9,8 @@ type Lectura<T> = { ok: true; datos: T } | { ok: false; respuesta: NextResponse 
 
 /** Lee el body con límite de tamaño y lo valida con el esquema: 413 si es
  * grande, 400 con el primer error si no valida. */
-export async function leerYValidar<T>(req: Request, esquema: ZodType<T>): Promise<Lectura<T>> {
-  const lectura = await leerJsonLimitado(req, MAX_BODY_BOT);
+export async function leerYValidar<T>(req: Request, esquema: ZodType<T>, maxBytes = MAX_BODY_BOT): Promise<Lectura<T>> {
+  const lectura = await leerJsonLimitado(req, maxBytes);
   if (!lectura.ok) return lectura;
   const parsed = esquema.safeParse(lectura.datos);
   if (!parsed.success) {
