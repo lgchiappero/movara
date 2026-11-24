@@ -58,6 +58,7 @@ beforeEach(() => {
     },
   };
   vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "info").mockImplementation(() => {});
 });
 
 function lead(datos: Partial<LeadWhatsapp> = {}) {
@@ -128,6 +129,20 @@ describe("procesarMensajeEntrante", () => {
     expect(ia.responder).not.toHaveBeenCalled();
     expect(deps.enviados).toEqual([]);
     expect(deps.leidos).toEqual([]);
+  });
+
+  it("deja en el log el resultado de cada mensaje, sin número ni texto", async () => {
+    b.tablas.config!.activo = false;
+    const l = lead();
+    await procesarMensajeEntrante(l.id, await entra(l.id, "quiero info de la casa"), deps);
+    b.tablas.config!.activo = true;
+    deps.ia = respuestaIA({});
+    await procesarMensajeEntrante(l.id, await entra(l.id, "para vivir"), deps);
+    const log = vi.mocked(console.info).mock.calls.flat().join("\n");
+    expect(log).toContain("[bot-whatsapp] Resultado: NADA_PAUSADO");
+    expect(log).toContain("[bot-whatsapp] Resultado: RESPONDIDO");
+    expect(log).not.toContain(l.telefono);
+    expect(log).not.toMatch(/quiero info|para vivir/);
   });
 
   it("excluidos y control humano: no responde", async () => {
