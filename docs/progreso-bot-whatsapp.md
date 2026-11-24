@@ -128,6 +128,10 @@ El bot sigue **apagado** en producción hasta que Luciano lo active.
    (`subscribed_apps`) y `WHATSAPP_APP_SECRET` no era la App Secret vigente
    de Movara Bot (401 "firma inválida"). El webhook ahora recorta espacios
    en los bordes del App Secret. Falta prender el bot desde el panel.
+   Envío: el log guarda código, subcódigo y título del error de Meta (sin
+   número ni texto). Con el número de prueba, si Meta responde 131030
+   (destinatario no permitido) a un 549…, se reintenta una vez sin el 9
+   (54 + característica + número) y el log dice qué formato funcionó.
 
 ## Decisiones tomadas
 

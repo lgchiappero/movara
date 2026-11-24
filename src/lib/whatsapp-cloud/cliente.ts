@@ -34,6 +34,54 @@ async function llamarGraph(cuerpo: Record<string, unknown>): Promise<Response> {
   });
 }
 
+/** Error 131030 de Meta: el destinatario no está en la lista de números
+ * permitidos del número de prueba. */
+export const CODIGO_DESTINATARIO_NO_PERMITIDO = 131030;
+
+type ErrorMeta = { code?: unknown; error_subcode?: unknown; title?: unknown; message?: unknown };
+
+/** Resumen apto para el log de un error de envío de Meta: HTTP, código,
+ * subcódigo y título. Nunca el número ni el texto: se descartan
+ * `error_data.details` y cualquier tira de 6 o más dígitos del título. */
+export function resumenErrorMeta(status: number, json: unknown): { texto: string; codigo: number | null; titulo: string } {
+  const e = ((json as { error?: ErrorMeta } | null)?.error ?? {}) as ErrorMeta;
+  const codigo = typeof e.code === "number" ? e.code : null;
+  const subcodigo = typeof e.error_subcode === "number" ? e.error_subcode : null;
+  const crudo = typeof e.title === "string" && e.title ? e.title : typeof e.message === "string" ? e.message : "";
+  const titulo = crudo
+    .replace(/^\(#\d+\)\s*/, "")
+    .replace(/\+?\d[\d\s-]{5,}\d/g, "[número]")
+    .slice(0, 120)
+    .trim();
+  const partes = [`HTTP ${status}`, codigo !== null && `código ${codigo}`, subcodigo !== null && `subcódigo ${subcodigo}`, titulo].filter(Boolean);
+  return { texto: partes.join(" · "), codigo, titulo };
+}
+
+function esDestinatarioNoPermitido(codigo: number | null, titulo: string): boolean {
+  return codigo === CODIGO_DESTINATARIO_NO_PERMITIDO || /not in allowed list|no est[aá] en la lista|no permitido/i.test(titulo);
+}
+
+/** Celular argentino como lo manda WhatsApp (549 + característica + número,
+ * 13 dígitos) → el mismo sin el 9 (54 + característica + número). Es el
+ * formato que espera la lista de destinatarios del número de prueba. */
+export function sinNueveArgentino(telefono: string): string | null {
+  return /^549\d{10}$/.test(telefono) ? `54${telefono.slice(3)}` : null;
+}
+
+async function enviarUnaVez(telefono: string, texto: string): Promise<ResultadoEnvio & { codigo?: number | null; titulo?: string }> {
+  try {
+    const res = await llamarGraph({ recipient_type: "individual", to: telefono, type: "text", text: { body: texto } });
+    const json = (await res.json().catch(() => null)) as { messages?: { id?: string }[] } | null;
+    if (!res.ok) {
+      const r = resumenErrorMeta(res.status, json);
+      return { ok: false, error: r.texto, codigo: r.codigo, titulo: r.titulo };
+    }
+    return { ok: true, waMessageId: json?.messages?.[0]?.id ?? null };
+  } catch (err) {
+    return { ok: false, error: resumenError(err) };
+  }
+}
+
 export const clienteWhatsappReal: ClienteWhatsapp = {
   async marcarLeidoYEscribiendo(waMessageId) {
     try {
@@ -44,14 +92,19 @@ export const clienteWhatsappReal: ClienteWhatsapp = {
     }
   },
   async enviarTexto(telefono, texto) {
-    try {
-      const res = await llamarGraph({ recipient_type: "individual", to: telefono, type: "text", text: { body: texto } });
-      const json = (await res.json().catch(() => null)) as { messages?: { id?: string }[] } | null;
-      if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-      return { ok: true, waMessageId: json?.messages?.[0]?.id ?? null };
-    } catch (err) {
-      return { ok: false, error: resumenError(err) };
+    const primero = await enviarUnaVez(telefono, texto);
+    if (primero.ok) return { ok: true, waMessageId: primero.waMessageId };
+    // Caso conocido de Argentina con el número de prueba: la lista de
+    // permitidos guarda el número sin el 9. Un solo reintento, y solo ante
+    // "destinatario no permitido": con el número real nunca se llega acá.
+    const alternativo = sinNueveArgentino(telefono);
+    if (!alternativo || !esDestinatarioNoPermitido(primero.codigo ?? null, primero.titulo ?? "")) return { ok: false, error: primero.error };
+    const segundo = await enviarUnaVez(alternativo, texto);
+    if (segundo.ok) {
+      console.info("[whatsapp] Envío OK con el formato argentino sin 9 (54 + característica + número) después de un 131030 con 549");
+      return { ok: true, waMessageId: segundo.waMessageId };
     }
+    return { ok: false, error: `549: ${primero.error} | sin 9: ${segundo.error}` };
   },
 };
 

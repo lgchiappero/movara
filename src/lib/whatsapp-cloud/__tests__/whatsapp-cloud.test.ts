@@ -1,7 +1,15 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { firmaValida, firmar } from "../firma";
 import { leerWebhook } from "../payload";
-import { clienteWhatsapp, clienteWhatsappReal, clienteWhatsappSimulado, whatsappSimulado, GRAPH_API_VERSION } from "../cliente";
+import {
+  clienteWhatsapp,
+  clienteWhatsappReal,
+  clienteWhatsappSimulado,
+  whatsappSimulado,
+  GRAPH_API_VERSION,
+  resumenErrorMeta,
+  sinNueveArgentino,
+} from "../cliente";
 
 const SECRETO = "secreto-de-prueba";
 
@@ -136,6 +144,72 @@ describe("cliente de WhatsApp", () => {
     vi.stubEnv("WHATSAPP_ACCESS_TOKEN", "");
     expect(await clienteWhatsappReal.enviarTexto("1", "x")).toEqual({ ok: false, error: "Error" });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  const errorMeta = (code: number, message: string, extra: Record<string, unknown> = {}) =>
+    new Response(JSON.stringify({ error: { message, type: "OAuthException", code, ...extra, fbtrace_id: "x" } }), { status: 400 });
+  const NO_PERMITIDO = "(#131030) Recipient phone number not in allowed list";
+
+  it("resumen del error de Meta: código, subcódigo y título, sin números ni detalles", () => {
+    expect(
+      resumenErrorMeta(400, {
+        error: { message: NO_PERMITIDO, code: 131030, error_subcode: 2494010, error_data: { details: "Add 5493490000001 to the list" } },
+      }),
+    ).toEqual({ texto: "HTTP 400 · código 131030 · subcódigo 2494010 · Recipient phone number not in allowed list", codigo: 131030, titulo: "Recipient phone number not in allowed list" });
+    // Prefiere `title`; tapa cualquier número que venga en el texto.
+    expect(resumenErrorMeta(400, { error: { title: "Invalid number +54 9 3490 000001", message: "otro", code: 100 } }).texto).toBe(
+      "HTTP 400 · código 100 · Invalid number [número]",
+    );
+    expect(resumenErrorMeta(500, null)).toEqual({ texto: "HTTP 500", codigo: null, titulo: "" });
+    expect(resumenErrorMeta(400, { error: { code: "x", error_subcode: "y", message: 5 } }).texto).toBe("HTTP 400");
+  });
+
+  it("formato argentino sin 9: solo celulares 549 de 13 dígitos", () => {
+    expect(sinNueveArgentino("5493493123456")).toBe("543493123456");
+    expect(sinNueveArgentino("543493123456")).toBeNull();
+    expect(sinNueveArgentino("549349312345")).toBeNull();
+    expect(sinNueveArgentino("5213312345678")).toBeNull();
+  });
+
+  it("131030 con un 549: reintenta una vez sin el 9 y registra qué formato funcionó (sin el número)", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    fetchMock.mockResolvedValueOnce(errorMeta(131030, NO_PERMITIDO)).mockResolvedValueOnce(new Response(JSON.stringify({ messages: [{ id: "wamid.sin9" }] })));
+    expect(await clienteWhatsappReal.enviarTexto("5493493123456", "Hola")).toEqual({ ok: true, waMessageId: "wamid.sin9" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).to).toBe("5493493123456");
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ to: "543493123456", text: { body: "Hola" } });
+    const info = vi.mocked(console.info).mock.calls.flat().join(" ");
+    expect(info).toContain("sin 9");
+    expect(info).not.toMatch(/3493123456|Hola/);
+  });
+
+  it("si el reintento sin 9 también falla, devuelve los dos errores (sin el número)", async () => {
+    fetchMock.mockResolvedValueOnce(errorMeta(131030, NO_PERMITIDO)).mockResolvedValueOnce(errorMeta(131030, NO_PERMITIDO));
+    const r = await clienteWhatsappReal.enviarTexto("5493493123456", "Hola");
+    expect(r).toEqual({
+      ok: false,
+      error: "549: HTTP 400 · código 131030 · Recipient phone number not in allowed list | sin 9: HTTP 400 · código 131030 · Recipient phone number not in allowed list",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(r)).not.toContain("3493123456");
+  });
+
+  it("reconoce el destinatario no permitido también por el título, sin código", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { message: "Recipient phone number not in allowed list" } }), { status: 400 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ messages: [{ id: "wamid.2" }] })));
+    expect(await clienteWhatsappReal.enviarTexto("5493493123456", "Hola")).toEqual({ ok: true, waMessageId: "wamid.2" });
+  });
+
+  it("no reintenta con otro error, con un número que no es 549 ni si el primer envío anda", async () => {
+    fetchMock.mockResolvedValueOnce(errorMeta(100, "(#100) Invalid parameter", { error_subcode: 33 }));
+    expect(await clienteWhatsappReal.enviarTexto("5493493123456", "Hola")).toEqual({ ok: false, error: "HTTP 400 · código 100 · subcódigo 33 · Invalid parameter" });
+    fetchMock.mockResolvedValueOnce(errorMeta(131030, NO_PERMITIDO));
+    expect(await clienteWhatsappReal.enviarTexto("543493123456", "Hola")).toEqual({ ok: false, error: "HTTP 400 · código 131030 · Recipient phone number not in allowed list" });
+    fetchMock.mockRejectedValueOnce(new TypeError("red"));
+    expect(await clienteWhatsappReal.enviarTexto("5493493123456", "Hola")).toEqual({ ok: false, error: "TypeError" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("simulado: no llama a Meta y solo fuera de producción", async () => {
