@@ -121,8 +121,13 @@ El bot sigue **apagado** en producción hasta que Luciano lo active.
    "personalmente" máximo una vez, nombre al final, no repreguntar datos,
    DERIVAR sin preguntas, CALIFICADO en 2 oraciones). Cuesta unos
    USD 0,003 por corrida. Las 2 últimas corridas, sin incumplimientos.
-4. Cargar las variables en Vercel, configurar el webhook en Meta y recién
-   ahí prender el bot desde el panel.
+4. HECHO el 24/11: variables en Vercel y webhook en Meta (app Movara Bot,
+   campo `messages`, suscrita a la cuenta del número de prueba con
+   `scripts/whatsapp-diagnostico.ts`). Un "Hola" real entró con 200 y
+   aparece en el panel. Lo que costó: la app no estaba suscrita a la cuenta
+   (`subscribed_apps`) y `WHATSAPP_APP_SECRET` no era la App Secret vigente
+   de Movara Bot (401 "firma inválida"). El webhook ahora recorta espacios
+   en los bordes del App Secret. Falta prender el bot desde el panel.
 
 ## Decisiones tomadas
 

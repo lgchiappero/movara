@@ -4,7 +4,7 @@ import { claveDe } from "@/lib/rate-limit-db";
 import { resumenError } from "@/lib/log-seguro";
 import { igualSeguro } from "@/lib/seguridad/igual-seguro";
 import { LIMITES, MAX_BODY, demasiadosPedidos, leerTextoLimitado, permitirClave, permitirIP } from "@/lib/seguridad/publico";
-import { diagnosticoFirma, firmaValida } from "@/lib/whatsapp-cloud/firma";
+import { firmaValida } from "@/lib/whatsapp-cloud/firma";
 import { leerWebhook, type MensajeEntrante } from "@/lib/whatsapp-cloud/payload";
 import { telefonoWhatsapp } from "@/lib/bot-whatsapp/telefono";
 import { procesarMensajeEntrante } from "@/lib/bot-whatsapp/procesar";
@@ -57,11 +57,7 @@ export async function POST(req: NextRequest) {
   const lectura = await leerTextoLimitado(req, MAX_BODY.whatsapp);
   if (!lectura.ok) return lectura.respuesta;
   if (!firmaValida(lectura.texto, req.headers.get("x-hub-signature-256"), process.env.WHATSAPP_APP_SECRET)) {
-    // TEMPORAL: diagnóstico sin datos sensibles (ver diagnosticoFirma).
-    console.error(
-      "[whatsapp] Webhook con firma inválida: rechazado",
-      JSON.stringify(diagnosticoFirma(lectura.texto, req.headers.get("x-hub-signature-256"), process.env.WHATSAPP_APP_SECRET)),
-    );
+    console.error("[whatsapp] Webhook con firma inválida: rechazado");
     return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
   }
 

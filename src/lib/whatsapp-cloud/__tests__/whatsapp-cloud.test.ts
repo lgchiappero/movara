@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { diagnosticoFirma, firmaValida, firmar } from "../firma";
+import { firmaValida, firmar } from "../firma";
 import { leerWebhook } from "../payload";
 import { clienteWhatsapp, clienteWhatsappReal, clienteWhatsappSimulado, whatsappSimulado, GRAPH_API_VERSION } from "../cliente";
 
@@ -30,34 +30,6 @@ describe("firma del webhook", () => {
     expect(firmaValida(body, firmar(body, SECRETO), "secreto de-prueba")).toBe(false);
   });
 
-  it("diagnóstico de firma rechazada: largos y prefijos, nunca el secreto", () => {
-    const hex = "0123456789abcdef0123456789abcdef";
-    const d = diagnosticoFirma(body, firmar(body, "otro"), ` ${hex}\n`);
-    expect(d).toEqual({
-      secretoConfigurado: true,
-      secretoLargo: 32,
-      secretoTeniaEspaciosEnBordes: true,
-      secretoEsHex: true,
-      cuerpoBytes: Buffer.byteLength(body),
-      header: "sha256",
-      recibida: firmar(body, "otro").slice(7, 15),
-      calculada: firmar(body, hex).slice(7, 15),
-    });
-    expect(JSON.stringify(d)).not.toContain(hex);
-    expect(JSON.stringify(d)).not.toContain(firmar(body, hex).slice(7));
-
-    expect(diagnosticoFirma("ñ", null, undefined)).toMatchObject({
-      secretoConfigurado: false,
-      secretoLargo: 0,
-      secretoTeniaEspaciosEnBordes: false,
-      secretoEsHex: false,
-      cuerpoBytes: 2,
-      header: "ausente",
-      recibida: null,
-      calculada: null,
-    });
-    expect(diagnosticoFirma(body, "abc", SECRETO)).toMatchObject({ header: "formato desconocido", recibida: null, secretoEsHex: false, secretoTeniaEspaciosEnBordes: false });
-  });
 });
 
 function webhook(value: Record<string, unknown>, field = "messages") {

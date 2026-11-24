@@ -26,22 +26,3 @@ export function firmar(bodyCrudo: string, appSecret: string): string {
   return `sha256=${hmac(bodyCrudo, appSecret)}`;
 }
 
-/** Datos para diagnosticar una firma rechazada, sin nada que revele el App
- * Secret: su largo, si tenía espacios en los bordes, el tamaño del body y los
- * primeros 8 caracteres de la firma recibida y de la calculada (un prefijo de
- * un HMAC no permite reconstruir la clave). TEMPORAL: sacarlo cuando la firma
- * de producción quede resuelta. */
-export function diagnosticoFirma(bodyCrudo: string, header: string | null, appSecret: string | undefined) {
-  const crudo = appSecret ?? "";
-  const secreto = limpiarSecreto(appSecret);
-  return {
-    secretoConfigurado: secreto.length > 0,
-    secretoLargo: secreto.length,
-    secretoTeniaEspaciosEnBordes: crudo.length !== secreto.length,
-    secretoEsHex: /^[0-9a-f]+$/i.test(secreto),
-    cuerpoBytes: Buffer.byteLength(bodyCrudo, "utf8"),
-    header: !header ? "ausente" : header.startsWith("sha256=") ? "sha256" : "formato desconocido",
-    recibida: header?.startsWith("sha256=") ? header.slice(7, 15).toLowerCase() : null,
-    calculada: secreto ? hmac(bodyCrudo, secreto).slice(0, 8) : null,
-  };
-}
