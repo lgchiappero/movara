@@ -60,8 +60,17 @@ export type Resultado =
   | "ERROR_IA"
   | "ERROR_ENVIO";
 
-/** Nunca lanza: un error se registra (sin datos personales) y se avisa. */
+/** Nunca lanza: un error se registra (sin datos personales) y se avisa.
+ * Cada mensaje deja en el log qué decidió el bot (solo el código del
+ * resultado, por ejemplo NADA_EN_HORARIO o RESPONDIDO: sin número ni texto),
+ * para saber por qué no respondió sin consultar la base. */
 export async function procesarMensajeEntrante(leadId: string, waMessageId: string, deps: Dependencias = dependenciasReales()): Promise<Resultado> {
+  const resultado = await procesarSinLog(leadId, waMessageId, deps);
+  console.info(`[bot-whatsapp] Resultado: ${resultado}`);
+  return resultado;
+}
+
+async function procesarSinLog(leadId: string, waMessageId: string, deps: Dependencias): Promise<Resultado> {
   try {
     await deps.esperar(ESPERA_AGRUPAR_MS);
     const ultimo = await db.mensajeWhatsapp.findFirst({ where: { leadId, direccion: "ENTRANTE" }, orderBy: { creadoEn: "desc" } });
