@@ -15,7 +15,7 @@ import { FRASES_DERIVACION } from "../src/lib/bot-whatsapp/prompt";
 const c = (contenido: string, tipo: MensajeHistorial["tipo"] = "TEXTO"): MensajeHistorial => ({ autor: "CLIENTE", tipo, contenido });
 const b = (contenido: string): MensajeHistorial => ({ autor: "BOT", tipo: "TEXTO", contenido });
 
-type Caso = { nombre: string; espera: string; historial: MensajeHistorial[]; datos?: Record<string, string>; empiezaCon?: string };
+type Caso = { nombre: string; espera: string; historial: MensajeHistorial[]; datos?: Record<string, string>; empiezaCon?: string; nombreEsperado?: string };
 
 const CASOS: Caso[] = [
   { nombre: "familia-1 primer mensaje", espera: "RESPONDER, pregunta para qué la piensa", historial: [c("Hola, quería info de las casas")] },
@@ -31,8 +31,9 @@ const CASOS: Caso[] = [
     ],
   },
   {
-    nombre: "familia-3 da el nombre",
-    espera: "CALIFICADO, agradece y cierra con Luciano",
+    nombre: "familia-3 da nombre y apellido",
+    espera: "CALIFICADO, agradece con el nombre de pila; nombre = nombre completo",
+    nombreEsperado: "Sofía Martínez",
     historial: [
       c("Hola, quería info de las casas"),
       b("¡Hola! Qué bueno que nos escribas. Contame, ¿la pensás para vivir, para alquilar…?"),
@@ -41,8 +42,37 @@ const CASOS: Caso[] = [
       c("Rafaela, ya tenemos el terreno"),
       b("Buenísimo, con terreno ya tienen lo más difícil. ¿Para cuándo se imaginan estar viviendo ahí?"),
       c("Para mitad del año que viene"),
-      b("Perfecto, hay tiempo de sobra. ¿Me decís tu nombre así le paso todo a Luciano?"),
+      b("Perfecto, hay tiempo de sobra. ¿Me decís tu nombre y apellido así le paso todo a Luciano?"),
+      c("Sofía Martínez"),
+    ],
+  },
+  {
+    nombre: "familia-4 da solo el nombre de pila",
+    espera: "CALIFICADO igual, sin volver a pedir el apellido",
+    nombreEsperado: "Sofía",
+    historial: [
+      c("Hola, quería info de las casas"),
+      b("¡Hola! Qué bueno que nos escribas. Contame, ¿la pensás para vivir, para alquilar…?"),
+      c("Para vivir con mi pareja y mi nena"),
+      b("Para tres quedan muy cómodas. ¿Por qué zona sería?"),
+      c("Rafaela, ya tenemos el terreno"),
+      b("Buenísimo, con terreno ya tienen lo más difícil. ¿Para cuándo se imaginan estar viviendo ahí?"),
+      c("Para mitad del año que viene"),
+      b("Perfecto, hay tiempo de sobra. ¿Me decís tu nombre y apellido así le paso todo a Luciano?"),
       c("Sofía"),
+    ],
+  },
+  {
+    nombre: "familia-5 llega el momento de pedir el nombre",
+    espera: "RESPONDER: pide nombre y apellido en una sola pregunta",
+    historial: [
+      c("Hola, quería info de las casas"),
+      b("¡Hola! Qué bueno que nos escribas. Contame, ¿la pensás para vivir, para alquilar…?"),
+      c("Para vivir con mi pareja y mi nena"),
+      b("Para tres quedan muy cómodas. ¿Por qué zona sería?"),
+      c("Rafaela, ya tenemos el terreno"),
+      b("Buenísimo, con terreno ya tienen lo más difícil. ¿Para cuándo se imaginan estar viviendo ahí?"),
+      c("Para mitad del año que viene"),
     ],
   },
   { nombre: "precio solo", espera: "RESPONDER, sin número, pregunta para qué", historial: [c("Precio?")] },
@@ -108,6 +138,9 @@ function incumplimientosDeContexto(caso: Caso, accion: string, texto: string, da
   const pregunta = texto.includes("?") ? texto.slice(texto.lastIndexOf(".", texto.indexOf("?")) + 1) : "";
   if (datos.uso && /para qu[eé] (la|lo|uso|tipo)|\buso\b|(vivir|alquilar),? o |o para (vivir|alquilar)|pens[aá]s usar|como vivienda/i.test(pregunta)) f.push("vuelve a preguntar el uso");
   if (datos.zona && /zona|d[oó]nde/i.test(pregunta)) f.push("vuelve a preguntar la zona");
+  if (/nombre/i.test(texto) && texto.includes("?") && !/apellido|nombre completo/i.test(texto)) f.push("pide el nombre sin el apellido");
+  if (caso.nombreEsperado && String(datos.nombre ?? "") !== caso.nombreEsperado) f.push(`nombre guardado "${String(datos.nombre ?? "")}" (se esperaba "${caso.nombreEsperado}")`);
+  if (accion === "CALIFICADO" && /apellido/i.test(texto)) f.push("vuelve a pedir el apellido");
   if (caso.empiezaCon && !texto.trim().replace(/^¡?hola!?[,.]?\s*/i, "").startsWith(caso.empiezaCon)) f.push(`no empieza con "${caso.empiezaCon}"`);
   return f;
 }

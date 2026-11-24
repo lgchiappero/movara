@@ -101,7 +101,7 @@ const PREGUNTAS: [Exclude<keyof DatosExtraidos, "origen">, string][] = [
   ["uso", "¡Hola! Qué bueno que nos escribas. Contame, ¿la pensás para vivir, para alquilar…?"],
   ["zona", "¡Qué lindo proyecto! ¿Por qué zona sería?"],
   ["plazo", "Buenísimo. ¿Para cuándo te imaginás tenerla?"],
-  ["nombre", "Perfecto. ¿Me decís tu nombre así le paso todo a Luciano?"],
+  ["nombre", "Perfecto. ¿Me decís tu nombre y apellido así le paso todo a Luciano?"],
 ];
 
 /** Respuestas por reglas fijas, para el e2e y para probar en local. Palabras
