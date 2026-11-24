@@ -5,6 +5,7 @@ import { PROMPT_SISTEMA, FRASE_DERIVACION } from "./prompt";
 import { respuestaBotSchema, respuestaUtilizable, type DatosExtraidos, type RespuestaBot } from "./respuesta";
 import type { UsoLlamada } from "./gasto";
 import { pasaFiltroPalabras } from "./palabras-clave";
+import { bloqueEstado, siguientePaso, type Contexto } from "./calificacion";
 
 /** Conversación con Claude. Clave solo en ANTHROPIC_API_KEY (la lee el SDK). */
 
@@ -24,7 +25,7 @@ export type ResultadoIA =
   | { ok: false; motivo: "INVALIDO" | "NEGATIVA" | "ERROR" | "SIN_CLAVE"; uso: UsoLlamada | null };
 
 export interface MotorIA {
-  responder(historial: MensajeHistorial[], datos: DatosLead): Promise<ResultadoIA>;
+  responder(historial: MensajeHistorial[], contexto: Contexto): Promise<ResultadoIA>;
 }
 
 function textoDe(m: MensajeHistorial): string {
@@ -35,9 +36,9 @@ function textoDe(m: MensajeHistorial): string {
 
 /** Historial → mensajes de la API: el cliente es "user", el bot y el equipo
  * "assistant"; turnos seguidos del mismo rol se unen; arranca y termina con
- * el cliente (Haiku 5.5 no acepta prefill). Los datos ya registrados van al
- * final del último turno, así el prompt de sistema queda fijo y cacheable. */
-export function armarMensajes(historial: MensajeHistorial[], datos: DatosLead): Anthropic.MessageParam[] {
+ * el cliente (Haiku 5.5 no acepta prefill). Los datos del lead NO van acá:
+ * van en el bloque de estado del prompt de sistema (ver sistemaDe). */
+export function armarMensajes(historial: MensajeHistorial[]): Anthropic.MessageParam[] {
   const mensajes: { role: "user" | "assistant"; content: string }[] = [];
   for (const m of historial.slice(-MAX_MENSAJES_HISTORIAL)) {
     const role = m.autor === "CLIENTE" ? "user" : "assistant";
@@ -49,26 +50,29 @@ export function armarMensajes(historial: MensajeHistorial[], datos: DatosLead): 
   }
   while (mensajes[0]?.role === "assistant") mensajes.shift();
   while (mensajes.at(-1)?.role === "assistant") mensajes.pop();
-  const ultimo = mensajes.at(-1);
-  if (!ultimo) return [];
-  const conocidos = Object.entries(datos).filter(([, v]) => v);
-  if (conocidos.length > 0) {
-    ultimo.content += `\n\n[Nota del sistema, no la escribió el cliente: datos ya registrados del contacto: ${conocidos.map(([k, v]) => `${k}=${v}`).join("; ")}]`;
-  }
   return mensajes;
+}
+
+/** Prompt de sistema: la parte fija (en caché) y, después, el bloque con los
+ * datos obtenidos y los que faltan de esta conversación. */
+export function sistemaDe(contexto: Contexto): Anthropic.TextBlockParam[] {
+  return [
+    { type: "text", text: PROMPT_SISTEMA, cache_control: { type: "ephemeral" } },
+    { type: "text", text: bloqueEstado(contexto) },
+  ];
 }
 
 export function crearMotorClaude(cliente: Pick<Anthropic, "messages"> = new Anthropic({ timeout: TIMEOUT_IA_MS, maxRetries: 1 })): MotorIA {
   return {
-    async responder(historial, datos) {
-      const messages = armarMensajes(historial, datos);
+    async responder(historial, contexto) {
+      const messages = armarMensajes(historial);
       if (messages.length === 0) return { ok: false, motivo: "INVALIDO", uso: null };
       let uso: UsoLlamada | null = null;
       try {
         const r = await cliente.messages.parse({
           model: MODELO_BOT,
           max_tokens: MAX_TOKENS_BOT,
-          system: [{ type: "text", text: PROMPT_SISTEMA, cache_control: { type: "ephemeral" } }],
+          system: sistemaDe(contexto),
           messages,
           output_config: { effort: "low", format: zodOutputFormat(respuestaBotSchema) },
         });
@@ -96,19 +100,26 @@ export function iaSimulada(): boolean {
 
 const USO_SIMULADO: UsoLlamada = { input_tokens: 300, output_tokens: 120, cache_creation_input_tokens: 0, cache_read_input_tokens: 2500 };
 
-/** Orden en que la IA simulada pide los datos y la pregunta de cada uno. */
-const PREGUNTAS: [Exclude<keyof DatosExtraidos, "origen">, string][] = [
-  ["uso", "¡Hola! Qué bueno que nos escribas. Contame, ¿la pensás para vivir, para alquilar…?"],
-  ["zona", "¡Qué lindo proyecto! ¿Por qué zona sería?"],
-  ["plazo", "Buenísimo. ¿Para cuándo te imaginás tenerla?"],
-  ["nombre", "Perfecto. ¿Me decís tu nombre y apellido así le paso todo a Luciano?"],
-];
+/** Pregunta de la IA simulada para cada combinación de datos que faltan. */
+const PREGUNTA_SIMULADA: Record<string, string> = {
+  "nombre,uso": "¡Hola! Gracias por escribirnos. Para empezar, ¿me decís tu nombre y apellido y para qué estás pensando la casa?",
+  nombre: "¿Me decís tu nombre y apellido?",
+  uso: "¿Para qué estás pensando la casa?",
+  "zona,terreno": "¿En qué localidad la instalarías y ya tenés terreno?",
+  zona: "¿En qué localidad la instalarías?",
+  terreno: "¿Ya tenés terreno?",
+  "personas,plazo": "¿Cuántas personas la van a usar y para cuándo la necesitás?",
+  personas: "¿Cuántas personas la van a usar?",
+  plazo: "¿Para cuándo la necesitás?",
+};
 
-/** Respuestas por reglas fijas, para el e2e y para probar en local. Palabras
- * especiales en el último mensaje: "#invalido" (JSON inválido), "#negativa",
- * "#error", "persona"/"humano" (deriva). */
+/** Respuestas por reglas fijas, para el e2e y para probar en local. Sigue
+ * los pasos de calificación: el último mensaje del cliente completa, en
+ * orden y separados por coma, los datos que faltaban del paso actual.
+ * Palabras especiales en el último mensaje: "#invalido" (JSON inválido),
+ * "#negativa", "#error", "persona"/"humano" (deriva). */
 export const motorSimulado: MotorIA = {
-  async responder(historial, datos) {
+  async responder(historial, { datos, mensajesBot }) {
     const delCliente = historial.filter((m) => m.autor === "CLIENTE" && m.tipo === "TEXTO");
     const ultimo = delCliente.at(-1)?.contenido.toLowerCase() ?? "";
     if (ultimo.includes("#invalido")) return { ok: false, motivo: "INVALIDO", uso: USO_SIMULADO };
@@ -124,20 +135,20 @@ export const motorSimulado: MotorIA = {
     if (/\b(persona|humano)\b/.test(ultimo)) {
       return { ok: true, uso: USO_SIMULADO, respuesta: { esLead: true, respuesta: `Claro. ${FRASE_DERIVACION}`, datosExtraidos: extraidos, accion: "DERIVAR", motivo: "simulado: pide una persona" } };
     }
-    // El último mensaje del cliente responde al primer dato que faltaba.
     if (yaHablo) {
-      const pendiente = PREGUNTAS.find(([campo]) => !extraidos[campo]);
-      if (pendiente) extraidos[pendiente[0]] = delCliente.at(-1)!.contenido.slice(0, 200);
+      const antes = siguientePaso(extraidos, mensajesBot - 1); // lo que preguntó el mensaje anterior
+      const partes = delCliente.at(-1)!.contenido.split(",").map((p) => p.trim()).filter(Boolean);
+      if (antes.tipo === "PREGUNTAR") antes.campos.forEach((c, i) => partes[i] && (extraidos[c] = partes[i].slice(0, 200)));
     }
-    const siguiente = PREGUNTAS.find(([campo]) => !extraidos[campo]);
-    if (!siguiente) {
-      return {
-        ok: true,
-        uso: USO_SIMULADO,
-        respuesta: { esLead: true, respuesta: `Gracias, ${extraidos.nombre}. Luciano te arma la propuesta y te escribe personalmente.`, datosExtraidos: extraidos, accion: "CALIFICADO", motivo: "simulado: datos completos" },
-      };
+    const siguiente = siguientePaso(extraidos, mensajesBot);
+    if (siguiente.tipo === "CERRAR") {
+      return { ok: true, uso: USO_SIMULADO, respuesta: { esLead: true, respuesta: "Gracias.", datosExtraidos: extraidos, accion: "CALIFICADO", motivo: "simulado: datos completos" } };
     }
-    return { ok: true, uso: USO_SIMULADO, respuesta: { esLead: true, respuesta: siguiente[1], datosExtraidos: extraidos, accion: "RESPONDER", motivo: `simulado: falta ${siguiente[0]}` } };
+    return {
+      ok: true,
+      uso: USO_SIMULADO,
+      respuesta: { esLead: true, respuesta: PREGUNTA_SIMULADA[siguiente.campos.join(",")], datosExtraidos: extraidos, accion: "RESPONDER", motivo: `simulado: falta ${siguiente.campos.join(" y ")}` },
+    };
   },
 };
 

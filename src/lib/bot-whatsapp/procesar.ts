@@ -1,13 +1,15 @@
 import type { LeadWhatsapp } from "@prisma/client";
 import { db } from "@/lib/db";
 import { resumenError } from "@/lib/log-seguro";
-import { clienteWhatsapp, type ClienteWhatsapp } from "@/lib/whatsapp-cloud/cliente";
+import { clienteWhatsapp, type ClienteWhatsapp, type Interactivo } from "@/lib/whatsapp-cloud/cliente";
 import { enviarAviso, destinoAvisos, type Aviso, type MotivoAviso } from "./avisos";
 import { obtenerConfigBot, gastoDelMes } from "./config";
 import { MENSAJE_CIERRE_MAXIMO, MENSAJE_SIN_AUDIO, ORIGENES, type HorarioAtencion, type ModoRespaldo } from "./constantes";
 import { registrarUso } from "./gasto";
 import { MAX_MENSAJES_HISTORIAL, motorIA, type DatosLead, type MotorIA } from "./ia";
 import { decidir, demoraRestante, type Decision } from "./reglas";
+import { contenidoConOpciones } from "./calificacion";
+import { generarTurno } from "./turno";
 import type { DatosExtraidos } from "./respuesta";
 
 /** Procesa los mensajes de un lead DESPUÉS de responderle 200 a Meta (corre
@@ -176,9 +178,9 @@ async function procesarConBloqueo(leadId: string, deps: Dependencias): Promise<R
   if (ultimoPendiente.waMessageId) await deps.whatsapp.marcarLeidoYEscribiendo(ultimoPendiente.waMessageId);
   const inicio = deps.ahora().getTime();
 
-  const enviar = async (texto: string, extra: Record<string, unknown> = {}): Promise<boolean> => {
+  const enviar = async (texto: string, extra: Record<string, unknown> = {}, interactivo: Interactivo | null = null): Promise<boolean> => {
     await deps.esperar(demoraRestante(texto, deps.ahora().getTime() - inicio));
-    const r = await deps.whatsapp.enviarTexto(lead.telefono, texto);
+    const r = await deps.whatsapp.enviarTexto(lead.telefono, texto, interactivo);
     if (!r.ok) {
       console.error(`[bot-whatsapp] No se pudo enviar por WhatsApp: ${r.error}`);
       await avisar("ERROR", "No se pudo enviar la respuesta por WhatsApp.");
@@ -186,7 +188,7 @@ async function procesarConBloqueo(leadId: string, deps: Dependencias): Promise<R
     }
     const ahora = deps.ahora();
     await db.mensajeWhatsapp.create({
-      data: { leadId, direccion: "SALIENTE", autor: "BOT", tipo: "TEXTO", contenido: texto, waMessageId: r.waMessageId, estadoEntrega: "sent", creadoEn: ahora },
+      data: { leadId, direccion: "SALIENTE", autor: "BOT", tipo: "TEXTO", contenido: contenidoConOpciones(texto, interactivo), waMessageId: r.waMessageId, estadoEntrega: "sent", creadoEn: ahora },
     });
     await db.leadWhatsapp.update({ where: { id: leadId }, data: { respuestasBot: { increment: 1 }, ultimoMensajeEn: ahora, ...extra } });
     return true;
@@ -208,23 +210,26 @@ async function procesarConBloqueo(leadId: string, deps: Dependencias): Promise<R
     return "RESPONDIDO";
   }
 
-  // decision.tipo === "IA"
-  const resultado = await deps.ia.responder(
+  // decision.tipo === "IA": historial + datos obtenidos y faltantes (del
+  // lead guardado) y cuántos mensajes ya mandó el bot.
+  const turno = await generarTurno(
+    deps.ia,
     recientes.slice(-MAX_MENSAJES_HISTORIAL).map((m) => ({ autor: m.autor as "CLIENTE" | "BOT" | "EQUIPO", tipo: m.tipo as "TEXTO" | "AUDIO" | "OTRO", contenido: m.contenido })),
-    datosDelLead(lead),
+    { datos: datosDelLead(lead), mensajesBot: lead.respuestasBot },
+    lead.id,
   );
-  if (resultado.uso) {
-    const { avisarOchenta } = await registrarUso(resultado.uso, config.topeGastoMensualUsd, deps.ahora());
+  for (const uso of turno.usos) {
+    const { avisarOchenta } = await registrarUso(uso, config.topeGastoMensualUsd, deps.ahora());
     if (avisarOchenta) await deps.avisar({ motivo: "GASTO_80", destino });
   }
-  if (!resultado.ok) {
+  if (!turno.ok) {
     // JSON inválido, negativa o error: deriva a Luciano y NO responde.
     await derivar("DERIVADO");
-    await avisar("ERROR", DETALLE_ERROR_IA[resultado.motivo]);
+    await avisar("ERROR", DETALLE_ERROR_IA[turno.motivo]);
     return "ERROR_IA";
   }
 
-  const r = resultado.respuesta;
+  const r = turno.respuesta;
   const cambios = datosNuevos(lead, r.datosExtraidos);
   if (!r.esLead) {
     // Número nuevo que no es un posible cliente: queda para Luciano.
@@ -234,7 +239,7 @@ async function procesarConBloqueo(leadId: string, deps: Dependencias): Promise<R
   if (Object.keys(cambios).length > 0) await db.leadWhatsapp.update({ where: { id: leadId }, data: cambios });
   if (r.accion === "NO_RESPONDER") return "NO_RESPONDER";
 
-  if (!(await enviar(r.respuesta.trim()))) return "ERROR_ENVIO";
+  if (!(await enviar(turno.texto, {}, turno.interactivo))) return "ERROR_ENVIO";
   if (r.accion === "CALIFICADO") {
     await derivar("CALIFICADO");
     await avisar("CALIFICADO", r.motivo);

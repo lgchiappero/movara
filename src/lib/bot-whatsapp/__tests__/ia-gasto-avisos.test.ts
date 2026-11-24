@@ -11,12 +11,14 @@ import { costoDeLlamada, registrarUso, PRECIOS_MODELO } from "../gasto";
 import { enviarAviso, htmlAviso, destinoAvisos, linkLead } from "../avisos";
 import { respuestaBotSchema, respuestaUtilizable, type RespuestaBot } from "../respuesta";
 import { PROMPT_SISTEMA, FRASE_DERIVACION } from "../prompt";
+import { bloqueEstado } from "../calificacion";
 
 const cliente = (contenido: string, tipo: MensajeHistorial["tipo"] = "TEXTO"): MensajeHistorial => ({ autor: "CLIENTE", tipo, contenido });
 const bot = (contenido: string): MensajeHistorial => ({ autor: "BOT", tipo: "TEXTO", contenido });
 
 const VACIOS = { nombre: null, uso: null, zona: null, terreno: null, personas: null, plazo: null, origen: null, origenDetalle: null };
 const RESPUESTA: RespuestaBot = { esLead: true, respuesta: "¡Hola! ¿Para qué la pensás?", datosExtraidos: VACIOS, accion: "RESPONDER", motivo: "saludo" };
+const CTX = { datos: {}, mensajesBot: 0 };
 const USO = { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 3000 };
 
 beforeEach(() => vi.spyOn(console, "error").mockImplementation(() => {}));
@@ -55,7 +57,7 @@ describe("esquema de respuesta", () => {
 
 describe("armarMensajes", () => {
   it("cliente = user, bot y equipo = assistant; une turnos seguidos y describe audios", () => {
-    const r = armarMensajes([cliente("Hola"), cliente("", "AUDIO"), bot("¡Hola!"), { autor: "EQUIPO", tipo: "TEXTO", contenido: "Soy Luciano" }, cliente("", "OTRO")], {});
+    const r = armarMensajes([cliente("Hola"), cliente("", "AUDIO"), bot("¡Hola!"), { autor: "EQUIPO", tipo: "TEXTO", contenido: "Soy Luciano" }, cliente("", "OTRO")]);
     expect(r).toEqual([
       { role: "user", content: "Hola\n[mandó un audio]" },
       { role: "assistant", content: "¡Hola!\nSoy Luciano" },
@@ -63,14 +65,13 @@ describe("armarMensajes", () => {
     ]);
   });
   it("arranca y termina con el cliente (sin prefill) y saltea vacíos", () => {
-    expect(armarMensajes([bot("viejo"), cliente(" "), cliente("Hola"), bot("¿Qué buscás?")], {})).toEqual([{ role: "user", content: "Hola" }]);
-    expect(armarMensajes([bot("solo bot")], {})).toEqual([]);
+    expect(armarMensajes([bot("viejo"), cliente(" "), cliente("Hola"), bot("¿Qué buscás?")])).toEqual([{ role: "user", content: "Hola" }]);
+    expect(armarMensajes([bot("solo bot")])).toEqual([]);
   });
-  it("agrega los datos ya registrados al último turno y recorta el historial", () => {
-    const r = armarMensajes([cliente("Hola")], { nombre: "Ana", zona: null, uso: "vivir" });
-    expect(r[0].content).toContain("datos ya registrados del contacto: nombre=Ana; uso=vivir]");
+  it("no mezcla datos del sistema en el texto del cliente y recorta el historial", () => {
+    expect(armarMensajes([cliente("Hola")])).toEqual([{ role: "user", content: "Hola" }]);
     const largo = Array.from({ length: 30 }, (_, i) => (i % 2 ? bot(`b${i}`) : cliente(`c${i}`)));
-    expect(armarMensajes(largo, {})[0].content).toBe("c10");
+    expect(armarMensajes(largo)[0].content).toBe("c10");
   });
 });
 
@@ -82,11 +83,15 @@ describe("motor de Claude (cliente simulado)", () => {
 
   it("llama a Haiku 5.5 con el prompt cacheado, effort low y salida estructurada", async () => {
     const { parse, motor } = clienteFalso(async () => ({ stop_reason: "end_turn", usage: USO, parsed_output: RESPUESTA }));
-    expect(await motor.responder([cliente("Hola")], {})).toEqual({ ok: true, respuesta: RESPUESTA, uso: USO });
+    const ctx = { datos: { nombre: "Ana Pérez", uso: "Para vivir", zona: null }, mensajesBot: 1 };
+    expect(await motor.responder([cliente("Hola")], ctx)).toEqual({ ok: true, respuesta: RESPUESTA, uso: USO });
     const p = parse.mock.calls[0][0] as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
     expect(p.model).toBe(MODELO_BOT);
     expect(p.model).toBe("claude-haiku-5-5");
-    expect(p.system).toEqual([{ type: "text", text: PROMPT_SISTEMA, cache_control: { type: "ephemeral" } }]);
+    // Parte fija en caché + bloque de estado (datos obtenidos y faltantes) sin caché.
+    expect(p.system).toEqual([{ type: "text", text: PROMPT_SISTEMA, cache_control: { type: "ephemeral" } }, { type: "text", text: bloqueEstado(ctx) }]);
+    expect(p.system[1].text).toContain("- nombre y apellido: Ana Pérez");
+    expect(p.system[1].text).toContain("DATOS QUE FALTAN:\n- localidad donde la instalaría");
     expect(p.output_config.effort).toBe("low");
     expect(p.output_config.format.type).toBe("json_schema");
     expect(p.messages).toEqual([{ role: "user", content: "Hola" }]);
@@ -94,9 +99,9 @@ describe("motor de Claude (cliente simulado)", () => {
   });
 
   it("negativa, salida nula o vacía → no se responde (pero se registra el uso)", async () => {
-    expect(await clienteFalso(async () => ({ stop_reason: "refusal", usage: USO, parsed_output: null })).motor.responder([cliente("x")], {})).toEqual({ ok: false, motivo: "NEGATIVA", uso: USO });
-    expect(await clienteFalso(async () => ({ stop_reason: "max_tokens", usage: USO, parsed_output: null })).motor.responder([cliente("x")], {})).toEqual({ ok: false, motivo: "INVALIDO", uso: USO });
-    expect(await clienteFalso(async () => ({ stop_reason: "end_turn", usage: USO, parsed_output: { ...RESPUESTA, respuesta: "" } })).motor.responder([cliente("x")], {})).toEqual({
+    expect(await clienteFalso(async () => ({ stop_reason: "refusal", usage: USO, parsed_output: null })).motor.responder([cliente("x")], CTX)).toEqual({ ok: false, motivo: "NEGATIVA", uso: USO });
+    expect(await clienteFalso(async () => ({ stop_reason: "max_tokens", usage: USO, parsed_output: null })).motor.responder([cliente("x")], CTX)).toEqual({ ok: false, motivo: "INVALIDO", uso: USO });
+    expect(await clienteFalso(async () => ({ stop_reason: "end_turn", usage: USO, parsed_output: { ...RESPUESTA, respuesta: "" } })).motor.responder([cliente("x")], CTX)).toEqual({
       ok: false,
       motivo: "INVALIDO",
       uso: USO,
@@ -104,19 +109,19 @@ describe("motor de Claude (cliente simulado)", () => {
   });
 
   it("JSON que no valida (AnthropicError del SDK) → INVALIDO; error de la API → ERROR", async () => {
-    expect(await clienteFalso(async () => Promise.reject(new Anthropic.AnthropicError("Failed to parse structured output"))).motor.responder([cliente("x")], {})).toEqual({
+    expect(await clienteFalso(async () => Promise.reject(new Anthropic.AnthropicError("Failed to parse structured output"))).motor.responder([cliente("x")], CTX)).toEqual({
       ok: false,
       motivo: "INVALIDO",
       uso: null,
     });
     const apiError = new Anthropic.APIError(529, {}, "overloaded", new Headers());
-    expect(await clienteFalso(async () => Promise.reject(apiError)).motor.responder([cliente("x")], {})).toEqual({ ok: false, motivo: "ERROR", uso: null });
-    expect(await clienteFalso(async () => Promise.reject(new TypeError("red"))).motor.responder([cliente("x")], {})).toEqual({ ok: false, motivo: "ERROR", uso: null });
+    expect(await clienteFalso(async () => Promise.reject(apiError)).motor.responder([cliente("x")], CTX)).toEqual({ ok: false, motivo: "ERROR", uso: null });
+    expect(await clienteFalso(async () => Promise.reject(new TypeError("red"))).motor.responder([cliente("x")], CTX)).toEqual({ ok: false, motivo: "ERROR", uso: null });
   });
 
   it("sin mensajes del cliente no llama a la API", async () => {
     const { parse, motor } = clienteFalso(async () => ({}));
-    expect(await motor.responder([bot("hola")], {})).toEqual({ ok: false, motivo: "INVALIDO", uso: null });
+    expect(await motor.responder([bot("hola")], CTX)).toEqual({ ok: false, motivo: "INVALIDO", uso: null });
     expect(parse).not.toHaveBeenCalled();
   });
 });
@@ -138,35 +143,56 @@ describe("IA simulada", () => {
     expect(motorIA()).toBe(motorSinClave);
     vi.stubEnv("ANTHROPIC_API_KEY", "   ");
     expect(motorIA()).toBe(motorSinClave);
-    expect(await motorSinClave.responder([cliente("info")], {})).toEqual({ ok: false, motivo: "SIN_CLAVE", uso: null });
+    expect(await motorSinClave.responder([cliente("info")], CTX)).toEqual({ ok: false, motivo: "SIN_CLAVE", uso: null });
   });
 
-  it("conversación completa hasta CALIFICADO", async () => {
+  it("sigue los pasos de calificación hasta CALIFICADO (respuestas parciales incluidas)", async () => {
     const h: MensajeHistorial[] = [cliente("Hola, quería info de las casas")];
     const datos: Record<string, string | null> = {};
-    const pasos: string[] = [];
-    for (const contesta of ["Para vivir", "Rafaela", "El año que viene", "Ana"]) {
-      const r = await motorSimulado.responder(h, datos);
+    const preguntas: string[] = [];
+    let mensajesBot = 0;
+    for (const contesta of ["Ana Pérez, Para vivir", "Rafaela, Sí tengo terreno", "3, Lo antes posible"]) {
+      const r = await motorSimulado.responder(h, { datos, mensajesBot });
       if (!r.ok) throw new Error("falló");
-      pasos.push(r.respuesta.accion);
+      expect(r.respuesta.accion).toBe("RESPONDER");
+      preguntas.push(r.respuesta.respuesta);
       Object.assign(datos, Object.fromEntries(Object.entries(r.respuesta.datosExtraidos).filter(([, v]) => v)));
       h.push(bot(r.respuesta.respuesta), cliente(contesta));
+      mensajesBot++;
     }
-    const fin = await motorSimulado.responder(h, datos);
-    expect(pasos).toEqual(["RESPONDER", "RESPONDER", "RESPONDER", "RESPONDER"]);
+    const fin = await motorSimulado.responder(h, { datos, mensajesBot });
+    expect(preguntas).toEqual([
+      "¡Hola! Gracias por escribirnos. Para empezar, ¿me decís tu nombre y apellido y para qué estás pensando la casa?",
+      "¿En qué localidad la instalarías y ya tenés terreno?",
+      "¿Cuántas personas la van a usar y para cuándo la necesitás?",
+    ]);
     expect(fin.ok && fin.respuesta.accion).toBe("CALIFICADO");
-    expect(fin.ok && fin.respuesta.datosExtraidos).toMatchObject({ uso: "Para vivir", zona: "Rafaela", plazo: "El año que viene", nombre: "Ana" });
+    expect(fin.ok && fin.respuesta.datosExtraidos).toMatchObject({ nombre: "Ana Pérez", uso: "Para vivir", zona: "Rafaela", terreno: "Sí tengo terreno", personas: "3", plazo: "Lo antes posible" });
+
+    // Respuesta parcial: pregunta solo lo que falta del paso.
+    const parcial = await motorSimulado.responder([cliente("info"), bot("¿?"), cliente("Rafaela")], { datos: { nombre: "Ana", uso: "vivir" }, mensajesBot: 1 });
+    expect(parcial.ok && parcial.respuesta.respuesta).toBe("¿Ya tenés terreno?");
+  });
+
+  it("tras 4 mensajes del bot y solo personas/plazo pendientes, cierra igual; preguntas sueltas por dato", async () => {
+    const datos = { nombre: "Ana", uso: "vivir", zona: "Rafaela", terreno: "sí" };
+    const cierre = await motorSimulado.responder([cliente("info"), bot("¿?"), cliente("x")], { datos, mensajesBot: 4 });
+    expect(cierre.ok && cierre.respuesta.accion).toBe("CALIFICADO");
+    const r = await motorSimulado.responder([cliente("info"), bot("¿?"), cliente("3")], { datos, mensajesBot: 2 });
+    expect(r.ok && r.respuesta.respuesta).toBe("¿Para cuándo la necesitás?");
+    const soloNombre = await motorSimulado.responder([cliente("Hola, info de casas")], { datos: { uso: "vivir" }, mensajesBot: 0 });
+    expect(soloNombre.ok && soloNombre.respuesta.respuesta).toBe("¿Me decís tu nombre y apellido?");
   });
 
   it("no lead, derivación y fallas a pedido", async () => {
-    const noLead = await motorSimulado.responder([cliente("¿Venís al asado?")], {});
+    const noLead = await motorSimulado.responder([cliente("¿Venís al asado?")], CTX);
     expect(noLead.ok && noLead.respuesta).toMatchObject({ esLead: false, accion: "NO_RESPONDER" });
-    const deriva = await motorSimulado.responder([cliente("info"), bot("¿Para qué?"), cliente("Quiero hablar con una persona")], {});
+    const deriva = await motorSimulado.responder([cliente("info"), bot("¿Para qué?"), cliente("Quiero hablar con una persona")], CTX);
     expect(deriva.ok && deriva.respuesta.accion).toBe("DERIVAR");
-    expect((await motorSimulado.responder([cliente("casa #invalido")], {})).ok).toBe(false);
-    expect(await motorSimulado.responder([cliente("casa #negativa")], {})).toMatchObject({ ok: false, motivo: "NEGATIVA" });
-    expect(await motorSimulado.responder([cliente("casa #error")], {})).toMatchObject({ ok: false, motivo: "ERROR", uso: null });
-    expect((await motorSimulado.responder([], {})).ok).toBe(true);
+    expect((await motorSimulado.responder([cliente("casa #invalido")], CTX)).ok).toBe(false);
+    expect(await motorSimulado.responder([cliente("casa #negativa")], CTX)).toMatchObject({ ok: false, motivo: "NEGATIVA" });
+    expect(await motorSimulado.responder([cliente("casa #error")], CTX)).toMatchObject({ ok: false, motivo: "ERROR", uso: null });
+    expect((await motorSimulado.responder([], CTX)).ok).toBe(true);
   });
 });
 

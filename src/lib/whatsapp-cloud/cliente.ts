@@ -10,11 +10,46 @@ export const GRAPH_API_VERSION = "v26.0";
 
 export type ResultadoEnvio = { ok: true; waMessageId: string | null } | { ok: false; error: string };
 
+/** Opciones de un mensaje interactivo. Límites de Meta: botones (hasta 3,
+ * título de hasta 20 caracteres) o lista (hasta 10 filas de hasta 24, con
+ * un botón para abrirla de hasta 20). El id vuelve en la respuesta del
+ * cliente; el título es lo que el cliente ve y lo que se guarda. */
+export type OpcionInteractiva = { id: string; titulo: string };
+export type Interactivo = { tipo: "botones"; opciones: OpcionInteractiva[] } | { tipo: "lista"; boton: string; opciones: OpcionInteractiva[] };
+
+export const LIMITES_INTERACTIVO = { botones: 3, tituloBoton: 20, filas: 10, tituloFila: 24, botonLista: 20, cuerpo: 1024 } as const;
+
+/** Cuerpo de la Graph API para un mensaje interactivo (type "interactive",
+ * "button" o "list"). Tira un error si no respeta los límites de Meta: es un
+ * error de programación (las opciones son fijas), no del cliente. */
+export function cuerpoInteractivo(texto: string, interactivo: Interactivo): Record<string, unknown> {
+  const L = LIMITES_INTERACTIVO;
+  const { opciones } = interactivo;
+  const maxTitulo = interactivo.tipo === "botones" ? L.tituloBoton : L.tituloFila;
+  const maxOpciones = interactivo.tipo === "botones" ? L.botones : L.filas;
+  if (!texto.trim() || texto.length > L.cuerpo) throw new Error("Texto inválido para un mensaje interactivo");
+  if (opciones.length === 0 || opciones.length > maxOpciones || opciones.some((o) => !o.titulo || o.titulo.length > maxTitulo || !o.id || o.id.length > 200)) {
+    throw new Error("Opciones inválidas para un mensaje interactivo");
+  }
+  if (interactivo.tipo === "botones") {
+    return {
+      type: "interactive",
+      interactive: { type: "button", body: { text: texto }, action: { buttons: opciones.map((o) => ({ type: "reply", reply: { id: o.id, title: o.titulo } })) } },
+    };
+  }
+  if (!interactivo.boton || interactivo.boton.length > L.botonLista) throw new Error("Botón de lista inválido");
+  return {
+    type: "interactive",
+    interactive: { type: "list", body: { text: texto }, action: { button: interactivo.boton, sections: [{ rows: opciones.map((o) => ({ id: o.id, title: o.titulo })) }] } },
+  };
+}
+
 export interface ClienteWhatsapp {
   /** Marca el mensaje como leído y muestra "escribiendo…" (hasta 25 s o
    * hasta que llega la respuesta). */
   marcarLeidoYEscribiendo(waMessageId: string): Promise<void>;
-  enviarTexto(telefono: string, texto: string): Promise<ResultadoEnvio>;
+  /** Texto solo o, con `interactivo`, con botones o una lista debajo. */
+  enviarTexto(telefono: string, texto: string, interactivo?: Interactivo | null): Promise<ResultadoEnvio>;
 }
 
 /** Solo fuera de producción: con WHATSAPP_SIMULADO=1 no se llama a Meta. */
@@ -68,9 +103,9 @@ export function sinNueveArgentino(telefono: string): string | null {
   return /^549\d{10}$/.test(telefono) ? `54${telefono.slice(3)}` : null;
 }
 
-async function enviarUnaVez(telefono: string, texto: string): Promise<ResultadoEnvio & { codigo?: number | null; titulo?: string }> {
+async function enviarUnaVez(telefono: string, contenido: Record<string, unknown>): Promise<ResultadoEnvio & { codigo?: number | null; titulo?: string }> {
   try {
-    const res = await llamarGraph({ recipient_type: "individual", to: telefono, type: "text", text: { body: texto } });
+    const res = await llamarGraph({ recipient_type: "individual", to: telefono, ...contenido });
     const json = (await res.json().catch(() => null)) as { messages?: { id?: string }[] } | null;
     if (!res.ok) {
       const r = resumenErrorMeta(res.status, json);
@@ -91,15 +126,21 @@ export const clienteWhatsappReal: ClienteWhatsapp = {
       console.error(`[whatsapp] No se pudo marcar como leído: ${resumenError(err)}`);
     }
   },
-  async enviarTexto(telefono, texto) {
-    const primero = await enviarUnaVez(telefono, texto);
+  async enviarTexto(telefono, texto, interactivo) {
+    let contenido: Record<string, unknown>;
+    try {
+      contenido = interactivo ? cuerpoInteractivo(texto, interactivo) : { type: "text", text: { body: texto } };
+    } catch (err) {
+      return { ok: false, error: resumenError(err) };
+    }
+    const primero = await enviarUnaVez(telefono, contenido);
     if (primero.ok) return { ok: true, waMessageId: primero.waMessageId };
     // Caso conocido de Argentina con el número de prueba: la lista de
     // permitidos guarda el número sin el 9. Un solo reintento, y solo ante
     // "destinatario no permitido": con el número real nunca se llega acá.
     const alternativo = sinNueveArgentino(telefono);
     if (!alternativo || !esDestinatarioNoPermitido(primero.codigo ?? null, primero.titulo ?? "")) return { ok: false, error: primero.error };
-    const segundo = await enviarUnaVez(alternativo, texto);
+    const segundo = await enviarUnaVez(alternativo, contenido);
     if (segundo.ok) {
       console.info("[whatsapp] Envío OK con el formato argentino sin 9 (54 + característica + número) después de un 131030 con 549");
       return { ok: true, waMessageId: segundo.waMessageId };

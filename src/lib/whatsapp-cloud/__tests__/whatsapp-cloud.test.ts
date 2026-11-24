@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { firmaValida, firmar } from "../firma";
-import { leerWebhook } from "../payload";
+import { leerWebhook, textoDeRespuestaInteractiva } from "../payload";
 import {
   clienteWhatsapp,
   clienteWhatsappReal,
@@ -9,6 +9,7 @@ import {
   GRAPH_API_VERSION,
   resumenErrorMeta,
   sinNueveArgentino,
+  cuerpoInteractivo,
 } from "../cliente";
 
 const SECRETO = "secreto-de-prueba";
@@ -66,6 +67,26 @@ describe("leerWebhook", () => {
     ]);
   });
 
+  it("respuesta a un botón o a una lista: se guarda como texto con el título que tocó el cliente", () => {
+    const r = leerWebhook(
+      webhook({
+        messages: [
+          { from: "5493490000001", id: "b", timestamp: "1", type: "interactive", interactive: { type: "button_reply", button_reply: { id: "terreno_si", title: "Sí, tengo terreno" } } },
+          { from: "5493490000001", id: "l", timestamp: "2", type: "interactive", interactive: { type: "list_reply", list_reply: { id: "uso_vivir", title: "Para vivir", description: "x" } } },
+          { from: "5493490000001", id: "p", timestamp: "3", type: "button", button: { text: "Quiero info", payload: "x" } },
+          { from: "5493490000001", id: "v", timestamp: "4", type: "interactive", interactive: { type: "nfm_reply" } },
+        ],
+      }),
+    );
+    expect(r.mensajes.map((m) => [m.tipo, m.contenido])).toEqual([
+      ["TEXTO", "Sí, tengo terreno"],
+      ["TEXTO", "Para vivir"],
+      ["TEXTO", "Quiero info"],
+      ["OTRO", ""],
+    ]);
+    expect(textoDeRespuestaInteractiva({ from: "1", id: "x", timestamp: "1", type: "button" })).toBeNull();
+  });
+
   it("recorta textos muy largos a 4000 caracteres", () => {
     const r = leerWebhook(webhook({ messages: [{ from: "5493490000001", id: "w", timestamp: "1", type: "text", text: { body: "a".repeat(5000) } }] }));
     expect(r.mensajes[0].contenido).toHaveLength(4000);
@@ -120,6 +141,56 @@ describe("cliente de WhatsApp", () => {
     expect(logs).toContain("HTTP 400");
     expect(logs).toContain("TypeError");
     expect(logs).not.toContain("token-prueba");
+  });
+
+  it("envía botones (interactive button) y listas (interactive list)", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ messages: [{ id: "wamid.out" }] })));
+    const botones = { tipo: "botones" as const, opciones: [{ id: "a", titulo: "Sí" }, { id: "b", titulo: "No" }] };
+    expect(await clienteWhatsappReal.enviarTexto("5493490000001", "¿Tenés terreno?", botones)).toEqual({ ok: true, waMessageId: "wamid.out" });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: "5493490000001",
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: "¿Tenés terreno?" },
+        action: { buttons: [{ type: "reply", reply: { id: "a", title: "Sí" } }, { type: "reply", reply: { id: "b", title: "No" } }] },
+      },
+    });
+    const lista = { tipo: "lista" as const, boton: "Elegir", opciones: [{ id: "u", titulo: "Para vivir" }] };
+    await clienteWhatsappReal.enviarTexto("5493490000001", "¿Para qué?", lista);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).interactive).toEqual({
+      type: "list",
+      body: { text: "¿Para qué?" },
+      action: { button: "Elegir", sections: [{ rows: [{ id: "u", title: "Para vivir" }] }] },
+    });
+  });
+
+  it("interactivo fuera de los límites de Meta: no se manda", async () => {
+    const largo = { tipo: "botones" as const, opciones: [{ id: "a", titulo: "x".repeat(21) }] };
+    expect(await clienteWhatsappReal.enviarTexto("1", "hola", largo)).toEqual({ ok: false, error: "Error" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(() => cuerpoInteractivo("", largo)).toThrow("Texto inválido");
+    expect(() => cuerpoInteractivo("x".repeat(1025), largo)).toThrow("Texto inválido");
+    expect(() => cuerpoInteractivo("hola", largo)).toThrow("Opciones inválidas");
+    expect(() => cuerpoInteractivo("hola", { tipo: "botones", opciones: [] })).toThrow("Opciones inválidas");
+    expect(() => cuerpoInteractivo("hola", { tipo: "botones", opciones: Array.from({ length: 4 }, (_, i) => ({ id: `${i}`, titulo: "a" })) })).toThrow("Opciones inválidas");
+    expect(() => cuerpoInteractivo("hola", { tipo: "botones", opciones: [{ id: "", titulo: "a" }] })).toThrow("Opciones inválidas");
+    expect(() => cuerpoInteractivo("hola", { tipo: "lista", boton: "", opciones: [{ id: "a", titulo: "x".repeat(24) }] })).toThrow("Botón de lista inválido");
+    expect(() => cuerpoInteractivo("hola", { tipo: "lista", boton: "x".repeat(21), opciones: [{ id: "a", titulo: "a" }] })).toThrow("Botón de lista inválido");
+  });
+
+  it("interactivo con 131030 y 549: reintenta sin el 9 con el mismo contenido", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 131030, title: "Recipient phone number not in allowed list" } }), { status: 400 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ messages: [{ id: "wamid.ok" }] })));
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const botones = { tipo: "botones" as const, opciones: [{ id: "a", titulo: "Sí" }] };
+    expect(await clienteWhatsappReal.enviarTexto("5493493123456", "¿Terreno?", botones)).toEqual({ ok: true, waMessageId: "wamid.ok" });
+    const [a, b] = fetchMock.mock.calls.map((c) => JSON.parse(c[1].body));
+    expect([a.to, b.to]).toEqual(["5493493123456", "543493123456"]);
+    expect(b.interactive).toEqual(a.interactive);
   });
 
   it("envía texto y devuelve el id del mensaje", async () => {

@@ -9,7 +9,27 @@ const mensajeSchema = z.object({
   timestamp: z.string().regex(/^\d+$/),
   type: z.string(),
   text: z.object({ body: z.string() }).optional(),
+  /** Respuesta a un mensaje interactivo: botón (button_reply) o fila de una lista (list_reply). */
+  interactive: z
+    .object({
+      type: z.string(),
+      button_reply: z.object({ id: z.string(), title: z.string() }).optional(),
+      list_reply: z.object({ id: z.string(), title: z.string() }).optional(),
+    })
+    .optional(),
+  /** Botón de respuesta rápida de una plantilla (no se usan, pero se leen igual). */
+  button: z.object({ text: z.string() }).optional(),
 });
+
+type MensajeCrudo = z.infer<typeof mensajeSchema>;
+
+/** Lo que tocó el cliente en un botón o una lista, como si lo hubiera
+ * escrito: el título de la opción. Null si no es una respuesta a botones. */
+export function textoDeRespuestaInteractiva(m: MensajeCrudo): string | null {
+  if (m.type === "interactive") return m.interactive?.button_reply?.title ?? m.interactive?.list_reply?.title ?? null;
+  if (m.type === "button") return m.button?.text ?? null;
+  return null;
+}
 
 const estadoSchema = z.object({
   id: z.string().min(1).max(200),
@@ -53,13 +73,16 @@ export function leerWebhook(datos: unknown): { mensajes: MensajeEntrante[]; esta
       if (change.field !== "messages") continue;
       const nombres = new Map((change.value.contacts ?? []).map((c) => [c.wa_id, c.profile?.name?.trim() || null]));
       for (const m of change.value.messages ?? []) {
-        const tipo: TipoMensaje = m.type === "text" ? "TEXTO" : m.type === "audio" ? "AUDIO" : "OTRO";
+        // La respuesta a un botón o a una lista se guarda como texto: es lo
+        // que el cliente eligió y el bot la interpreta igual que si la escribiera.
+        const elegido = textoDeRespuestaInteractiva(m);
+        const tipo: TipoMensaje = m.type === "text" || elegido !== null ? "TEXTO" : m.type === "audio" ? "AUDIO" : "OTRO";
         mensajes.push({
           waMessageId: m.id,
           telefono: m.from,
           nombrePerfil: nombres.get(m.from) ?? null,
           tipo,
-          contenido: tipo === "TEXTO" ? (m.text?.body ?? "").slice(0, 4000) : "",
+          contenido: tipo === "TEXTO" ? (elegido ?? m.text?.body ?? "").slice(0, 4000) : "",
           enviadoEn: new Date(Number(m.timestamp) * 1000),
         });
       }

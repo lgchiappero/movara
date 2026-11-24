@@ -10,6 +10,8 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import { procesarMensajeEntrante, datosNuevos, ESPERA_AGRUPAR_MS, dependenciasReales, factorEsperas, type Dependencias } from "../procesar";
+import { textoCierre, OPCIONES } from "../calificacion";
+import type { Interactivo } from "@/lib/whatsapp-cloud/cliente";
 import { motorSimulado, motorSinClave, type MotorIA, type ResultadoIA } from "../ia";
 import { MENSAJE_CIERRE_MAXIMO, MENSAJE_SIN_AUDIO } from "../constantes";
 import type { RespuestaBot } from "../respuesta";
@@ -19,7 +21,7 @@ const AHORA = new Date("2026-11-20T01:00:00Z"); // jueves 22:00 en Córdoba
 const VACIOS = { nombre: null, uso: null, zona: null, terreno: null, personas: null, plazo: null, origen: null, origenDetalle: null };
 
 let b: ReturnType<typeof crearBaseFalsa>;
-let deps: Dependencias & { enviados: string[]; avisos: string[]; esperas: number[]; leidos: string[] };
+let deps: Dependencias & { enviados: string[]; avisos: string[]; esperas: number[]; leidos: string[]; interactivos: (Interactivo | null)[] };
 
 function respuestaIA(r: Partial<RespuestaBot>): MotorIA {
   return { responder: vi.fn(async (): Promise<ResultadoIA> => ({ ok: true, uso: { input_tokens: 10, output_tokens: 10 }, respuesta: { esLead: true, respuesta: "Hola", datosExtraidos: VACIOS, accion: "RESPONDER", motivo: "m", ...r } })) };
@@ -33,17 +35,20 @@ beforeEach(() => {
   const avisos: string[] = [];
   const esperas: number[] = [];
   const leidos: string[] = [];
+  const interactivos: (Interactivo | null)[] = [];
   let reloj = AHORA.getTime();
   deps = {
     enviados,
     avisos,
     esperas,
     leidos,
+    interactivos,
     ia: motorSimulado,
     whatsapp: {
       marcarLeidoYEscribiendo: async (id) => void leidos.push(id),
-      enviarTexto: async (_tel, texto) => {
+      enviarTexto: async (_tel, texto, interactivo) => {
         enviados.push(texto);
+        interactivos.push(interactivo ?? null);
         return { ok: true, waMessageId: `wamid.out.${enviados.length}` };
       },
     },
@@ -201,9 +206,39 @@ describe("procesarMensajeEntrante", () => {
     deps.ia = respuestaIA({ accion: "CALIFICADO", respuesta: "Gracias, Ana. Luciano te escribe.", datosExtraidos: { ...VACIOS, nombre: "Ana", origen: "RECOMENDACION", origenDetalle: "Martín" } });
     const l = lead();
     expect(await procesarMensajeEntrante(l.id, await entra(l.id, "Ana"), deps)).toBe("RESPONDIDO");
-    expect(deps.enviados).toEqual(["Gracias, Ana. Luciano te escribe."]);
+    // El texto de Claude se reemplaza por uno de los cierres aprobados, con el nombre de pila.
+    expect(deps.enviados).toEqual([textoCierre("Ana", l.id)]);
     expect(leadDe(l.id)).toMatchObject({ estado: "CALIFICADO", controlHumano: true, nombre: "Ana", origen: "RECOMENDACION", origenDetalle: "Martín" });
     expect(deps.avisos).toEqual(["CALIFICADO"]);
+  });
+
+  it("primer mensaje: pide nombre y uso con la lista de usos, y la guarda en la conversación", async () => {
+    const l = lead();
+    expect(await procesarMensajeEntrante(l.id, await entra(l.id, "Hola, quería info de las casas"), deps)).toBe("RESPONDIDO");
+    expect(deps.enviados).toEqual(["¡Hola! Gracias por escribirnos. Para empezar, ¿me decís tu nombre y apellido y para qué estás pensando la casa?"]);
+    expect(deps.interactivos).toEqual([OPCIONES.USO.interactivo]);
+    expect(b.tablas.mensajes.at(-1)).toMatchObject({
+      autor: "BOT",
+      contenido: "¡Hola! Gracias por escribirnos. Para empezar, ¿me decís tu nombre y apellido y para qué estás pensando la casa?\n[Opciones: Para vivir / Para alquilar o invertir / Campo o fin de semana / Empresa u obra / Otro]",
+    });
+  });
+
+  it("a Claude le llegan los datos guardados y los mensajes del bot; si repite un dato, regenera una vez y registra los dos usos", async () => {
+    const contextos: unknown[] = [];
+    const respuestas = ["¿En qué localidad la instalarías?", "¿Ya tenés terreno?"];
+    deps.ia = {
+      responder: vi.fn(async (_h, ctx): Promise<ResultadoIA> => {
+        contextos.push(ctx);
+        return { ok: true, uso: { input_tokens: 10, output_tokens: 10 }, respuesta: { esLead: true, respuesta: respuestas.shift()!, datosExtraidos: VACIOS, accion: "RESPONDER", motivo: "m" } };
+      }),
+    };
+    const l = lead({ nombre: "Ana", uso: "Para vivir", zona: "Rafaela", respuestasBot: 2 });
+    expect(await procesarMensajeEntrante(l.id, await entra(l.id, "Rafaela"), deps)).toBe("RESPONDIDO");
+    expect(contextos[0]).toMatchObject({ datos: { nombre: "Ana", uso: "Para vivir", zona: "Rafaela" }, mensajesBot: 2 });
+    expect(contextos[1]).toMatchObject({ correccion: expect.stringContaining("ya está obtenido") });
+    expect(deps.enviados).toEqual(["¿Ya tenés terreno?"]);
+    expect(deps.interactivos).toEqual([OPCIONES.TERRENO.interactivo]);
+    expect(b.tablas.uso[0]).toMatchObject({ llamadas: 2, tokensSalida: 20 });
   });
 
   it("DERIVAR: mensaje, DERIVADO, control humano y aviso", async () => {

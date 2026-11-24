@@ -90,7 +90,8 @@ test.describe("Bot de WhatsApp — webhook (simulado)", () => {
       const patch = await page.request.patch(`${API}/config`, { data: { activo: true, modoHorario: false, emailAviso: "bot-e2e@example.com" } });
       expect(patch.status()).toBe(200);
 
-      const turnos = ["Hola, quería info de las casas", "Para vivir con mi familia", "Rafaela", "El año que viene", "Ana"];
+      // Pasos nuevos: nombre + uso, localidad + terreno, personas + plazo, cierre.
+      const turnos = ["Hola, quería info de las casas", "Ana Pérez, Para vivir", "Rafaela, Sí, tengo terreno", "3, Lo antes posible"];
       for (const [i, texto] of turnos.entries()) {
         await enviarWebhook(page.request, cuerpo(tel, `wamid.e2e.${tel}.${i}`, texto));
         await expect
@@ -98,8 +99,12 @@ test.describe("Bot de WhatsApp — webhook (simulado)", () => {
           .toBe(i + 1);
       }
       const lead = (await leadPorTelefono(page, tel))!;
-      expect(lead).toMatchObject({ estado: "CALIFICADO", controlHumano: true, nombre: "Ana", zona: "Rafaela" });
-      expect(lead.mensajes.at(-1)!.contenido).toContain("Luciano te arma la propuesta");
+      expect(lead).toMatchObject({ estado: "CALIFICADO", controlHumano: true, nombre: "Ana Pérez", uso: "Para vivir", zona: "Rafaela", terreno: "Sí", personas: "3", plazo: "Lo antes posible" });
+      // Uno de los cierres aprobados, con el nombre de pila y sin prometer "hoy".
+      expect(lead.mensajes.at(-1)!.contenido).toMatch(/^(Gracias|Perfecto|Genial), Ana[,.]/);
+      expect(lead.mensajes.at(-1)!.contenido).not.toMatch(/\bhoy\b/i);
+      // El primer mensaje del bot llevó la lista de usos.
+      expect(lead.mensajes[1].contenido).toContain("[Opciones: Para vivir / Para alquilar o invertir");
 
       // Con control humano el bot ya no responde.
       await enviarWebhook(page.request, cuerpo(tel, `wamid.e2e.${tel}.extra`, "¿Y cuándo me escribe?"));
@@ -110,7 +115,7 @@ test.describe("Bot de WhatsApp — webhook (simulado)", () => {
 
       await page.goto(`/admin/bot-whatsapp/${lead.id}`);
       await esperarQuieto(page);
-      await expect(page.getByRole("list", { name: "Conversación" })).toContainText("¿Por qué zona sería?");
+      await expect(page.getByRole("list", { name: "Conversación" })).toContainText("¿En qué localidad la instalarías y ya tenés terreno?");
       await expect(page.getByRole("button", { name: "Devolver al bot" })).toBeVisible();
     } finally {
       await page.request.patch(`${API}/config`, { data: { activo: false, modoHorario: config.modoHorario, emailAviso: config.emailAviso } });
